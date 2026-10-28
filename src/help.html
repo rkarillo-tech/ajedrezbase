@@ -1,0 +1,303 @@
+<div class="modal-back" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="modal wide">
+    <h2 id="helpTitle"><span>❓ Guía de AjedrezBase</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div class="help-tools">
+      <input id="helpSearch" placeholder="Buscar en la ayuda: token, variante, marcador, FEN, motor…" aria-label="Buscar en la ayuda">
+      <button id="helpExpand" class="sm-btn">Desplegar todo</button>
+      <button id="helpCollapse" class="sm-btn">Plegar todo</button>
+      <button class="sm-btn danger" data-close title="Cerrar la ayuda (Esc)">✖</button>
+    </div>
+    <div id="helpNoResults" class="small" hidden>No hay apartados que contengan ese texto.</div>
+
+    <div class="help-body" id="helpBody">
+
+      <details id="help-inicio" open>
+        <summary>🧭 1. De un vistazo: cómo está organizada la pantalla</summary>
+        <ul>
+          <li><b>Columna izquierda</b>: el tablero con la <b>barra de evaluación</b> (a su izquierda), los nombres de los jugadores con el material capturado, el <b>panel del motor</b>, el <b>gráfico de la partida</b>, los botones de navegación y la <b>lista de jugadas</b> con sus variantes.</li>
+          <li><b>Columna derecha</b>, arriba: la <b>barra de la partida actual</b> (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, cinco pestañas:
+            <b>📖 Estudio</b> (importar, comentar, analizar), <b>🌍 Aperturas</b>, <b>📚 Biblioteca</b>, <b>👑 Finales</b> y <b>🎯 Entrenar</b>.</li>
+          <li><b>Barra superior</b>: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU y su nivel, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.</li>
+          <li>En el móvil todo se apila: primero el tablero y después las herramientas.</li>
+        </ul>
+        <div class="example"><b>Ejemplo rápido (2 minutos):</b> pega una partida en «📖 Estudio» → pulsa <b>Importar</b> → recórrela con las flechas <kbd>←</kbd> <kbd>→</kbd> → pulsa <b>🤖 Analizar y comentar</b> → si te gusta, <b>💾 Guardar en biblioteca</b>.</div>
+      </details>
+
+      <details id="help-mover">
+        <summary>♟ 2. Mover piezas y recorrer la partida</summary>
+        <ul>
+          <li><b>Mover</b>: arrastra la pieza, o haz clic en la pieza y luego en la casilla de destino. Los puntos verdes indican las jugadas legales (se pueden ocultar en ⚙ Ajustes).</li>
+          <li><b>Coronar</b>: al llevar un peón a la última fila aparece un cuadro para elegir dama, torre, alfil o caballo.</li>
+          <li><b>Navegar</b>: botones <b>|◀ ◀ ▶ ▶|</b> bajo el gráfico, o el teclado (<kbd>←</kbd> <kbd>→</kbd> <kbd>Inicio</kbd> <kbd>Fin</kbd>). También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.</li>
+          <li><b>▶ Auto</b> (o <kbd>Espacio</kbd>) reproduce la partida sola, una jugada por segundo.</li>
+          <li><b>⇅ Girar</b> (o <kbd>F</kbd>) da la vuelta al tablero.</li>
+          <li>La aplicación detecta jaque mate, ahogado, triple repetición, regla de 50 jugadas y material insuficiente; lo verás en la línea de estado bajo los botones.</li>
+        </ul>
+      </details>
+
+      <details id="help-importar">
+        <summary>📥 3. Importar partidas, PGN y posiciones FEN</summary>
+        <p>En <b>📖 Estudio</b>, el recuadro «Jugadas, PGN completo o FEN» acepta casi cualquier cosa. Pega y pulsa <b>Importar</b>.</p>
+        <ul>
+          <li><b>Notación española</b>: <code>1. e4 e5 2. Cf3 Cc6 3. Ab5</code> (C caballo, A alfil, T torre, D dama, R rey).</li>
+          <li><b>Notación inglesa</b>: <code>1. e4 e5 2. Nf3 Nc6 3. Bb5</code>.</li>
+          <li><b>Figurines</b>: <code>1. e4 e5 2. ♘f3 ♞c6</code> · <b>Coordenadas</b>: <code>e2e4 e7e5 g1f3</code> · <b>Notación larga</b>: <code>1. e2-e4 e7-e5 2. Cg1-f3</code>.</li>
+          <li><b>PGN completo</b> con cabeceras <code>[White "…"]</code>, variantes entre paréntesis, comentarios entre llaves <code>{…}</code> y símbolos (<code>!?</code>, <code>$14</code>…). Es el formato que exportan Lichess, Chess.com y ChessBase.</li>
+          <li><b>FEN</b>: una posición suelta, por ejemplo <code>8/8/1KP5/3r4/8/8/8/k7 w - - 0 1</code>. Se detecta sola al importar, o usa <b>Cargar FEN</b>.</li>
+        </ul>
+        <p><b>«Notación de entrada»</b> indica cómo está escrito lo que pegas; con «Automática» la aplicación lo deduce. Es distinto de <b>«Notación» de la barra superior</b>, que sólo decide cómo se <i>muestran</i> las jugadas. Por eso puedes pegar en inglés y verlo en español (Nf3 → Cf3). El PGN que copias o descargas siempre sale en inglés, que es el estándar.</p>
+        <ul>
+          <li><b>Añadir desde aquí</b>: añade las jugadas del recuadro a partir de la posición actual del tablero (útil para meter una variante escrita a mano).</li>
+          <li><b>📋 Copiar PGN</b> / <b>⬇ Descargar .pgn</b> / <b>📋 Copiar FEN</b>: para llevarte la partida o la posición a otro programa.</li>
+          <li>Si el texto tiene varias partidas, se muestra la primera y todas quedan en <b>📚 Biblioteca › 🗂 Abrir .pgn</b> (sin guardar).</li>
+          <li>Si hay una jugada ilegal o mal escrita, la importación se detiene ahí y te dice cuál es (por ejemplo «Detenido en 23. Axf7»).</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> en Lichess, en una partida tuya, «Compartir y exportar» → «Descargar PGN» o copiar el texto PGN → pégalo aquí → Importar. Los comentarios y evaluaciones <code>[%eval]</code> de Lichess también se leen.</div>
+      </details>
+
+      <details id="help-variantes">
+        <summary>🌿 4. Variantes, comentarios, símbolos y flechas</summary>
+        <ul>
+          <li><b>Crear una variante</b>: vuelve a una jugada anterior y mueve otra cosa. Se crea una línea alternativa sangrada en la lista; la partida original no se toca. (Si prefieres que la nueva jugada <i>sustituya</i> lo que seguía, cambia «Al mover en mitad de la partida» a «Sobrescribir línea».)</li>
+          <li><b>Moverte entre alternativas</b>: <kbd>↑</kbd> <kbd>↓</kbd> saltan entre las jugadas posibles del mismo punto.</li>
+          <li><b>⬆ Promover variante</b> la sube un puesto; <b>★ Hacer principal</b> la convierte en la línea principal; <b>✂ Cortar</b> borra la jugada actual y todo lo que sigue.</li>
+          <li><b>Comentar</b>: en «Comentario de la posición» escribe lo que quieras sobre la jugada que lleva a la posición actual. Aparece en cursiva en la lista de jugadas y se exporta en el PGN.</li>
+          <li><b>Símbolos</b>: <code>! !! !? ?! ? ??</code> valoran la jugada; <code>+− ± = ∞ ∓ −+</code> valoran la posición. «Limpiar» los quita.</li>
+          <li><b>✍ Redactar comentario con el motor</b>: analiza la jugada actual y escribe un comentario en español (si era un error, cuál era la mejor y cuál es la refutación).</li>
+          <li><b>Flechas y círculos</b>: clic derecho y arrastrar dibuja una flecha; clic derecho en una casilla la rodea. Verde por defecto, <kbd>⇧</kbd> roja, <kbd>Alt</kbd> azul, <kbd>⇧</kbd>+<kbd>Alt</kbd> amarilla. Repite el gesto para borrarla, o usa <b>🧽 Borrar flechas</b>. Se guardan en el PGN y Lichess/ChessBase las entienden.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> en la jugada 12 crees que había algo mejor → pulsa la jugada 11 de las negras en la lista → juega tu idea en el tablero → escribe en el comentario «Más activa: amenaza Cxe5» → dibuja una flecha roja con <kbd>⇧</kbd> + clic derecho mostrando la amenaza.</div>
+      </details>
+
+      <details id="help-motor">
+        <summary>⚙ 5. El motor: análisis en vivo, nube y etiquetas</summary>
+        <ul>
+          <li><b>Analizar</b> (o tecla <kbd>E</kbd>) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.</li>
+          <li><b>Flecha</b> muestra en morado la mejor jugada del motor. <b>⚡ Jugar</b> la ejecuta.</li>
+          <li><b>Evaluación</b>: <code>+0.80</code> = ventaja blanca de unos 8 décimas de peón; <code>−1.50</code> = ventaja negra de 1,5 peones; <code>#3</code> = mate en 3 para las blancas; <code>−#2</code> = mate en 2 para las negras.</li>
+          <li><b>Qué motor está trabajando</b> (etiqueta verde del panel):
+            <ul>
+              <li><b>⚙ Stockfish 10</b>: el motor fuerte, funcionando en tu navegador (descarga 1,5 MB la primera vez).</li>
+              <li><b>⚙ Motor interno</b>: el de respaldo, más débil, funciona siempre sin conexión. Si aparece <b>⚠</b>, pasa el ratón por encima para ver por qué no se pudo usar Stockfish (normalmente, porque el archivo se abrió en una vista previa en vez de en el navegador).</li>
+              <li><b>☁ Stockfish (nube Lichess)</b>: sólo al pulsar <b>☁ Nube</b>. Es un análisis muy profundo ya calculado en Lichess; sólo existe para posiciones conocidas (aperturas, partidas famosas).</li>
+            </ul></li>
+          <li>En <b>⚙ Ajustes</b> puedes elegir «sólo motor interno», el tiempo por jugada y el número de líneas.</li>
+        </ul>
+      </details>
+
+      <details id="help-analisis">
+        <summary>🤖 6. Analizar una partida completa y leer el gráfico</summary>
+        <ul>
+          <li><b>🤖 Analizar y comentar</b> (pestaña Estudio) evalúa todas las jugadas de la línea principal y:
+            <ul>
+              <li>marca las jugadas: <span class="nag-blunder">??</span> error grave, <span class="nag-mistake">?</span> error, <span class="nag-inacc">?!</span> imprecisión, <span class="nag-brilliant">!</span> jugada única;</li>
+              <li>escribe comentarios en las jugadas críticas (cuál era mejor, cuál es la refutación, si se deja material o un mate);</li>
+              <li>muestra un informe con la <b>precisión</b> de cada jugador y la pérdida media en centipeones.</li>
+            </ul>
+            La clasificación se basa en cuánto baja la probabilidad de ganar, igual que en Lichess. Tus propios comentarios y símbolos no se sobrescriben.</li>
+          <li><b>📈 Completar gráfico</b> hace una pasada rápida sólo para dibujar el gráfico, sin comentar nada.</li>
+          <li><b>Cómo leer el gráfico</b>: de izquierda a derecha, la partida (sólo la línea principal). Cuanto más <b>sube la zona blanca</b>, mejor van las blancas; si baja, las negras. La línea discontinua es la igualdad. +1 peón ≈ 59 %, +3 ≈ 75 %, +5 ≈ 86 %, mate = 100 %. Los puntos de color son los errores; la raya naranja es la jugada en la que estás. Haz clic en el gráfico para saltar a esa jugada.</li>
+          <li>Puedes <b>⏹ Detener</b> el análisis cuando quieras; lo calculado se conserva.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> tras importar tu partida del torneo, pulsa «Analizar y comentar» → mira en el gráfico dónde cae la curva → pulsa ese punto → lee el comentario de la jugada marcada con ?? → prueba en el tablero la alternativa que propone.</div>
+      </details>
+
+      <details id="help-cpu">
+        <summary>🤖 7. Jugar contra la CPU</summary>
+        <ul>
+          <li>Elige el <b>Nivel</b> (1 a 8) en la barra superior y pulsa <b>🤖 Jugar vs CPU</b>. Juegas con el bando que está <b>abajo</b> en el tablero (gíralo antes con ⇅ si quieres negras).</li>
+          <li>Puedes empezar desde la posición inicial, desde cualquier momento de una partida, o desde una posición montada en el editor («🤖 Jugar desde aquí vs CPU»).</li>
+          <li>Mientras juegas, el análisis se pausa para no darte pistas. Pulsa otra vez el botón para terminar.</li>
+          <li>Las jugadas quedan en la lista: al acabar puedes analizarlas o guardarlas.</li>
+        </ul>
+      </details>
+
+      <details id="help-editor">
+        <summary>✏ 8. Montar una posición (editor)</summary>
+        <ul>
+          <li>Pulsa <b>✏ Colocar piezas</b> (bajo el tablero). El tablero se enmarca en naranja y aparece el editor.</li>
+          <li><b>Arrastra</b> cualquier pieza a otra casilla, sin reglas. Suéltala <b>fuera del tablero</b> para quitarla (o clic derecho sobre ella).</li>
+          <li><b>Añade piezas</b> arrastrándolas desde la paleta, o elige una en la paleta y pulsa casillas (pulsar otra vez la quita). Con ✋ puedes mover con dos clics; 🗑 borra.</li>
+          <li>Indica <b>quién juega</b> y los <b>enroques</b> posibles. También puedes pegar una FEN.</li>
+          <li>Atajos: posición inicial, la de la partida, sólo reyes, vaciar.</li>
+          <li><b>✔ Empezar desde esta posición</b> la convierte en el inicio de la partida (para analizar, comentar, guardar o entrenar). <b>🤖 Jugar desde aquí vs CPU</b> la juega contra el motor.</li>
+          <li>El editor comprueba que la posición sea legal: un rey de cada color, sin peones en 1ª/8ª fila y sin el rey del bando que no mueve en jaque.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> quieres practicar el mate de alfil y caballo → «Sólo reyes» → arrastra desde la paleta un alfil y un caballo blancos → «Jugar desde aquí vs CPU» con nivel 8.</div>
+      </details>
+
+      <details id="help-biblioteca">
+        <summary>📚 9. Biblioteca: guardar, favoritas, etiquetas y borrar</summary>
+        <ul>
+          <li><b>Nada se guarda solo.</b> Importar o abrir partidas no ocupa espacio. Cuando una te interese, pulsa <b>💾 Guardar en biblioteca</b> en la barra de la partida actual.</li>
+          <li>Debajo de esa barra ves siempre el estado: «No está en la biblioteca», «● Tiene cambios y NO está guardada» o «✔ Está en tu biblioteca». Si la partida ya está guardada, <b>tus cambios se guardan solos</b>.</li>
+          <li>Si vas a abrir otra partida y la actual tiene cambios sin guardar, se te avisa antes.</li>
+          <li><b>Título</b>: edítalo en el recuadro de la barra. <b>⭐</b> la marca como favorita (si no estaba guardada, la guarda). <b>Etiquetas</b>: escríbelas separadas por comas, por ejemplo <code>repertorio, siciliana, torneo 2026</code>.</li>
+          <li>En <b>📚 Biblioteca › Mis partidas</b>:
+            <ul>
+              <li>busca por título, jugador, evento, ECO o año;</li>
+              <li>filtra por ⭐ favoritas, 📌 con marcadores, 📅 repaso pendiente o por etiqueta;</li>
+              <li>pulsa una fila para abrirla, ☆ para marcarla como favorita, 🎯 para entrenarla, 🗑 para borrarla;</li>
+              <li>marca varias casillas y usa <b>🗑 Borrar seleccionadas</b> o <b>⬇ Exportar .pgn</b> (si no seleccionas nada, exporta las que estés viendo).</li>
+            </ul></li>
+          <li><b>⬇ Copia de seguridad</b> descarga un archivo con todas tus partidas y marcadores; <b>⬆ Restaurar copia</b> lo vuelve a cargar (sin duplicar lo que ya tengas).</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> tienes 30 partidas de Siciliana guardadas → escribe «siciliana» en el buscador → marca «Todas» → «⬇ Exportar .pgn» para llevarlas a ChessBase.</div>
+        <p class="warn-note">⚠ La biblioteca vive en <b>este navegador y en esta dirección</b>. No es la misma si abres la página desde GitHub Pages que desde el archivo de tu ordenador, ni en Chrome que en Firefox. Para pasarla de un sitio a otro, usa la copia de seguridad.</p>
+      </details>
+
+      <details id="help-marcadores">
+        <summary>📌 10. Marcadores (ideas, tácticas, errores típicos…)</summary>
+        <ul>
+          <li>Sitúate en la jugada que quieres recordar y pulsa <b>📌 Marcar posición</b> (o la tecla <kbd>M</kbd>). Si la partida no está guardada, te propone guardarla, porque el marcador apunta a ella.</li>
+          <li>Elige la <b>categoría</b>: 💡 Idea, ⚔ Táctica, ⚠ Error típico, 🧭 Plan, ♟ Final, 📖 Apertura o ⭐ Favorita. Escribe una <b>nota</b> (si la jugada ya tenía comentario, se propone como nota).</li>
+          <li><b>Entrenar como tarjeta</b>: «encontrar la jugada marcada» (para tácticas e ideas) o «la marcada es un error, encontrar la mejor» (para errores típicos: el motor calcula cuál era la buena).</li>
+          <li>En la lista de jugadas, la jugada marcada muestra el icono de su categoría.</li>
+          <li>En <b>📚 Biblioteca › 📌 Marcadores</b> los ves todos con un minitablero; puedes buscar en las notas, filtrar por categoría, editarlos ✏ o borrarlos 🗑. Pulsa uno para abrir la partida justo en esa jugada.</li>
+          <li>Para cambiar un marcador, vuelve a la misma jugada y pulsa otra vez 📌.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> en tu partida, en la jugada 23 tu rival hizo un sacrificio en h7 que no viste → márcala como «⚔ Táctica» con la nota «Sacrificio griego: alfil en d3 + caballo a g5» → días después aparecerá como tarjeta para que lo encuentres tú.</div>
+      </details>
+
+      <details id="help-buscar">
+        <summary>🔎 11. Buscar en tus comentarios y notas</summary>
+        <ul>
+          <li>En <b>📚 Biblioteca › 🔎 Buscar notas</b> escribe una palabra o frase y pulsa Buscar (o <kbd>Intro</kbd>).</li>
+          <li>Busca en <b>todos los comentarios de todas tus partidas guardadas</b> y en las notas de los marcadores. No distingue mayúsculas ni tildes («peon» encuentra «peón»).</li>
+          <li>Cada resultado indica la partida y la jugada; púlsalo para ir allí.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> busca «columna abierta» para repasar todas las partidas donde comentaste un plan con la torre.</div>
+      </details>
+
+      <details id="help-pgn">
+        <summary>🗂 12. Abrir ficheros .pgn grandes</summary>
+        <ul>
+          <li>En <b>📚 Biblioteca › 🗂 Abrir .pgn</b> pulsa <b>📂 Abrir .pgn</b> (puedes elegir varios ficheros). También hay una «Antología de clásicos» de prueba.</li>
+          <li>El fichero se abre <b>sólo en memoria</b>: no se guarda nada y desaparece al cerrar la página o al pulsar <b>✖ Cerrar fichero</b>.</li>
+          <li>Filtra por jugador, evento, año, ECO o resultado. Pulsa una fila para ver la partida.</li>
+          <li>Para quedarte con alguna: <b>💾</b> en su fila, o <b>«Guardar en la biblioteca las partidas filtradas»</b> para varias de golpe. Las que ya tengas no se duplican (✔).</li>
+          <li>Ficheros grandes: hasta unos 200 MB van bien; por encima se pide confirmación y a partir de 400 MB se rechazan. Como referencia, un fichero de 11 MB (21.000 partidas) se abre en menos de un segundo.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> descargas el .pgn de un torneo (500 partidas) → ábrelo → filtra «Carlsen» → guarda sólo esas 11 → cierra el fichero para liberar memoria.</div>
+      </details>
+
+      <details id="help-aperturas">
+        <summary>🌍 13. Aperturas: explorador y enciclopedia (y el token de Lichess)</summary>
+        <ul>
+          <li>La pestaña <b>🌍 Aperturas</b> muestra, para la posición del tablero, qué jugadas se han hecho, cuántas veces y con qué resultado (barra blanco / tablas / negro), y partidas de ejemplo que puedes cargar.</li>
+          <li>Tres fuentes:
+            <ul>
+              <li><b>Maestros</b>: partidas reales de jugadores de +2200 (necesita token de Lichess).</li>
+              <li><b>Lichess</b>: millones de partidas online de 1800 a 2500 (necesita token).</li>
+              <li><b>Mi biblioteca + .pgn abierto</b>: tus propias partidas; funciona sin conexión y sin token.</li>
+            </ul></li>
+          <li>La <b>enciclopedia ECO local</b> (abajo) tiene más de 170 aperturas con nombre en español; busca «Najdorf», «Londres» o «C60» y pulsa para cargarla. Funciona sin conexión.</li>
+          <li>El nombre de la apertura aparece arriba junto al título y reconoce transposiciones.</li>
+        </ul>
+        <div class="steps" id="help-token">
+          <b>🔑 Cómo conseguir y poner el token de Lichess (gratis, una sola vez):</b>
+          <ol>
+            <li>Entra en <a href="https://lichess.org" target="_blank" rel="noopener">lichess.org</a> con tu cuenta (si no tienes, créala gratis).</li>
+            <li>Abre <a href="https://lichess.org/account/oauth/token/create?description=AjedrezBase" target="_blank" rel="noopener">esta página de creación de tokens</a> (Preferencias → API access tokens → «+»).</li>
+            <li>Deja la descripción «AjedrezBase» y <b>no marques ningún permiso</b>: el explorador no los necesita.</li>
+            <li>Pulsa el botón de crear al final de la página. Lichess muestra un código que empieza por <code>lip_</code>. <b>Cópialo ya</b>: no se vuelve a mostrar.</li>
+            <li>Aquí, abre <b>⚙ Ajustes</b>, pégalo en «Token personal de Lichess» y pulsa <b>🔌 Probar token</b>.</li>
+          </ol>
+          El token se guarda sólo en este navegador y sólo se envía a Lichess. Si lo pierdes o lo quieres anular, bórralo en esa misma página de Lichess y crea otro.
+        </div>
+      </details>
+
+      <details id="help-finales">
+        <summary>👑 14. Finales: tablas Syzygy y finales fundamentales</summary>
+        <ul>
+          <li>Con <b>7 piezas o menos</b>, <b>🔍 Consultar posición</b> da el resultado exacto con juego perfecto y la valoración de cada jugada: 🏆 gana, 🟰 tablas, ❌ pierde. DTZ = jugadas hasta que se reinicia la regla de 50; DTM = jugadas hasta el mate.</li>
+          <li><b>Practicar</b>: activa la casilla y juega; el rival responderá con la defensa perfecta de la tabla. Ideal para comprobar si sabes ganar (o hacer tablas) un final.</li>
+          <li><b>Finales fundamentales</b>: Lucena, Philidor, Saavedra, oposición, regla del cuadrado y los mates básicos, con una explicación de la idea clave.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> carga «Posición de Lucena» → activa «Practicar» → intenta ganar con blancas; si la tabla dice «🟰 Tablas» tras tu jugada, has perdido la victoria.</div>
+      </details>
+
+      <details id="help-entrenar">
+        <summary>🎯 15. Entrenar: repertorio y tarjetas</summary>
+        <ul>
+          <li><b>Entrenar una partida o repertorio</b>: carga una partida con tus líneas y variantes → pestaña <b>🎯 Entrenar</b> → elige con qué bando entrenas → <b>▶ Empezar</b>. Tú haces tus jugadas; el rival responde eligiendo al azar entre tus variantes. <b>💡 Pista</b> marca la pieza y, si la pulsas otra vez, la jugada.</li>
+          <li>Si la partida está en la biblioteca, se programa su repaso: si fallas, vuelve mañana; si la haces perfecta, se espacia (1, 3, 7, 16, 35, 75 días). <b>📅 Entrenar la siguiente partida pendiente</b> te pone la que toca.</li>
+          <li><b>🧠 Tarjetas de tus marcadores</b>: <b>▶ Repasar pendientes</b> te muestra, una a una, las posiciones que marcaste para que encuentres la jugada. <b>↩ Volver a la partida</b> te devuelve a donde estabas.</li>
+        </ul>
+        <div class="example"><b>Ejemplo de repertorio:</b> crea una partida con 1.e4 c5 2.Cf3 d6 3.d4 y añade como variantes las respuestas que preparas contra 2…Cc6 y 2…e6 → guárdala con la etiqueta «repertorio» → entrénala con blancas cada vez que te lo pida.</div>
+      </details>
+
+      <details id="help-ocupacion">
+        <summary>💾 16. Ocupación de memoria y espacio</summary>
+        <ul>
+          <li>Arriba de <b>📚 Biblioteca</b> tienes el medidor:
+            <ul>
+              <li><b>Biblioteca (permanente)</b>: lo que ocupan tus partidas y marcadores guardados. Se recomiendan hasta 100 MB (unas 50.000–100.000 partidas), porque se carga entera al abrir la página.</li>
+              <li><b>Fichero .pgn abierto</b>: lo que ocupa en memoria el fichero que tengas abierto (recomendado hasta 200 MB).</li>
+              <li>La línea de abajo indica el espacio total que el navegador permite a esta página y, en Chrome, la memoria que usa.</li>
+            </ul></li>
+          <li>La barra pasa a naranja y rojo al acercarse al límite, y se pide confirmación antes de guardar o abrir algo muy grande.</li>
+          <li><b>🔒 Proteger datos</b> pide al navegador que no borre tu biblioteca aunque se quede sin espacio (algunos navegadores sólo lo conceden a páginas que usas a menudo o que tienes en marcadores).</li>
+          <li>Para liberar espacio: borra partidas que no uses, cierra el fichero .pgn al terminar y guarda copias de seguridad de vez en cuando.</li>
+        </ul>
+      </details>
+
+      <details id="help-ajustes">
+        <summary>🛠 17. Ajustes y personalización</summary>
+        <ul>
+          <li><b>Barra superior</b>: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.</li>
+          <li><b>⚙ Ajustes</b>: motor (automático o sólo interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, coordenadas, mostrar jugadas legales y recordar la partida al recargar.</li>
+          <li><b>🔊</b> activa o silencia los sonidos.</li>
+          <li>Todos los ajustes se recuerdan en este navegador.</li>
+        </ul>
+      </details>
+
+      <details id="help-atajos">
+        <summary>⌨ 18. Atajos de teclado</summary>
+        <table class="kbd-table">
+          <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Jugada anterior / siguiente</td></tr>
+          <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Cambiar entre variantes alternativas</td></tr>
+          <tr><td><kbd>Inicio</kbd> <kbd>Fin</kbd></td><td>Principio / final de la línea</td></tr>
+          <tr><td><kbd>Espacio</kbd></td><td>Reproducción automática</td></tr>
+          <tr><td><kbd>F</kbd></td><td>Girar el tablero</td></tr>
+          <tr><td><kbd>E</kbd></td><td>Activar / pausar el análisis continuo</td></tr>
+          <tr><td><kbd>M</kbd></td><td>Marcar la posición</td></tr>
+          <tr><td><kbd>?</kbd></td><td>Abrir esta ayuda</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Cerrar ventanas</td></tr>
+        </table>
+        <p class="small">Los atajos no funcionan mientras escribes en un recuadro de texto.</p>
+      </details>
+
+      <details id="help-instalar">
+        <summary>📲 19. Versión web, instalación y uso sin conexión</summary>
+        <ul>
+          <li><b>Versión web</b>: <a href="https://rkarillo-tech.github.io/ajedrezbase/" target="_blank" rel="noopener">rkarillo-tech.github.io/ajedrezbase</a>. Es la forma recomendada: Stockfish y las consultas a Lichess funcionan sin problemas y tu biblioteca queda siempre en la misma dirección.</li>
+          <li><b>Instalarla</b>: en la versión web aparece el botón <b>⬇ Instalar</b> arriba (o el icono de instalar en la barra de direcciones de Chrome y Edge). En el móvil: Android con Chrome → menú ⋮ → «Instalar aplicación»; iPhone/iPad con Safari → Compartir → «Añadir a pantalla de inicio».</li>
+          <li><b>Sin conexión</b>: una vez abierta con internet, la aplicación (incluido Stockfish) queda guardada y funciona sin conexión. Sólo necesitan internet el explorador de Lichess, la nube y las tablas Syzygy.</li>
+          <li><b>Actualizaciones</b>: con conexión siempre se carga la última versión; no hay que hacer nada.</li>
+          <li><b>Archivo suelto</b>: también puedes descargar <code>index.html</code> y abrirlo con doble clic. Funciona igual, pero la biblioteca de esa copia es distinta de la de la versión web.</li>
+        </ul>
+      </details>
+
+      <details id="help-problemas">
+        <summary>🩺 20. Problemas frecuentes</summary>
+        <dl class="faq">
+          <dt>«Lichess ha rechazado la consulta: hace falta un token personal»</dt>
+          <dd>Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 13. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.</dd>
+          <dt>«Motor interno ⚠» en vez de Stockfish</dt>
+          <dd>El navegador no ha dejado arrancar Stockfish (pasa en vistas previas de archivos o sin conexión la primera vez). Abre la versión web (<a href="https://rkarillo-tech.github.io/ajedrezbase/" target="_blank" rel="noopener">rkarillo-tech.github.io/ajedrezbase</a>) o el archivo directamente con Chrome, Edge o Firefox (doble clic).</dd>
+          <dt>Importo en inglés y veo las jugadas en español</dt>
+          <dd>Es normal: la «Notación» de la barra superior sólo cambia cómo se muestran. Elige «Inglesa» si prefieres verlas como en el PGN.</dd>
+          <dt>«No aparece mi biblioteca»</dt>
+          <dd>La biblioteca depende del navegador y de la dirección desde la que abres la página. Ábrela siempre igual, o usa ⬇ Copia de seguridad / ⬆ Restaurar copia para pasarla.</dd>
+          <dt>El gráfico sale casi vacío</dt>
+          <dd>Sólo se dibuja con las posiciones evaluadas. Pulsa 📈 Completar gráfico o 🤖 Analizar y comentar.</dd>
+          <dt>«Jugada ilegal o no reconocida» al importar</dt>
+          <dd>Revisa esa jugada en el texto (a veces el PGN tiene erratas o mezcla notaciones). Prueba a fijar la «Notación de entrada» en vez de «Automática». Lo importado hasta ese punto se conserva.</dd>
+          <dt>La nube dice que la posición no está</dt>
+          <dd>La nube de Lichess sólo guarda posiciones que alguien analizó a fondo. Usa el motor local.</dd>
+        </dl>
+      </details>
+    </div>
+  </div>
+</div>

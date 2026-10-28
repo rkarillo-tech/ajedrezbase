@@ -1,0 +1,24 @@
+# Ejecuta todas las pruebas en cada cambio y comprueba que index.html, sw.js y GUIA.md están al día con src/.
+name: Pruebas
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Los ficheros generados coinciden con el código fuente
+        run: python3 build.py --check
+      - name: Núcleo (reglas, motor interno, PGN)
+        run: node tests/test_reglas.js
+      - name: Instalar Playwright
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Aplicación en el navegador
+        run: python3 tests/test_app.py

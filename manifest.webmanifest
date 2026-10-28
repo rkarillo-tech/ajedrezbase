@@ -1,0 +1,18 @@
+{
+  "name": "AjedrezBase",
+  "short_name": "AjedrezBase",
+  "description": "Analiza, comenta y entrena tus partidas de ajedrez: variantes, PGN, motor Stockfish, aperturas, finales, biblioteca y marcadores.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0e14",
+  "theme_color": "#0b0e14",
+  "categories": ["games", "education", "productivity"],
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,969 @@
+<!doctype html>
+<!--
+  AjedrezBase {{VERSION}} · https://github.com/rkarillo-tech/ajedrezbase
+
+  MIT License
+  
+  Copyright (c) 2026 Rafael Karino Arillo (rkarillo-tech)
+  
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  Componentes de terceros: ver «Licencia y créditos» en la aplicación y THIRD_PARTY_NOTICES.md.
+  Stockfish (GPLv3) no forma parte de este archivo: se descarga aparte desde cdnjs al usarlo.
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Suite de análisis de ajedrez en un único archivo: tablero, variantes, PGN, motor, aperturas, finales y entrenador.">
+<title>AjedrezBase</title>
+<meta name="theme-color" content="#0b0e14">
+<link rel="icon" type="image/svg+xml" href="{{ICON_SVG}}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ICON_PNG32}}">
+<style>
+:root {
+  --bg: #0b0e14; --panel: #141a24; --panel2: #1c2433; --panel3: #263147;
+  --text: #eef2f8; --muted: #94a3b8; --accent: #66bb6a; --accent-dim: #214328;
+  --warn: #ffa726; --danger: #ef5350; --info: #29b6f6; --brilliant: #26c6da; --mistake: #ff7043;
+  --light: #f0d9b5; --dark: #b58863; --border: #2c384e;
+  --last: rgba(255, 235, 59, 0.42);
+}
+[data-theme="green"] { --light: #ebecd0; --dark: #739552; }
+[data-theme="blue"] { --light: #dee3e6; --dark: #5d8aa8; }
+[data-theme="slate"] { --light: #c8d0d8; --dark: #566370; }
+[data-theme="coral"] { --light: #f4e1d2; --dark: #d0846a; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { color-scheme: dark; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.42 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+a { color: var(--info); }
+code { background: var(--panel2); padding: 0 4px; border-radius: 4px; }
+
+header {
+  padding: 9px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 30;
+}
+.brand-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+h1 { font-size: 1.12rem; margin: 0; white-space: nowrap; }
+.eco-banner {
+  background: var(--panel2); border: 1px solid var(--border); padding: 3px 9px; border-radius: 6px;
+  font-size: 0.8rem; color: var(--info); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw;
+}
+.header-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.header-actions select { width: auto; }
+
+main {
+  max-width: 1600px; margin: auto; padding: 12px;
+  display: grid; grid-template-columns: minmax(320px, 620px) minmax(380px, 1fr); gap: 14px; align-items: start;
+}
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 11px; padding: 12px; min-width: 0; }
+
+/* Barras de jugador */
+.player-bar {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  background: var(--panel2); padding: 5px 11px; border-radius: 7px; margin-bottom: 6px; font-size: 0.88rem; border: 1px solid var(--border); min-height: 32px;
+}
+.player-bar.bottom { margin-top: 6px; margin-bottom: 0; }
+.player-bar.to-move { border-color: var(--accent); }
+.player-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-elo { color: var(--muted); font-weight: 400; margin-left: 4px; }
+.captured-pieces { font-size: 1.02rem; letter-spacing: -2px; color: var(--muted); white-space: nowrap; }
+.mat-badge { background: var(--panel3); color: var(--accent); font-weight: 700; padding: 1px 6px; border-radius: 4px; font-size: 0.76rem; margin-left: 5px; }
+
+/* Barra de evaluación + tablero */
+.board-stage { display: grid; grid-template-columns: 24px 1fr; gap: 7px; align-items: stretch; }
+.eval-bar-outer { background: #2a2f38; border: 2px solid var(--border); border-radius: 4px; position: relative; overflow: hidden; }
+.eval-bar-white { background: #f2f4f8; width: 100%; height: 50%; transition: height 0.3s ease; position: absolute; bottom: 0; left: 0; }
+.eval-bar-outer.flipped .eval-bar-white { bottom: auto; top: 0; }
+.eval-bar-outer.hidden-eval .eval-bar-white { height: 50% !important; opacity: .25; }
+.eval-score-text { position: absolute; left: 0; right: 0; z-index: 3; font-size: 9.5px; font-weight: 800; text-align: center; padding: 3px 0; }
+.eval-score-text.top { top: 0; color: #e2e8f0; }
+.eval-score-text.bot { bottom: 0; color: #1e293b; }
+.eval-bar-outer.flipped .eval-score-text.top { color: #1e293b; }
+.eval-bar-outer.flipped .eval-score-text.bot { color: #e2e8f0; }
+
+.board-wrap { position: relative; touch-action: none; }
+.board {
+  display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1;
+  border: 3px solid var(--border); border-radius: 4px; overflow: hidden; position: relative; user-select: none; -webkit-user-select: none;
+}
+.board.editor-cursor .square { cursor: grab; }
+.board.locked .square { cursor: default; }
+.drawing-layer { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); pointer-events: none; z-index: 6; }
+.square { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer; }
+.square.light { background: var(--light); color: #222; }
+.square.dark { background: var(--dark); color: #222; }
+.square.has-own { cursor: grab; }
+.piece-holder { position: relative; width: 88%; height: 88%; display: flex; align-items: center; justify-content: center; z-index: 2; pointer-events: none; }
+.square.drag-origin .piece-holder { opacity: .28; }
+.piece-svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.36)); }
+.unicode-piece { font-size: clamp(26px, 4.6vw, 52px); line-height: 1; }
+.unicode-piece.w { color: #fff; text-shadow: 0 1px 2px #111, 1px 0 1px #111, -1px 0 1px #111; }
+.unicode-piece.b { color: #161616; text-shadow: 0 1px 1px rgba(255,255,255,0.45); }
+.drag-ghost { position: fixed; pointer-events: none; z-index: 100; transform: translate(-50%, -50%); }
+.drag-ghost .piece-svg { filter: drop-shadow(0 6px 6px rgba(0,0,0,0.45)); }
+
+.square.selected { box-shadow: inset 0 0 0 4px #f6e05e; }
+.square.last::before { content: ""; position: absolute; inset: 0; background: var(--last); }
+.square.in-check { background-image: radial-gradient(circle, rgba(239,83,80,0.95) 0%, rgba(239,83,80,0.35) 55%, rgba(239,83,80,0) 78%); }
+.square.hint-sq { box-shadow: inset 0 0 0 5px var(--info); }
+.square.hover-target { box-shadow: inset 0 0 0 4px rgba(255,255,255,.65); }
+.square.flash-bad { animation: flashbad .5s ease 2; }
+@keyframes flashbad { 50% { box-shadow: inset 0 0 0 6px var(--danger); } }
+.square.target::after { content: ""; position: absolute; width: 26%; height: 26%; border-radius: 50%; background: rgba(20, 85, 30, 0.5); z-index: 3; }
+.square.target.occupied::after { width: 92%; height: 92%; background: transparent; border: 6px solid rgba(20, 85, 30, 0.5); }
+.coord { position: absolute; font-size: 10px; font-weight: 700; left: 3px; top: 1px; opacity: .8; pointer-events: none; z-index: 3; }
+.coord.file { left: auto; top: auto; right: 3px; bottom: 0; }
+.square.light .coord { color: var(--dark); }
+.square.dark .coord { color: var(--light); }
+
+/* Modales */
+.promo-modal { position: absolute; inset: 0; background: rgba(15, 19, 26, 0.8); display: none; align-items: center; justify-content: center; z-index: 20; }
+.promo-modal.open { display: flex; }
+.promo-box { background: var(--panel); border: 1px solid var(--border); padding: 14px; border-radius: 12px; text-align: center; }
+.promo-choices { display: flex; gap: 8px; margin-top: 10px; }
+.promo-btn { width: 62px; height: 62px; padding: 6px; background: var(--panel2); border-radius: 9px; }
+.modal-back { position: fixed; inset: 0; background: rgba(5, 8, 12, .7); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+.modal-back.open { display: flex; }
+.modal { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; width: min(560px, 100%); max-height: 90vh; overflow: auto; }
+.modal h2 { font-size: 1.05rem; margin-bottom: 10px; }
+.modal.wide { width: min(880px, 100%); }
+.help-tools { display: flex; gap: 6px; margin-bottom: 8px; position: sticky; top: -16px; background: var(--panel); padding: 4px 0; z-index: 2; }
+.help-tools input { flex: 1; }
+.help-body details, .help-body .steps { scroll-margin-top: 64px; }
+.help-body details { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; background: #121823; }
+.help-body summary { padding: 9px 12px; font-weight: 700; color: var(--text); font-size: .9rem; margin: 0; }
+.help-body details[open] summary { border-bottom: 1px solid var(--border); }
+.help-body details > :not(summary) { margin-left: 12px; margin-right: 12px; }
+.help-body ul, .help-body ol { padding-left: 20px; font-size: .86rem; line-height: 1.55; }
+.help-body li { margin: 3px 0; }
+.help-body p { font-size: .86rem; }
+.help-body .example { background: #13261a; border-left: 3px solid var(--accent); padding: 7px 10px; border-radius: 6px; font-size: .84rem; margin: 8px 12px 10px; }
+.help-body .steps { background: #13202e; border-left: 3px solid var(--info); padding: 8px 10px; border-radius: 6px; font-size: .84rem; margin: 8px 12px 10px; }
+.help-body .warn-note { background: #2b2210; border-left: 3px solid var(--warn); padding: 7px 10px; border-radius: 6px; font-size: .84rem; }
+.faq dt { font-weight: 700; font-size: .86rem; margin-top: 8px; }
+.faq dd { margin: 2px 0 6px 12px; font-size: .84rem; color: #c8d1de; }
+.token-help { background: #13202e; border: 1px solid var(--info); border-radius: 8px; padding: 9px 11px; font-size: .84rem; margin-top: 8px; }
+.token-help ol { padding-left: 20px; margin: 6px 0; }
+.kbd-table td { padding: 3px 8px; border-bottom: 1px solid var(--border); }
+kbd { background: var(--panel3); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: .8rem; }
+
+/* Motor */
+.engine-box { margin-top: 8px; background: #101520; border: 1px solid var(--border); border-radius: 7px; font-size: 0.83rem; }
+.engine-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 9px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.engine-head .left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.engine-badge { color: var(--accent); font-weight: 700; white-space: nowrap; }
+.engine-meta { color: var(--muted); font-size: .76rem; white-space: nowrap; }
+.engine-lines { padding: 3px 0; min-height: 26px; }
+.pv-line { display: flex; gap: 8px; align-items: baseline; padding: 3px 9px; cursor: pointer; white-space: nowrap; overflow: hidden; }
+.pv-line:hover { background: rgba(255,255,255,.04); }
+.pv-score { font-weight: 800; min-width: 50px; text-align: right; font-family: ui-monospace, monospace; }
+.pv-score.pos { color: #e2e8f0; }
+.pv-score.neg { color: #94a3b8; }
+.pv-moves { color: var(--info); overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, monospace; }
+.pv-empty { color: var(--muted); padding: 4px 9px; }
+.switch { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: .78rem; cursor: pointer; white-space: nowrap; }
+.switch input { width: auto; margin: 0; }
+
+/* Gráfico */
+.eval-chart-wrap { margin-top: 8px; background: #101520; border: 1px solid var(--border); border-radius: 7px; height: 64px; position: relative; cursor: pointer; overflow: hidden; }
+.eval-chart-wrap svg { width: 100%; height: 100%; display: block; }
+.chart-msg { position: absolute; inset: 0; display: flex; gap: 10px; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: .78rem; padding: 0 10px; cursor: default; flex-wrap: wrap; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .72rem; color: var(--muted); margin-top: 3px; }
+.chart-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
+
+/* Botones */
+.controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; align-items: center; }
+button, .button {
+  background: var(--panel2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; cursor: pointer;
+  font: inherit; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 5px; transition: background 0.12s, border-color .12s;
+}
+button:hover:not(:disabled) { background: var(--panel3); border-color: #4b5d7c; }
+button:disabled { opacity: .35; cursor: not-allowed; }
+.primary { background: #26593a; border-color: #43875d; }
+.info-btn { background: #18435e; border-color: #29b6f6; color: #e1f5fe; }
+.warn-btn { background: #593d16; border-color: var(--warn); color: #ffe0b2; }
+.danger { border-color: #7c3b3b; color: #ffcdd2; }
+.sm-btn { padding: 3px 7px; font-size: 0.77rem; }
+.on { background: #26593a; border-color: #43875d; }
+.status-line { margin-top: 6px; font-size: .84rem; font-weight: 600; min-height: 1.2em; }
+.status-line.check { color: var(--warn); }
+.status-line.over { color: var(--danger); }
+
+/* Lista de jugadas (árbol) */
+.moves-box { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); background: #0f141e; border-radius: 7px; padding: 7px 8px; margin-top: 6px; line-height: 1.85; font-size: .9rem; }
+.mv { padding: 1px 4px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+.mv:hover { background: var(--panel3); }
+.mv.active { background: var(--accent-dim); outline: 1px solid var(--accent); color: #fff; font-weight: 700; }
+.mvnum { color: var(--muted); margin-left: 3px; font-size: .84rem; }
+.mvcomment { color: #b6c2d3; font-style: italic; font-size: .82rem; margin: 0 3px; }
+.var { display: block; margin: 2px 0 2px 10px; padding-left: 8px; border-left: 2px solid var(--panel3); color: #c3cad6; font-size: .85rem; line-height: 1.7; }
+.var .var { margin-left: 6px; }
+.empty-moves { color: var(--muted); font-size: .84rem; }
+.nag { font-weight: 800; margin-left: 1px; }
+.nag-good { color: var(--accent); }
+.nag-brilliant { color: var(--brilliant); }
+.nag-inacc { color: var(--warn); }
+.nag-mistake { color: var(--mistake); }
+.nag-blunder { color: var(--danger); }
+.nag-pos { color: var(--info); margin-left: 3px; font-weight: 700; }
+
+/* Pestañas */
+.mode-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #0e131c; padding: 4px; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 12px; }
+.tab-btn { padding: 7px 5px; border: 1px solid transparent; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.79rem; border-radius: 6px; justify-content: center; }
+.tab-btn.active { background: var(--panel2); color: var(--text); border-color: var(--border); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* Tablas */
+.cb-table-wrap { max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 7px; background: #0f141e; margin-top: 8px; }
+table.cb-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.cb-table th, .cb-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #1e2738; }
+.cb-table th { background: var(--panel2); color: var(--muted); position: sticky; top: 0; z-index: 2; }
+.cb-table tbody tr:hover { background: rgba(255,255,255,0.04); cursor: pointer; }
+.cb-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.wdl-bar { display: flex; height: 14px; border-radius: 3px; overflow: hidden; min-width: 100px; border: 1px solid #333; font-size: 9px; font-weight: 700; line-height: 13px; }
+.wdl-w { background: #e2e8f0; color: #111; text-align: center; }
+.wdl-d { background: #64748b; color: #fff; text-align: center; }
+.wdl-b { background: #1e293b; color: #cbd5e1; text-align: center; }
+
+/* Informe */
+.progress { height: 6px; background: var(--panel2); border-radius: 4px; overflow: hidden; margin: 8px 0 4px; display: none; }
+.progress.show { display: block; }
+.progress > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.report { display: none; margin: 8px 0; }
+.report.show { display: block; }
+.report table { width: 100%; border-collapse: collapse; font-size: .82rem; text-align: center; }
+.report th, .report td { padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.report th:first-child, .report td:first-child { text-align: left; color: var(--muted); }
+.report .acc { font-size: 1.05rem; font-weight: 800; }
+
+/* Formularios */
+.palette-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 6px; }
+.palette-btn { aspect-ratio: 1; padding: 4px; border-radius: 7px; background: var(--panel2); border: 2px solid var(--border); justify-content: center; touch-action: none; font-size: 1.25rem; cursor: grab; }
+.palette-btn .pal-piece { width: 78%; height: 78%; pointer-events: none; }
+.palette-row .palette-btn { background: var(--light); }
+.palette-row .palette-btn:hover:not(:disabled) { background: var(--dark); }
+.palette-row .palette-btn.active { background: #ffd28a; border-color: var(--warn); box-shadow: 0 0 0 2px var(--warn); }
+.palette-row, .editor-panel .small { user-select: none; -webkit-user-select: none; }
+#topBar { scroll-margin-top: 64px; }
+.editor-panel { background: #101520; border: 1px solid var(--warn); border-radius: 9px; padding: 10px; }
+body.editing #toolsPanel > :not(#editorPanel) { display: none; }
+body.editing #engineBox, body.editing #evalChartWrap, body.editing #chartLegend, body.editing #moves, body.editing #varControls, body.editing #navControls, body.editing #statusText { display: none; }
+body.editing .board { border-color: var(--warn); }
+body.editing .eval-bar-outer { visibility: hidden; }
+.palette-btn.active { border-color: var(--warn); background: rgba(255, 167, 38, 0.16); }
+h2 { font-size: 0.94rem; margin: 0 0 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+h3 { font-size: .86rem; margin: 10px 0 4px; color: var(--muted); }
+label { display: block; color: var(--muted); font-size: .79rem; margin: 7px 0 3px; }
+input, textarea, select { width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: #0e131d; color: var(--text); font: inherit; font-size: 0.86rem; }
+input[type=checkbox] { width: auto; }
+textarea { resize: vertical; min-height: 60px; }
+#moveInput { font-family: ui-monospace, monospace; font-size: .82rem; min-height: 80px; }
+.section { border-top: 1px solid var(--border); margin-top: 11px; padding-top: 10px; }
+.small { font-size: .78rem; color: var(--muted); margin: 3px 0 0; }
+.msg-ok { color: var(--accent); }
+.msg-err { color: var(--danger); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+details > summary { cursor: pointer; color: var(--muted); font-size: .84rem; margin: 6px 0; }
+.chk-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0; }
+.chk-row label { display: inline-flex; align-items: center; gap: 4px; margin: 0; color: var(--text); }
+.note-box { background: #101520; border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; margin-top: 8px; font-size: .82rem; }
+
+.saved-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 190px; overflow-y: auto; }
+.saved-item { display: flex; gap: 6px; align-items: center; background: var(--panel2); border: 1px solid var(--border); padding: 3px 6px; border-radius: 6px; font-size: 0.82rem; }
+.saved-item .name { flex: 1; text-align: left; background: transparent; border: 0; padding: 2px; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saved-item.due { border-color: var(--warn); }
+.srs-pill { font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; background: var(--panel3); white-space: nowrap; }
+.srs-pill.due { background: var(--warn); color: #111; font-weight: 700; }
+.srs-pill.ok { background: var(--accent-dim); color: #c8e6c9; }
+
+/* Partida actual */
+.game-card { background: #101520; border: 1px solid var(--border); border-radius: 9px; padding: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.gc-row { display: flex; gap: 6px; align-items: center; }
+.gc-row input { flex: 1; min-width: 0; }
+.star-btn { font-size: 1.25rem; line-height: 1; padding: 4px 8px; color: #ffd54f; }
+.star-btn.on { background: #4a3b10; border-color: #ffd54f; }
+.save-state { font-size: .76rem; color: var(--muted); }
+.save-state.dirty { color: var(--warn); }
+.save-state.saved { color: var(--accent); }
+/* Ocupación */
+.storage-box { background: #101520; border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; margin-bottom: 10px; }
+.storage-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.storage-head b { margin-right: auto; }
+.meter-row { display: grid; grid-template-columns: 200px 1fr 150px; gap: 8px; align-items: center; font-size: .76rem; color: var(--muted); margin: 3px 0; }
+.meter { height: 9px; background: var(--panel2); border-radius: 5px; overflow: hidden; border: 1px solid var(--border); }
+.meter > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.meter > div.warn { background: var(--warn); }
+.meter > div.bad { background: var(--danger); }
+.meter-txt { text-align: right; font-variant-numeric: tabular-nums; }
+/* Sub-pestañas */
+.subtabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px; }
+.sub-btn { justify-content: center; font-size: .78rem; padding: 6px 4px; }
+.sub-btn.active { background: var(--panel3); border-color: var(--info); }
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-row input { flex: 1; min-width: 160px; }
+.filter-row select { width: auto; }
+.lib-table td { vertical-align: middle; }
+.lib-table tr.current { background: rgba(102,187,106,.12); }
+.lib-title { font-weight: 700; }
+.lib-sub { font-size: .74rem; color: var(--muted); }
+.tag { display: inline-block; background: var(--panel3); border-radius: 10px; padding: 0 7px; font-size: .7rem; margin: 1px 2px 1px 0; white-space: nowrap; }
+.star-cell { cursor: pointer; font-size: 1.05rem; color: #ffd54f; text-align: center; }
+.row-actions { white-space: nowrap; text-align: right; }
+/* Marcadores */
+.mark-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 460px; overflow-y: auto; }
+.mark-card { display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; align-items: start; background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 7px; cursor: pointer; }
+.mark-card:hover { border-color: #4b5d7c; }
+.mark-card.no-board { grid-template-columns: 1fr auto; }
+.mark-head { font-weight: 700; font-size: .84rem; }
+.mark-note { font-size: .82rem; color: #c8d1de; margin-top: 2px; white-space: pre-wrap; }
+.mark-meta { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+.mark-actions { display: flex; flex-direction: column; gap: 4px; }
+.mini-board { display: grid; grid-template-columns: repeat(8, 1fr); width: 96px; height: 96px; border: 1px solid #000; }
+.mini-board span { display: flex; align-items: center; justify-content: center; font-size: 11px; line-height: 1; }
+.mini-board .l { background: var(--light); }
+.mini-board .d { background: var(--dark); }
+.mini-board .w { color: #fff; text-shadow: 0 0 1px #000, 0 0 1px #000; }
+.mini-board .b { color: #111; }
+mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
+.cat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat-chip.active { background: #593d16; border-color: var(--warn); }
+.mv-mark { font-size: .72rem; margin-left: 1px; }
+.app-footer { text-align: center; color: var(--muted); font-size: .76rem; padding: 6px 12px 22px; }
+.link-inline { background: none; border: 0; padding: 0; color: var(--info); text-decoration: underline; cursor: pointer; font-size: inherit; display: inline; }
+.link-inline:hover:not(:disabled) { background: none; }
+.lic-p { font-size: .86rem; }
+.lic-text { white-space: pre-wrap; font-size: .74rem; background: #0e131d; border: 1px solid var(--border); border-radius: 6px; padding: 8px; max-height: 260px; overflow: auto; }
+.lic-table td { vertical-align: top; font-size: .8rem; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel3); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; z-index: 300; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 90vw; }
+.toast.show { opacity: 1; }
+
+@media (max-width: 980px) {
+  header { position: static; }
+  main { grid-template-columns: 1fr; }
+  .mode-tabs { grid-template-columns: repeat(3, 1fr); }
+  .meter-row { grid-template-columns: 1fr; gap: 2px; }
+  .meter-txt { text-align: left; }
+  .eco-banner { max-width: 70vw; }
+}
+@media (max-width: 520px) {
+  header { padding: 8px 10px; }
+  main { padding: 8px; }
+  .panel { padding: 9px; }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+  .subtabs { grid-template-columns: 1fr 1fr; }
+  .gc-row { flex-wrap: wrap; }
+  .mark-card { grid-template-columns: 64px 1fr; }
+  .mark-card .mark-actions { grid-column: 1 / -1; flex-direction: row; }
+  .mini-board { width: 64px; height: 64px; }
+  .hide-sm { display: none; }
+}
+</style>
+</head>
+<body data-theme="wood">
+
+<header>
+  <div class="brand-title">
+    <h1>♞ AjedrezBase</h1>
+    <span id="ecoBanner" class="eco-banner" title="Apertura detectada (reconoce transposiciones)">Posición inicial</span>
+  </div>
+  <div class="header-actions">
+    <select id="pieceStyleSelect" title="Diseño de las piezas" aria-label="Diseño de las piezas">
+      <option value="staunton">Piezas: Clásicas</option>
+      <option value="neo">Piezas: Minimalistas</option>
+      <option value="disc">Piezas: Diagrama</option>
+      <option value="unicode">Piezas: Unicode</option>
+    </select>
+    <select id="displayLang" title="Notación en pantalla" aria-label="Notación en pantalla">
+      <option value="es">Notación: Española (Cf3)</option>
+      <option value="fig">Notación: Figurines (♘f3)</option>
+      <option value="en">Notación: Inglesa (Nf3)</option>
+    </select>
+    <select id="themeSelect" title="Colores del tablero" aria-label="Colores del tablero">
+      <option value="wood">Madera</option>
+      <option value="green">Verde torneo</option>
+      <option value="blue">Azul</option>
+      <option value="slate">Pizarra</option>
+      <option value="coral">Coral</option>
+    </select>
+    <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor con el bando de abajo">🤖 Jugar vs CPU</button>
+    <select id="cpuLevel" title="Nivel de la CPU" aria-label="Nivel de la CPU" style="width:auto">
+      <option value="1">Nivel 1</option><option value="3">Nivel 2</option><option value="5">Nivel 3</option><option value="8">Nivel 4</option>
+      <option value="11">Nivel 5</option><option value="14">Nivel 6</option><option value="17">Nivel 7</option><option value="20">Nivel 8 (máx.)</option>
+    </select>
+    <button id="soundToggle" title="Sonido de las jugadas" aria-label="Sonido">🔊</button>
+    <button id="settingsBtn" title="Ajustes (motor, token de Lichess, análisis)" aria-label="Ajustes">⚙</button>
+    <button id="installBtn" class="primary" hidden title="Instalar AjedrezBase como aplicación (funciona sin conexión)">⬇ Instalar</button>
+    <button id="helpBtn" title="Guía completa y atajos (?)" aria-label="Ayuda">❓ Ayuda</button>
+    <button id="newGame" class="danger" title="Empezar una partida nueva">Nueva</button>
+  </div>
+</header>
+
+<main>
+  <!-- ================= COLUMNA IZQUIERDA ================= -->
+  <section class="panel" aria-label="Tablero">
+    <div class="player-bar" id="topBar">
+      <span class="player-name" id="topName">Negras</span>
+      <div><span id="topCaptured" class="captured-pieces"></span><span id="topAdv" class="mat-badge" hidden></span></div>
+    </div>
+
+    <div class="board-stage">
+      <div class="eval-bar-outer" id="evalBarOuter" title="Evaluación (blanco = ventaja de las blancas)">
+        <div class="eval-bar-white" id="evalBarWhite"></div>
+        <div class="eval-score-text top" id="evalTopText"></div>
+        <div class="eval-score-text bot" id="evalBotText"></div>
+      </div>
+
+      <div class="board-wrap" id="boardWrap">
+        <div id="board" class="board" role="grid" aria-label="Tablero de ajedrez"></div>
+        <svg id="drawingLayer" class="drawing-layer" viewBox="0 0 800 800" aria-hidden="true">
+          <defs>
+            <marker id="ah-green" markerWidth="4" markerHeight="4" refX="2.05" refY="2" orient="auto"><path d="M0,0 V4 L3,2 Z" fill="rgba(76,175,80,0.9)"/></marker>
+            <marker id="ah-red" markerWidth="4" markerHeight="4" refX="2.05" refY="2" orient="auto"><path d="M0,0 V4 L3,2 Z" fill="rgba(239,83,80,0.9)"/></marker>
+            <marker id="ah-blue" markerWidth="4" markerHeight="4" refX="2.05" refY="2" orient="auto"><path d="M0,0 V4 L3,2 Z" fill="rgba(41,182,246,0.9)"/></marker>
+            <marker id="ah-yellow" markerWidth="4" markerHeight="4" refX="2.05" refY="2" orient="auto"><path d="M0,0 V4 L3,2 Z" fill="rgba(255,202,40,0.95)"/></marker>
+            <marker id="ah-engine" markerWidth="4" markerHeight="4" refX="2.05" refY="2" orient="auto"><path d="M0,0 V4 L3,2 Z" fill="rgba(186,104,200,0.85)"/></marker>
+          </defs>
+          <g id="arrowsGroup"></g>
+        </svg>
+        <div id="promoModal" class="promo-modal" role="dialog" aria-label="Elegir pieza de coronación">
+          <div class="promo-box">
+            <strong>Coronación</strong>
+            <div class="promo-choices" id="promoChoices"></div>
+            <button id="cancelPromo" class="sm-btn" style="margin-top:8px">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="player-bar bottom" id="bottomBar">
+      <span class="player-name" id="bottomName">Blancas</span>
+      <div><span id="bottomCaptured" class="captured-pieces"></span><span id="bottomAdv" class="mat-badge" hidden></span></div>
+    </div>
+
+
+    <!-- Motor -->
+    <div class="engine-box" id="engineBox">
+      <div class="engine-head">
+        <div class="left">
+          <span id="engineSourceBadge" class="engine-badge">⚙ Motor</span>
+          <span id="engineMeta" class="engine-meta"></span>
+        </div>
+        <div class="controls" style="margin:0">
+          <label class="switch" title="Análisis continuo de la posición (tecla E)"><input type="checkbox" id="liveToggle"> Analizar</label>
+          <label class="switch" title="Flecha con la mejor jugada"><input type="checkbox" id="arrowToggle"> Flecha</label>
+          <button id="playBestMoveBtn" class="sm-btn" title="Jugar la mejor jugada del motor">⚡ Jugar</button>
+          <button id="cloudStockfishBtn" class="sm-btn info-btn" title="Evaluación profunda de Stockfish en la nube de Lichess">☁ Nube</button>
+        </div>
+      </div>
+      <div class="engine-lines" id="engineLines"><div class="pv-empty">Iniciando motor…</div></div>
+    </div>
+
+    <div class="eval-chart-wrap" id="evalChartWrap" title="Probabilidad de ganar a lo largo de la línea principal: arriba ventaja blanca, abajo negra. Clic para saltar a esa jugada.">
+      <svg id="evalChartSvg" viewBox="0 0 600 64" preserveAspectRatio="none"></svg>
+      <div id="chartMsg" class="chart-msg" hidden></div>
+    </div>
+    <div id="chartLegend" class="chart-legend" hidden>
+      <span>▲ arriba ventaja blancas · ▼ abajo negras · - - igualdad · <span style="color:#ffa726">|</span> posición actual (clic para saltar)</span>
+      <span><i style="background:#ef5350"></i>??</span><span><i style="background:#ff7043"></i>?</span><span><i style="background:#ffca28"></i>?!</span><span><i style="background:#26c6da"></i>!</span>
+    </div>
+
+    <div class="controls" id="navControls">
+      <button id="startBtn" title="Inicio (Inicio)" aria-label="Ir al inicio">|◀</button>
+      <button id="backBtn" title="Atrás (←)" aria-label="Atrás">◀</button>
+      <button id="playBtn" title="Reproducción automática (Espacio)">▶ Auto</button>
+      <button id="forwardBtn" title="Adelante (→)" aria-label="Adelante">▶</button>
+      <button id="endBtn" title="Final (Fin)" aria-label="Ir al final">▶|</button>
+      <button id="flipBtn" title="Girar tablero (F)">⇅ Girar</button>
+      <button id="editPosBtn" class="warn-btn" title="Colocar las piezas libremente y empezar desde esa posición">✏ Colocar piezas</button>
+      <button id="undoBtn" class="danger" title="Borrar esta jugada y todo lo que sigue">✂ Cortar</button>
+    </div>
+    <div id="statusText" class="status-line" aria-live="polite"></div>
+
+    <div id="moves" class="moves-box" aria-label="Jugadas y variantes"></div>
+    <div class="controls" id="varControls">
+      <button id="promoteVarBtn" class="sm-btn" title="Subir esta variante un puesto">⬆ Promover variante</button>
+      <button id="mainVarBtn" class="sm-btn" title="Convertir esta línea en la principal">★ Hacer principal</button>
+      <button id="clearShapesBtn" class="sm-btn" title="Borrar flechas y círculos de esta posición">🧽 Borrar flechas</button>
+      <button id="markBtn2" class="sm-btn warn-btn" title="Marcar esta posición">📌 Marcar</button>
+      <span class="small hide-sm" style="margin-left:auto">Clic derecho: flechas/círculos (⇧ rojo, Alt azul, ⇧+Alt amarillo)</span>
+    </div>
+  </section>
+
+  <!-- ================= COLUMNA DERECHA ================= -->
+  <section class="panel" id="toolsPanel" aria-label="Herramientas">
+    <!-- Editor de posición: ocupa la columna de herramientas mientras se edita -->
+    <div id="editorPanel" class="editor-panel" hidden>
+      <h2><span>✏ Editor de posición</span><button id="edCancelBtn" class="sm-btn danger">✖ Salir sin cambios</button></h2>
+      <p class="small">• <b>Arrastra</b> cualquier pieza a otra casilla; suéltala <b>fuera del tablero</b> para quitarla.<br>
+        • <b>Añade</b> piezas arrastrándolas desde la paleta, o elige una y pulsa casillas (pulsar de nuevo la quita).<br>
+        • Con <b>✋</b> también puedes mover con dos clics (origen y destino). Clic derecho borra.</p>
+      <div class="palette-row" id="paletteWhite"></div>
+      <div class="palette-row" id="paletteBlack"></div>
+      <div class="grid2">
+        <div>
+          <label for="edTurn">Juegan</label>
+          <select id="edTurn"><option value="w">Blancas</option><option value="b">Negras</option></select>
+        </div>
+        <div>
+          <label>Enroques posibles</label>
+          <div class="chk-row">
+            <label><input type="checkbox" id="edCK"> O-O ♔</label><label><input type="checkbox" id="edCQ"> O-O-O ♔</label>
+            <label><input type="checkbox" id="edCk"> O-O ♚</label><label><input type="checkbox" id="edCq"> O-O-O ♚</label>
+          </div>
+        </div>
+      </div>
+      <label for="edFen">FEN (puedes pegar una aquí)</label>
+      <input id="edFen" spellcheck="false" style="font-family:ui-monospace,monospace; font-size:.78rem">
+      <div class="controls">
+        <button id="edStartPosBtn" class="sm-btn">♟ Posición inicial</button>
+        <button id="edCurrentBtn" class="sm-btn" title="Volver a la posición que había en el tablero al abrir el editor">↺ Posición de la partida</button>
+        <button id="edKingsBtn" class="sm-btn">♔♚ Sólo reyes</button>
+        <button id="edClearBoardBtn" class="sm-btn">🧹 Vaciar</button>
+        <button id="edFlipBtn" class="sm-btn">⇅ Girar</button>
+      </div>
+      <div class="controls">
+        <button id="edApplyBtn" class="primary">✔ Empezar desde esta posición</button>
+        <button id="edPlayCpuBtn" class="info-btn" title="Juegas con el bando de abajo del tablero">🤖 Jugar desde aquí vs CPU</button>
+      </div>
+      <div id="edMsg" class="small" aria-live="polite"></div>
+    </div>
+
+
+    <!-- Partida actual: guardar, favorita, etiquetas, marcar -->
+    <div class="game-card" id="gameCard">
+      <div class="gc-row">
+        <button id="favToggle" class="star-btn" title="Marcar como favorita (la guarda en la biblioteca)" aria-label="Favorita">☆</button>
+        <input id="gameName" placeholder="Título de la partida…" aria-label="Título de la partida">
+        <button id="saveGame" class="primary" title="Guardar esta partida en tu biblioteca">💾 Guardar en biblioteca</button>
+      </div>
+      <div class="gc-row">
+        <input id="gameTags" list="tagList" placeholder="Etiquetas separadas por comas: repertorio, finales…" aria-label="Etiquetas">
+        <datalist id="tagList"></datalist>
+        <button id="markBtn" class="warn-btn" title="Marcar esta posición como idea, táctica, error típico…">📌 Marcar posición</button>
+      </div>
+      <div id="saveState" class="save-state">No guardada en la biblioteca</div>
+    </div>
+
+    <div class="mode-tabs" role="tablist">
+      <button class="tab-btn active" data-tab="study" role="tab">📖 Estudio</button>
+      <button class="tab-btn" data-tab="explorer" role="tab">🌍 Aperturas</button>
+      <button class="tab-btn" data-tab="library" role="tab">📚 Biblioteca</button>
+      <button class="tab-btn" data-tab="endgames" role="tab">👑 Finales</button>
+      <button class="tab-btn" data-tab="tools" role="tab">🎯 Entrenar</button>
+    </div>
+
+    <!-- ===== PESTAÑA 1: ESTUDIO ===== -->
+    <div id="tab-study" class="tab-pane active" role="tabpanel">
+      <h2>
+        <span>Análisis de la partida</span>
+        <span class="controls" style="margin:0">
+          <button id="autoAnnotateBtn" class="warn-btn sm-btn" title="Evalúa cada jugada de la línea principal, marca errores y redacta comentarios">🤖 Analizar y comentar</button>
+          <button id="cancelAnalysisBtn" class="sm-btn danger" hidden>⏹ Detener</button>
+        </span>
+      </h2>
+      <div class="progress" id="analysisProgress"><div></div></div>
+      <div id="analysisStatus" class="small"></div>
+      <div id="reportBox" class="report">
+        <table>
+          <thead><tr><th></th><th id="repWName">Blancas</th><th id="repBName">Negras</th></tr></thead>
+          <tbody>
+            <tr><td>Precisión</td><td class="acc" id="repWAcc">–</td><td class="acc" id="repBAcc">–</td></tr>
+            <tr><td>Pérdida media (cp)</td><td id="repWAcpl">–</td><td id="repBAcpl">–</td></tr>
+            <tr><td><span class="nag-brilliant">!</span> Única / muy buena</td><td id="repWGood">0</td><td id="repBGood">0</td></tr>
+            <tr><td><span class="nag-inacc">?!</span> Imprecisiones</td><td id="repWInacc">0</td><td id="repBInacc">0</td></tr>
+            <tr><td><span class="nag-mistake">?</span> Errores</td><td id="repWMistake">0</td><td id="repBMistake">0</td></tr>
+            <tr><td><span class="nag-blunder">??</span> Errores graves</td><td id="repWBlunder">0</td><td id="repBBlunder">0</td></tr>
+          </tbody>
+        </table>
+        <p class="small">Clasificación por pérdida de probabilidad de ganar (como Lichess). Pulsa una jugada para leer su comentario.</p>
+      </div>
+
+      <details id="headersDetails">
+        <summary>Datos de la partida (cabeceras PGN)</summary>
+        <div class="grid2">
+          <div><label for="hWhite">Blancas</label><input id="hWhite" data-h="White"></div>
+          <div><label for="hBlack">Negras</label><input id="hBlack" data-h="Black"></div>
+          <div><label for="hWhiteElo">Elo blancas</label><input id="hWhiteElo" data-h="WhiteElo" inputmode="numeric"></div>
+          <div><label for="hBlackElo">Elo negras</label><input id="hBlackElo" data-h="BlackElo" inputmode="numeric"></div>
+          <div><label for="hEvent">Evento</label><input id="hEvent" data-h="Event"></div>
+          <div><label for="hDate">Fecha (AAAA.MM.DD)</label><input id="hDate" data-h="Date"></div>
+          <div><label for="hSite">Lugar</label><input id="hSite" data-h="Site"></div>
+          <div><label for="hResult">Resultado</label>
+            <select id="hResult" data-h="Result"><option>*</option><option>1-0</option><option>0-1</option><option>1/2-1/2</option></select>
+          </div>
+        </div>
+      </details>
+
+      <div class="grid2">
+        <div>
+          <label for="notation">Notación de entrada</label>
+          <select id="notation">
+            <option value="auto">Automática (ES / EN / figurines / UCI)</option>
+            <option value="es">Española (Cf3, Ab5, Rf1 = rey)</option>
+            <option value="en">Inglesa (Nf3, Bb5, Rf1 = torre)</option>
+            <option value="uci">Coordenadas (e2e4)</option>
+          </select>
+        </div>
+        <div>
+          <label for="branchMode">Al mover en mitad de la partida</label>
+          <select id="branchMode">
+            <option value="variation">Crear variante</option>
+            <option value="overwrite">Sobrescribir línea</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="moveInput">Jugadas, PGN completo (con variantes y comentarios) o FEN</label>
+      <textarea id="moveInput" spellcheck="false">1. e4 e5 2. Cf3 Cc6 3. Ab5 a6 4. Aa4 Cf6 5. O-O Ae7 6. Te1 b5 7. Ab3 d6 8. c3 O-O</textarea>
+      <div class="controls">
+        <button id="importBtn" class="primary" title="Sustituye la partida actual">Importar</button>
+        <button id="appendBtn" title="Añade las jugadas desde la posición actual">Añadir desde aquí</button>
+        <button id="loadFenBtn" title="Cargar el texto como posición FEN">Cargar FEN</button>
+        <button id="copyPgnBtn" class="sm-btn">📋 Copiar PGN</button>
+        <button id="downloadPgnBtn" class="sm-btn">⬇ Descargar .pgn</button>
+        <button id="copyFenBtn" class="sm-btn">📋 Copiar FEN</button>
+      </div>
+      <div id="importResult" class="small" aria-live="polite"></div>
+
+      <div class="section">
+        <h2>
+          <span>Comentario de la posición</span>
+          <span id="currentMoveBadge" class="small">Posición inicial</span>
+        </h2>
+        <div class="controls" style="margin: 4px 0 6px">
+          <button class="sm-btn nag-btn" data-nag="!" title="Buena jugada">!</button>
+          <button class="sm-btn nag-btn" data-nag="!!" title="Jugada brillante">!!</button>
+          <button class="sm-btn nag-btn" data-nag="!?" title="Interesante">!?</button>
+          <button class="sm-btn nag-btn" data-nag="?!" title="Dudosa">?!</button>
+          <button class="sm-btn nag-btn" data-nag="?" title="Error">?</button>
+          <button class="sm-btn nag-btn" data-nag="??" title="Error grave">??</button>
+          <span style="width:6px"></span>
+          <button class="sm-btn posnag-btn" data-nag="+−" title="Las blancas ganan">+−</button>
+          <button class="sm-btn posnag-btn" data-nag="±" title="Ventaja blanca">±</button>
+          <button class="sm-btn posnag-btn" data-nag="=" title="Igualdad">=</button>
+          <button class="sm-btn posnag-btn" data-nag="∞" title="Posición poco clara">∞</button>
+          <button class="sm-btn posnag-btn" data-nag="∓" title="Ventaja negra">∓</button>
+          <button class="sm-btn posnag-btn" data-nag="−+" title="Las negras ganan">−+</button>
+          <button class="sm-btn nag-btn" data-nag="" title="Quitar símbolos">Limpiar</button>
+        </div>
+        <textarea id="annotation" placeholder="Notas tácticas y estratégicas sobre la jugada que lleva a esta posición…"></textarea>
+        <div class="controls">
+          <button id="explainMoveBtn" class="sm-btn info-btn" title="El motor analiza la jugada y redacta un comentario en español">✍ Redactar comentario con el motor</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PESTAÑA 2: APERTURAS ===== -->
+    <div id="tab-explorer" class="tab-pane" role="tabpanel">
+      <h2>
+        <span>🌍 Explorador de aperturas</span>
+        <select id="explorerDbSelect" style="width:auto; padding:3px 7px" aria-label="Base de datos">
+          <option value="masters">Maestros (OTB, +2200)</option>
+          <option value="lichess">Lichess (partidas online)</option>
+          <option value="local">Mi biblioteca + .pgn abierto (sin conexión)</option>
+        </select>
+      </h2>
+      <p class="small" id="explorerHint">Estadísticas reales para la posición del tablero. Pulsa una jugada para hacerla.</p>
+      <div id="explorerOpening" class="small" style="color:var(--info); font-weight:600"></div>
+      <div class="cb-table-wrap">
+        <table class="cb-table">
+          <thead><tr><th>Jugada</th><th class="num">Partidas</th><th>Blancas / Tablas / Negras</th><th class="num hide-sm">Elo medio</th></tr></thead>
+          <tbody id="explorerMovesBody"><tr><td colspan="4" class="small">Abre esta pestaña para consultar la posición.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="section">
+        <h2>Partidas en esta posición</h2>
+        <div class="cb-table-wrap" style="max-height:170px">
+          <table class="cb-table">
+            <thead><tr><th>Blancas</th><th>Negras</th><th>Res.</th><th>Año</th><th></th></tr></thead>
+            <tbody id="explorerGamesBody"><tr><td colspan="5" class="small">—</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <h2>Enciclopedia ECO local (sin conexión)</h2>
+        <input id="ecoSearchInput" placeholder="Buscar apertura o código (Siciliana, Najdorf, Caro-Kann, Londres, C60…)" aria-label="Buscar apertura">
+        <div class="cb-table-wrap" style="max-height:180px">
+          <table class="cb-table"><tbody id="ecoLocalList"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PESTAÑA 3: BIBLIOTECA ===== -->
+    <div id="tab-library" class="tab-pane" role="tabpanel">
+      <div class="storage-box" id="storageBox">
+        <div class="storage-head">
+          <b>💾 Ocupación</b>
+          <span id="storagePersist" class="small"></span>
+          <button id="persistBtn" class="sm-btn" title="Pide al navegador que no borre estos datos aunque le falte espacio">🔒 Proteger datos</button>
+          <button id="storageRefreshBtn" class="sm-btn" title="Actualizar">↻</button>
+        </div>
+        <div class="meter-row"><span>Biblioteca (permanente)</span><div class="meter"><div id="meterLib"></div></div><span id="meterLibTxt" class="meter-txt"></span></div>
+        <div class="meter-row"><span>Fichero .pgn abierto (sólo memoria)</span><div class="meter"><div id="meterColl"></div></div><span id="meterCollTxt" class="meter-txt"></span></div>
+        <div id="storageDetail" class="small"></div>
+      </div>
+
+      <div class="subtabs" role="tablist">
+        <button class="sub-btn active" data-sub="games">📚 Mis partidas <span id="libCount" class="srs-pill">0</span></button>
+        <button class="sub-btn" data-sub="marks">📌 Marcadores <span id="markCount" class="srs-pill">0</span></button>
+        <button class="sub-btn" data-sub="search">🔎 Buscar notas</button>
+        <button class="sub-btn" data-sub="collection">🗂 Abrir .pgn <span id="collCount" class="srs-pill">0</span></button>
+      </div>
+
+      <!-- Mis partidas -->
+      <div class="subpane" id="sub-games">
+        <div class="filter-row">
+          <input id="libFilter" placeholder="Buscar por título, jugador, evento, ECO, año…" aria-label="Buscar en la biblioteca">
+          <select id="libTagFilter" aria-label="Filtrar por etiqueta"><option value="">Todas</option></select>
+          <select id="libSort" aria-label="Ordenar">
+            <option value="updated">Recientes</option>
+            <option value="title">Título</option>
+            <option value="date">Fecha de la partida</option>
+          </select>
+        </div>
+        <div class="controls">
+          <label class="switch"><input type="checkbox" id="libSelectAll"> Todas</label>
+          <button id="libDeleteSel" class="sm-btn danger" disabled>🗑 Borrar seleccionadas</button>
+          <button id="libExportPgn" class="sm-btn" title="Exporta las seleccionadas (o todas las visibles) a un .pgn">⬇ Exportar .pgn</button>
+          <button id="libBackup" class="sm-btn" title="Copia completa (partidas + marcadores) en un archivo">⬇ Copia de seguridad</button>
+          <button id="libRestore" class="sm-btn">⬆ Restaurar copia</button>
+          <input type="file" id="jsonFileInput" accept=".json" hidden>
+        </div>
+        <div class="cb-table-wrap" style="max-height:420px">
+          <table class="cb-table lib-table">
+            <thead><tr><th></th><th>⭐</th><th>Partida</th><th>Res.</th><th class="hide-sm">Etiquetas</th><th></th></tr></thead>
+            <tbody id="libBody"></tbody>
+          </table>
+        </div>
+        <div id="libStatus" class="small"></div>
+      </div>
+
+      <!-- Marcadores -->
+      <div class="subpane" id="sub-marks" hidden>
+        <div class="filter-row">
+          <input id="markFilter" placeholder="Buscar en las notas de los marcadores…" aria-label="Buscar marcadores">
+          <select id="markCatFilter" aria-label="Categoría"><option value="">Todas las categorías</option></select>
+        </div>
+        <div id="markList" class="mark-list"></div>
+      </div>
+
+      <!-- Buscar en comentarios -->
+      <div class="subpane" id="sub-search" hidden>
+        <p class="small">Busca un texto en todos los comentarios de tus partidas guardadas y en las notas de tus marcadores. Pulsa un resultado para ir a esa jugada.</p>
+        <div class="filter-row">
+          <input id="commentSearch" placeholder="Ej.: sacrificio en h7, columna abierta, Lucena…" aria-label="Texto a buscar">
+          <button id="commentSearchBtn" class="primary">🔎 Buscar</button>
+        </div>
+        <div id="searchResults" class="mark-list"></div>
+      </div>
+
+      <!-- Fichero .pgn abierto (colección temporal) -->
+      <div class="subpane" id="sub-collection" hidden>
+        <p class="small">El fichero se abre <b>sólo en memoria</b>: no se guarda nada. Échale un vistazo y guarda en tu biblioteca sólo las partidas que te interesen con 💾.</p>
+        <div class="controls">
+          <button id="openPgnFileBtn" class="primary">📂 Abrir .pgn</button>
+          <input type="file" id="pgnFileInput" accept=".pgn,.txt" multiple hidden>
+          <button id="loadSampleDbBtn" class="sm-btn info-btn">Antología de clásicos</button>
+          <button id="closeCollBtn" class="sm-btn danger" title="Libera la memoria que ocupa el fichero">✖ Cerrar fichero</button>
+        </div>
+        <input id="dbFilterInput" placeholder="Filtrar por jugador, evento, año, ECO o resultado…" style="margin-top:8px" aria-label="Filtrar partidas">
+        <div class="cb-table-wrap" style="max-height:380px">
+          <table class="cb-table">
+            <thead><tr><th>#</th><th>Blancas</th><th>Negras</th><th>Res.</th><th class="hide-sm">Evento / ECO</th><th>Año</th><th></th></tr></thead>
+            <tbody id="pgnDbBody"></tbody>
+          </table>
+        </div>
+        <div class="controls">
+          <button id="saveCollFilteredBtn" class="sm-btn warn-btn">💾 Guardar en la biblioteca las partidas filtradas</button>
+        </div>
+        <div id="dbStatus" class="small"></div>
+      </div>
+    </div>
+
+    <!-- ===== PESTAÑA 4: FINALES ===== -->
+    <div id="tab-endgames" class="tab-pane" role="tabpanel">
+      <h2>
+        <span>👑 Tablas de finales Syzygy (hasta 7 piezas)</span>
+        <button id="querySyzygyBtn" class="primary sm-btn">🔍 Consultar posición</button>
+      </h2>
+      <p class="small">Con 7 piezas o menos, la base Syzygy da el resultado exacto con juego perfecto y la valoración de cada jugada legal.</p>
+      <div class="note-box">Veredicto: <b id="syzygyStatusText">pulsa «Consultar» o carga un final de abajo</b></div>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" id="tbPractice"> Practicar: el rival responde con la jugada perfecta de la tabla</label>
+      <div class="cb-table-wrap" style="max-height:230px">
+        <table class="cb-table">
+          <thead><tr><th>Jugada</th><th>Resultado tras la jugada</th><th class="num">DTZ</th><th class="num">DTM</th></tr></thead>
+          <tbody id="syzygyTableBody"><tr><td colspan="4" class="small">Sin datos todavía.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="section">
+        <h2>Finales fundamentales (1 clic)</h2>
+        <div class="controls" id="endgamePresets"></div>
+        <div id="endgameNote" class="note-box" hidden></div>
+      </div>
+    </div>
+
+    <!-- ===== PESTAÑA 5: ENTRENADOR + EDITOR ===== -->
+    <div id="tab-tools" class="tab-pane" role="tabpanel">
+      <h2>
+        <span>🎯 Entrenador de repertorio (repetición espaciada)</span>
+        <span id="trainStatusBadge" class="srs-pill">Inactivo</span>
+      </h2>
+      <p class="small">Juega tus jugadas de la partida cargada; el rival responde con las variantes guardadas (al azar entre ellas). Si la partida está en tu biblioteca, se reprograma: si fallas, vuelve mañana; si aciertas todo, se espacia (1, 3, 7, 16, 35, 75 días).</p>
+      <div class="grid2">
+        <select id="trainSide" aria-label="Bando a entrenar">
+          <option value="1">Entreno con blancas</option>
+          <option value="-1">Entreno con negras</option>
+          <option value="0">Juego ambos bandos</option>
+        </select>
+        <div class="controls" style="margin:0">
+          <button id="startTrainBtn" class="primary">▶ Empezar</button>
+          <button id="hintTrainBtn" disabled>💡 Pista</button>
+          <button id="stopTrainBtn" class="danger" disabled>⏹ Salir</button>
+        </div>
+      </div>
+      <div class="controls"><button id="trainDueBtn" class="sm-btn warn-btn">📅 Entrenar la siguiente partida pendiente</button><span id="gameDueBadge" class="srs-pill">0 pendientes</span></div>
+      <div id="trainFeedback" class="note-box" aria-live="polite" hidden></div>
+
+      <div class="section">
+        <h2>
+          <span>🧠 Tarjetas de tus marcadores</span>
+          <span id="cardDueBadge" class="srs-pill">0 pendientes</span>
+        </h2>
+        <p class="small">Cada marcador que tenga «entrenar» activado es una tarjeta: ves la posición y tienes que encontrar la jugada. Las que aciertas se espacian; las que fallas vuelven pronto.</p>
+        <div class="controls">
+          <button id="cardsDueBtn" class="primary">▶ Repasar pendientes</button>
+          <button id="cardsAllBtn" class="sm-btn">Repasar todas</button>
+          <button id="cardsBackBtn" class="sm-btn" hidden>↩ Volver a la partida</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>
+          <span>🛠 Editor de posición</span>
+          <button id="toggleEditorModeBtn" class="warn-btn sm-btn">✏ Colocar piezas</button>
+        </h2>
+        <p class="small">Monta cualquier posición moviendo las piezas libremente sobre el tablero y empieza a analizarla, entrenarla o jugarla contra la CPU desde ahí.</p>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<footer class="app-footer">
+  AjedrezBase {{VERSION}} · © 2026 Rafael Karino Arillo ·
+  <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
+  <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
+</footer>
+
+<!-- Ajustes -->
+<div class="modal-back" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal">
+    <h2 id="settingsTitle"><span>⚙ Ajustes</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <label for="setEngine">Motor de análisis</label>
+    <select id="setEngine">
+      <option value="auto">Automático: Stockfish 10 (descarga 1,5 MB la primera vez) y, sin conexión, el motor interno</option>
+      <option value="internal">Sólo motor interno (100 % sin conexión, más débil)</option>
+    </select>
+    <div class="grid3">
+      <div><label for="setAnalysisMs">Tiempo por jugada al analizar (ms)</label><input id="setAnalysisMs" type="number" min="200" max="10000" step="100"></div>
+      <div><label for="setMultipv">Líneas del motor</label><select id="setMultipv"><option>1</option><option>2</option><option>3</option></select></div>
+      <div><label for="setLiveMs">Tiempo de análisis continuo (ms)</label><input id="setLiveMs" type="number" min="500" max="30000" step="500"></div>
+    </div>
+    <label for="setToken">Token personal de Lichess (para el explorador de aperturas)</label>
+    <div class="gc-row">
+      <input id="setToken" type="password" autocomplete="off" placeholder="lip_…">
+      <button id="testTokenBtn" class="sm-btn info-btn">🔌 Probar token</button>
+    </div>
+    <div id="tokenResult" class="small"></div>
+    <p class="small">Lichess exige ahora un token gratuito para su explorador. Créalo <b>sin marcar ningún permiso</b> en
+      <a href="https://lichess.org/account/oauth/token/create?description=AjedrezBase" target="_blank" rel="noopener">lichess.org › API access tokens</a>
+      (<a href="#" class="help-link" data-help="help-token">ver pasos</a>). Se guarda sólo en este navegador y sólo se envía a Lichess.</p>
+    <div class="chk-row" style="margin-top:10px">
+      <label><input type="checkbox" id="setCoords"> Coordenadas</label>
+      <label><input type="checkbox" id="setLegal"> Mostrar jugadas legales</label>
+      <label><input type="checkbox" id="setAutosave"> Recordar la partida al recargar</label>
+    </div>
+  </div>
+</div>
+
+<!-- Ayuda -->
+{{HELP}}
+
+<!-- Marcador -->
+<div class="modal-back" id="markModal" role="dialog" aria-modal="true" aria-labelledby="markTitle">
+  <div class="modal">
+    <h2 id="markTitle"><span>📌 Marcar posición</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div id="markWhere" class="small"></div>
+    <label>Categoría</label>
+    <div id="markCats" class="cat-chips"></div>
+    <label for="markNote">Nota</label>
+    <textarea id="markNote" placeholder="¿Qué idea hay aquí? ¿Qué quieres recordar?"></textarea>
+    <label for="markTrain">Entrenar como tarjeta</label>
+    <select id="markTrain">
+      <option value="move">Sí: encontrar la jugada marcada</option>
+      <option value="best">Sí: la jugada marcada es un error, encontrar la mejor (según el motor)</option>
+      <option value="none">No entrenar</option>
+    </select>
+    <div class="controls">
+      <button id="markSaveBtn" class="primary">📌 Guardar marcador</button>
+      <button id="markDeleteBtn" class="danger" hidden>🗑 Borrar marcador</button>
+    </div>
+    <p class="small" id="markInfo"></p>
+  </div>
+</div>
+
+<!-- Licencia y créditos -->
+<div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
+  <div class="modal wide">
+    <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <p class="lic-p"><b>AjedrezBase {{VERSION}}</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
+    <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">{{MIT}}</pre></details>
+    <h3>Componentes y servicios de terceros</h3>
+    <table class="cb-table lic-table">
+      <thead><tr><th>Componente</th><th>Uso</th><th>Licencia</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://github.com/niklasf/stockfish.js" target="_blank" rel="noopener noreferrer">stockfish.js</a> 10.0.2 (Stockfish de T. Romstad, M. Costalba, J. Kiiski, G. Linscott y colaboradores; versión JavaScript de Niklas Fiekas)</td><td>Motor de análisis. <b>No va incluido</b>: el navegador lo descarga de cdnjs al usarlo (y, si instalas la aplicación, lo guarda para usarlo sin conexión).</td><td>GPL v3 · <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">código fuente</a></td></tr>
+        <tr><td>Piezas «Clásicas», de <a href="https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces" target="_blank" rel="noopener noreferrer">Colin M. L. Burnett</a> (Wikimedia Commons)</td><td>Dibujo de las piezas y del icono</td><td>Licencia múltiple GPL / BSD / GFDL</td></tr>
+        <tr><td>Servicios de <a href="https://lichess.org" target="_blank" rel="noopener noreferrer">Lichess</a>: explorador de aperturas, evaluación en la nube y tablas Syzygy</td><td>Sólo se consultan cuando los usas; el explorador necesita tu token personal</td><td>Servicio gratuito de lichess.org (<a href="https://lichess.org/api" target="_blank" rel="noopener noreferrer">API</a>)</td></tr>
+        <tr><td>Partidas de la antología y finales clásicos</td><td>Ejemplos</td><td>Partidas históricas</td></tr>
+      </tbody>
+    </table>
+    <p class="small">El motor interno, las reglas, el lector PGN, la enciclopedia ECO en español y el resto de la aplicación son código propio con licencia MIT. Tus partidas se guardan sólo en tu navegador: la aplicación no envía datos a ningún servidor propio.</p>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status"></div>
+
+<script id="coreLib">
+{{CORE}}
+</script>
+<script>
+{{PGN}}
+{{ECO}}
+{{APP}}
+</script>
+</body>
+</html>
