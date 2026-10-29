@@ -397,7 +397,7 @@ def prueba_stockfish19(browser):
     carpeta = pathlib.Path(sf)
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
     def servir(r):
-        f = carpeta / r.request.url.split("/")[-1]
+        f = carpeta / r.request.url.split("/")[-1].split("#")[0]
         if not f.exists():
             return r.abort()
         r.fulfill(body=f.read_bytes(), content_type="application/wasm" if f.suffix == ".wasm" else "application/javascript", headers={"Access-Control-Allow-Origin": "*"})
@@ -415,6 +415,28 @@ def prueba_stockfish19(browser):
     comprobar(pg.evaluate("Pgn.mainlineFrom(game.root)[5].nag") == "??", "Stockfish 19 marca 3...Cf6?? como error grave")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
+    # Publicada (http/https) y con el service worker ya instalado, como en GitHub Pages a partir de la segunda visita
+    class Silencioso(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Silencioso, directory=str(ROOT)))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
+    ctx.route("**/cdn.jsdelivr.net/**", servir)
+    ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/*lichess*/**", lambda r: r.abort())
+    try:
+        pg, errores = nueva_pagina(ctx, f"http://127.0.0.1:{srv.server_address[1]}/")
+        pg.wait_for_function("navigator.serviceWorker && navigator.serviceWorker.controller", timeout=20000)
+        for visita in (2, 3):
+            pg.reload()
+            pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+            pg.wait_for_function("document.getElementById('engineSourceBadge').textContent.startsWith('⚙')", timeout=45000)
+            comprobar(pg.inner_text("#engineSourceBadge").strip() == "⚙ Stockfish 19", f"publicada, en la visita {visita} (con el service worker) también arranca Stockfish 19")
+        comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    finally:
+        ctx.close()
+        srv.shutdown()
 
 
 def main():

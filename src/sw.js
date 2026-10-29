@@ -41,14 +41,19 @@ self.addEventListener("fetch", event => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  if (ENGINES.includes(url.href)) {
+  // Stockfish 19 busca su .wasm en la dirección que va tras «#» en la del Worker. Cuando este service
+  // worker entrega sf-worker.js, el navegador pierde ese «#…» y Stockfish pide «sf-worker.wasm» a
+  // este mismo sitio: se le da el .wasm de Stockfish 19.
+  const engineUrl = ENGINES.includes(url.href) ? url.href
+    : url.origin === self.location.origin && url.pathname.endsWith("/sf-worker.wasm") ? "{{SF19_WASM}}" : null;
+  if (engineUrl) {
     event.respondWith((async () => {
       const cache = await caches.open(ENGINE_CACHE);
-      const hit = await cache.match(url.href);
+      const hit = await cache.match(engineUrl);
       if (hit) return hit;
       // Se pide siempre en modo CORS para que la copia sirva tanto a importScripts como a fetch (wasm)
-      const res = await fetch(url.href, { mode: "cors", credentials: "omit" });
-      if (res.ok) cache.put(url.href, res.clone());
+      const res = await fetch(engineUrl, { mode: "cors", credentials: "omit" });
+      if (res.ok) cache.put(engineUrl, res.clone());
       return res;
     })());
     return;
