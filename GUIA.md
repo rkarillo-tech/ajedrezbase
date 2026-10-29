@@ -9,7 +9,7 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 - **Columna izquierda**: el tablero con la **barra de evaluación** (a su izquierda), los nombres de los jugadores con el material capturado, el **panel del motor**, el **gráfico de la partida**, los botones de navegación y la **lista de jugadas** con sus variantes.
 - **Columna derecha**, arriba: la **barra de la partida actual** (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, cinco pestañas:
 **📖 Estudio** (importar, comentar, analizar), **🌍 Aperturas**, **📚 Biblioteca** (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), **👑 Finales** y **🎯 Entrenar**.
-- **Barra superior**: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU y su nivel, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.
+- **Barra superior**: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.
 - En el móvil todo se apila: primero el tablero y después las herramientas.
 
 > **Ejemplo rápido (2 minutos):** pega una partida en «📖 Estudio» → pulsa **Importar** → recórrela con las flechas `←` `→` → pulsa **🤖 Analizar y comentar** → si te gusta, **💾 Guardar en biblioteca**.
@@ -92,11 +92,19 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 
 > **Ejemplo:** tras importar tu partida del torneo, pulsa «Analizar y comentar» → mira en el gráfico dónde cae la curva → pulsa ese punto → lee el comentario de la jugada marcada con ?? → prueba en el tablero la alternativa que propone.
 
-## 🤖 7. Jugar contra la CPU
-- Elige el **Nivel** (1 a 8) en la barra superior y pulsa **🤖 Jugar vs CPU**. Juegas con el bando que está **abajo** en el tablero (gíralo antes con ⇅ si quieres negras).
-- Puedes empezar desde la posición inicial, desde cualquier momento de una partida, o desde una posición montada en el editor («🤖 Jugar desde aquí vs CPU»).
-- Mientras juegas, el análisis se pausa para no darte pistas. Pulsa otra vez el botón para terminar.
-- Las jugadas quedan en la lista: al acabar puedes analizarlas o guardarlas.
+## 🤖 7. Jugar contra la CPU: nivel, estilo y reloj
+- Pulsa **🤖 Jugar vs CPU** en la barra superior y elige:
+  - **Juegas con**: el bando de abajo del tablero, blancas, negras o al azar.
+  - **Nivel** del 1 al 8.
+  - **Estilo**: **⚖ Equilibrado** (la jugada del motor), **⚔ Agresivo** (prefiere jaques, capturas, sacrificios y acercarse a tu rey), **🏰 Posicional** (desarrollo, centro, enroque; evita sacar la dama pronto), **🛡 Defensivo** (cambia piezas, enroca y no adelanta los peones de su rey) o **🎲 Humano** (a veces no ve la mejor jugada).
+El estilo sólo elige entre jugadas casi igual de buenas según el motor, así que nunca regala piezas a propósito; cuanto más bajo es el nivel, más se aparta de la mejor. Necesita Stockfish: con el motor interno la CPU juega siempre «equilibrado».
+  - **Reloj**: sin reloj o de 1+0 a 30+0 (minutos + segundos de incremento por jugada). El reloj empieza con la primera jugada; si se te acaba el tiempo pierdes, salvo que el rival no tenga material para dar mate (entonces son tablas). La CPU reparte su tiempo según lo que le queda.
+  - **Empezar desde** una partida nueva o desde la posición del tablero (también desde el editor: «🤖 Jugar desde aquí vs CPU»).
+  - **🙈 A ciegas**: las piezas se ocultan durante la partida (ver «A ciegas y visualización»).
+- Mientras juegas, el motor, la evaluación y el gráfico se ocultan y no se puede navegar por la partida. Debajo del tablero tienes **↶ Deshacer** (sólo sin reloj), **½ Ofrecer tablas** (la CPU las acepta a partir de la jugada 10 si no cree ir mejor), **🏳 Rendirse** y **⏹ Terminar** (deja la partida sin resultado).
+- Al terminar se apunta el resultado y puedes **🤖 Analizar la partida**, **💾 Guardarla** o pedir la **🔁 Revancha** con los colores cambiados.
+
+> **Ejemplo:** 🤖 Jugar vs CPU → negras, nivel 5, ⚔ Agresivo, 5+3 → ▶ Empezar a jugar. Al acabar, «🤖 Analizar la partida» y después «🎯 Aprende de tus errores».
 
 ## ✏ 8. Montar una posición (editor)
 - Pulsa **✏ Colocar piezas** (bajo el tablero). El tablero se enmarca en naranja y aparece el editor.
@@ -212,7 +220,25 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 
 > **Ejemplo de repertorio:** crea una partida con 1.e4 c5 2.Cf3 d6 3.d4 y añade como variantes las respuestas que preparas contra 2…Cc6 y 2…e6 → guárdala con la etiqueta «repertorio» → entrénala con blancas cada vez que te lo pida.
 
-## 💾 18. Ocupación de memoria y espacio
+## 🔮 18. Adivina la jugada
+- Reproduce una partida intentando acertar, una a una, las jugadas de un bando. En **🎯 Entrenar › 🔮 Adivina la jugada** elige la partida: **la del tablero** (empieza en la jugada en la que estés), **una clásica** de la antología al azar o **una de tus partidas** guardadas al azar (si pusiste tu nombre en Estadísticas, adivinas tus propias jugadas).
+- El bando **automático** es el de abajo para la partida del tablero, el ganador en las clásicas y el tuyo en tus partidas. Puedes elegirlo tú.
+- En cada jugada, haz la tuya en el tablero. El motor la puntúa de **0 a 5** según lo que pierde respecto a la mejor (5 = excelente, 4 = muy buena, 3 = buena, 2 = dudosa, 1 = floja, 0 = error) y puntúa igual la jugada de la partida, así que al final comparas tu puntuación con la del jugador. También se cuentan las **coincidencias** con la partida.
+- **💡 Pista** marca la pieza que se movió (esa jugada vale como mucho 3 puntos) y **👁 Ver la jugada** la enseña sin puntos. Después se juega la jugada real y el rival responde.
+- La partida queda con tus intentos como variantes y un comentario con los puntos en cada jugada: puedes analizarla o guardarla. **↩ Volver a tu partida** recupera lo que tenías en el tablero.
+
+> **Ejemplo:** elige «Una clásica de la antología» y «Bando: automático» → ▶ Empezar → si te toca «La Inmortal», juegas las blancas de Anderssen. ¿Encontrarás 23.Ae7#?
+
+## 🙈 19. A ciegas y visualización
+- **🙈 Ocultar piezas** (o la tecla `B`) esconde las piezas del tablero: sigues viendo la última jugada marcada y puedes mover pulsando las casillas o escribiendo la jugada en el recuadro de debajo del tablero. **👁 Ojear** las muestra dos segundos.
+- **🤖 Jugar a ciegas vs CPU** abre la partida contra la CPU con las piezas ocultas; al terminar se vuelven a mostrar.
+- **Sigue la línea de memoria**: ves una posición de una partida (clásica o tuya) y, escritas, las siguientes 2, 4, 6 u 8 medias jugadas, sin que se muevan las piezas. Después te pregunta dónde ha acabado una pieza (pulsa la casilla) o qué hay en una casilla (elige la respuesta). Al contestar, el tablero muestra la posición final. Son 10 preguntas.
+- **Color de las casillas**: te dice una casilla y tienes que contestar si es clara u oscura, sin mirar (el tablero se tapa). Son 20 preguntas.
+- **Encuentra la casilla**: pulsa en 30 segundos todas las casillas que puedas, con las coordenadas ocultas. Se guarda tu récord con blancas y con negras abajo (gira el tablero con ⇅ para practicar con negras).
+
+> **Ejemplo:** empieza con «Sigue la línea» a 2 medias jugadas; cuando aciertes 9 de 10, sube a 4, luego a 6… Y prueba una partida a ciegas contra la CPU de nivel 1 sin reloj.
+
+## 💾 20. Ocupación de memoria y espacio
 - Arriba de **📚 Biblioteca** tienes el medidor:
   - **Biblioteca (permanente)**: lo que ocupan tus partidas y marcadores guardados. Se recomiendan hasta 100 MB (unas 50.000–100.000 partidas), porque se carga entera al abrir la página.
   - **Fichero .pgn abierto**: lo que ocupa en memoria el fichero que tengas abierto (recomendado hasta 200 MB).
@@ -221,13 +247,13 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - **🔒 Proteger datos** pide al navegador que no borre tu biblioteca aunque se quede sin espacio (algunos navegadores sólo lo conceden a páginas que usas a menudo o que tienes en marcadores).
 - Para liberar espacio: borra partidas que no uses, cierra el fichero .pgn al terminar y guarda copias de seguridad de vez en cuando.
 
-## 🛠 19. Ajustes y personalización
+## 🛠 21. Ajustes y personalización
 - **Barra superior**: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.
 - **⚙ Ajustes**: motor (automático o sólo interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, coordenadas, mostrar jugadas legales y recordar la partida al recargar.
 - **🔊** activa o silencia los sonidos.
 - Todos los ajustes se recuerdan en este navegador.
 
-## ⌨ 20. Atajos de teclado
+## ⌨ 22. Atajos de teclado
 | Tecla | Acción |
 | --- | --- |
 | `←` `→` | Jugada anterior / siguiente |
@@ -238,27 +264,28 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 | `E` | Activar / pausar el análisis continuo |
 | `M` | Marcar la posición |
 | `X` | Ver la amenaza del rival |
+| `B` | Ocultar / mostrar las piezas (a ciegas) |
 | Rueda del ratón | Avanzar / retroceder (con el puntero sobre el tablero) |
 | `?` | Abrir esta ayuda |
 | `Esc` | Cerrar ventanas |
 
 Los atajos no funcionan mientras escribes en un recuadro de texto.
 
-## 📤 21. Imagen, impresión y enlaces para compartir
+## 📤 23. Imagen, impresión y enlaces para compartir
 - **🖼 Imagen**: descarga la posición del tablero como PNG, con sus flechas y círculos y un pie con la partida y la jugada. Si el navegador lo permite, además la copia al portapapeles para pegarla en un correo, un chat o un documento.
 - **🖨 Imprimir**: prepara la partida comentada para imprimirla o guardarla como PDF (elige «Guardar como PDF» en la ventana de impresión): cabecera con jugadores y evento, jugadas con comentarios y variantes, y diagramas en las jugadas marcadas con 📌, en las ??, ? y !! y en la posición final.
 - **🔗 Enlace**: copia un enlace que abre la partida justo en la jugada en la que estás, con las jugadas de la línea (y la posición inicial si no es la normal). Quien lo abra la verá en su navegador sin que se guarde nada; puede guardarla con 💾 si le interesa. Los comentarios y las variantes no viajan en el enlace: para eso, comparte el .pgn.
 
 > **Ejemplo:** quieres preguntarle a un compañero del club por la jugada 18 → sitúate en ella → **🔗 Enlace** → pégalo en WhatsApp. Para tu cuaderno de estudio → **🖨 Imprimir** → «Guardar como PDF».
 
-## 📲 22. Versión web, instalación y uso sin conexión
+## 📲 24. Versión web, instalación y uso sin conexión
 - **Versión web**: [rkarillo-tech.github.io/ajedrezbase](https://rkarillo-tech.github.io/ajedrezbase/). Es la forma recomendada: Stockfish y las consultas a Lichess funcionan sin problemas y tu biblioteca queda siempre en la misma dirección.
 - **Instalarla**: en la versión web aparece el botón **⬇ Instalar** arriba (o el icono de instalar en la barra de direcciones de Chrome y Edge). En el móvil: Android con Chrome → menú ⋮ → «Instalar aplicación»; iPhone/iPad con Safari → Compartir → «Añadir a pantalla de inicio».
 - **Sin conexión**: una vez abierta con internet, la aplicación (incluido Stockfish) queda guardada y funciona sin conexión. Sólo necesitan internet el explorador de Lichess, la nube y las tablas Syzygy.
 - **Actualizaciones**: con conexión siempre se carga la última versión; no hay que hacer nada.
 - **Archivo suelto**: también puedes descargar `index.html` y abrirlo con doble clic. Funciona igual, pero la biblioteca de esa copia es distinta de la de la versión web.
 
-## 🩺 23. Problemas frecuentes
+## 🩺 25. Problemas frecuentes
 **«Lichess ha rechazado la consulta: hace falta un token personal»**
 
 Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 15. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.

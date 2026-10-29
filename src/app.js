@@ -54,7 +54,8 @@ const DEFAULTS = {
   pieceStyle: "staunton", lang: "es", theme: "wood", sound: true, engine: "auto", token: "",
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
-  animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: ""
+  animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new"
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -164,15 +165,15 @@ const ECO = (() => {
 let game = Pgn.newGame();
 const ui = {
   selected: null, drag: null, autoplay: null, flipped: false, drawStart: null, nodeMap: new Map(),
-  cpu: { on: false, side: -1, thinking: false, prevLive: true }, analysing: false, cancelAnalysis: false,
+  cpu: { on: false, side: -1, thinking: false, prevLive: true, over: false, level: 8, style: "balanced", tc: "", blind: false, startNode: null, lastEval: null }, blind: false, peek: false, analysing: false, cancelAnalysis: false,
   activeTab: "study", engineArrow: null, liveNode: null,
   libId: null, dirty: false, rev: 0, saveError: "", recUpdated: 0, explorerAbort: null, fav: false, tags: [], legacyStudy: null, markCtx: null, librarySub: "games"
 };
 const trainer = { active: false, side: 1, errors: 0, hints: 0, correct: 0, hintLevel: 0, hintArrow: null, hintSq: -1, libId: null, markId: null, card: false, busy: false };
 const editor = { active: false, state: null, tool: "MOVE", sel: null, origin: null };
 const cur = () => game.current;
-/* ¿Estamos en un ejercicio (entrenador o «aprende de tus errores»)? Entonces se oculta el motor */
-const quiz = () => trainer.active || Retry.active;
+/* ¿Estamos en un ejercicio o jugando contra la CPU? Entonces se oculta el motor y no se navega por la partida */
+const quiz = () => trainer.active || Retry.active || Guess.active || Vis.active || ui.cpu.on;
 const viewState = () => (editor.active ? editor.state : game.current.state);
 
 /* ---------- 7. Motor: Stockfish 19 Lite (WASM, NNUE) → Stockfish 10 (asm.js) → motor interno ---------- */
@@ -387,7 +388,9 @@ function renderBoard() {
     if (ui.selected === i) el.classList.add("selected");
     if (last && (last.from === i || last.to === i)) el.classList.add("last");
     if (checkSq === i) el.classList.add("in-check");
-    if ((trainer.active && trainer.hintSq === i) || (Retry.active && Retry.hintSq === i)) el.classList.add("hint-sq");
+    if ((trainer.active && trainer.hintSq === i) || (Retry.active && Retry.hintSq === i) || (Guess.active && Guess.hintSq === i)) el.classList.add("hint-sq");
+    if (Vis.marks.ok === i) el.classList.add("vis-ok");
+    if (Vis.marks.bad === i) el.classList.add("vis-bad");
     if (targets.has(i)) { el.classList.add("target"); if (targets.get(i)) el.classList.add("occupied"); }
     if (!locked && !editor.active && p !== "." && Chess.color(p) === s.t) el.classList.add("has-own");
     el.innerHTML = `<div class="piece-holder">${getPieceHTML(p, settings.pieceStyle)}</div>`;
@@ -399,7 +402,10 @@ function renderBoard() {
   }
   boardEl.replaceChildren(frag);
   boardEl.classList.toggle("editor-cursor", editor.active);
-  boardEl.classList.toggle("locked", locked);
+  boardEl.classList.toggle("locked", locked && !Vis.active);
+  boardEl.classList.toggle("blind", !!ui.blind && !ui.peek && !editor.active);
+  boardEl.classList.toggle("no-coords", Vis.active && Vis.mode === "coords");
+  boardEl.classList.toggle("vis-hide", Vis.active && Vis.mode === "color");
   // Símbolo de calidad (?? ? ?! ! !!) sobre la casilla de destino de la última jugada
   if (last && node.nag && !quiz()) {
     const sq = boardEl.querySelector(`.square[data-sq="${last.to}"]`);
@@ -476,7 +482,8 @@ const shapeColor = e => (e.shiftKey && e.altKey ? "yellow" : e.shiftKey ? "red" 
 
 /* ---------- 10. Interacción con el tablero (clic, arrastre, flechas) ---------- */
 function canUserMove() {
-  if (ui.cpu.thinking || trainer.busy) return false;
+  if (ui.cpu.thinking || trainer.busy || Vis.active) return false;
+  if (Guess.active) return Guess.state === "ask" && !Guess.busy && cur().state.t === Guess.side;
   if (Retry.active) return !Retry.busy && Retry.state !== "solved" && Retry.state !== "shown";
   if (trainer.active) return trainerUserTurn();
   if (ui.cpu.on && cur().state.t === ui.cpu.side) return false;
@@ -505,6 +512,7 @@ boardEl.addEventListener("pointerdown", e => {
     e.preventDefault();
     return;
   }
+  if (Vis.active) { visAnswer(i); return; }
   const s = cur().state;
   if (!canUserMove()) {
     if (ui.cpu.thinking) toast("La CPU está pensando…");
@@ -618,6 +626,7 @@ function soundFor(node) {
 function playMove(move, who = "user") {
   if (Retry.active && who === "user") { retryMove(move); return; }
   if (trainer.active && who === "user") { trainerUserMove(move); return; }
+  if (Guess.active && who === "user") { guessResolve(move); return; }
   if (who === "user") stopAutoplay();
   const existed = cur().children.some(c => Pgn.sameMove(c.move, move));
   const child = Pgn.addMove(cur(), move, settings.branchMode);
@@ -626,9 +635,9 @@ function playMove(move, who = "user") {
   ui.selected = null;
   soundFor(child);
   render();
-  if (who === "user") {
-    if (ui.cpu.on) setTimeout(maybeCpuMove, 60);
-    else if ($("tbPractice").checked && ui.activeTab === "endgames") setTimeout(tbReply, 60);
+  if (ui.cpu.on) cpuAfterMove(child, who);
+  else if (who === "user") {
+    if ($("tbPractice").checked && ui.activeTab === "endgames") setTimeout(tbReply, 60);
   }
   if (ui.activeTab === "endgames" && who !== "user") debouncedSyzygy();
 }
@@ -680,6 +689,9 @@ function renderStatus() {
   else if (ui.cpu.on && !st.over) txt += cur().state.t === ui.cpu.side ? " · turno de la CPU" : " · tu turno";
   if (trainer.active) txt = "🎯 Entrenamiento · " + txt;
   if (Retry.active) txt = "🎯 Aprende de tus errores · " + txt;
+  if (Guess.active) txt = "🔮 Adivina la jugada · " + txt;
+  if (Vis.active) txt = "🙈 Visualización: responde en el panel de abajo";
+  if (ui.blind && !Vis.active) txt += " · 🙈 piezas ocultas";
   el.textContent = txt;
   el.className = "status-line" + (st.over ? " over" : st.check ? " check" : "");
 }
@@ -706,6 +718,7 @@ function renderBars() {
   $("topAdv").textContent = top.adv; $("topAdv").hidden = !top.adv;
   $("bottomName").innerHTML = bot.name; $("bottomCaptured").textContent = bot.cap;
   $("bottomAdv").textContent = bot.adv; $("bottomAdv").hidden = !bot.adv;
+  renderClocks();
   const whiteToMove = s.t === 1;
   $("topBar").classList.toggle("to-move", ui.flipped ? whiteToMove : !whiteToMove);
   $("bottomBar").classList.toggle("to-move", ui.flipped ? !whiteToMove : whiteToMove);
@@ -851,7 +864,7 @@ function renderEvalChart() {
     const btn = msg.querySelector("button");
     if (btn) btn.onclick = ev => { ev.stopPropagation(); analyseGame({ quick: true }); };
   };
-  if (quiz()) { empty("Gráfico oculto durante el ejercicio"); return; }
+  if (quiz()) { empty(`Gráfico oculto durante ${ui.cpu.on ? "la partida" : "el ejercicio"}`); return; }
   if (line.length < 2) { empty("El gráfico de evaluación aparecerá cuando haya jugadas"); return; }
   const pts = line.map((n, i) => (n.eval ? { i, w: winPct(n.eval), n } : null)).filter(Boolean);
   // Sólo se dibuja la curva si cubre casi toda la partida (o mientras se está analizando)
@@ -892,7 +905,7 @@ $("evalChartWrap").addEventListener("click", e => {
 /* ---------- 16. Panel del motor ---------- */
 function renderEngineLines(lines, stateNode, meta) {
   const box = $("engineLines");
-  if (quiz()) { box.innerHTML = `<div class="pv-empty">Motor oculto durante el ejercicio.</div>`; $("engineMeta").textContent = ""; return; }
+  if (quiz()) { box.innerHTML = `<div class="pv-empty">Motor oculto durante ${ui.cpu.on ? "la partida" : "el ejercicio"}.</div>`; $("engineMeta").textContent = ""; return; }
   if (!lines || !lines.length) { box.innerHTML = `<div class="pv-empty">${esc(meta || "Sin análisis para esta posición.")}</div>`; return; }
   box.innerHTML = "";
   lines.forEach(l => {
@@ -976,12 +989,13 @@ function updateButtons() {
   $("mainVarBtn").disabled = Pgn.isMainline(n) || q;
   $("analyseVarBtn").hidden = Pgn.isMainline(n) || q;
   $("threatBtn").disabled = q || editor.active;
+  $("playBestMoveBtn").disabled = q;
   $("threatBtn").classList.toggle("on", Threat.node === n);
   $("threatInfo").hidden = Threat.node !== n || q;
   $("clearShapesBtn").disabled = !n.shapes.length;
   $("liveToggle").checked = settings.live;
   $("arrowToggle").checked = settings.arrow;
-  $("playCpuToggle").textContent = ui.cpu.on ? "🤖 CPU: ON" : "🤖 Jugar vs CPU";
+  $("playCpuToggle").textContent = ui.cpu.on ? "⏹ Terminar vs CPU" : "🤖 Jugar vs CPU";
   $("playCpuToggle").className = ui.cpu.on ? "on" : "info-btn";
 }
 function render() {
@@ -1017,6 +1031,13 @@ function setGame(g, opts = {}) {
   if (!opts.noConfirm && !confirmLeave()) return false;
   stopAutoplay();
   if (trainer.active && !opts.keepTrainer) stopTraining(true);
+  if (ui.cpu.on) stopCpu(true);
+  if (Guess.active) guessStop();
+  if (Vis.active && !opts.keepVis) visStop(true);
+  $("cpuBox").hidden = $("guessBox").hidden = true;
+  if (!opts.keepVis) $("visBox").hidden = true;
+  clockStop();
+  Clock.shown = false;
   game = g;
   game.current = opts.current || g.root;
   ui.selected = null;
@@ -1552,7 +1573,9 @@ function startRetry(side, queue) {
   if (!q.length) { toast("No hay errores que repasar."); return; }
   if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
   if (trainer.active) stopTraining(true);
-  if (ui.cpu.on) toggleCpu();
+  if (ui.cpu.on) stopCpu(true);
+  if (Guess.active) guessStop();
+  if (Vis.active) visStop(true);
   if (editor.active) closeEditor();
   stopAutoplay();
   Threat.node = null;
@@ -1752,42 +1775,743 @@ async function retrySaveCard(node) {
   refreshLibraryViews();
 }
 
-/* ---------- 20. Jugar contra la CPU ---------- */
+/* ---------- 20. Jugar contra la CPU: nivel, estilo y reloj ---------- */
+const CPU_STYLES = { balanced: "⚖ Equilibrado", aggressive: "⚔ Agresivo", positional: "🏰 Posicional", defensive: "🛡 Defensivo", human: "🎲 Humano" };
+const PIECE_VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+/* Deja todo lo que esté en marcha (ejercicios, partida contra la CPU, editor) antes de empezar otra cosa */
+function leaveModes() {
+  if (editor.active) closeEditor();
+  if (trainer.active) stopTraining(true);
+  if (Retry.active) retryEnd(true);
+  if (ui.cpu.on) stopCpu(true);
+  if (Guess.active) guessStop();
+  if (Vis.active) visStop(true);
+  stopAutoplay();
+  Threat.node = null;
+  Engine.cancel("live");
+}
+/* Guarda la partida del tablero para volver a ella al terminar (tarjetas, ejercicios, adivina la jugada…) */
+function stashBoard() {
+  if (Cards.stash) return true;
+  if (!trainer.active && !confirmLeave()) return false;
+  if (trainer.active) stopTraining(true);
+  Cards.stash = { game, current: game.current, flipped: ui.flipped, libId: ui.libId, fav: ui.fav, tags: ui.tags.slice(), name: $("gameName").value, dirty: ui.dirty && !ui.libId };
+  $("cardsBackBtn").hidden = false;
+  return true;
+}
+
+/* Reloj: empieza a correr con la primera jugada; cada bando recibe el incremento al mover */
+const Clock = { shown: false, running: false, started: false, base: 0, inc: 0, ms: { 1: 0, "-1": 0 }, turn: 1, last: 0, timer: null };
+function parseTc(v) {
+  const m = /^(\d+)\+(\d+)$/.exec(v || "");
+  return m ? { base: +m[1] * 60000, inc: +m[2] * 1000 } : null;
+}
+function clockLeft(c) { return Clock.ms[c] - (Clock.running && Clock.started && Clock.turn === c ? Date.now() - Clock.last : 0); }
+function fmtClock(ms) {
+  ms = Math.max(0, ms);
+  if (ms < 10000) return "0:0" + (Math.floor(ms / 100) / 10).toFixed(1);
+  const s = Math.ceil(ms / 1000);
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
+function renderClocks() {
+  const top = ui.flipped ? 1 : -1;
+  for (const [id, c] of [["topClock", top], ["bottomClock", -top]]) {
+    const el = $(id);
+    el.hidden = !Clock.shown;
+    if (!Clock.shown) continue;
+    const left = clockLeft(c), run = Clock.running && Clock.started && Clock.turn === c;
+    el.textContent = fmtClock(left);
+    el.classList.toggle("running", run);
+    el.classList.toggle("low", left < Math.min(20000, Clock.base * 0.1 + 1));
+  }
+}
+function clockStart(tc) {
+  clearInterval(Clock.timer);
+  Object.assign(Clock, { shown: true, running: true, started: false, base: tc.base, inc: tc.inc, ms: { 1: tc.base, "-1": tc.base }, turn: cur().state.t, last: Date.now() });
+  Clock.timer = setInterval(clockTick, 100);
+  renderClocks();
+}
+function clockStop() {
+  if (Clock.running && Clock.started) Clock.ms[Clock.turn] = Math.max(0, clockLeft(Clock.turn));
+  Clock.running = false;
+  clearInterval(Clock.timer);
+  Clock.timer = null;
+  renderClocks();
+}
+/* Pulsa el reloj del bando que acaba de mover. Devuelve false si se le había acabado el tiempo. */
+function clockPress(mover) {
+  if (!Clock.running) return true;
+  const now = Date.now();
+  if (Clock.started) {
+    Clock.ms[mover] -= now - Clock.last;
+    if (Clock.ms[mover] <= 0) { Clock.ms[mover] = 0; clockFlag(mover); return false; }
+    Clock.ms[mover] += Clock.inc;
+  }
+  Clock.started = true;
+  Clock.turn = -mover;
+  Clock.last = now;
+  renderClocks();
+  return true;
+}
+function clockTick() {
+  if (!Clock.running || !Clock.started) return;
+  if (clockLeft(Clock.turn) <= 0) { Clock.ms[Clock.turn] = 0; clockFlag(Clock.turn); return; }
+  renderClocks();
+}
+/* ¿Puede dar mate el bando c con lo que le queda? (rey solo o rey y una pieza menor: no) */
+function hasMatingMaterial(s, c) {
+  let minors = 0;
+  for (let i = 0; i < 128; i++) {
+    if (i & 0x88) { i += 7; continue; }
+    const p = s.b[i];
+    if (p === "." || Chess.color(p) !== c) continue;
+    const t = p.toLowerCase();
+    if (t === "p" || t === "r" || t === "q") return true;
+    if (t === "n" || t === "b") minors++;
+  }
+  return minors >= 2;
+}
+function clockFlag(c) {
+  Clock.running = false;
+  clearInterval(Clock.timer);
+  Clock.timer = null;
+  renderClocks();
+  if (!ui.cpu.on || ui.cpu.over) return;
+  const draw = !hasMatingMaterial(cur().state, -c);
+  const who = c === 1 ? "las blancas" : "las negras";
+  cpuGameOver(draw ? "1/2-1/2" : c === 1 ? "0-1" : "1-0", `Se acabó el tiempo de ${who}${draw ? ", pero el rival no tiene material para dar mate: tablas" : ""}.`);
+}
+
+/* Bonificación de cada estilo para una jugada candidata (sólo elige entre jugadas casi igual de buenas) */
+function cpuStyleBonus(s, m, style) {
+  const pc = m.piece.toLowerCase(), cap = m.captured && m.captured !== "." ? m.captured.toLowerCase() : "";
+  const after = Chess.apply(s, m), check = Chess.inCheck(after);
+  const ek = Chess.kingSq(s.b, -s.t), ok = Chess.kingSq(s.b, s.t);
+  const dist = (a, b) => (a < 0 || b < 0 ? 8 : Math.max(Math.abs((a >> 4) - (b >> 4)), Math.abs((a & 7) - (b & 7))));
+  const fwd = s.t === 1 ? (m.from >> 4) - (m.to >> 4) : (m.to >> 4) - (m.from >> 4);
+  const castle = m.flag === "castle", center = [3, 4].includes(m.to >> 4) && [2, 3, 4, 5].includes(m.to & 7);
+  const backRank = (m.from >> 4) === (s.t === 1 ? 7 : 0);
+  const opening = s.full <= 12;
+  let v = 0;
+  if (style === "aggressive") {
+    if (check) v += 3;
+    if (cap) v += 1.5 + (PIECE_VAL[cap] < PIECE_VAL[pc] ? 1 : 0);   // también los sacrificios
+    v += Math.max(0, 4 - dist(m.to, ek)) * 0.8 - Math.max(0, 4 - dist(m.from, ek)) * 0.4;
+    if (fwd > 0) v += 0.6; else if (fwd < 0) v -= 1;
+    if (pc === "p" && Math.abs((m.to & 7) - (ek & 7)) <= 2) v += 0.7;
+  } else if (style === "positional") {
+    if (castle) v += 2.5;
+    if (opening && backRank && (pc === "n" || pc === "b")) v += 2;
+    if (center) v += 1;
+    if (pc === "k" && !castle && Chess.nonPawnCount(s) > 6) v -= 2;
+    if (opening && pc === "q") v -= 1;
+    if (pc === "p" && [0, 1, 6, 7].includes(m.from & 7) && opening) v -= 1;
+    if (check && !cap) v -= 0.5;
+  } else if (style === "defensive") {
+    if (cap && PIECE_VAL[cap] >= PIECE_VAL[pc] && pc !== "p") v += 2;   // cambiar piezas
+    if (castle) v += 2;
+    if (fwd < 0) v += 0.8;
+    v += Math.max(0, 3 - dist(m.to, ok)) * 0.5;
+    if (check && !cap) v -= 1;
+    if (pc === "p" && fwd > 0 && Math.abs((m.from & 7) - (ok & 7)) <= 1) v -= 1.5;   // no adelantar los peones del enroque
+  }
+  return v;
+}
+/* Elige la jugada de la CPU entre las líneas del motor según el estilo y el nivel */
+function cpuPick(s, lines, style, level, rnd = Math.random) {
+  const L = Chess.legal(s), me = s.t, cands = [];
+  for (const l of lines || []) {
+    const u = l && l.pv && l.pv[0];
+    if (!u || cands.some(c => c.uci === u)) continue;
+    const m = Chess.moveFromUci(s, u, L);
+    if (m) cands.push({ uci: u, m, w: me === 1 ? winPct(l) : 100 - winPct(l), mate: l.mate });
+  }
+  if (!cands.length) return null;
+  const best = cands.reduce((a, b) => (b.w > a.w ? b : a));
+  if (style === "balanced" || cands.length === 1 || (best.mate != null && best.w >= 100)) return best.uci;
+  const weak = (20 - level) / 19;   // 0 en el nivel máximo, 1 en el mínimo
+  const tol = ({ aggressive: 7, positional: 6, defensive: 6, human: 4 }[style] || 0) + weak * 14;
+  let pick = best, top = -Infinity;
+  for (const c of cands) {
+    const loss = best.w - c.w;
+    if (loss > tol) continue;
+    const sc = style === "human" ? rnd() * (2 + weak * 6) - loss * 0.25 : cpuStyleBonus(s, c.m, style) + rnd() * 0.6 - loss * 0.35;
+    if (sc > top) { top = sc; pick = c; }
+  }
+  return pick.uci;
+}
+function cpuLevelName(level) { const opts = [...$("cpuLevel").options], i = opts.findIndex(o => +o.value === +level); return "nivel " + (i >= 0 ? i + 1 : level); }
+function cpuName() { return `CPU ${cpuLevelName(ui.cpu.level)} (${CPU_STYLES[ui.cpu.style].replace(/^\S+ /, "").toLowerCase()})`; }
+function cpuThinkMs() {
+  const level = ui.cpu.level, base = 250 + level * 70;
+  if (!Clock.running) return base;
+  const left = clockLeft(ui.cpu.side);
+  return Math.round(Math.max(60, Math.min(base, left / 40 + Clock.inc * 0.4)));
+}
 function maybeCpuMove() {
-  if (!ui.cpu.on || ui.cpu.thinking) return;
+  if (!ui.cpu.on || ui.cpu.thinking || ui.cpu.over) return;
   const node = cur();
-  if (node.state.t !== ui.cpu.side) return;
-  const st = gameStatus(node);
-  if (st.over) { toast(st.text, 4000); return; }
+  if (node.state.t !== ui.cpu.side || gameStatus(node).over) return;
   ui.cpu.thinking = true;
   Engine.cancel("live");
   renderStatus(); renderBoard();
-  const level = +settings.cpuLevel;
-  Engine.analyse(node, { purpose: "cpu", movetime: 250 + level * 70, multipv: 1, skill: level }).then(job => {
+  const { level, style } = ui.cpu;
+  const styled = style !== "balanced" && Engine.kind === "stockfish";
+  Engine.analyse(node, { purpose: "cpu", movetime: cpuThinkMs(), multipv: styled ? 4 : 1, skill: styled ? 20 : level }).then(job => {
     ui.cpu.thinking = false;
-    if (!job || !job.best || cur() !== node || !ui.cpu.on) { render(); return; }
-    const m = Chess.moveFromUci(node.state, job.best);
+    if (!job || !job.best || cur() !== node || !ui.cpu.on || ui.cpu.over) { render(); return; }
+    if (job.lines[0]) ui.cpu.lastEval = job.lines[0];
+    const u = styled ? cpuPick(node.state, job.lines, style, level) || job.best : job.best;
+    const m = Chess.moveFromUci(node.state, u);
     if (m) playMove(m, "cpu"); else render();
-    const st2 = gameStatus(cur());
-    if (st2.over) setTimeout(() => toast(st2.text, 4500), 200);
   });
 }
-function toggleCpu() {
-  if (Batch.running && !ui.cpu.on) { toast("El motor está analizando tus partidas de la biblioteca: espera a que termine o detenlo en «📊 Estadísticas»."); return; }
-  ui.cpu.on = !ui.cpu.on;
-  if (ui.cpu.on) {
-    if (trainer.active) stopTraining(true);
-    ui.cpu.side = ui.flipped ? 1 : -1;
-    ui.cpu.prevLive = settings.live;
-    settings.live = false;
-    toast(`Juegas con ${ui.flipped ? "negras" : "blancas"}. La CPU (nivel ${$("cpuLevel").selectedIndex + 1}) lleva las ${ui.flipped ? "blancas" : "negras"}.`);
-  } else {
-    settings.live = ui.cpu.prevLive;
-    Engine.cancel("cpu");
-    ui.cpu.thinking = false;
+/* Tras cada jugada de la partida contra la CPU: reloj, final de la partida y respuesta de la CPU */
+function cpuAfterMove(child, who) {
+  if (!clockPress(child.parent.state.t)) return;
+  const st = gameStatus(child);
+  if (st.over) { cpuGameOver(st.result, st.text); return; }
+  cpuPanel();
+  if (who === "user") setTimeout(maybeCpuMove, 60);
+}
+function openCpuDialog(blind) {
+  if (ui.cpu.on) { stopCpu(false); return; }
+  $("cpuLevel").value = String(settings.cpuLevel);
+  if ($("cpuLevel").selectedIndex < 0) $("cpuLevel").value = "8";
+  $("cpuStyle").value = settings.cpuStyle in CPU_STYLES ? settings.cpuStyle : "balanced";
+  $("cpuClock").value = settings.cpuClock;
+  if ($("cpuClock").selectedIndex < 0) $("cpuClock").value = "";
+  $("cpuColor").value = settings.cpuColor;
+  if ($("cpuColor").selectedIndex < 0) $("cpuColor").value = "board";
+  $("cpuFrom").value = editor.active ? "here" : settings.cpuFrom;
+  $("cpuBlind").checked = blind != null ? blind : ui.blind;
+  openModal("cpuModal");
+}
+function startCpuGame(opts = {}) {
+  if (Batch.running) { toast("El motor está analizando tus partidas de la biblioteca: espera a que termine o detenlo en «📊 Estadísticas»."); return false; }
+  Object.assign(settings, { cpuLevel: +$("cpuLevel").value, cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value });
+  saveSettings();
+  if (editor.active && settings.cpuFrom === "here" && !applyEditor()) return false;
+  if (settings.cpuFrom === "new") {
+    if (!confirmLeave()) return false;
+    leaveModes();
+    setGame(Pgn.newGame(), { name: "", noConfirm: true });
+  } else leaveModes();
+  if (gameStatus(cur()).over) { toast("La partida ya ha terminado en esta posición."); return false; }
+  closeModals();
+  const c = settings.cpuColor;
+  const user = opts.color || (c === "r" ? (Math.random() < 0.5 ? 1 : -1) : c === "board" ? (ui.flipped ? -1 : 1) : +c);
+  ui.flipped = user === -1;
+  const tc = parseTc(settings.cpuClock);
+  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, level: settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
+  settings.live = false;
+  if (!game.root.children.length && game.headers.Event === "Estudio") {
+    const d = new Date();
+    Object.assign(game.headers, {
+      Event: "Partida contra la CPU", Date: `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`,
+      White: user === 1 ? "Tú" : cpuName(), Black: user === 1 ? cpuName() : "Tú"
+    });
+    if (tc) game.headers.TimeControl = `${tc.base / 1000}+${tc.inc / 1000}`;
+    syncHeaderForm();
   }
+  if (ui.cpu.blind !== !!ui.blind) setBlind(ui.cpu.blind);
+  if (tc) clockStart(tc); else { clockStop(); Clock.shown = false; renderClocks(); }
+  toast(`Juegas con ${user === 1 ? "blancas" : "negras"} contra la CPU (${cpuLevelName(ui.cpu.level)}, ${CPU_STYLES[ui.cpu.style]}${tc ? `, ${settings.cpuClock}` : ""}).`, 3500);
   render();
+  cpuPanel();
   maybeCpuMove();
+  return true;
+}
+function stopCpu(silent) {
+  if (!ui.cpu.on) return;
+  ui.cpu.on = false;
+  ui.cpu.thinking = false;
+  settings.live = ui.cpu.prevLive;
+  Engine.cancel("cpu");
+  clockStop();
+  Clock.shown = false;
+  renderClocks();
+  if (ui.cpu.blind && ui.blind) setBlind(false);
+  $("cpuBox").hidden = true;
+  if (!silent) { toast("Partida contra la CPU terminada."); render(); }
+}
+function cpuGameOver(result, text) {
+  const user = -ui.cpu.side;
+  ui.cpu.over = true;
+  ui.cpu.on = false;
+  ui.cpu.thinking = false;
+  settings.live = ui.cpu.prevLive;
+  Engine.cancel("cpu");
+  clockStop();
+  game.headers.Result = result;
+  syncHeaderForm();
+  markDirty();
+  if (ui.cpu.blind && ui.blind) setBlind(false);
+  const sc = scoreOf(result, user);
+  Sound.play("end");
+  cpuPanel(sc === 1 ? "🏆 ¡Has ganado!" : sc === 0 ? "❌ Has perdido." : "🟰 Tablas.", text);
+  render();
+}
+function cpuUndo() {
+  if (Clock.running) return;
+  const user = -ui.cpu.side, path = Pgn.pathTo(cur()), start = path.indexOf(ui.cpu.startNode);
+  let i = path.length - 2;
+  while (i >= 0 && path[i].state.t !== user) i--;
+  if (i < 0 || i < start) { toast("No hay jugadas tuyas que deshacer."); return; }
+  Engine.cancel("cpu");
+  ui.cpu.thinking = false;
+  game.current = path[i];
+  ui.selected = null;
+  render();
+  cpuPanel();
+}
+function cpuOfferDraw() {
+  const l = ui.cpu.lastEval, plies = Pgn.pathTo(cur()).length - Pgn.pathTo(ui.cpu.startNode).length;
+  const w = l ? (ui.cpu.side === 1 ? winPct(l) : 100 - winPct(l)) : 100;
+  if (plies >= 20 && w <= 56) cpuGameOver("1/2-1/2", "La CPU acepta las tablas.");
+  else toast(plies < 20 ? "La CPU rechaza las tablas: es pronto para eso." : "La CPU rechaza las tablas: cree que va mejor.", 3200);
+}
+function cpuPanel(head, text) {
+  const box = $("cpuBox");
+  const desc = `${cpuLevelName(ui.cpu.level)} · ${CPU_STYLES[ui.cpu.style]}${ui.cpu.tc ? ` · ⏱ ${ui.cpu.tc}` : ""}${ui.cpu.blind ? " · 🙈 a ciegas" : ""}`;
+  box.hidden = false;
+  if (ui.cpu.over || head) {
+    box.innerHTML = `<div class="retry-head">🏁 ${esc(head || "Partida terminada")}</div><div>${esc(text || "")} <span class="small">(CPU ${esc(desc)})</span></div>
+      <div class="controls"><button class="sm-btn primary" data-c="analyse">🤖 Analizar la partida</button><button class="sm-btn" data-c="save">💾 Guardar</button><button class="sm-btn info-btn" data-c="rematch">🔁 Revancha</button><button class="sm-btn" data-c="close">Cerrar</button></div>`;
+  } else {
+    box.innerHTML = `<div class="retry-head">🤖 Partida contra la CPU</div><div class="small">${esc(desc)}</div>
+      <div class="controls">${ui.cpu.tc ? "" : `<button class="sm-btn" data-c="undo" title="Deshace tu última jugada y la respuesta de la CPU">↶ Deshacer</button>`}<button class="sm-btn" data-c="draw">½ Ofrecer tablas</button><button class="sm-btn danger" data-c="resign">🏳 Rendirse</button><button class="sm-btn" data-c="stop" title="Deja la partida sin resultado y vuelve al análisis">⏹ Terminar</button></div>`;
+  }
+  box.querySelectorAll("[data-c]").forEach(b => b.onclick = () => cpuAction(b.dataset.c));
+}
+function cpuAction(a) {
+  if (a === "undo") cpuUndo();
+  else if (a === "draw") cpuOfferDraw();
+  else if (a === "resign") { if (confirm("¿Seguro que quieres rendirte?")) cpuGameOver(ui.cpu.side === 1 ? "1-0" : "0-1", "Te has rendido."); }
+  else if (a === "stop") stopCpu(false);
+  else if (a === "analyse") { $("cpuBox").hidden = true; switchTab("study"); analyseGame(); }
+  else if (a === "save") saveToLibrary({});
+  else if (a === "close") { $("cpuBox").hidden = true; Clock.shown = false; renderClocks(); }
+  else if (a === "rematch") {
+    const prev = -ui.cpu.side;
+    $("cpuLevel").value = String(ui.cpu.level); $("cpuStyle").value = ui.cpu.style; $("cpuClock").value = ui.cpu.tc || ""; $("cpuFrom").value = "new"; $("cpuBlind").checked = ui.cpu.blind;
+    startCpuGame({ color: -prev });
+  }
+}
+
+/* ---------- 20b. «Adivina la jugada»: reproduce una partida acertando las jugadas de un bando ---------- */
+const Guess = { active: false, busy: false, state: "", side: 1, line: [], i: 0, total: 0, pts: 0, ref: 0, max: 0, hits: 0, n: 0, last: "", hint: false, hintSq: -1, bestJob: null, title: "", result: "*" };
+const GUESS_WORDS = ["un error", "floja", "dudosa", "buena", "muy buena", "excelente"];
+/* Puntos (0-5) según lo que se pierde, en probabilidad de ganar, respecto a la mejor jugada del motor */
+function guessPoints(loss) {
+  for (const [lim, p] of [[2, 5], [5, 4], [10, 3], [18, 2], [30, 1]]) if (loss <= lim) return p;
+  return 0;
+}
+const guessMs = () => Math.max(600, Math.min(2500, +settings.analysisMs));
+function guessSource(kind) {
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  if (kind === "board") {
+    if (!game.root.children.length) { toast("Carga antes una partida en el tablero (o elige una clásica)."); return null; }
+    const line = Pgn.mainlineFrom(game.root);
+    let start = Pgn.isMainline(cur()) ? Pgn.pathTo(cur()).length - 1 : 0;
+    if (start >= line.length - 1) start = 0;
+    return { game, start, side: ui.flipped ? -1 : 1, title: $("gameName").value.trim() || defaultTitle(game.headers) };
+  }
+  if (kind === "classic") {
+    const parts = Pgn.splitGames(SAMPLE_MULTI_PGN), g = Pgn.parseGame(pick(parts), { lang: "auto" }).game;
+    return { game: g, start: 0, side: g.headers.Result === "0-1" ? -1 : 1, title: defaultTitle(g.headers) };
+  }
+  const recs = [...Lib.games.values()].filter(r => r.pgn), names = myNameList();
+  const mine = recs.filter(r => colorOfMe(r, names));
+  const pool = mine.length ? mine : recs;
+  if (!pool.length) { toast("Tu biblioteca está vacía: guarda antes alguna partida (o descárgalas de Lichess)."); return null; }
+  const rec = pick(pool), g = Pgn.parseGame(rec.pgn, { lang: "en" }).game;
+  return { game: g, start: 0, side: colorOfMe(rec, names) || 1, title: rec.title || defaultTitle(g.headers) };
+}
+function startGuess() {
+  if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
+  const src = guessSource($("guessSource").value);
+  if (!src) return;
+  const sel = $("guessSide").value, side = sel === "auto" ? src.side : +sel;
+  const line = Pgn.mainlineFrom(src.game.root);
+  const total = line.slice(src.start).filter(n => n.parent.state.t === side).length;
+  if (!total) { toast("No quedan jugadas de ese bando que adivinar."); return; }
+  if (!stashBoard()) return;
+  leaveModes();
+  const g = Pgn.newGame(Chess.toFen(src.game.root.state));
+  g.headers = Object.assign({}, src.game.headers, { Result: "*" });
+  let node = g.root;
+  for (let k = 0; k < src.start; k++) node = Pgn.addMove(node, line[k].move);
+  ui.flipped = side === -1;
+  setGame(g, { noConfirm: true, current: node, name: "🔮 " + src.title });
+  Object.assign(Guess, { active: true, busy: false, state: "", side, line, i: src.start, total, pts: 0, ref: 0, max: 0, hits: 0, n: 0, last: "", hint: false, hintSq: -1, title: src.title, result: src.game.headers.Result || "*" });
+  $("guessBadge").textContent = "Activo";
+  $("guessBadge").className = "srs-pill ok";
+  guessAdvance();
+  setTimeout(() => { const r = $("boardWrap").getBoundingClientRect(); if (r.top < 0 || r.bottom > innerHeight) $("topBar").scrollIntoView({ block: "start", behavior: "smooth" }); }, 40);
+}
+function guessPlay(srcNode) {
+  const child = Pgn.addMove(cur(), srcNode.move);
+  game.current = child;
+  Guess.i++;
+  soundFor(child);
+  return child;
+}
+/* Juega las respuestas del rival hasta que le toca al bando que adivinas */
+function guessAdvance() {
+  if (!Guess.active) return;
+  const next = Guess.line[Guess.i];
+  if (!next) { guessFinish(); return; }
+  if (next.parent.state.t !== Guess.side) {
+    Guess.busy = true;
+    Guess.state = "reply";
+    render(); guessPanel();
+    setTimeout(() => {
+      if (!Guess.active || Guess.state !== "reply") return;
+      guessPlay(next);
+      Guess.busy = false;
+      guessAdvance();
+    }, 600);
+    return;
+  }
+  Object.assign(Guess, { state: "ask", busy: false, hint: false, hintSq: -1 });
+  Guess.bestJob = Engine.analyse(cur(), { purpose: "guess", movetime: guessMs(), multipv: 1 });
+  render(); guessPanel();
+}
+async function guessResolve(move) {
+  if (!Guess.active || Guess.state !== "ask" || Guess.busy) return;
+  const p = cur(), real = Guess.line[Guess.i];
+  if (!real || p.state.t !== Guess.side) return;
+  Guess.busy = true;
+  Guess.state = "checking";
+  Guess.hintSq = -1;
+  renderBoard(); guessPanel();
+  const L = Chess.legal(p.state), mover = p.state.t;
+  const sanOf = uci => { const m = Chess.moveFromUci(p.state, uci, L); return m ? formatSan(Chess.san(p.state, m, L), settings.lang, mover) : uci; };
+  const u = move ? Chess.uci(move) : null;
+  let job = await Guess.bestJob;
+  if (!Guess.active) return;
+  if (!job || !job.lines || !job.lines[0]) job = await Engine.analyse(p, { purpose: "guess", movetime: guessMs(), multipv: 1 });
+  if (!Guess.active) return;
+  const l0 = job && job.lines && job.lines[0], best = job && (job.best || (l0 && l0.pv[0]));
+  const bestEv = l0 ? { cp: l0.cp, mate: l0.mate, winner: l0.winner } : null;
+  const w = ev => (mover === 1 ? winPct(ev) : 100 - winPct(ev));
+  const evalOf = async uci => {
+    if (!bestEv) return null;
+    if (uci === best) return bestEv;
+    const m = Chess.moveFromUci(p.state, uci, L);
+    const fake = { parent: p, uci, state: Chess.apply(p.state, m) };
+    const t = terminalEval(fake);
+    if (t) return t;
+    const j = await Engine.analyse(fake, { purpose: "guess", movetime: guessMs(), multipv: 1 });
+    const l = j && j.lines && j.lines[0];
+    return l ? { cp: l.cp, mate: l.mate, winner: l.winner } : null;
+  };
+  const same = u === real.uci;
+  const evU = u ? await evalOf(u) : null;
+  if (!Guess.active) return;
+  const evR = same ? evU : await evalOf(real.uci);
+  if (!Guess.active) return;
+  const pointsOf = ev => (!bestEv ? 0 : ev ? guessPoints(Math.max(0, w(bestEv) - w(ev))) : 0);
+  let pu = u ? (bestEv ? pointsOf(evU) : same ? 5 : 0) : 0;
+  const pr = bestEv ? pointsOf(evR) : 5;
+  if (Guess.hint) pu = Math.min(pu, 3);
+  Object.assign(Guess, { pts: Guess.pts + pu, ref: Guess.ref + pr, max: Guess.max + 5, n: Guess.n + 1, hits: Guess.hits + (same ? 1 : 0) });
+  const realSan = formatSan(real.san, settings.lang, mover), num = numPrefix(p.state);
+  const engineNote = best && best !== real.uci && best !== u ? ` · el motor prefería <b>${esc(sanOf(best))}</b>` : "";
+  if (!u) Guess.last = `👁 En la partida se jugó <b>${esc(num + realSan)}</b> (${pr}/5)${engineNote}.`;
+  else if (same) Guess.last = `✔ <b>¡Como en la partida!</b> ${esc(num + realSan)}: ${pu}/5, ${GUESS_WORDS[pu]}${engineNote}.`;
+  else Guess.last = `Tú: <b>${esc(num + sanOf(u))}</b> → ${pu}/5 (${GUESS_WORDS[pu]}) · partida: <b>${esc(realSan)}</b> → ${pr}/5${engineNote}.`;
+  Sound.play(pu >= 4 ? "ok" : pu <= 1 ? "error" : "move");
+  // La partida resultante guarda tus intentos: la jugada real como principal y la tuya como variante
+  const child = guessPlay(real);
+  child.comment = !u ? `🔮 Vista sin adivinar (${pr}/5).` : same ? `🔮 Acertada: ${pu}/5.` : `🔮 Tú: ${sanOf(u)} (${pu}/5) · partida: ${pr}/5.`;
+  if (best && best !== real.uci && best !== u) child.comment += ` Motor: ${sanOf(best)}.`;
+  if (u && !same) Pgn.addMove(p, move).comment = `Tu jugada: ${pu}/5.`;
+  Guess.busy = false;
+  guessAdvance();
+}
+function guessPanel() {
+  const box = $("guessBox");
+  box.hidden = false;
+  if (!Guess.active) return;
+  const h = game.headers, side = Guess.side === 1 ? "blancas" : "negras", player = (Guess.side === 1 ? h.White : h.Black) || "Partida";
+  let html = `<div class="retry-head">🔮 Adivina la jugada · ${esc(Guess.title)}</div>
+    <div class="guess-score"><span>Tú: <b>${Guess.pts}</b>/${Guess.max}</span><span>${esc(player)}: <b>${Guess.ref}</b>/${Guess.max}</span><span>Coincidencias: <b>${Guess.hits}</b>/${Guess.n}</span><span>Jugada ${Math.min(Guess.n + 1, Guess.total)} de ${Guess.total}</span></div>`;
+  if (Guess.last) html += `<div class="retry-msg">${Guess.last}</div>`;
+  if (Guess.state === "ask") html += `<div class="retry-q">¿Qué jugaron las ${side}? Haz la jugada en el tablero.</div>`;
+  if (Guess.state === "checking") html += `<div class="small">⏳ El motor está puntuando la jugada…</div>`;
+  if (Guess.state === "reply") html += `<div class="small">Responden las ${Guess.side === 1 ? "negras" : "blancas"}…</div>`;
+  html += `<div class="controls">${Guess.state === "ask" ? `<button class="sm-btn" data-g="hint" title="Marca la pieza que se movió (esta jugada valdrá como mucho 3 puntos)">💡 Pista</button><button class="sm-btn" data-g="show" title="Ver la jugada de la partida (0 puntos)">👁 Ver la jugada</button>` : ""}<button class="sm-btn danger" data-g="end">⏹ Terminar</button></div>`;
+  box.innerHTML = html;
+  box.querySelectorAll("[data-g]").forEach(b => b.onclick = () => guessAction(b.dataset.g));
+}
+function guessAction(a) {
+  if (a === "end") { guessFinish(); return; }
+  if (Guess.state !== "ask" || Guess.busy) return;
+  if (a === "show") guessResolve(null);
+  else if (a === "hint") {
+    const real = Guess.line[Guess.i];
+    Guess.hint = true;
+    Guess.hintSq = real.move.from;
+    Guess.last = "💡 La pieza que se movió en la partida está marcada en azul (esta jugada vale como mucho 3 puntos).";
+    renderBoard(); guessPanel();
+  }
+}
+function guessStop() {
+  Guess.active = false;
+  Guess.busy = false;
+  Guess.hintSq = -1;
+  Engine.cancel("guess");
+  $("guessBadge").textContent = "Inactivo";
+  $("guessBadge").className = "srs-pill";
+}
+function guessFinish() {
+  if (!Guess.active) return;
+  const complete = Guess.i >= Guess.line.length;
+  guessStop();
+  const pct = x => (Guess.max ? Math.round((x / Guess.max) * 100) : 0);
+  const h = game.headers, player = (Guess.side === 1 ? h.White : h.Black) || "el jugador";
+  if (complete) h.Result = Guess.result;
+  const summary = `🔮 Adivina la jugada (${Guess.side === 1 ? "blancas" : "negras"}): ${Guess.pts}/${Guess.max} puntos (${pct(Guess.pts)} %); ${player}: ${Guess.ref}/${Guess.max} (${pct(Guess.ref)} %); coincidencias ${Guess.hits} de ${Guess.n}.`;
+  if (Guess.n) game.root.comment = summary;
+  const verdict = !Guess.n ? "No has adivinado ninguna jugada."
+    : Guess.pts > Guess.ref ? "🏆 ¡Has jugado mejor que el jugador de la partida, según el motor!"
+    : Guess.pts === Guess.ref ? "🤝 Has jugado igual de bien que el jugador de la partida."
+    : pct(Guess.pts) >= 80 ? "👍 Muy buen nivel: tus jugadas son casi tan buenas como las de la partida."
+    : pct(Guess.pts) >= 60 ? "Bien: revisa las jugadas con pocos puntos en la lista (tus intentos quedan como variantes)." : "Repasa las jugadas con pocos puntos: tus intentos quedan como variantes en la lista.";
+  const box = $("guessBox");
+  box.hidden = false;
+  box.innerHTML = `<div class="retry-head">🏁 ${complete ? "Partida terminada" : "Adivina la jugada: terminado"}</div>
+    <div class="guess-score"><span>Tú: <b>${Guess.pts}</b>/${Guess.max} (${pct(Guess.pts)} %)</span><span>${esc(player)}: <b>${Guess.ref}</b>/${Guess.max} (${pct(Guess.ref)} %)</span><span>Coincidencias: <b>${Guess.hits}</b>/${Guess.n}</span></div>
+    <div class="retry-msg">${verdict}</div>
+    <div class="controls"><button class="sm-btn primary" data-g="again">🔁 Otra partida</button>${Cards.stash ? `<button class="sm-btn" data-g="back">↩ Volver a tu partida</button>` : ""}<button class="sm-btn" data-g="close">Cerrar</button></div>`;
+  box.querySelector("[data-g=again]").onclick = startGuess;
+  const bk = box.querySelector("[data-g=back]");
+  if (bk) bk.onclick = () => { box.hidden = true; restoreStash(); };
+  box.querySelector("[data-g=close]").onclick = () => { box.hidden = true; };
+  render();
+}
+
+/* ---------- 20c. A ciegas y visualización ---------- */
+function setBlind(on) {
+  ui.blind = !!on;
+  ui.peek = false;
+  $("blindBtn").textContent = ui.blind ? "👁 Mostrar piezas" : "🙈 Ocultar piezas";
+  $("peekBtn").hidden = !ui.blind;
+  $("blindBadge").textContent = ui.blind ? "Piezas ocultas" : "Piezas visibles";
+  $("blindBadge").className = "srs-pill" + (ui.blind ? " ok" : "");
+  renderBoard();
+  renderStatus();
+}
+function peekPieces() {
+  if (!ui.blind) return;
+  ui.peek = true;
+  ui.peeks = (ui.peeks || 0) + 1;
+  renderBoard();
+  clearTimeout(ui.peekTimer);
+  ui.peekTimer = setTimeout(() => { ui.peek = false; renderBoard(); }, 2000);
+}
+const Vis = { active: false, mode: "", state: "", n: 0, ok: 0, bad: 0, total: 0, q: null, t0: 0, end: 0, timer: null, msg: "", marks: {}, plies: 4 };
+let VIS_CLASSICS = null;
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const randomSq = () => { const d = Math.floor(Math.random() * 64); return (d >> 3) * 16 + (d & 7); };
+const pieceText = p => (p === "." ? "nada (vacía)" : PIECE_LABEL[p]);
+/* Sigue cada pieza desde su casilla de partida a lo largo de las jugadas y prepara la pregunta */
+function visQuestion(P, moves) {
+  const loc = new Map(), promoted = new Set();
+  for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } if (P.b[i] !== ".") loc.set(i, i); }
+  const find = sq => { for (const [k, v] of loc) if (v === sq) return k; return null; };
+  let s = P;
+  for (const m of moves) {
+    const capSq = m.flag === "ep" ? m.to + 16 * s.t : m.to;
+    if (s.b[capSq] !== ".") { const v = find(capSq); if (v != null) loc.delete(v); }
+    const k = find(m.from);
+    if (k != null) { loc.set(k, m.to); if (m.promotion) promoted.add(k); }
+    if (m.flag === "castle") {
+      const row = m.from & 0x70, [rf, rt] = m.to > m.from ? [row + 7, row + 5] : [row, row + 3], rk = find(rf);
+      if (rk != null) loc.set(rk, rt);
+    }
+    s = Chess.apply(s, m);
+  }
+  const moved = [...loc].filter(([k, v]) => k !== v && !promoted.has(k));
+  const changed = [];
+  for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } if (P.b[i] !== s.b[i]) changed.push(i); }
+  if (moved.length && (Math.random() < 0.6 || !changed.length)) {
+    const [k, v] = moved[Math.floor(Math.random() * moved.length)];
+    return { type: "where", piece: P.b[k], from: k, answer: v, F: s };
+  }
+  if (!changed.length) return null;
+  const sq = changed[Math.floor(Math.random() * changed.length)], ans = s.b[sq];
+  const others = shuffle([...new Set([P.b[sq], ".", ...moves.map(m => m.piece), ...moves.map(m => m.captured || ".")])].filter(x => x && x !== ans)).slice(0, 3);
+  return { type: "what", sq, answer: ans, choices: shuffle([ans, ...others]), F: s };
+}
+function visLineQuestion(plies) {
+  if (!VIS_CLASSICS) VIS_CLASSICS = Pgn.splitGames(SAMPLE_MULTI_PGN).map(t => ({ t, lang: "auto" }));
+  const pool = VIS_CLASSICS.concat(Lib.ready ? [...Lib.games.values()].filter(r => r.pgn).map(r => ({ t: r.pgn, lang: "en", title: r.title })) : []);
+  for (let tries = 0; tries < 40; tries++) {
+    const it = pool[Math.floor(Math.random() * pool.length)];
+    let g;
+    try { g = Pgn.parseGame(it.t, { lang: it.lang }).game; } catch { continue; }
+    const line = Pgn.mainlineFrom(g.root);
+    if (line.length < plies + 6) continue;
+    const start = 4 + Math.floor(Math.random() * (line.length - plies - 3));
+    const P = line[start - 1].state, seq = line.slice(start, start + plies);
+    const q = visQuestion(P, seq.map(n => n.move));
+    if (q) return Object.assign(q, { P, seq, after: line[start - 1], title: it.title || defaultTitle(g.headers) });
+  }
+  return null;
+}
+function startVis() {
+  if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
+  const mode = $("visMode").value;
+  if (mode === "line" && !stashBoard()) return;
+  leaveModes();
+  Object.assign(Vis, { active: true, mode, state: "", n: 0, ok: 0, bad: 0, total: mode === "line" ? 10 : mode === "color" ? 20 : 0, q: null, t0: Date.now(), msg: "", marks: {}, plies: +$("visPlies").value });
+  clearInterval(Vis.timer);
+  if (mode === "coords") { Vis.end = Date.now() + 30000; Vis.timer = setInterval(visTick, 200); }
+  visNext();
+  setTimeout(() => { const r = $("boardWrap").getBoundingClientRect(); if (r.top < 0 || r.bottom > innerHeight) $("topBar").scrollIntoView({ block: "start", behavior: "smooth" }); }, 40);
+}
+function visNext() {
+  if (!Vis.active) return;
+  if (Vis.total && Vis.n >= Vis.total) { visFinish(); return; }
+  Vis.marks = {};
+  Vis.state = "ask";
+  if (Vis.mode === "line") {
+    const q = visLineQuestion(Vis.plies);
+    if (!q) { toast("No hay partidas lo bastante largas para este ejercicio."); visFinish(); return; }
+    Vis.q = q;
+    const g = Pgn.newGame(Chess.toFen(q.P));
+    g.headers.Event = "Ejercicio";
+    let n = g.root;
+    for (const x of q.seq) n = Pgn.addMove(n, x.move);
+    ui.flipped = q.P.t === -1;
+    setGame(g, { noConfirm: true, keepVis: true, name: "🙈 Visualización" });
+  } else {
+    let sq;
+    do sq = randomSq(); while (Vis.q && sq === Vis.q.sq);
+    Vis.q = { sq };
+    renderBoard(); renderStatus();
+  }
+  visPanel();
+}
+function visTick() {
+  if (!Vis.active || Vis.mode !== "coords") return;
+  if (Date.now() >= Vis.end) { visFinish(); return; }
+  const el = $("visClock");
+  if (el) el.textContent = Math.ceil((Vis.end - Date.now()) / 1000) + " s";
+}
+function visPanel() {
+  const box = $("visBox");
+  box.hidden = false;
+  const q = Vis.q;
+  let html = "";
+  if (Vis.mode === "line") {
+    const lineTxt = lineText(q.P, q.seq.map(n => n.uci), Vis.plies);
+    const ask = q.type === "where"
+      ? `¿Dónde está ahora ${PIECE_ART[q.piece.toLowerCase()]} ${PIECE_LABEL[q.piece].split(" ")[1]} que estaba en <b>${Chess.sqName(q.from)}</b>? Pulsa su casilla.`
+      : `¿Qué hay ahora en <b>${Chess.sqName(q.sq)}</b>?`;
+    html = `<div class="retry-head">🙈 Sigue la línea · ${Vis.state === "answered" ? Vis.n : Vis.n + 1} de ${Vis.total} · aciertos ${Vis.ok}</div>
+      <div class="small">${esc(q.title)} · ${q.after.parent ? `tras ${esc(numPrefix(q.after.parent.state) + dispSan(q.after))}` : "posición inicial"}. Imagina estas jugadas sin mover las piezas:</div>
+      <div class="vis-line">${esc(lineTxt)}</div>`;
+    if (Vis.state === "ask") {
+      html += `<div class="retry-q">${ask}</div>`;
+      if (q.type === "what") html += `<div class="vis-choices">${q.choices.map(c => `<button class="sm-btn" data-v="${c}">${c === "." ? "∅" : glyphUnicode[c]} ${esc(pieceText(c))}</button>`).join("")}</div>`;
+    }
+  } else if (Vis.mode === "color") {
+    html = `<div class="retry-head">🙈 Color de las casillas · ${Vis.n + 1} de ${Vis.total} · aciertos ${Vis.ok}</div>
+      <div class="vis-big">${Chess.sqName(q.sq)}</div>
+      <div class="vis-choices" style="justify-content:center"><button class="sm-btn" data-v="l">⬜ Clara</button><button class="sm-btn" data-v="d">⬛ Oscura</button></div>`;
+  } else {
+    html = `<div class="retry-head">🙈 Encuentra la casilla · ⏱ <span id="visClock">${Math.ceil((Vis.end - Date.now()) / 1000)} s</span> · ✔ ${Vis.ok} ✖ ${Vis.bad}</div>
+      <div class="vis-big">${Chess.sqName(q.sq)}</div><div class="small" style="text-align:center">Pulsa esa casilla en el tablero (${ui.flipped ? "negras" : "blancas"} abajo).</div>`;
+  }
+  if (Vis.msg) html += `<div class="retry-msg">${Vis.msg}</div>`;
+  html += `<div class="controls">${Vis.state === "answered" ? `<button class="sm-btn primary" data-v="next">${Vis.n >= Vis.total ? "Ver resultado ▶" : "Siguiente ▶"}</button>` : ""}<button class="sm-btn danger" data-v="end">⏹ Terminar</button></div>`;
+  box.innerHTML = html;
+  box.querySelectorAll("[data-v]").forEach(b => b.onclick = () => visAnswer(b.dataset.v));
+}
+/* Respuestas: casilla pulsada en el tablero (número) o botón (pieza, «l»/«d», next, end) */
+function visAnswer(v) {
+  if (!Vis.active) return;
+  if (v === "end") { visFinish(); return; }
+  if (v === "next") { visNext(); return; }
+  if (Vis.state !== "ask") return;
+  const q = Vis.q, sqName = Chess.sqName;
+  if (Vis.mode === "coords") {
+    if (typeof v !== "number") return;
+    const ok = v === q.sq;
+    if (ok) Vis.ok++; else Vis.bad++;
+    Sound.play(ok ? "move" : "error");
+    Vis.msg = ok ? "" : `✖ Eso era ${sqName(v)}; ${sqName(q.sq)} está marcada en verde.`;
+    visNext();
+    Vis.marks = ok ? { ok: v } : { ok: q.sq, bad: v };
+    renderBoard();
+    clearTimeout(Vis.markTimer);
+    Vis.markTimer = setTimeout(() => { Vis.marks = {}; renderBoard(); }, 450);
+    return;
+  }
+  let ok, txt;
+  if (Vis.mode === "color") {
+    if (v !== "l" && v !== "d") return;
+    const light = ((q.sq >> 4) + (q.sq & 7)) % 2 === 0;
+    ok = (v === "l") === light;
+    txt = `${sqName(q.sq)} es ${light ? "clara" : "oscura"}.`;
+    Vis.n++;
+    if (ok) Vis.ok++; else Vis.bad++;
+    Vis.msg = (ok ? "✔ " : "✖ ") + txt;
+    Sound.play(ok ? "move" : "error");
+    visNext();
+    return;
+  }
+  if (q.type === "where") {
+    if (typeof v !== "number") return;
+    ok = v === q.answer;
+    Vis.marks = ok ? { ok: v } : { ok: q.answer, bad: v };
+    txt = `${cap(PIECE_ART[q.piece.toLowerCase()])} está en <b>${sqName(q.answer)}</b>.`;
+  } else {
+    if (typeof v === "number") return;
+    ok = v === q.answer;
+    Vis.marks = { ok: q.sq };
+    txt = `En ${sqName(q.sq)} hay ${esc(pieceText(q.answer))}.`;
+  }
+  Vis.n++;
+  if (ok) Vis.ok++; else Vis.bad++;
+  Vis.state = "answered";
+  Vis.msg = (ok ? "✔ <b>¡Correcto!</b> " : "❌ No. ") + txt + " El tablero muestra ahora la posición final.";
+  Sound.play(ok ? "ok" : "error");
+  goTo(Pgn.mainlineFrom(game.root).pop());
+  visPanel();
+}
+function visStop(silent) {
+  clearInterval(Vis.timer);
+  clearTimeout(Vis.markTimer);
+  Vis.timer = null;
+  Vis.active = false;
+  Vis.marks = {};
+  if (!silent) renderBoard();
+}
+function visFinish() {
+  if (!Vis.active) return;
+  const mode = Vis.mode, secs = Math.round((Date.now() - Vis.t0) / 1000);
+  visStop(false);
+  let res;
+  if (mode === "coords") {
+    const recs = LS.get("ajedrezVisRecords", {}), key = "coords" + (ui.flipped ? "B" : "W"), prev = recs[key] || 0;
+    if (Vis.ok > prev) { recs[key] = Vis.ok; LS.set("ajedrezVisRecords", recs); }
+    res = `${Vis.ok} casilla${Vis.ok === 1 ? "" : "s"} en 30 s${Vis.bad ? ` (${Vis.bad} fallo${Vis.bad === 1 ? "" : "s"})` : ""}. ${Vis.ok > prev ? "🏆 ¡Nuevo récord!" : `Tu récord con las ${ui.flipped ? "negras" : "blancas"} abajo: ${prev}.`}`;
+  } else if (mode === "color") res = `${Vis.ok} de ${Vis.n} aciertos en ${secs} s.`;
+  else res = `${Vis.ok} de ${Vis.n} aciertos con líneas de ${Vis.plies} medias jugadas.`;
+  const box = $("visBox");
+  box.hidden = false;
+  box.innerHTML = `<div class="retry-head">🏁 Visualización terminada</div><div>${res}</div>
+    <div class="controls"><button class="sm-btn primary" data-v="again">🔁 Otra vez</button>${mode === "line" && Cards.stash ? `<button class="sm-btn" data-v="back">↩ Volver a tu partida</button>` : ""}<button class="sm-btn" data-v="close">Cerrar</button></div>`;
+  box.querySelector("[data-v=again]").onclick = () => { $("visMode").value = mode; startVis(); };
+  const bk = box.querySelector("[data-v=back]");
+  if (bk) bk.onclick = () => { box.hidden = true; restoreStash(); };
+  box.querySelector("[data-v=close]").onclick = () => { box.hidden = true; };
+  render();
 }
 
 /* ---------- 21a. Consultas a Lichess: de una en una y respetando sus pausas ----------
@@ -2569,11 +3293,7 @@ function trainableMarks(all) {
 function startCards(all) {
   const q = trainableMarks(all);
   if (!q.length) { toast(all ? "No tienes marcadores entrenables. Marca posiciones con «📌 Marcar posición»." : "¡No tienes tarjetas pendientes hoy! 🎉", 4000); return; }
-  if (!Cards.stash) {
-    if (!trainer.active && !confirmLeave()) return;
-    if (trainer.active) stopTraining(true);
-    Cards.stash = { game, current: game.current, flipped: ui.flipped, libId: ui.libId, fav: ui.fav, tags: ui.tags.slice(), name: $("gameName").value, dirty: ui.dirty && !ui.libId };
-  }
+  if (!stashBoard()) return;
   for (let i = q.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [q[i], q[j]] = [q[j], q[i]]; }
   Cards.queue = q;
   Cards.done = 0;
@@ -3044,7 +3764,9 @@ function validatePosition(s) {
 }
 function openEditor() {
   if (trainer.active) stopTraining(true);
-  if (ui.cpu.on) toggleCpu();
+  if (ui.cpu.on) stopCpu(true);
+  if (Guess.active) guessStop();
+  if (Vis.active) visStop(true);
   stopAutoplay();
   Engine.cancel("live");
   editor.active = true;
@@ -3100,7 +3822,9 @@ function trainFeedback(html, kind) {
 function startTraining(opts = {}) {
   if (!game.root.children.length) { toast("Carga o crea antes una línea (con sus variantes) para entrenarla."); return; }
   if (editor.active) closeEditor();
-  if (ui.cpu.on) toggleCpu();
+  if (ui.cpu.on) stopCpu(true);
+  if (Guess.active) guessStop();
+  if (Vis.active) visStop(true);
   stopAutoplay();
   Object.assign(trainer, {
     active: true, side: opts.side != null ? opts.side : +$("trainSide").value, errors: 0, hints: 0, correct: 0, hintLevel: 0, hintArrow: null, hintSq: -1,
@@ -3282,7 +4006,8 @@ $("displayLang").onchange = e => { settings.lang = e.target.value; saveSettings(
 $("themeSelect").onchange = e => { settings.theme = e.target.value; saveSettings(); document.body.dataset.theme = settings.theme; };
 $("soundToggle").onclick = () => { settings.sound = !settings.sound; saveSettings(); $("soundToggle").textContent = settings.sound ? "🔊" : "🔇"; if (settings.sound) Sound.play("move"); };
 $("cpuLevel").onchange = e => { settings.cpuLevel = +e.target.value; saveSettings(); };
-$("playCpuToggle").onclick = toggleCpu;
+$("playCpuToggle").onclick = () => openCpuDialog();
+$("cpuStartBtn").onclick = () => startCpuGame();
 $("newGame").onclick = () => {
   if (!confirmLeave()) return;
   if (editor.active) closeEditor();
@@ -3566,7 +4291,7 @@ $("toggleEditorModeBtn").onclick = () => (editor.active ? closeEditor() : openEd
 $("editPosBtn").onclick = () => (editor.active ? closeEditor() : openEditor());
 $("edCurrentBtn").onclick = () => { editor.state = Chess.clone(editor.origin); editor.sel = null; editorChanged(); };
 $("edFlipBtn").onclick = () => { ui.flipped = !ui.flipped; renderBoard(); renderBars(); };
-$("edPlayCpuBtn").onclick = () => { if (applyEditor() && !ui.cpu.on) toggleCpu(); };
+$("edPlayCpuBtn").onclick = () => { if (editor.active) { openCpuDialog(); $("cpuFrom").value = "here"; } };
 $("edClearBoardBtn").onclick = () => { editor.state.b = Array(128).fill("."); editor.state.c = 0; editor.sel = null; editorChanged(); editorMsg("Tablero vacío: recuerda poner los dos reyes."); };
 $("edKingsBtn").onclick = () => { editor.state.b = Array(128).fill("."); editor.state.b[Chess.sqIdx("e1")] = "K"; editor.state.b[Chess.sqIdx("e8")] = "k"; editor.state.c = 0; editor.sel = null; editorChanged(); };
 $("edStartPosBtn").onclick = () => { editor.state = Chess.parseFen(Chess.START_FEN); editor.sel = null; editorChanged(); };
@@ -3579,6 +4304,12 @@ $("edFen").onchange = e => {
 };
 
 $("startTrainBtn").onclick = () => startTraining();
+$("guessStartBtn").onclick = startGuess;
+$("visStartBtn").onclick = startVis;
+$("visMode").onchange = () => { $("visPlies").hidden = $("visMode").value !== "line"; };
+$("blindBtn").onclick = () => setBlind(!ui.blind);
+$("peekBtn").onclick = peekPieces;
+$("blindCpuBtn").onclick = () => openCpuDialog(true);
 $("stopTrainBtn").onclick = () => { stopTraining(false); trainFeedback("Entrenamiento detenido."); };
 $("hintTrainBtn").onclick = trainerHint;
 $("trainDueBtn").onclick = () => {
@@ -3644,7 +4375,6 @@ async function analyseRecordHeadless(rec, ms, onPos) {
 async function analysePending(recs) {
   if (ui.analysing || Batch.running) { toast("Ya hay un análisis en marcha."); return; }
   if (quiz()) { toast("Termina antes el ejercicio."); return; }
-  if (ui.cpu.on) toggleCpu();
   const list = recs.filter(r => r.id !== ui.libId);
   if (!list.length) { toast("La partida que tienes abierta se analiza con «🤖 Analizar y comentar»."); return; }
   const ms = +$("stBatchMs").value;
@@ -3983,11 +4713,7 @@ function startDrills(mode) {
   if (mode === "due") list.sort((a, b) => (a.srs ? a.srs.due : now) - (b.srs ? b.srs.due : now));
   const q = list.slice(0, +$("drillCount").value).map(drillNode).filter(Boolean);
   if (!q.length) return;
-  if (!Cards.stash) {
-    if (!trainer.active && !confirmLeave()) return;
-    if (trainer.active) stopTraining(true);
-    Cards.stash = { game, current: game.current, flipped: ui.flipped, libId: ui.libId, fav: ui.fav, tags: ui.tags.slice(), name: $("gameName").value, dirty: ui.dirty && !ui.libId };
-  }
+  if (!stashBoard()) return;
   $("cardsBackBtn").hidden = false;
   if (Retry.active) retryEnd(true);
   startRetry(0, q);
@@ -4391,6 +5117,7 @@ document.addEventListener("keydown", e => {
   else if (k === "?") openHelp();
   else if (k === "m" || k === "M") openMarkDialog();
   else if (k === "x" || k === "X") showThreat();
+  else if (k === "b" || k === "B") setBlind(!ui.blind);
   else return;
   e.preventDefault();
 });
@@ -4421,8 +5148,6 @@ document.addEventListener("keydown", e => {
   $("displayLang").value = settings.lang;
   $("themeSelect").value = settings.theme;
   $("soundToggle").textContent = settings.sound ? "🔊" : "🔇";
-  $("cpuLevel").value = String(settings.cpuLevel);
-  if ($("cpuLevel").selectedIndex < 0) $("cpuLevel").value = "8";
   $("notation").value = settings.notation;
   $("branchMode").value = settings.branchMode;
   $("explorerDbSelect").value = settings.explorerDb;
