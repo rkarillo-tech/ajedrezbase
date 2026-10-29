@@ -31,9 +31,12 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Buscar posición** | Encuentra en tu biblioteca o en un `.pgn` las partidas con la posición del tablero, su estructura de peones o su material, y ábrelas en ese momento |
 | **Biblioteca** | Guardas sólo lo que te interesa: ⭐ favoritas, etiquetas, buscador, borrado individual, exportar y copias de seguridad |
 | **Marcadores** | 📌 Marca posiciones como idea, táctica, error típico, plan… con nota; búscalas y vuelve a ellas con un clic |
+| **Jugar contra la CPU** | 8 niveles y 5 estilos (equilibrado, ⚔ agresivo, 🏰 posicional, 🛡 defensivo, 🎲 humano), reloj de 1+0 a 30+0 con incremento, rendirse, tablas, deshacer sin reloj y revancha; también a ciegas |
+| **Adivina la jugada** | Reproduce una partida clásica o tuya acertando las jugadas de un bando: el motor puntúa cada intento de 0 a 5 y comparas tu puntuación con la del jugador |
+| **A ciegas y visualización** | Piezas ocultas (`B`) para jugar a ciegas, «sigue la línea» de memoria (2 a 8 medias jugadas), color de las casillas y encuentra la casilla en 30 s con récord |
 | **Entrenar** | Repertorio contra tus variantes, **ejercicios con los errores de todas tus partidas** (táctica, mates, defensa, convertir la ventaja, finales…) y **tarjetas** de tus marcadores, con repetición espaciada (1, 3, 7, 16, 35, 75 días) |
 | **Compartir** | Imagen PNG de la posición (también al portapapeles), impresión o PDF de la partida comentada con diagramas, y enlace que abre la partida en una jugada |
-| **Más** | Editor de posición arrastrando piezas, jugar contra la CPU (8 niveles), jugar escribiendo la jugada, planilla de dos columnas, rueda del ratón, ficheros `.pgn` de miles de partidas, medidor de memoria |
+| **Más** | Editor de posición arrastrando piezas, jugar escribiendo la jugada, planilla de dos columnas, rueda del ratón, ficheros `.pgn` de miles de partidas, medidor de memoria |
 
 ## Cómo se usa
 
@@ -53,7 +56,7 @@ Todo está explicado con ejemplos en la **[guía de uso](GUIA.md)**, que tambié
 ## Atajos
 
 `←` `→` jugada anterior / siguiente · `↑` `↓` cambiar de variante · `Inicio` `Fin` · `Espacio` reproducir ·
-`F` girar el tablero · `E` análisis on/off · `X` ver amenaza · `M` marcar posición · `?` ayuda · `Esc` cerrar ·
+`F` girar el tablero · `E` análisis on/off · `X` ver amenaza · `M` marcar posición · `B` piezas ocultas · `?` ayuda · `Esc` cerrar ·
 rueda del ratón sobre el tablero para avanzar y retroceder.
 
 ## Preguntas frecuentes

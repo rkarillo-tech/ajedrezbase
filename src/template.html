@@ -88,6 +88,22 @@ main {
 .player-elo { color: var(--muted); font-weight: 400; margin-left: 4px; }
 .captured-pieces { font-size: 1.02rem; letter-spacing: -2px; color: var(--muted); white-space: nowrap; }
 .mat-badge { background: var(--panel3); color: var(--accent); font-weight: 700; padding: 1px 6px; border-radius: 4px; font-size: 0.76rem; margin-left: 5px; }
+.bar-right { display: flex; align-items: center; gap: 2px; }
+.clock { font-family: ui-monospace, monospace; font-weight: 700; font-size: .95rem; background: var(--panel3); padding: 1px 8px; border-radius: 5px; margin-left: 8px; min-width: 4.4em; text-align: center; border: 1px solid var(--border); }
+.clock.running { background: #e8f5e9; color: #111; border-color: var(--accent); }
+.clock.low { background: #c62828; color: #fff; border-color: #ef5350; }
+.board.blind .piece-holder { visibility: hidden; }
+.board.no-coords .coord { display: none; }
+.board.vis-hide .square { background: var(--panel2); }
+.board.vis-hide .piece-holder, .board.vis-hide .coord { visibility: hidden; }
+.square.vis-ok { box-shadow: inset 0 0 0 4px rgba(76,175,80,.95); }
+.square.vis-bad { box-shadow: inset 0 0 0 4px rgba(239,83,80,.95); }
+.vis-line { font-family: ui-monospace, monospace; font-size: 1rem; font-weight: 700; margin: 4px 0; word-spacing: 2px; }
+.vis-big { font-size: 1.6rem; font-weight: 800; text-align: center; margin: 4px 0; letter-spacing: 1px; }
+.vis-choices { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.vis-choices button { min-width: 44px; }
+.guess-score { display: flex; gap: 10px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); margin-top: 3px; }
+.guess-score b { color: var(--text); }
 
 /* Barra de evaluación + tablero */
 .board-stage { display: grid; grid-template-columns: 24px 1fr; gap: 7px; align-items: stretch; }
@@ -492,11 +508,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <option value="slate">Pizarra</option>
       <option value="coral">Coral</option>
     </select>
-    <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor con el bando de abajo">🤖 Jugar vs CPU</button>
-    <select id="cpuLevel" title="Nivel de la CPU" aria-label="Nivel de la CPU" style="width:auto">
-      <option value="1">Nivel 1</option><option value="3">Nivel 2</option><option value="5">Nivel 3</option><option value="8">Nivel 4</option>
-      <option value="11">Nivel 5</option><option value="14">Nivel 6</option><option value="17">Nivel 7</option><option value="20">Nivel 8 (máx.)</option>
-    </select>
+    <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor: nivel, estilo y reloj">🤖 Jugar vs CPU</button>
     <button id="soundToggle" title="Sonido de las jugadas" aria-label="Sonido">🔊</button>
     <button id="settingsBtn" title="Ajustes (motor, token de Lichess, análisis)" aria-label="Ajustes">⚙</button>
     <button id="installBtn" class="primary" hidden title="Instalar AjedrezBase como aplicación (funciona sin conexión)">⬇ Instalar</button>
@@ -510,7 +522,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   <section class="panel" aria-label="Tablero">
     <div class="player-bar" id="topBar">
       <span class="player-name" id="topName">Negras</span>
-      <div><span id="topCaptured" class="captured-pieces"></span><span id="topAdv" class="mat-badge" hidden></span></div>
+      <div class="bar-right"><span id="topCaptured" class="captured-pieces"></span><span id="topAdv" class="mat-badge" hidden></span><span id="topClock" class="clock" hidden></span></div>
     </div>
 
     <div class="board-stage">
@@ -544,7 +556,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 
     <div class="player-bar bottom" id="bottomBar">
       <span class="player-name" id="bottomName">Blancas</span>
-      <div><span id="bottomCaptured" class="captured-pieces"></span><span id="bottomAdv" class="mat-badge" hidden></span></div>
+      <div class="bar-right"><span id="bottomCaptured" class="captured-pieces"></span><span id="bottomAdv" class="mat-badge" hidden></span><span id="bottomClock" class="clock" hidden></span></div>
     </div>
 
 
@@ -588,6 +600,9 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     </div>
     <div id="statusText" class="status-line" aria-live="polite"></div>
     <div id="retryBox" class="retry-box" hidden aria-live="polite" tabindex="-1"></div>
+    <div id="cpuBox" class="retry-box" hidden aria-live="polite"></div>
+    <div id="guessBox" class="retry-box" hidden aria-live="polite"></div>
+    <div id="visBox" class="retry-box" hidden aria-live="polite"></div>
     <div class="type-move" id="typeMoveRow">
       <input id="moveTyped" placeholder="⌨ Escribe una jugada (e4, Cf3, Axc6, O-O…) y pulsa Intro" aria-label="Escribir una jugada con el teclado" autocomplete="off" spellcheck="false">
     </div>
@@ -1042,6 +1057,57 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 
       <div class="section">
         <h2>
+          <span>🔮 Adivina la jugada</span>
+          <span id="guessBadge" class="srs-pill">Inactivo</span>
+        </h2>
+        <p class="small">Reproduce una partida acertando las jugadas de un bando. Cada intento lo puntúa el motor de 0 a 5 según lo que pierdes respecto a la mejor jugada; al final ves tu puntuación junto a la del jugador de la partida.</p>
+        <div class="filter-row">
+          <select id="guessSource" aria-label="Partida">
+            <option value="board">La partida del tablero</option>
+            <option value="classic">Una clásica de la antología (al azar)</option>
+            <option value="mine">Una de mis partidas (al azar)</option>
+          </select>
+          <select id="guessSide" aria-label="Bando que adivinas">
+            <option value="auto">Bando: automático</option>
+            <option value="1">Adivino las blancas</option>
+            <option value="-1">Adivino las negras</option>
+          </select>
+        </div>
+        <div class="controls">
+          <button id="guessStartBtn" class="primary">▶ Empezar</button>
+          <span class="small">Con «la partida del tablero» empieza desde la jugada en la que estés (|◀ para ir al principio).</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>
+          <span>🙈 A ciegas y visualización</span>
+          <span id="blindBadge" class="srs-pill">Piezas visibles</span>
+        </h2>
+        <p class="small">Juega sin ver las piezas (escribe o pulsa las casillas) y entrena la visión del tablero: seguir una línea de memoria, el color de las casillas y sus coordenadas.</p>
+        <div class="controls">
+          <button id="blindBtn" class="sm-btn warn-btn" title="Oculta las piezas del tablero (tecla B)">🙈 Ocultar piezas</button>
+          <button id="peekBtn" class="sm-btn" hidden title="Muestra las piezas un par de segundos">👁 Ojear</button>
+          <button id="blindCpuBtn" class="sm-btn info-btn" title="Abre la partida contra la CPU con las piezas ocultas">🤖 Jugar a ciegas vs CPU</button>
+        </div>
+        <div class="filter-row">
+          <select id="visMode" aria-label="Ejercicio">
+            <option value="line">Sigue la línea de memoria</option>
+            <option value="color">Color de las casillas</option>
+            <option value="coords">Encuentra la casilla (30 s)</option>
+          </select>
+          <select id="visPlies" aria-label="Dificultad">
+            <option value="2">2 medias jugadas</option>
+            <option value="4" selected>4 medias jugadas</option>
+            <option value="6">6 medias jugadas</option>
+            <option value="8">8 medias jugadas</option>
+          </select>
+          <button id="visStartBtn" class="primary sm-btn">▶ Empezar</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>
           <span>🛠 Editor de posición</span>
           <button id="toggleEditorModeBtn" class="warn-btn sm-btn">✏ Colocar piezas</button>
         </h2>
@@ -1088,6 +1154,57 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <label><input type="checkbox" id="setAutosave"> Recordar la partida al recargar</label>
       <label><input type="checkbox" id="setAnimate"> Animar las piezas</label>
       <label><input type="checkbox" id="setWheel"> Rueda del ratón para avanzar/retroceder</label>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="cpuModal" role="dialog" aria-modal="true" aria-labelledby="cpuTitle">
+  <div class="modal">
+    <h2 id="cpuTitle"><span>🤖 Jugar contra la CPU</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div class="grid2">
+      <div><label for="cpuColor">Juegas con</label>
+        <select id="cpuColor">
+          <option value="board">El bando de abajo del tablero</option>
+          <option value="1">Blancas</option>
+          <option value="-1">Negras</option>
+          <option value="r">Al azar</option>
+        </select></div>
+      <div><label for="cpuLevel">Nivel</label>
+        <select id="cpuLevel">
+          <option value="1">Nivel 1</option><option value="3">Nivel 2</option><option value="5">Nivel 3</option><option value="8">Nivel 4</option>
+          <option value="11">Nivel 5</option><option value="14">Nivel 6</option><option value="17">Nivel 7</option><option value="20">Nivel 8 (máx.)</option>
+        </select></div>
+      <div><label for="cpuStyle">Estilo</label>
+        <select id="cpuStyle">
+          <option value="balanced">⚖ Equilibrado: la jugada del motor</option>
+          <option value="aggressive">⚔ Agresivo: jaques, capturas y ataque al rey</option>
+          <option value="positional">🏰 Posicional: desarrollo, centro y enroque</option>
+          <option value="defensive">🛡 Defensivo: cambia piezas y juega seguro</option>
+          <option value="human">🎲 Humano: a veces no ve la mejor</option>
+        </select></div>
+      <div><label for="cpuClock">Reloj</label>
+        <select id="cpuClock">
+          <option value="">Sin reloj</option>
+          <option value="1+0">1+0 · bala</option>
+          <option value="3+0">3+0 · blitz</option>
+          <option value="3+2">3+2 · blitz</option>
+          <option value="5+0">5+0 · blitz</option>
+          <option value="5+3">5+3 · blitz</option>
+          <option value="10+0">10+0 · rápida</option>
+          <option value="10+5">10+5 · rápida</option>
+          <option value="15+10">15+10 · rápida</option>
+          <option value="30+0">30+0 · clásica</option>
+        </select></div>
+      <div><label for="cpuFrom">Empezar desde</label>
+        <select id="cpuFrom">
+          <option value="new">Una partida nueva</option>
+          <option value="here">La posición del tablero</option>
+        </select></div>
+      <div><label>&nbsp;</label><label class="switch"><input type="checkbox" id="cpuBlind"> 🙈 A ciegas (piezas ocultas)</label></div>
+    </div>
+    <p class="small" id="cpuNote">Mientras juegas, el motor y la evaluación se ocultan. Con reloj no se pueden deshacer jugadas, y si se te acaba el tiempo pierdes (salvo que el rival no tenga material para dar mate).</p>
+    <div class="controls">
+      <button id="cpuStartBtn" class="primary">▶ Empezar a jugar</button>
     </div>
   </div>
 </div>
