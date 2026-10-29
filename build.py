@@ -18,6 +18,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 
+# Motores Stockfish (GPL v3): no se incluyen en el repositorio; el navegador los descarga de estos CDN.
+ENGINES = {
+    "SF19_JS": "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js",
+    "SF19_WASM": "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm",
+    "SF10_JS": "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js",
+}
+
+
+def engines(text):
+    for k, v in ENGINES.items():
+        text = text.replace("{{%s}}" % k, v)
+    return text
+
 
 def read(p):
     return (SRC / p).read_text(encoding="utf-8")
@@ -174,13 +187,14 @@ def build():
     page = page.replace("{{ICON_SVG}}", data_uri("assets/icon.svg", "image/svg+xml"))
     page = page.replace("{{ICON_PNG32}}", data_uri("assets/icon-32.png", "image/png"))
     page = page.replace("{{VERSION}}", version)
+    page = engines(page)
     left = re.findall(r"\{\{[A-Z_0-9]+\}\}", page)
     if left:
         raise SystemExit("Marcadores sin sustituir: " + ", ".join(sorted(set(left))))
     return {
         "index.html": page,
-        "sw.js": read("sw.js").replace("{{VERSION}}", version),
-        "sf-worker.js": read("sf-worker.js"),
+        "sw.js": engines(read("sw.js").replace("{{VERSION}}", version)),
+        "sf-worker.js": engines(read("sf-worker.js")),
         "GUIA.md": build_guide(read("help.html")),
     }
 

@@ -20,5 +20,11 @@ jobs:
         run: |
           python3 -m pip install --quiet playwright
           python3 -m playwright install --with-deps chromium
+      - name: Descargar Stockfish 19 (para probarlo sin depender del CDN)
+        run: |
+          npm pack stockfish@19.0.1 --silent
+          mkdir -p /tmp/sf && tar xzf stockfish-19.0.1.tgz -C /tmp/sf package/bin/stockfish-19-lite-single.js package/bin/stockfish-19-lite-single.wasm
       - name: Aplicación en el navegador
+        env:
+          STOCKFISH_DIR: /tmp/sf/package/bin
         run: python3 tests/test_app.py

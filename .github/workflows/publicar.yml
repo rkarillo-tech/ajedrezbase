@@ -25,7 +25,9 @@ jobs:
           node tests/test_reglas.js
           python3 -m pip install --quiet playwright
           python3 -m playwright install --with-deps chromium
-          python3 tests/test_app.py
+          npm pack stockfish@19.0.1 --silent
+          mkdir -p /tmp/sf && tar xzf stockfish-19.0.1.tgz -C /tmp/sf package/bin/stockfish-19-lite-single.js package/bin/stockfish-19-lite-single.wasm
+          STOCKFISH_DIR=/tmp/sf/package/bin python3 tests/test_app.py
       - name: Adjuntar a la Release
         env:
           GH_TOKEN: ${{ github.token }}

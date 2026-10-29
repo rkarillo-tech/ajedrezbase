@@ -28,7 +28,10 @@
         <ul>
           <li><b>Mover</b>: arrastra la pieza, o haz clic en la pieza y luego en la casilla de destino. Los puntos verdes indican las jugadas legales (se pueden ocultar en ⚙ Ajustes).</li>
           <li><b>Coronar</b>: al llevar un peón a la última fila aparece un cuadro para elegir dama, torre, alfil o caballo.</li>
-          <li><b>Navegar</b>: botones <b>|◀ ◀ ▶ ▶|</b> bajo el gráfico, o el teclado (<kbd>←</kbd> <kbd>→</kbd> <kbd>Inicio</kbd> <kbd>Fin</kbd>). También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.</li>
+          <li><b>Escribir la jugada</b>: en el recuadro «⌨ Escribe una jugada» bajo el tablero, teclea <code>e4</code>, <code>Cf3</code>, <code>Axc6</code>, <code>O-O</code> (o en inglés, <code>Nf3</code>) y pulsa <kbd>Intro</kbd>. Sirve para jugar sin ratón.</li>
+          <li><b>Navegar</b>: botones <b>|◀ ◀ ▶ ▶|</b> bajo el gráfico, el teclado (<kbd>←</kbd> <kbd>→</kbd> <kbd>Inicio</kbd> <kbd>Fin</kbd>) o la <b>rueda del ratón</b> con el puntero sobre el tablero. También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.</li>
+          <li><b>Vista previa</b>: al pasar el ratón por una jugada de la lista o de las líneas del motor aparece un minitablero con esa posición, sin moverte de donde estás.</li>
+          <li>Las piezas se deslizan al avanzar y retroceder; si lo prefieres, desactiva «Animar las piezas» o «Rueda del ratón» en ⚙ Ajustes.</li>
           <li><b>▶ Auto</b> (o <kbd>Espacio</kbd>) reproduce la partida sola, una jugada por segundo.</li>
           <li><b>⇅ Girar</b> (o <kbd>F</kbd>) da la vuelta al tablero.</li>
           <li>La aplicación detecta jaque mate, ahogado, triple repetición, regla de 50 jugadas y material insuficiente; lo verás en la línea de estado bajo los botones.</li>
@@ -62,7 +65,8 @@
           <li><b>Moverte entre alternativas</b>: <kbd>↑</kbd> <kbd>↓</kbd> saltan entre las jugadas posibles del mismo punto.</li>
           <li><b>⬆ Promover variante</b> la sube un puesto; <b>★ Hacer principal</b> la convierte en la línea principal; <b>✂ Cortar</b> borra la jugada actual y todo lo que sigue.</li>
           <li><b>Comentar</b>: en «Comentario de la posición» escribe lo que quieras sobre la jugada que lleva a la posición actual. Aparece en cursiva en la lista de jugadas y se exporta en el PGN.</li>
-          <li><b>Símbolos</b>: <code>! !! !? ?! ? ??</code> valoran la jugada; <code>+− ± = ∞ ∓ −+</code> valoran la posición. «Limpiar» los quita.</li>
+          <li><b>Símbolos</b>: <code>! !! !? ?! ? ??</code> valoran la jugada; <code>+− ± = ∞ ∓ −+</code> valoran la posición. «Limpiar» los quita. El símbolo de la última jugada aparece también en un círculo de color sobre su casilla del tablero.</li>
+          <li><b>📋 Ver como planilla</b>: muestra la partida en dos columnas (número · blancas · negras), como en una planilla de torneo; los comentarios y variantes aparecen entre filas. <b>📜 Ver como lista</b> vuelve a la vista continua.</li>
           <li><b>✍ Redactar comentario con el motor</b>: analiza la jugada actual y escribe un comentario en español (si era un error, cuál era la mejor y cuál es la refutación).</li>
           <li><b>Flechas y círculos</b>: clic derecho y arrastrar dibuja una flecha; clic derecho en una casilla la rodea. Verde por defecto, <kbd>⇧</kbd> roja, <kbd>Alt</kbd> azul, <kbd>⇧</kbd>+<kbd>Alt</kbd> amarilla. Repite el gesto para borrarla, o usa <b>🧽 Borrar flechas</b>. Se guardan en el PGN y Lichess/ChessBase las entienden.</li>
         </ul>
@@ -74,14 +78,16 @@
         <ul>
           <li><b>Analizar</b> (o tecla <kbd>E</kbd>) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.</li>
           <li><b>Flecha</b> muestra en morado la mejor jugada del motor. <b>⚡ Jugar</b> la ejecuta.</li>
+          <li><b>👁 Amenaza</b> (o tecla <kbd>X</kbd>): enseña qué jugaría el rival <i>si le tocara mover</i>, con una flecha roja discontinua y su valoración. Responde al momento a «¿qué está tramando?» y a por qué una jugada pasiva es mala. Pulsa otra vez o cambia de jugada para quitarla.</li>
           <li><b>Evaluación</b>: <code>+0.80</code> = ventaja blanca de unos 8 décimas de peón; <code>−1.50</code> = ventaja negra de 1,5 peones; <code>#3</code> = mate en 3 para las blancas; <code>−#2</code> = mate en 2 para las negras.</li>
           <li><b>Qué motor está trabajando</b> (etiqueta verde del panel):
             <ul>
-              <li><b>⚙ Stockfish 10</b>: el motor fuerte, funcionando en tu navegador (descarga 1,5 MB la primera vez).</li>
-              <li><b>⚙ Motor interno</b>: el de respaldo, más débil, funciona siempre sin conexión. Si aparece <b>⚠</b>, pasa el ratón por encima para ver por qué no se pudo usar Stockfish (normalmente, porque el archivo se abrió en una vista previa en vez de en el navegador).</li>
+              <li><b>⚙ Stockfish 19</b>: el motor fuerte (versión «Lite» con red neuronal NNUE), funcionando en tu navegador. Descarga 1,9 MB la primera vez.</li>
+              <li><b>⚙ Stockfish 10</b>: el de antes, más débil; se usa sólo si el navegador no admite WebAssembly o no se puede descargar el 19.</li>
+              <li><b>⚙ Motor interno</b>: el de respaldo, mucho más débil, funciona siempre sin conexión. Si aparece <b>⚠</b>, pasa el ratón por encima para ver por qué no se pudo usar Stockfish (normalmente, porque el archivo se abrió en una vista previa en vez de en el navegador).</li>
               <li><b>☁ Stockfish (nube Lichess)</b>: sólo al pulsar <b>☁ Nube</b>. Es un análisis muy profundo ya calculado en Lichess; sólo existe para posiciones conocidas (aperturas, partidas famosas).</li>
             </ul></li>
-          <li>En <b>⚙ Ajustes</b> puedes elegir «sólo motor interno», el tiempo por jugada y el número de líneas.</li>
+          <li>En <b>⚙ Ajustes</b> puedes elegir el motor (automático, Stockfish 10 o sólo el interno), el tiempo por jugada y el número de líneas.</li>
         </ul>
       </details>
 
@@ -98,6 +104,14 @@
           <li><b>📈 Completar gráfico</b> hace una pasada rápida sólo para dibujar el gráfico, sin comentar nada.</li>
           <li><b>Cómo leer el gráfico</b>: de izquierda a derecha, la partida (sólo la línea principal). Cuanto más <b>sube la zona blanca</b>, mejor van las blancas; si baja, las negras. La línea discontinua es la igualdad. +1 peón ≈ 59 %, +3 ≈ 75 %, +5 ≈ 86 %, mate = 100 %. Los puntos de color son los errores; la raya naranja es la jugada en la que estás. Haz clic en el gráfico para saltar a esa jugada.</li>
           <li>Puedes <b>⏹ Detener</b> el análisis cuando quieras; lo calculado se conserva.</li>
+          <li><b>🌿 Analizar esta variante</b>: si estás dentro de una variante, analiza esa línea (desde el inicio hasta su final) en vez de la principal.</li>
+          <li><b>🎯 Aprende de tus errores</b>: al terminar el análisis, elige un bando (o «Todos»). La aplicación te lleva a cada jugada marcada con <span class="nag-mistake">?</span> o <span class="nag-blunder">??</span>, oculta el motor y te pide que encuentres algo mejor:
+            <ul>
+              <li>si aciertas la del motor, o una casi igual de buena, se da por resuelta (flecha verde; la del motor en azul);</li>
+              <li>si no, te dice cómo quedaría la posición y puedes volver a intentarlo; tras 3 fallos, o con <b>👁 Ver solución</b>, se muestra;</li>
+              <li><b>💡 Pista</b> marca la pieza que hay que mover y, la segunda vez, la jugada; <b>⏭ Saltar</b> pasa al siguiente;</li>
+              <li><b>📌 Guardar como tarjeta</b> lo convierte en una tarjeta de «error típico» para repasarlo más adelante en 🎯 Entrenar.</li>
+            </ul></li>
         </ul>
         <div class="example"><b>Ejemplo:</b> tras importar tu partida del torneo, pulsa «Analizar y comentar» → mira en el gráfico dónde cae la curva → pulsa ese punto → lee el comentario de la jugada marcada con ?? → prueba en el tablero la alternativa que propone.</div>
       </details>
@@ -262,14 +276,26 @@
           <tr><td><kbd>F</kbd></td><td>Girar el tablero</td></tr>
           <tr><td><kbd>E</kbd></td><td>Activar / pausar el análisis continuo</td></tr>
           <tr><td><kbd>M</kbd></td><td>Marcar la posición</td></tr>
+          <tr><td><kbd>X</kbd></td><td>Ver la amenaza del rival</td></tr>
+          <tr><td>Rueda del ratón</td><td>Avanzar / retroceder (con el puntero sobre el tablero)</td></tr>
           <tr><td><kbd>?</kbd></td><td>Abrir esta ayuda</td></tr>
           <tr><td><kbd>Esc</kbd></td><td>Cerrar ventanas</td></tr>
         </table>
         <p class="small">Los atajos no funcionan mientras escribes en un recuadro de texto.</p>
       </details>
 
+      <details id="help-compartir">
+        <summary>📤 19. Imagen, impresión y enlaces para compartir</summary>
+        <ul>
+          <li><b>🖼 Imagen</b>: descarga la posición del tablero como PNG, con sus flechas y círculos y un pie con la partida y la jugada. Si el navegador lo permite, además la copia al portapapeles para pegarla en un correo, un chat o un documento.</li>
+          <li><b>🖨 Imprimir</b>: prepara la partida comentada para imprimirla o guardarla como PDF (elige «Guardar como PDF» en la ventana de impresión): cabecera con jugadores y evento, jugadas con comentarios y variantes, y diagramas en las jugadas marcadas con 📌, en las ??, ? y !! y en la posición final.</li>
+          <li><b>🔗 Enlace</b>: copia un enlace que abre la partida justo en la jugada en la que estás, con las jugadas de la línea (y la posición inicial si no es la normal). Quien lo abra la verá en su navegador sin que se guarde nada; puede guardarla con 💾 si le interesa. Los comentarios y las variantes no viajan en el enlace: para eso, comparte el .pgn.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> quieres preguntarle a un compañero del club por la jugada 18 → sitúate en ella → <b>🔗 Enlace</b> → pégalo en WhatsApp. Para tu cuaderno de estudio → <b>🖨 Imprimir</b> → «Guardar como PDF».</div>
+      </details>
+
       <details id="help-instalar">
-        <summary>📲 19. Versión web, instalación y uso sin conexión</summary>
+        <summary>📲 20. Versión web, instalación y uso sin conexión</summary>
         <ul>
           <li><b>Versión web</b>: <a href="https://rkarillo-tech.github.io/ajedrezbase/" target="_blank" rel="noopener">rkarillo-tech.github.io/ajedrezbase</a>. Es la forma recomendada: Stockfish y las consultas a Lichess funcionan sin problemas y tu biblioteca queda siempre en la misma dirección.</li>
           <li><b>Instalarla</b>: en la versión web aparece el botón <b>⬇ Instalar</b> arriba (o el icono de instalar en la barra de direcciones de Chrome y Edge). En el móvil: Android con Chrome → menú ⋮ → «Instalar aplicación»; iPhone/iPad con Safari → Compartir → «Añadir a pantalla de inicio».</li>
@@ -280,10 +306,14 @@
       </details>
 
       <details id="help-problemas">
-        <summary>🩺 20. Problemas frecuentes</summary>
+        <summary>🩺 21. Problemas frecuentes</summary>
         <dl class="faq">
           <dt>«Lichess ha rechazado la consulta: hace falta un token personal»</dt>
           <dd>Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 13. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.</dd>
+          <dt>«Lichess pide esperar» o «demasiadas consultas»</dt>
+          <dd>Lichess limita las consultas seguidas. La aplicación hace una cada vez y, si Lichess pide una pausa, espera el minuto que exige antes de volver a preguntar. Basta con esperar.</dd>
+          <dt>«Esta partida se ha modificado en otra pestaña»</dt>
+          <dd>Tienes la aplicación abierta en dos pestañas o ventanas. Para no perder nada, no se guarda encima de los cambios de la otra: vuelve a abrir la partida desde la biblioteca, o pulsa 💾 si quieres quedarte con la versión de esta pestaña.</dd>
           <dt>«Motor interno ⚠» en vez de Stockfish</dt>
           <dd>El navegador no ha dejado arrancar Stockfish (pasa en vistas previas de archivos o sin conexión la primera vez). Abre la versión web (<a href="https://rkarillo-tech.github.io/ajedrezbase/" target="_blank" rel="noopener">rkarillo-tech.github.io/ajedrezbase</a>) o el archivo directamente con Chrome, Edge o Firefox (doble clic).</dd>
           <dt>Importo en inglés y veo las jugadas en español</dt>

@@ -17,7 +17,10 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 ## ♟ 2. Mover piezas y recorrer la partida
 - **Mover**: arrastra la pieza, o haz clic en la pieza y luego en la casilla de destino. Los puntos verdes indican las jugadas legales (se pueden ocultar en ⚙ Ajustes).
 - **Coronar**: al llevar un peón a la última fila aparece un cuadro para elegir dama, torre, alfil o caballo.
-- **Navegar**: botones **|◀ ◀ ▶ ▶|** bajo el gráfico, o el teclado (`←` `→` `Inicio` `Fin`). También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.
+- **Escribir la jugada**: en el recuadro «⌨ Escribe una jugada» bajo el tablero, teclea `e4`, `Cf3`, `Axc6`, `O-O` (o en inglés, `Nf3`) y pulsa `Intro`. Sirve para jugar sin ratón.
+- **Navegar**: botones **|◀ ◀ ▶ ▶|** bajo el gráfico, el teclado (`←` `→` `Inicio` `Fin`) o la **rueda del ratón** con el puntero sobre el tablero. También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.
+- **Vista previa**: al pasar el ratón por una jugada de la lista o de las líneas del motor aparece un minitablero con esa posición, sin moverte de donde estás.
+- Las piezas se deslizan al avanzar y retroceder; si lo prefieres, desactiva «Animar las piezas» o «Rueda del ratón» en ⚙ Ajustes.
 - **▶ Auto** (o `Espacio`) reproduce la partida sola, una jugada por segundo.
 - **⇅ Girar** (o `F`) da la vuelta al tablero.
 - La aplicación detecta jaque mate, ahogado, triple repetición, regla de 50 jugadas y material insuficiente; lo verás en la línea de estado bajo los botones.
@@ -45,7 +48,8 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - **Moverte entre alternativas**: `↑` `↓` saltan entre las jugadas posibles del mismo punto.
 - **⬆ Promover variante** la sube un puesto; **★ Hacer principal** la convierte en la línea principal; **✂ Cortar** borra la jugada actual y todo lo que sigue.
 - **Comentar**: en «Comentario de la posición» escribe lo que quieras sobre la jugada que lleva a la posición actual. Aparece en cursiva en la lista de jugadas y se exporta en el PGN.
-- **Símbolos**: `! !! !? ?! ? ??` valoran la jugada; `+− ± = ∞ ∓ −+` valoran la posición. «Limpiar» los quita.
+- **Símbolos**: `! !! !? ?! ? ??` valoran la jugada; `+− ± = ∞ ∓ −+` valoran la posición. «Limpiar» los quita. El símbolo de la última jugada aparece también en un círculo de color sobre su casilla del tablero.
+- **📋 Ver como planilla**: muestra la partida en dos columnas (número · blancas · negras), como en una planilla de torneo; los comentarios y variantes aparecen entre filas. **📜 Ver como lista** vuelve a la vista continua.
 - **✍ Redactar comentario con el motor**: analiza la jugada actual y escribe un comentario en español (si era un error, cuál era la mejor y cuál es la refutación).
 - **Flechas y círculos**: clic derecho y arrastrar dibuja una flecha; clic derecho en una casilla la rodea. Verde por defecto, `⇧` roja, `Alt` azul, `⇧`+`Alt` amarilla. Repite el gesto para borrarla, o usa **🧽 Borrar flechas**. Se guardan en el PGN y Lichess/ChessBase las entienden.
 
@@ -54,12 +58,14 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 ## ⚙ 5. El motor: análisis en vivo, nube y etiquetas
 - **Analizar** (o tecla `E`) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.
 - **Flecha** muestra en morado la mejor jugada del motor. **⚡ Jugar** la ejecuta.
+- **👁 Amenaza** (o tecla `X`): enseña qué jugaría el rival *si le tocara mover*, con una flecha roja discontinua y su valoración. Responde al momento a «¿qué está tramando?» y a por qué una jugada pasiva es mala. Pulsa otra vez o cambia de jugada para quitarla.
 - **Evaluación**: `+0.80` = ventaja blanca de unos 8 décimas de peón; `−1.50` = ventaja negra de 1,5 peones; `#3` = mate en 3 para las blancas; `−#2` = mate en 2 para las negras.
 - **Qué motor está trabajando** (etiqueta verde del panel):
-  - **⚙ Stockfish 10**: el motor fuerte, funcionando en tu navegador (descarga 1,5 MB la primera vez).
-  - **⚙ Motor interno**: el de respaldo, más débil, funciona siempre sin conexión. Si aparece **⚠**, pasa el ratón por encima para ver por qué no se pudo usar Stockfish (normalmente, porque el archivo se abrió en una vista previa en vez de en el navegador).
+  - **⚙ Stockfish 19**: el motor fuerte (versión «Lite» con red neuronal NNUE), funcionando en tu navegador. Descarga 1,9 MB la primera vez.
+  - **⚙ Stockfish 10**: el de antes, más débil; se usa sólo si el navegador no admite WebAssembly o no se puede descargar el 19.
+  - **⚙ Motor interno**: el de respaldo, mucho más débil, funciona siempre sin conexión. Si aparece **⚠**, pasa el ratón por encima para ver por qué no se pudo usar Stockfish (normalmente, porque el archivo se abrió en una vista previa en vez de en el navegador).
   - **☁ Stockfish (nube Lichess)**: sólo al pulsar **☁ Nube**. Es un análisis muy profundo ya calculado en Lichess; sólo existe para posiciones conocidas (aperturas, partidas famosas).
-- En **⚙ Ajustes** puedes elegir «sólo motor interno», el tiempo por jugada y el número de líneas.
+- En **⚙ Ajustes** puedes elegir el motor (automático, Stockfish 10 o sólo el interno), el tiempo por jugada y el número de líneas.
 
 ## 🤖 6. Analizar una partida completa y leer el gráfico
 - **🤖 Analizar y comentar** (pestaña Estudio) evalúa todas las jugadas de la línea principal y:
@@ -70,6 +76,12 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - **📈 Completar gráfico** hace una pasada rápida sólo para dibujar el gráfico, sin comentar nada.
 - **Cómo leer el gráfico**: de izquierda a derecha, la partida (sólo la línea principal). Cuanto más **sube la zona blanca**, mejor van las blancas; si baja, las negras. La línea discontinua es la igualdad. +1 peón ≈ 59 %, +3 ≈ 75 %, +5 ≈ 86 %, mate = 100 %. Los puntos de color son los errores; la raya naranja es la jugada en la que estás. Haz clic en el gráfico para saltar a esa jugada.
 - Puedes **⏹ Detener** el análisis cuando quieras; lo calculado se conserva.
+- **🌿 Analizar esta variante**: si estás dentro de una variante, analiza esa línea (desde el inicio hasta su final) en vez de la principal.
+- **🎯 Aprende de tus errores**: al terminar el análisis, elige un bando (o «Todos»). La aplicación te lleva a cada jugada marcada con ? o ??, oculta el motor y te pide que encuentres algo mejor:
+  - si aciertas la del motor, o una casi igual de buena, se da por resuelta (flecha verde; la del motor en azul);
+  - si no, te dice cómo quedaría la posición y puedes volver a intentarlo; tras 3 fallos, o con **👁 Ver solución**, se muestra;
+  - **💡 Pista** marca la pieza que hay que mover y, la segunda vez, la jugada; **⏭ Saltar** pasa al siguiente;
+  - **📌 Guardar como tarjeta** lo convierte en una tarjeta de «error típico» para repasarlo más adelante en 🎯 Entrenar.
 
 > **Ejemplo:** tras importar tu partida del torneo, pulsa «Analizar y comentar» → mira en el gráfico dónde cae la curva → pulsa ese punto → lee el comentario de la jugada marcada con ?? → prueba en el tablero la alternativa que propone.
 
@@ -189,22 +201,39 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 | `F` | Girar el tablero |
 | `E` | Activar / pausar el análisis continuo |
 | `M` | Marcar la posición |
+| `X` | Ver la amenaza del rival |
+| Rueda del ratón | Avanzar / retroceder (con el puntero sobre el tablero) |
 | `?` | Abrir esta ayuda |
 | `Esc` | Cerrar ventanas |
 
 Los atajos no funcionan mientras escribes en un recuadro de texto.
 
-## 📲 19. Versión web, instalación y uso sin conexión
+## 📤 19. Imagen, impresión y enlaces para compartir
+- **🖼 Imagen**: descarga la posición del tablero como PNG, con sus flechas y círculos y un pie con la partida y la jugada. Si el navegador lo permite, además la copia al portapapeles para pegarla en un correo, un chat o un documento.
+- **🖨 Imprimir**: prepara la partida comentada para imprimirla o guardarla como PDF (elige «Guardar como PDF» en la ventana de impresión): cabecera con jugadores y evento, jugadas con comentarios y variantes, y diagramas en las jugadas marcadas con 📌, en las ??, ? y !! y en la posición final.
+- **🔗 Enlace**: copia un enlace que abre la partida justo en la jugada en la que estás, con las jugadas de la línea (y la posición inicial si no es la normal). Quien lo abra la verá en su navegador sin que se guarde nada; puede guardarla con 💾 si le interesa. Los comentarios y las variantes no viajan en el enlace: para eso, comparte el .pgn.
+
+> **Ejemplo:** quieres preguntarle a un compañero del club por la jugada 18 → sitúate en ella → **🔗 Enlace** → pégalo en WhatsApp. Para tu cuaderno de estudio → **🖨 Imprimir** → «Guardar como PDF».
+
+## 📲 20. Versión web, instalación y uso sin conexión
 - **Versión web**: [rkarillo-tech.github.io/ajedrezbase](https://rkarillo-tech.github.io/ajedrezbase/). Es la forma recomendada: Stockfish y las consultas a Lichess funcionan sin problemas y tu biblioteca queda siempre en la misma dirección.
 - **Instalarla**: en la versión web aparece el botón **⬇ Instalar** arriba (o el icono de instalar en la barra de direcciones de Chrome y Edge). En el móvil: Android con Chrome → menú ⋮ → «Instalar aplicación»; iPhone/iPad con Safari → Compartir → «Añadir a pantalla de inicio».
 - **Sin conexión**: una vez abierta con internet, la aplicación (incluido Stockfish) queda guardada y funciona sin conexión. Sólo necesitan internet el explorador de Lichess, la nube y las tablas Syzygy.
 - **Actualizaciones**: con conexión siempre se carga la última versión; no hay que hacer nada.
 - **Archivo suelto**: también puedes descargar `index.html` y abrirlo con doble clic. Funciona igual, pero la biblioteca de esa copia es distinta de la de la versión web.
 
-## 🩺 20. Problemas frecuentes
+## 🩺 21. Problemas frecuentes
 **«Lichess ha rechazado la consulta: hace falta un token personal»**
 
 Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 13. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.
+
+**«Lichess pide esperar» o «demasiadas consultas»**
+
+Lichess limita las consultas seguidas. La aplicación hace una cada vez y, si Lichess pide una pausa, espera el minuto que exige antes de volver a preguntar. Basta con esperar.
+
+**«Esta partida se ha modificado en otra pestaña»**
+
+Tienes la aplicación abierta en dos pestañas o ventanas. Para no perder nada, no se guarda encima de los cambios de la otra: vuelve a abrir la partida desde la biblioteca, o pulsa 💾 si quieres quedarte con la versión de esta pestaña.
 
 **«Motor interno ⚠» en vez de Stockfish**
 

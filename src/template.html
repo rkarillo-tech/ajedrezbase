@@ -205,6 +205,14 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .danger { border-color: #7c3b3b; color: #ffcdd2; }
 .sm-btn { padding: 3px 7px; font-size: 0.77rem; }
 .on { background: #26593a; border-color: #43875d; }
+.type-move { margin-top: 6px; }
+.threat-info { padding: 5px 9px; border-bottom: 1px solid var(--border); font-size: .8rem; color: #ffcdd2; background: rgba(239,83,80,.08); }
+.retry-box { margin-top: 8px; background: #13261a; border: 1px solid var(--accent); border-radius: 8px; padding: 9px 11px; font-size: .86rem; }
+.retry-box:focus { outline: none; }
+.retry-head { font-weight: 800; margin-bottom: 3px; }
+.retry-q { margin-top: 5px; font-weight: 600; color: #c8e6c9; }
+.retry-msg { margin-top: 6px; }
+.type-move input { font-family: ui-monospace, monospace; font-size: .82rem; padding: 5px 8px; }
 .status-line { margin-top: 6px; font-size: .84rem; font-weight: 600; min-height: 1.2em; }
 .status-line.check { color: var(--warn); }
 .status-line.over { color: var(--danger); }
@@ -268,7 +276,7 @@ table.cb-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 #topBar { scroll-margin-top: 64px; }
 .editor-panel { background: #101520; border: 1px solid var(--warn); border-radius: 9px; padding: 10px; }
 body.editing #toolsPanel > :not(#editorPanel) { display: none; }
-body.editing #engineBox, body.editing #evalChartWrap, body.editing #chartLegend, body.editing #moves, body.editing #varControls, body.editing #navControls, body.editing #statusText { display: none; }
+body.editing #exportControls, body.editing #retryBox, body.editing #typeMoveRow, body.editing #engineBox, body.editing #evalChartWrap, body.editing #chartLegend, body.editing #moves, body.editing #varControls, body.editing #navControls, body.editing #statusText { display: none; }
 body.editing .board { border-color: var(--warn); }
 body.editing .eval-bar-outer { visibility: hidden; }
 .palette-btn.active { border-color: var(--warn); background: rgba(255, 167, 38, 0.16); }
@@ -356,6 +364,37 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 .lic-p { font-size: .86rem; }
 .lic-text { white-space: pre-wrap; font-size: .74rem; background: #0e131d; border: 1px solid var(--border); border-radius: 6px; padding: 8px; max-height: 260px; overflow: auto; }
 .lic-table td { vertical-align: top; font-size: .8rem; }
+/* Símbolo sobre la casilla */
+.sq-badge { position: absolute; top: 2%; right: 2%; z-index: 7; min-width: 34%; height: 34%; padding: 0 3px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: clamp(9px, 1.6vw, 14px); font-weight: 900; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.5); pointer-events: none; letter-spacing: -1px; }
+.nag-brilliant-bg { background: #0097a7; } .nag-good-bg { background: #43a047; } .nag-inacc-bg { background: #f9a825; color: #111; }
+.nag-mistake-bg { background: #f4511e; } .nag-blunder-bg { background: #d32f2f; }
+/* Planilla */
+.sheet-row { display: grid; grid-template-columns: 38px 1fr 1fr; border-bottom: 1px solid #1c2433; line-height: 1.7; }
+.sheet-row:nth-child(even) { background: rgba(255,255,255,.02); }
+.sheet-num { color: var(--muted); font-size: .82rem; text-align: right; padding-right: 8px; }
+.sheet-extra { padding: 3px 4px 5px 38px; border-bottom: 1px solid #1c2433; background: rgba(41,182,246,.04); }
+.pv-mv { cursor: default; }
+.pv-mv:hover { text-decoration: underline; }
+/* Minitablero flotante */
+.hover-board { position: fixed; z-index: 400; width: 184px; height: 184px; border: 2px solid var(--border); border-radius: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.55); pointer-events: none; background: var(--panel); }
+.hover-board svg { display: block; }
+/* Vista de impresión */
+.print-view { display: none; }
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  body > *:not(#printView) { display: none !important; }
+  .print-view { display: block !important; font: 11pt/1.5 Georgia, "Times New Roman", serif; color: #000; }
+  .print-view h1 { font-size: 16pt; margin: 0 0 2px; }
+  .print-view .pres { float: right; }
+  .print-view .pmeta { color: #444; font-size: 10pt; margin-bottom: 10px; }
+  .print-view .pnum { color: #555; margin-right: 2px; }
+  .print-view i { color: #333; }
+  .print-view .pv-diagram { margin: 8px 0 12px; break-inside: avoid; text-align: center; }
+  .print-view .pv-diagram svg { width: 6.5cm; height: 6.5cm; }
+  .print-view figcaption { font-size: 9.5pt; color: #333; }
+  .print-view .pfoot { margin-top: 16px; color: #777; font-size: 8pt; text-align: right; }
+}
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel3); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; z-index: 300; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 90vw; }
 .toast.show { opacity: 1; }
 
@@ -474,9 +513,11 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <label class="switch" title="Análisis continuo de la posición (tecla E)"><input type="checkbox" id="liveToggle"> Analizar</label>
           <label class="switch" title="Flecha con la mejor jugada"><input type="checkbox" id="arrowToggle"> Flecha</label>
           <button id="playBestMoveBtn" class="sm-btn" title="Jugar la mejor jugada del motor">⚡ Jugar</button>
+          <button id="threatBtn" class="sm-btn" title="Ver qué amenaza el rival: qué jugaría si le tocara mover (tecla X)">👁 Amenaza</button>
           <button id="cloudStockfishBtn" class="sm-btn info-btn" title="Evaluación profunda de Stockfish en la nube de Lichess">☁ Nube</button>
         </div>
       </div>
+      <div id="threatInfo" class="threat-info" hidden></div>
       <div class="engine-lines" id="engineLines"><div class="pv-empty">Iniciando motor…</div></div>
     </div>
 
@@ -500,6 +541,10 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button id="undoBtn" class="danger" title="Borrar esta jugada y todo lo que sigue">✂ Cortar</button>
     </div>
     <div id="statusText" class="status-line" aria-live="polite"></div>
+    <div id="retryBox" class="retry-box" hidden aria-live="polite" tabindex="-1"></div>
+    <div class="type-move" id="typeMoveRow">
+      <input id="moveTyped" placeholder="⌨ Escribe una jugada (e4, Cf3, Axc6, O-O…) y pulsa Intro" aria-label="Escribir una jugada con el teclado" autocomplete="off" spellcheck="false">
+    </div>
 
     <div id="moves" class="moves-box" aria-label="Jugadas y variantes"></div>
     <div class="controls" id="varControls">
@@ -508,6 +553,12 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button id="clearShapesBtn" class="sm-btn" title="Borrar flechas y círculos de esta posición">🧽 Borrar flechas</button>
       <button id="markBtn2" class="sm-btn warn-btn" title="Marcar esta posición">📌 Marcar</button>
       <span class="small hide-sm" style="margin-left:auto">Clic derecho: flechas/círculos (⇧ rojo, Alt azul, ⇧+Alt amarillo)</span>
+    </div>
+    <div class="controls" id="exportControls">
+      <button id="moveViewBtn" class="sm-btn" title="Cambiar entre lista continua y planilla de dos columnas">📋 Ver como planilla</button>
+      <button id="pngBtn" class="sm-btn" title="Descargar la posición como imagen PNG (y copiarla al portapapeles)">🖼 Imagen</button>
+      <button id="printBtn" class="sm-btn" title="Imprimir o guardar como PDF la partida comentada, con diagramas">🖨 Imprimir</button>
+      <button id="linkBtn" class="sm-btn" title="Copiar un enlace que abre esta partida en esta jugada">🔗 Enlace</button>
     </div>
   </section>
 
@@ -580,6 +631,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <span>Análisis de la partida</span>
         <span class="controls" style="margin:0">
           <button id="autoAnnotateBtn" class="warn-btn sm-btn" title="Evalúa cada jugada de la línea principal, marca errores y redacta comentarios">🤖 Analizar y comentar</button>
+          <button id="analyseVarBtn" class="sm-btn" hidden title="Analiza la variante en la que estás (desde el inicio hasta su final)">🌿 Analizar esta variante</button>
           <button id="cancelAnalysisBtn" class="sm-btn danger" hidden>⏹ Detener</button>
         </span>
       </h2>
@@ -598,6 +650,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           </tbody>
         </table>
         <p class="small">Clasificación por pérdida de probabilidad de ganar (como Lichess). Pulsa una jugada para leer su comentario.</p>
+        <div id="retryStart" class="controls" hidden></div>
       </div>
 
       <details id="headersDetails">
@@ -883,7 +936,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     <h2 id="settingsTitle"><span>⚙ Ajustes</span><button class="sm-btn" data-close>Cerrar</button></h2>
     <label for="setEngine">Motor de análisis</label>
     <select id="setEngine">
-      <option value="auto">Automático: Stockfish 10 (descarga 1,5 MB la primera vez) y, sin conexión, el motor interno</option>
+      <option value="auto">Automático: Stockfish 19 Lite (recomendado; descarga 1,9 MB la primera vez), con Stockfish 10 y el motor interno de respaldo</option>
+      <option value="sf10">Stockfish 10 (más antiguo y débil; para navegadores sin WebAssembly)</option>
       <option value="internal">Sólo motor interno (100 % sin conexión, más débil)</option>
     </select>
     <div class="grid3">
@@ -904,6 +958,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <label><input type="checkbox" id="setCoords"> Coordenadas</label>
       <label><input type="checkbox" id="setLegal"> Mostrar jugadas legales</label>
       <label><input type="checkbox" id="setAutosave"> Recordar la partida al recargar</label>
+      <label><input type="checkbox" id="setAnimate"> Animar las piezas</label>
+      <label><input type="checkbox" id="setWheel"> Rueda del ratón para avanzar/retroceder</label>
     </div>
   </div>
 </div>
@@ -945,7 +1001,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     <table class="cb-table lic-table">
       <thead><tr><th>Componente</th><th>Uso</th><th>Licencia</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/niklasf/stockfish.js" target="_blank" rel="noopener noreferrer">stockfish.js</a> 10.0.2 (Stockfish de T. Romstad, M. Costalba, J. Kiiski, G. Linscott y colaboradores; versión JavaScript de Niklas Fiekas)</td><td>Motor de análisis. <b>No va incluido</b>: el navegador lo descarga de cdnjs al usarlo (y, si instalas la aplicación, lo guarda para usarlo sin conexión).</td><td>GPL v3 · <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">código fuente</a></td></tr>
+        <tr><td><a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener noreferrer">Stockfish.js</a> 19 Lite (WebAssembly) de Chess.com / Nathan Rugg, basado en <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">Stockfish</a> (T. Romstad, M. Costalba, J. Kiiski, G. Linscott y colaboradores), con red NNUE de Chris Bao</td><td>Motor de análisis principal. <b>No va incluido</b>: el navegador lo descarga de jsDelivr al usarlo (y, si instalas la aplicación, lo guarda para usarlo sin conexión).</td><td>GPL v3 · <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">código fuente</a></td></tr>
+        <tr><td><a href="https://github.com/niklasf/stockfish.js" target="_blank" rel="noopener noreferrer">stockfish.js</a> 10.0.2 (versión JavaScript de Niklas Fiekas)</td><td>Motor de respaldo para navegadores sin WebAssembly; se descarga de cdnjs sólo si hace falta</td><td>GPL v3</td></tr>
         <tr><td>Piezas «Clásicas», de <a href="https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces" target="_blank" rel="noopener noreferrer">Colin M. L. Burnett</a> (Wikimedia Commons)</td><td>Dibujo de las piezas y del icono</td><td>Licencia múltiple GPL / BSD / GFDL</td></tr>
         <tr><td>Servicios de <a href="https://lichess.org" target="_blank" rel="noopener noreferrer">Lichess</a>: explorador de aperturas, evaluación en la nube y tablas Syzygy</td><td>Sólo se consultan cuando los usas; el explorador necesita tu token personal</td><td>Servicio gratuito de lichess.org (<a href="https://lichess.org/api" target="_blank" rel="noopener noreferrer">API</a>)</td></tr>
         <tr><td>Partidas de la antología y finales clásicos</td><td>Ejemplos</td><td>Partidas históricas</td></tr>
@@ -954,6 +1011,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     <p class="small">El motor interno, las reglas, el lector PGN, la enciclopedia ECO en español y el resto de la aplicación son código propio con licencia MIT. Tus partidas se guardan sólo en tu navegador: la aplicación no envía datos a ningún servidor propio.</p>
   </div>
 </div>
+
+<div id="printView" class="print-view" aria-hidden="true"></div>
 
 <div id="toast" class="toast" role="status"></div>
 

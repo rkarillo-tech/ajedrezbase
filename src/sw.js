@@ -1,12 +1,13 @@
 /* AjedrezBase {{VERSION}} · service worker: permite instalar la aplicación y usarla sin conexión.
    - La página se pide primero a la red (así siempre tienes la última versión) y, si no hay
      conexión, se sirve la copia guardada.
-   - Stockfish se guarda la primera vez que se descarga y se reutiliza entre versiones.
+   - Stockfish (19 Lite y, si se usa, 10) se guarda la primera vez y se reutiliza entre versiones.
    - Las consultas a Lichess nunca pasan por aquí: van siempre a la red. */
 const VERSION = "{{VERSION}}";
 const CACHE = "ajedrezbase-app-" + VERSION;
 const ENGINE_CACHE = "ajedrezbase-motor";
-const ENGINE = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js";
+const ENGINES = ["{{SF19_JS}}", "{{SF19_WASM}}", "{{SF10_JS}}"];
+const PRECACHE_ENGINES = ["{{SF19_JS}}", "{{SF19_WASM}}"];   // el 10 sólo se guarda si llega a usarse
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "sf-worker.js",
   "assets/icon.svg", "assets/icon-32.png", "assets/icon-180.png", "assets/icon-192.png", "assets/icon-512.png", "assets/icon-maskable-512.png"
@@ -17,10 +18,12 @@ self.addEventListener("install", event => {
     const cache = await caches.open(CACHE);
     await cache.addAll(SHELL);
     // Intenta dejar ya guardado el motor; si falla (sin conexión), se guardará al usarlo.
-    try {
-      const engine = await caches.open(ENGINE_CACHE);
-      if (!(await engine.match(ENGINE))) await engine.put(ENGINE, await fetch(ENGINE, { mode: "no-cors" }));
-    } catch (e) { /* se reintentará más adelante */ }
+    const engine = await caches.open(ENGINE_CACHE);
+    for (const url of PRECACHE_ENGINES) {
+      try {
+        if (!(await engine.match(url))) { const res = await fetch(url, { mode: "cors" }); if (res.ok) await engine.put(url, res); }
+      } catch (e) { /* se reintentará más adelante */ }
+    }
     await self.skipWaiting();
   })());
 });
@@ -38,13 +41,14 @@ self.addEventListener("fetch", event => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  if (url.href === ENGINE) {
+  if (ENGINES.includes(url.href)) {
     event.respondWith((async () => {
       const cache = await caches.open(ENGINE_CACHE);
-      const hit = await cache.match(ENGINE);
+      const hit = await cache.match(url.href);
       if (hit) return hit;
-      const res = await fetch(req);
-      if (res.ok || res.type === "opaque") cache.put(ENGINE, res.clone());
+      // Se pide siempre en modo CORS para que la copia sirva tanto a importScripts como a fetch (wasm)
+      const res = await fetch(url.href, { mode: "cors", credentials: "omit" });
+      if (res.ok) cache.put(url.href, res.clone());
       return res;
     })());
     return;
@@ -65,7 +69,7 @@ self.addEventListener("fetch", event => {
   }
 
   event.respondWith((async () => {
-    const hit = await caches.match(req);
+    const hit = await caches.match(req, { ignoreSearch: url.pathname.endsWith("sf-worker.js") });
     if (hit) return hit;
     const res = await fetch(req);
     if (res.ok) { const cache = await caches.open(CACHE); cache.put(req, res.clone()); }

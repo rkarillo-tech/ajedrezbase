@@ -53,7 +53,8 @@ const safeName = s => String(s || "partida").replace(/[^\p{L}\p{N}\-_ ]/gu, "").
 const DEFAULTS = {
   pieceStyle: "staunton", lang: "es", theme: "wood", sound: true, engine: "auto", token: "",
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
-  branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters"
+  branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
+  animate: true, wheel: true, moveView: "list"
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -84,6 +85,21 @@ function lineText(state, ucis, maxPlies = 10) {
     const prefix = s.t === 1 ? s.full + "." : i === 0 ? s.full + "..." : "";
     out.push(prefix + formatSan(Chess.san(s, m, L), settings.lang, s.t));
     s = Chess.apply(s, m);
+  }
+  return out.join(" ");
+}
+/* Igual que lineText, pero cada jugada es un <span> con la FEN resultante (para el minitablero) */
+function lineSpans(state, ucis, maxPlies = 10) {
+  const out = [];
+  let s = state;
+  for (let i = 0; i < Math.min(ucis.length, maxPlies); i++) {
+    const L = Chess.legal(s);
+    const m = Chess.moveFromUci(s, ucis[i], L);
+    if (!m) break;
+    const prefix = s.t === 1 ? s.full + "." : i === 0 ? s.full + "..." : "";
+    const txt = prefix + formatSan(Chess.san(s, m, L), settings.lang, s.t);
+    s = Chess.apply(s, m);
+    out.push(`<span class="pv-mv" data-fen="${esc(Chess.toFen(s))}" data-from="${m.from}" data-to="${m.to}">${esc(txt)}</span>`);
   }
   return out.join(" ");
 }
@@ -150,15 +166,20 @@ const ui = {
   selected: null, drag: null, autoplay: null, flipped: false, drawStart: null, nodeMap: new Map(),
   cpu: { on: false, side: -1, thinking: false, prevLive: true }, analysing: false, cancelAnalysis: false,
   activeTab: "study", engineArrow: null, liveNode: null,
-  libId: null, dirty: false, rev: 0, fav: false, tags: [], legacyStudy: null, markCtx: null, librarySub: "games"
+  libId: null, dirty: false, rev: 0, saveError: "", recUpdated: 0, explorerAbort: null, fav: false, tags: [], legacyStudy: null, markCtx: null, librarySub: "games"
 };
 const trainer = { active: false, side: 1, errors: 0, hints: 0, correct: 0, hintLevel: 0, hintArrow: null, hintSq: -1, libId: null, markId: null, card: false, busy: false };
 const editor = { active: false, state: null, tool: "MOVE", sel: null, origin: null };
 const cur = () => game.current;
+/* ¿Estamos en un ejercicio (entrenador o «aprende de tus errores»)? Entonces se oculta el motor */
+const quiz = () => trainer.active || Retry.active;
 const viewState = () => (editor.active ? editor.state : game.current.state);
 
-/* ---------- 7. Motor (Stockfish 10 en Worker con respaldo al motor interno) ---------- */
-const SF_URL = "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js";
+/* ---------- 7. Motor: Stockfish 19 Lite (WASM, NNUE) → Stockfish 10 (asm.js) → motor interno ---------- */
+const STOCKFISH = [
+  { id: "sf19", name: "Stockfish 19", js: "{{SF19_JS}}", wasm: "{{SF19_WASM}}", needsWasm: true, size: "1,9 MB" },
+  { id: "sf10", name: "Stockfish 10", js: "{{SF10_JS}}", size: "1,5 MB" }
+];
 function makeFakeWorker() {
   // Respaldo si el navegador no permite Workers: ejecuta el motor interno en el hilo principal
   const fake = { onmessage: null, terminate() {} };
@@ -171,8 +192,9 @@ const Engine = {
   w: null, kind: "", name: "", ready: false, running: null, pending: null, stopping: false, note: "", readyTimer: null,
   init() {
     this.shutdown();
+    this.note = "";
     if (settings.engine === "internal") this.startInternal("");
-    else this.startStockfish();
+    else this.startStockfish(settings.engine === "sf10" ? 1 : 0);
   },
   shutdown() {
     clearTimeout(this.readyTimer);
@@ -184,33 +206,43 @@ const Engine = {
     this.w = w; this.kind = kind; this.ready = false;
     w.onmessage = e => this.onLine(String(e.data));
   },
-  startStockfish(forceBlob) {
-    // Publicada (https), se lanza desde sf-worker.js del mismo sitio para que el service worker
-    // pueda guardarlo y usarlo sin conexión. Como archivo suelto, desde un Worker «blob».
+  /* Prueba Stockfish 19 y, si no puede, Stockfish 10. Publicada (https) se lanza desde sf-worker.js
+     del mismo sitio para que el service worker pueda guardarlo y usarlo sin conexión; como archivo
+     suelto, desde un Worker «blob». */
+  startStockfish(i = 0, forceBlob = false) {
+    const def = STOCKFISH[i];
+    if (!def) { this.startInternal(this.note || "no se pudo cargar Stockfish (¿sin conexión?)"); return; }
+    if (def.needsWasm && typeof WebAssembly !== "object") { this.startStockfish(i + 1); return; }
     const sameOrigin = !forceBlob && /^https?:$/.test(location.protocol);
+    const hash = def.wasm ? "#" + encodeURIComponent(def.wasm) : "";
     let w;
     try {
-      if (sameOrigin) w = new Worker("sf-worker.js");
-      else w = new Worker(URL.createObjectURL(new Blob([`importScripts(${JSON.stringify(SF_URL)});`], { type: "application/javascript" })));
+      if (sameOrigin) w = new Worker(`sf-worker.js?e=${def.id}${hash}`);
+      else w = new Worker(URL.createObjectURL(new Blob([`importScripts(${JSON.stringify(def.js)});`], { type: "application/javascript" })) + hash);
     } catch {
-      if (sameOrigin) { this.startStockfish(true); return; }
-      this.startInternal("este navegador o esta vista previa no deja ejecutar Stockfish; abre el archivo directamente en Chrome, Edge o Firefox");
+      if (sameOrigin) { this.startStockfish(i, true); return; }
+      this.note = "este navegador o esta vista previa no deja ejecutar Stockfish; abre el archivo directamente en Chrome, Edge o Firefox";
+      this.startInternal(this.note);
       return;
     }
     this.attach(w, "stockfish");
-    setEngineBadge("⏳ Cargando Stockfish 10…", "");
+    this.def = def;
+    setEngineBadge(`⏳ Cargando ${def.name}…`, "");
+    const retry = (nextI, blob, reason) => {
+      const pend = this.pending;
+      this.pending = null;
+      this.shutdown();
+      if (reason) this.note = reason;
+      this.startStockfish(nextI, blob);
+      if (pend) this.pending = pend;
+    };
     w.onerror = e => {
       if (e && e.preventDefault) e.preventDefault();
       if (this.ready || this.kind !== "stockfish" || this.w !== w) return;
-      if (sameOrigin) {
-        const pend = this.pending;
-        this.pending = null;
-        this.shutdown();
-        this.startStockfish(true);
-        this.pending = pend;
-      } else this.fallback("Stockfish no disponible (¿sin conexión?)");
+      if (sameOrigin) retry(i, true);
+      else retry(i + 1, false, `${def.name} no está disponible (¿sin conexión?)`);
     };
-    this.readyTimer = setTimeout(() => { if (!this.ready && this.kind === "stockfish") this.fallback("Stockfish tardó demasiado en cargar"); }, 25000);
+    this.readyTimer = setTimeout(() => { if (!this.ready && this.kind === "stockfish" && this.w === w) retry(i + 1, false, `${def.name} tardó demasiado en cargar`); }, 30000);
     this.send("uci");
   },
   fallback(reason) {
@@ -236,7 +268,8 @@ const Engine = {
     if (line === "uciok") {
       this.ready = true;
       clearTimeout(this.readyTimer);
-      this.name = this.kind === "stockfish" ? "Stockfish 10" : "Motor interno";
+      this.name = this.kind === "stockfish" ? this.def.name : "Motor interno";
+      if (this.kind === "stockfish" && this.def.id === "sf19") this.note = "";
       if (this.kind === "stockfish") this.send("setoption name Hash value 32");
       setEngineBadge("⚙ " + this.name + (this.note ? " ⚠" : ""), this.note);
       this.pump();
@@ -353,7 +386,7 @@ function renderBoard() {
     if (ui.selected === i) el.classList.add("selected");
     if (last && (last.from === i || last.to === i)) el.classList.add("last");
     if (checkSq === i) el.classList.add("in-check");
-    if (trainer.active && trainer.hintSq === i) el.classList.add("hint-sq");
+    if ((trainer.active && trainer.hintSq === i) || (Retry.active && Retry.hintSq === i)) el.classList.add("hint-sq");
     if (targets.has(i)) { el.classList.add("target"); if (targets.get(i)) el.classList.add("occupied"); }
     if (!locked && !editor.active && p !== "." && Chess.color(p) === s.t) el.classList.add("has-own");
     el.innerHTML = `<div class="piece-holder">${getPieceHTML(p, settings.pieceStyle)}</div>`;
@@ -366,19 +399,54 @@ function renderBoard() {
   boardEl.replaceChildren(frag);
   boardEl.classList.toggle("editor-cursor", editor.active);
   boardEl.classList.toggle("locked", locked);
+  // Símbolo de calidad (?? ? ?! ! !!) sobre la casilla de destino de la última jugada
+  if (last && node.nag && !quiz()) {
+    const sq = boardEl.querySelector(`.square[data-sq="${last.to}"]`);
+    if (sq) sq.insertAdjacentHTML("beforeend", `<span class="sq-badge ${NAG_CLASS[node.nag] || ""}-bg" title="${esc(NAG_TITLE[node.nag] || "")}">${esc(node.nag)}</span>`);
+  }
+  const prev = ui.prevRenderNode;
+  ui.prevRenderNode = editor.active ? null : node;
+  if (prev && prev !== node && !editor.active && settings.animate && !ui.noAnimOnce && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+    if (node.parent === prev && node.move) animateMove(node.move, 1);
+    else if (prev.parent === node && prev.move) animateMove(prev.move, -1);
+  }
+  ui.noAnimOnce = false;
   renderShapes();
+}
+const NAG_TITLE = { "!!": "Jugada brillante", "!": "Buena jugada", "!?": "Interesante", "?!": "Imprecisión", "?": "Error", "??": "Error grave" };
+/* Desliza la pieza desde su casilla de origen (o de vuelta, al retroceder) */
+function animateMove(mv, dir) {
+  const slide = (from, to) => {
+    const el = boardEl.querySelector(`.square[data-sq="${to}"] .piece-holder`);
+    const sqEl = boardEl.querySelector(`.square[data-sq="${to}"]`);
+    if (!el || !sqEl || !el.animate) return;
+    const size = sqEl.getBoundingClientRect().width;
+    const col = i => (ui.flipped ? 7 - (i & 7) : i & 7), row = i => (ui.flipped ? 7 - (i >> 4) : i >> 4);
+    const dx = (col(from) - col(to)) * size, dy = (row(from) - row(to)) * size;
+    el.style.zIndex = 9;
+    const a = el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], { duration: 160, easing: "ease-out" });
+    a.onfinish = a.oncancel = () => { el.style.zIndex = ""; };
+  };
+  const f = dir > 0 ? mv.from : mv.to, t = dir > 0 ? mv.to : mv.from;
+  slide(f, t);
+  if (mv.flag === "castle") {
+    const rf = mv.to > mv.from ? mv.from + 3 : mv.from - 4, rt = mv.to > mv.from ? mv.from + 1 : mv.from - 1;
+    slide(dir > 0 ? rf : rt, dir > 0 ? rt : rf);
+  }
 }
 function sqCenter(i) {
   const f = i & 7, r = i >> 4;
   return [(ui.flipped ? 7 - f : f) * 100 + 50, (ui.flipped ? 7 - r : r) * 100 + 50];
 }
-const SHAPE_COLORS = { green: "rgba(76,175,80,0.85)", red: "rgba(239,83,80,0.85)", blue: "rgba(41,182,246,0.85)", yellow: "rgba(255,202,40,0.9)", engine: "rgba(186,104,200,0.72)" };
+const SHAPE_COLORS = { green: "rgba(76,175,80,0.85)", red: "rgba(239,83,80,0.85)", blue: "rgba(41,182,246,0.85)", yellow: "rgba(255,202,40,0.9)", engine: "rgba(186,104,200,0.72)", threat: "rgba(239,83,80,0.8)" };
 function renderShapes() {
   const list = [];
   if (!editor.active) {
     for (const sh of cur().shapes || []) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
-    if (ui.engineArrow && settings.arrow && !trainer.active && ui.engineArrow.node === cur()) list.push({ color: "engine", from: ui.engineArrow.from, to: ui.engineArrow.to });
+    if (ui.engineArrow && settings.arrow && !quiz() && ui.engineArrow.node === cur()) list.push({ color: "engine", from: ui.engineArrow.from, to: ui.engineArrow.to });
+    if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
+    if (Retry.active) for (const a of Retry.arrows) list.push(a);
   }
   let html = "";
   for (const sh of list) {
@@ -388,7 +456,9 @@ function renderShapes() {
     const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
     const sw = sh.color === "engine" ? 13 : 15;
     const ex = x2 - ux * 22, ey = y2 - uy * 22;
-    html += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" marker-end="url(#ah-${sh.color})"/>`;
+    const marker = sh.color === "threat" ? "red" : sh.color;
+    const dash = sh.color === "threat" ? ` stroke-dasharray="18 14"` : "";
+    html += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="${dash ? "butt" : "round"}"${dash} marker-end="url(#ah-${marker})"/>`;
   }
   $("arrowsGroup").innerHTML = html;
 }
@@ -406,6 +476,7 @@ const shapeColor = e => (e.shiftKey && e.altKey ? "yellow" : e.shiftKey ? "red" 
 /* ---------- 10. Interacción con el tablero (clic, arrastre, flechas) ---------- */
 function canUserMove() {
   if (ui.cpu.thinking || trainer.busy) return false;
+  if (Retry.active) return !Retry.busy && Retry.state !== "solved" && Retry.state !== "shown";
   if (trainer.active) return trainerUserTurn();
   if (ui.cpu.on && cur().state.t === ui.cpu.side) return false;
   return true;
@@ -498,6 +569,7 @@ window.addEventListener("pointerup", e => {
   }
   if (d.moved) {
     const to = sqFromPoint(e.clientX, e.clientY);
+    ui.noAnimOnce = true;
     if (to != null && to !== d.from && tryMove(d.from, to)) return;
     renderBoard();
   } else if (d.wasSelected) { ui.selected = null; renderBoard(); }
@@ -543,6 +615,7 @@ function soundFor(node) {
   else Sound.play("move");
 }
 function playMove(move, who = "user") {
+  if (Retry.active && who === "user") { retryMove(move); return; }
   if (trainer.active && who === "user") { trainerUserMove(move); return; }
   if (who === "user") stopAutoplay();
   const existed = cur().children.some(c => Pgn.sameMove(c.move, move));
@@ -605,6 +678,7 @@ function renderStatus() {
   if (ui.cpu.thinking) txt += " · 🤖 la CPU está pensando…";
   else if (ui.cpu.on && !st.over) txt += cur().state.t === ui.cpu.side ? " · turno de la CPU" : " · tu turno";
   if (trainer.active) txt = "🎯 Entrenamiento · " + txt;
+  if (Retry.active) txt = "🎯 Aprende de tus errores · " + txt;
   el.textContent = txt;
   el.className = "status-line" + (st.over ? " over" : st.check ? " check" : "");
 }
@@ -640,6 +714,7 @@ function renderBars() {
 const NAG_CLASS = { "!!": "nag-brilliant", "!": "nag-good", "!?": "nag-good", "?!": "nag-inacc", "?": "nag-mistake", "??": "nag-blunder" };
 function renderMoves() {
   const box = $("moves");
+  if (typeof hoverTip !== "undefined") hoverTip.hidden = true;
   ui.nodeMap = new Map();
   const marked = Lib.ready ? markedNodesOfCurrent() : new Map();
   const frag = document.createDocumentFragment();
@@ -668,7 +743,7 @@ function renderMoves() {
     parentEl.append(c, " ");
     return true;
   };
-  if (trainer.active) {
+  if (quiz()) {
     const path = Pgn.pathTo(cur()).slice(1);
     path.forEach((n, i) => emit(frag, n, i === 0));
     if (!path.length) frag.append(Object.assign(document.createElement("span"), { className: "empty-moves", textContent: "Entrenamiento en curso: las jugadas aparecen a medida que las haces." }));
@@ -693,7 +768,34 @@ function renderMoves() {
         c = main;
       }
     };
-    line(frag, game.root, true);
+    if (settings.moveView === "sheet" && game.root.children.length) {
+      // Planilla: dos columnas (Nº · blancas · negras); comentarios y variantes cortan la tabla
+      const emitMove = (cell, node) => { const tmp = document.createElement("span"); emit(tmp, node, false); tmp.querySelectorAll(".mvnum").forEach(x => x.remove()); cell.append(...tmp.childNodes); };
+      let cells = null;
+      const startRow = (num, blackFirst) => {
+        const row = document.createElement("div");
+        row.className = "sheet-row";
+        row.innerHTML = `<span class="sheet-num">${num}.</span><span class="sheet-cell"></span><span class="sheet-cell"></span>`;
+        cells = row.querySelectorAll(".sheet-cell");
+        if (blackFirst) cells[0].textContent = "…";
+        frag.append(row);
+      };
+      for (const node of Pgn.mainlineFrom(game.root)) {
+        const ps = node.parent.state;
+        if (ps.t === 1 || !cells) startRow(ps.full, ps.t === -1);
+        emitMove(cells[ps.t === 1 ? 0 : 1], node);
+        const alts = node.parent.children.slice(1);
+        if (node.comment || alts.length) {
+          const blk = document.createElement("div");
+          blk.className = "sheet-extra";
+          comment(blk, node);
+          for (const alt of alts) { const v = document.createElement("div"); v.className = "var"; emit(v, alt, true); const hc = comment(v, alt); line(v, alt, hc); blk.append(v); }
+          frag.append(blk);
+          cells = null;
+        }
+        if (ps.t === -1) cells = null;
+      }
+    } else line(frag, game.root, true);
   }
   box.replaceChildren(frag);
   const a = box.querySelector(".mv.active");
@@ -706,7 +808,7 @@ $("moves").addEventListener("click", e => {
   const el = e.target.closest(".mv");
   if (!el) return;
   const n = ui.nodeMap.get(+el.dataset.id);
-  if (n && !trainer.active) { stopAutoplay(); goTo(n); }
+  if (n && !quiz()) { stopAutoplay(); goTo(n); }
 });
 
 /* ---------- 15. Comentario, apertura, gráfico y barra de evaluación ---------- */
@@ -726,10 +828,10 @@ function renderEco() {
 function updateEvalBar(ev) {
   const outer = $("evalBarOuter");
   outer.classList.toggle("flipped", ui.flipped);
-  outer.classList.toggle("hidden-eval", !ev || trainer.active);
+  outer.classList.toggle("hidden-eval", !ev || quiz());
   const top = $("evalTopText"), bot = $("evalBotText");
   top.textContent = bot.textContent = "";
-  if (!ev || trainer.active) return;
+  if (!ev || quiz()) return;
   const w = winPct(ev);
   $("evalBarWhite").style.height = Math.max(2, Math.min(98, w)) + "%";
   const txt = ev.mate != null ? (ev.mate === 0 ? "#" : "#" + Math.abs(ev.mate)) : (Math.abs(ev.cp) >= 1000 ? Math.round(Math.abs(ev.cp) / 100) : (Math.abs(ev.cp) / 100).toFixed(1));
@@ -748,7 +850,7 @@ function renderEvalChart() {
     const btn = msg.querySelector("button");
     if (btn) btn.onclick = ev => { ev.stopPropagation(); analyseGame({ quick: true }); };
   };
-  if (trainer.active) { empty("Gráfico oculto durante el entrenamiento"); return; }
+  if (quiz()) { empty("Gráfico oculto durante el ejercicio"); return; }
   if (line.length < 2) { empty("El gráfico de evaluación aparecerá cuando haya jugadas"); return; }
   const pts = line.map((n, i) => (n.eval ? { i, w: winPct(n.eval), n } : null)).filter(Boolean);
   // Sólo se dibuja la curva si cubre casi toda la partida (o mientras se está analizando)
@@ -780,7 +882,7 @@ function renderEvalChart() {
 $("evalChartWrap").addEventListener("click", e => {
   if (!$("chartMsg").hidden) return;
   const line = [game.root, ...Pgn.mainlineFrom(game.root)];
-  if (line.length < 2 || trainer.active) return;
+  if (line.length < 2 || quiz()) return;
   const rect = $("evalChartWrap").getBoundingClientRect();
   const idx = Math.round(((e.clientX - rect.left) / rect.width) * (line.length - 1));
   goTo(line[Math.max(0, Math.min(line.length - 1, idx))]);
@@ -789,7 +891,7 @@ $("evalChartWrap").addEventListener("click", e => {
 /* ---------- 16. Panel del motor ---------- */
 function renderEngineLines(lines, stateNode, meta) {
   const box = $("engineLines");
-  if (trainer.active) { box.innerHTML = `<div class="pv-empty">Motor oculto durante el entrenamiento.</div>`; $("engineMeta").textContent = ""; return; }
+  if (quiz()) { box.innerHTML = `<div class="pv-empty">Motor oculto durante el ejercicio.</div>`; $("engineMeta").textContent = ""; return; }
   if (!lines || !lines.length) { box.innerHTML = `<div class="pv-empty">${esc(meta || "Sin análisis para esta posición.")}</div>`; return; }
   box.innerHTML = "";
   lines.forEach(l => {
@@ -798,7 +900,7 @@ function renderEngineLines(lines, stateNode, meta) {
     const row = document.createElement("div");
     row.className = "pv-line";
     const sc = winPct(ev) >= 50 ? "pos" : "neg";
-    row.innerHTML = `<span class="pv-score ${sc}">${esc(fmtEval(ev))}</span><span class="pv-moves">${esc(lineText(stateNode.state, l.pv, 12))}</span>`;
+    row.innerHTML = `<span class="pv-score ${sc}">${esc(fmtEval(ev))}</span><span class="pv-moves">${lineSpans(stateNode.state, l.pv, 12)}</span>`;
     row.title = "Pulsa para jugar la primera jugada de esta línea";
     row.onclick = () => {
       const m = Chess.moveFromUci(stateNode.state, l.pv[0]);
@@ -835,7 +937,7 @@ function showEngineFor(node, job) {
 }
 const requestLive = debounce(() => {
   const node = cur();
-  if (!settings.live || editor.active || trainer.active || ui.analysing || ui.cpu.thinking || !Engine.ready) {
+  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ui.cpu.thinking || !Engine.ready) {
     Engine.cancel("live");
     return;
   }
@@ -864,12 +966,17 @@ const scheduleAutosave = debounce(saveSessionNow, 600);
 window.addEventListener("pagehide", saveSessionNow);
 function updateButtons() {
   const n = cur();
-  $("backBtn").disabled = $("startBtn").disabled = !n.parent || trainer.active;
-  $("forwardBtn").disabled = $("endBtn").disabled = !n.children.length || trainer.active;
-  $("playBtn").disabled = trainer.active || !game.root.children.length;
-  $("undoBtn").disabled = !n.parent || trainer.active;
-  $("promoteVarBtn").disabled = !n.parent || n.parent.children[0] === n || trainer.active;
-  $("mainVarBtn").disabled = Pgn.isMainline(n) || trainer.active;
+  const q = quiz();
+  $("backBtn").disabled = $("startBtn").disabled = !n.parent || q;
+  $("forwardBtn").disabled = $("endBtn").disabled = !n.children.length || q;
+  $("playBtn").disabled = q || !game.root.children.length;
+  $("undoBtn").disabled = !n.parent || q;
+  $("promoteVarBtn").disabled = !n.parent || n.parent.children[0] === n || q;
+  $("mainVarBtn").disabled = Pgn.isMainline(n) || q;
+  $("analyseVarBtn").hidden = Pgn.isMainline(n) || q;
+  $("threatBtn").disabled = q || editor.active;
+  $("threatBtn").classList.toggle("on", Threat.node === n);
+  $("threatInfo").hidden = Threat.node !== n || q;
   $("clearShapesBtn").disabled = !n.shapes.length;
   $("liveToggle").checked = settings.live;
   $("arrowToggle").checked = settings.arrow;
@@ -913,7 +1020,13 @@ function setGame(g, opts = {}) {
   ui.selected = null;
   ui.liveNode = null;
   ui.engineArrow = null;
+  if (Retry.active) retryEnd(true);
+  Threat.node = null;
+  ui.analysedLine = null;
+  $("retryStart").hidden = true;
   ui.libId = opts.libId || null;
+  ui.recUpdated = ui.libId && typeof Lib !== "undefined" && Lib.games.get(ui.libId) ? Lib.games.get(ui.libId).updated : 0;
+  ui.saveError = "";
   ui.dirty = false;
   ui.rev++;
   ui.fav = !!opts.fav;
@@ -1074,9 +1187,11 @@ function buildComment(n, info) {
 async function analyseGame(opts = {}) {
   if (ui.analysing) return;
   const quick = !!opts.quick;
-  const nodes = [game.root, ...Pgn.mainlineFrom(game.root)];
+  // Por defecto, la línea principal; con opts.variation, la línea que pasa por la jugada actual
+  const nodes = opts.variation ? [...Pgn.pathTo(cur()), ...Pgn.mainlineFrom(cur())] : [game.root, ...Pgn.mainlineFrom(game.root)];
+  ui.analysedLine = nodes;
   if (nodes.length < 2) { toast("No hay jugadas que analizar."); return; }
-  if (trainer.active) { toast("Termina antes el entrenamiento."); return; }
+  if (quiz()) { toast("Termina antes el ejercicio."); return; }
   ui.analysing = true;
   ui.cancelAnalysis = false;
   Engine.cancel("live");
@@ -1140,9 +1255,10 @@ async function analyseGame(opts = {}) {
   $("repWName").textContent = game.headers.White || "Blancas";
   $("repBName").textContent = game.headers.Black || "Negras";
   $("reportBox").classList.add("show");
-  $("analysisStatus").textContent = `✔ Análisis completado con ${Engine.name} en ${Math.round((Date.now() - t0) / 1000)} s. Se han marcado y comentado las jugadas críticas.`;
+  $("analysisStatus").textContent = `✔ Análisis ${opts.variation ? "de la variante " : ""}completado con ${Engine.name} en ${Math.round((Date.now() - t0) / 1000)} s. Se han marcado y comentado las jugadas críticas.`;
   markDirty();
   render();
+  renderRetryStart();
 }
 async function explainCurrentMove() {
   const n = cur();
@@ -1171,6 +1287,224 @@ async function explainCurrentMove() {
     btn.textContent = "✍ Redactar comentario con el motor";
     render();
   }
+}
+
+/* ---------- 19b. «Ver amenaza»: qué jugaría el rival si le tocara mover ---------- */
+const Threat = { node: null, from: -1, to: -1, busy: false };
+function clearThreat() { Threat.node = null; render(); }
+async function showThreat() {
+  const node = cur();
+  if (Threat.node === node) { clearThreat(); return; }
+  if (editor.active || quiz() || Threat.busy) return;
+  const s = node.state;
+  if (gameStatus(node).over) { toast("La partida ha terminado."); return; }
+  if (Chess.inCheck(s)) { toast("Estás en jaque: la amenaza es el propio jaque."); return; }
+  const t = Chess.clone(s);
+  t.t = -s.t;
+  t.ep = -1;
+  if (!Chess.legal(t).length) { toast("El rival no tendría ninguna jugada."); return; }
+  Threat.busy = true;
+  $("threatBtn").textContent = "⏳ Amenaza";
+  Engine.cancel("live");
+  ui.liveNode = null;
+  const job = await new Promise(resolve => Engine.start({ purpose: "threat", fen: Chess.toFen(t), moves: [], stm: t.t, movetime: Math.max(900, Math.min(2500, +settings.analysisMs * 1.5)), multipv: 1, resolve }));
+  Threat.busy = false;
+  $("threatBtn").textContent = "👁 Amenaza";
+  const l = job && job.lines && job.lines[0];
+  const u = (l && l.pv[0]) || (job && job.best);
+  if (!u || cur() !== node) { render(); return; }
+  Threat.node = node;
+  Threat.from = Chess.sqIdx(u.slice(0, 2));
+  Threat.to = Chess.sqIdx(u.slice(2, 4));
+  const ev = l ? { cp: l.cp, mate: l.mate, winner: l.winner } : null;
+  const who = t.t === 1 ? "las blancas" : "las negras";
+  const L = Chess.legal(t), m = Chess.moveFromUci(t, u, L);
+  const san = m ? formatSan(Chess.san(t, m, L), settings.lang, t.t) : u;
+  const capt = m && m.captured !== "." ? `, capturando ${PIECE_ART[m.captured.toLowerCase()]} de ${Chess.sqName(m.to)}` : "";
+  $("threatInfo").innerHTML = `👁 <b>Amenaza:</b> si les tocara, ${who} jugarían <b>${esc(san)}</b>${esc(capt)}${ev ? ` (${esc(fmtEval(ev))})` : ""}. <span class="small">${l && l.pv.length > 1 ? "Línea: " + esc(lineText(t, l.pv, 5)) : ""}</span>`;
+  render();
+}
+
+/* ---------- 19c. «Aprende de tus errores»: rehacer los ? y ?? de la partida ---------- */
+const Retry = { active: false, busy: false, queue: [], i: 0, attempts: 0, hint: 0, hintSq: -1, state: "", results: [], arrows: [], msg: "", prevFlip: false };
+function mistakesOf(side) {
+  const line = ui.analysedLine || [game.root, ...Pgn.mainlineFrom(game.root)];
+  return line.slice(1).filter(n => (n.nag === "?" || n.nag === "??") && n.parent && n.parent.eval && n.parent.eval.best && n.parent.eval.best !== n.uci && (!side || n.parent.state.t === side));
+}
+function renderRetryStart() {
+  const box = $("retryStart");
+  const w = mistakesOf(1).length, b = mistakesOf(-1).length;
+  if (!w && !b) { box.hidden = false; box.innerHTML = `<span class="small">🎯 No hay errores (? ni ??) que repasar en esta partida.</span>`; return; }
+  const h = game.headers;
+  box.hidden = false;
+  box.innerHTML = `<b>🎯 Aprende de tus errores:</b>
+    <button class="sm-btn primary" data-s="1" ${w ? "" : "disabled"}>${esc(h.White || "Blancas")} (${w})</button>
+    <button class="sm-btn primary" data-s="-1" ${b ? "" : "disabled"}>${esc(h.Black || "Negras")} (${b})</button>
+    <button class="sm-btn" data-s="0">Todos (${w + b})</button>`;
+  box.querySelectorAll("button").forEach(btn => btn.onclick = () => startRetry(+btn.dataset.s));
+}
+function startRetry(side) {
+  const q = mistakesOf(side);
+  if (!q.length) { toast("No hay errores que repasar."); return; }
+  if (trainer.active) stopTraining(true);
+  if (ui.cpu.on) toggleCpu();
+  if (editor.active) closeEditor();
+  stopAutoplay();
+  Threat.node = null;
+  Engine.cancel("live");
+  Object.assign(Retry, { active: true, busy: false, queue: q, i: 0, results: [], prevFlip: ui.flipped });
+  retryShow();
+  const box = $("retryBox");
+  setTimeout(() => { const r = $("boardWrap").getBoundingClientRect(); if (r.top < 0 || r.bottom > innerHeight) $("topBar").scrollIntoView({ block: "start", behavior: "smooth" }); }, 40);
+  if (box) box.focus && box.focus();
+}
+const retryNode = () => Retry.queue[Retry.i];
+function retryDesc(node) {
+  const p = node.parent, side = p.state.t === 1 ? "las blancas" : "las negras";
+  return `En la partida, ${side} jugaron <b>${esc(numPrefix(p.state) + dispSan(node) + (node.nag || ""))}</b> y la valoración pasó de ${esc(fmtEval(p.eval))} a ${esc(fmtEval(node.eval))}.`;
+}
+function retryShow() {
+  const node = retryNode();
+  Object.assign(Retry, { attempts: 0, hint: 0, hintSq: -1, state: "ask", arrows: [], msg: "" });
+  game.current = node.parent;
+  ui.selected = null;
+  ui.flipped = node.parent.state.t === -1;
+  render();
+  retryPanel();
+}
+function retryPanel() {
+  const box = $("retryBox");
+  if (!box) return;
+  box.hidden = false;
+  if (!Retry.active) return;
+  const node = retryNode(), n = Retry.queue.length;
+  const who = node.parent.state.t === 1 ? "las blancas" : "las negras";
+  let html = `<div class="retry-head">🎯 Error ${Retry.i + 1} de ${n}</div><div>${retryDesc(node)}</div>`;
+  if (Retry.state === "ask" || Retry.state === "wrong") html += `<div class="retry-q">¿Qué era mejor para ${who}? Haz la jugada en el tablero.</div>`;
+  if (Retry.msg) html += `<div class="retry-msg">${Retry.msg}</div>`;
+  const open = Retry.state === "ask" || Retry.state === "wrong";
+  html += `<div class="controls">`;
+  if (open) html += `<button class="sm-btn" data-a="hint">💡 Pista</button><button class="sm-btn" data-a="show">👁 Ver solución</button><button class="sm-btn" data-a="skip">⏭ Saltar</button>`;
+  if (Retry.state === "checking") html += `<span class="small">⏳ Comprobando tu jugada con el motor…</span>`;
+  if (Retry.state === "solved" || Retry.state === "shown") {
+    html += `<button class="sm-btn warn-btn" data-a="card">📌 Guardar como tarjeta</button>`;
+    html += Retry.i + 1 < n ? `<button class="sm-btn primary" data-a="next">Siguiente ▶</button>` : `<button class="sm-btn primary" data-a="next">Ver resumen ▶</button>`;
+  }
+  html += `<button class="sm-btn danger" data-a="end">⏹ Terminar</button></div>`;
+  box.innerHTML = html;
+  box.querySelectorAll("[data-a]").forEach(b => b.onclick = () => retryAction(b.dataset.a));
+}
+function bestOf(node) {
+  const p = node.parent, best = p.eval.best;
+  const L = Chess.legal(p.state), m = Chess.moveFromUci(p.state, best, L);
+  return { uci: best, move: m, san: m ? formatSan(Chess.san(p.state, m, L), settings.lang, p.state.t) : best, line: lineText(p.state, p.eval.pv && p.eval.pv.length ? p.eval.pv : [best], 6) };
+}
+function retryAction(a) {
+  const node = retryNode();
+  if (a === "end") { retryEnd(false); return; }
+  if (a === "next") { Retry.i++; if (Retry.i >= Retry.queue.length) retryEnd(false); else retryShow(); return; }
+  if (a === "skip") { Retry.results.push({ node, ok: false, skipped: true }); Retry.i++; if (Retry.i >= Retry.queue.length) retryEnd(false); else retryShow(); return; }
+  if (a === "card") { retrySaveCard(node); return; }
+  if (a === "hint") {
+    const b = bestOf(node);
+    Retry.hint++;
+    if (Retry.hint === 1 && b.move) { Retry.hintSq = b.move.from; Retry.msg = "💡 La pieza que debes mover está marcada en azul."; }
+    else if (b.move) { Retry.arrows = [{ color: "blue", from: b.move.from, to: b.move.to }]; Retry.msg = "💡 La flecha azul indica la jugada."; }
+    renderBoard(); retryPanel(); return;
+  }
+  if (a === "show") { retryShowSolution(); return; }
+}
+async function retryMove(move) {
+  const node = retryNode(), p = node.parent, u = Chess.uci(move);
+  if (Retry.busy || Retry.state === "solved" || Retry.state === "shown") return;
+  const L = Chess.legal(p.state), san = formatSan(Chess.san(p.state, move, L), settings.lang, p.state.t);
+  if (u === p.eval.best) { retrySolved(move, san, 0); return; }
+  if (u === node.uci) { Retry.attempts++; Retry.state = "wrong"; Retry.msg = `❌ ${esc(san)} es justo la jugada de la partida, la que fue un error. Busca otra.`; Sound.play("error"); retryPanel(); return; }
+  Retry.busy = true;
+  Retry.state = "checking";
+  retryPanel();
+  const fake = { parent: p, uci: u, state: Chess.apply(p.state, move) };
+  let ev = terminalEval(fake);
+  if (!ev) {
+    const job = await Engine.analyse(fake, { purpose: "retry", movetime: Math.max(700, +settings.analysisMs), multipv: 1 });
+    const l = job && job.lines && job.lines[0];
+    ev = l ? { cp: l.cp, mate: l.mate, winner: l.winner } : null;
+  }
+  Retry.busy = false;
+  if (!Retry.active || retryNode() !== node) return;
+  if (!ev) { Retry.state = "ask"; Retry.msg = "No se ha podido comprobar la jugada: inténtalo otra vez."; retryPanel(); return; }
+  const mover = p.state.t;
+  const wBest = mover === 1 ? winPct(p.eval) : 100 - winPct(p.eval);
+  const wUser = mover === 1 ? winPct(ev) : 100 - winPct(ev);
+  const loss = Math.max(0, wBest - wUser);
+  if (loss <= 5) { retrySolved(move, san, loss); return; }
+  Retry.attempts++;
+  Retry.state = "wrong";
+  Retry.arrows = [{ color: "red", from: move.from, to: move.to }];
+  Sound.play("error");
+  Retry.msg = `❌ Con ${esc(san)} la valoración sería ${esc(fmtEval(ev))}: sigue sin ser buena. ${Retry.attempts >= 3 ? "" : "Prueba otra."}`;
+  renderShapes();
+  if (Retry.attempts >= 3) { retryShowSolution(Retry.msg + "<br>"); return; }
+  retryPanel();
+}
+function retrySolved(move, san, loss) {
+  const node = retryNode(), b = bestOf(node);
+  Retry.state = "solved";
+  Retry.hintSq = -1;
+  Retry.results.push({ node, ok: Retry.attempts === 0 && Retry.hint === 0 });
+  Retry.arrows = [{ color: "green", from: move.from, to: move.to }];
+  if (b.move && Chess.uci(move) !== b.uci) Retry.arrows.push({ color: "blue", from: b.move.from, to: b.move.to });
+  Sound.play("ok");
+  Retry.msg = loss === 0
+    ? `✔ <b>¡Exacto!</b> ${esc(san)} era la mejor jugada. Línea: ${esc(b.line)}`
+    : `✔ <b>¡Bien!</b> ${esc(san)} también vale (casi tan buena como la del motor). La mejor era ${esc(b.san)} (flecha azul): ${esc(b.line)}`;
+  renderBoard();
+  retryPanel();
+}
+function retryShowSolution(prefix = "") {
+  const node = retryNode(), b = bestOf(node);
+  Retry.state = "shown";
+  Retry.hintSq = -1;
+  Retry.results.push({ node, ok: false });
+  Retry.arrows = b.move ? [{ color: "green", from: b.move.from, to: b.move.to }] : [];
+  Retry.msg = `${prefix}👁 La buena era <b>${esc(b.san)}</b> (flecha verde). Línea: ${esc(b.line)}`;
+  renderBoard();
+  retryPanel();
+}
+function retryEnd(silent) {
+  const res = Retry.results, done = res.filter(r => !r.skipped).length, first = res.filter(r => r.ok).length;
+  const last = retryNode();
+  Retry.active = false;
+  Retry.arrows = [];
+  Retry.hintSq = -1;
+  ui.flipped = Retry.prevFlip;
+  const box = $("retryBox");
+  if (silent) { box.hidden = true; return; }
+  if (last) game.current = last;
+  box.hidden = false;
+  box.innerHTML = `<div class="retry-head">🏁 Repaso terminado</div><div>Has repasado ${done} error${done === 1 ? "" : "es"}: <b>${first}</b> resuelto${first === 1 ? "" : "s"} a la primera${done - first > 0 ? `, ${done - first} con ayuda` : ""}${res.length - done ? ` y ${res.length - done} saltado${res.length - done === 1 ? "" : "s"}` : ""}.</div>
+    <div class="small">Guarda como tarjeta 📌 los que quieras repasar más adelante en «🎯 Entrenar › Tarjetas».</div>
+    <div class="controls"><button class="sm-btn" data-close-retry>Cerrar</button></div>`;
+  box.querySelector("[data-close-retry]").onclick = () => { box.hidden = true; };
+  render();
+}
+async function retrySaveCard(node) {
+  if (!Lib.ready) return;
+  if (!ui.libId || !Lib.games.has(ui.libId)) {
+    if (!confirm("Para guardar tarjetas, la partida tiene que estar en tu biblioteca.\n\n¿Guardarla ahora?")) return;
+    if (!(await saveToLibrary({}))) return;
+  }
+  const p = node.parent, b = bestOf(node);
+  const path = Pgn.pathTo(node).slice(1).map(n => n.uci);
+  const prev = marksOfGame(ui.libId).find(m => m.path.join(" ") === path.join(" "));
+  const rec = Object.assign(prev ? Object.assign({}, prev) : { created: Date.now(), srs: null }, {
+    gameId: ui.libId, path, fen: Chess.toFen(node.state), fenBefore: Chess.toFen(p.state), san: node.san, num: numPrefix(p.state), color: p.state.t,
+    cat: "error", note: `En la partida se jugó ${numPrefix(p.state)}${dispSan(node)}${node.nag || ""}. La buena era ${b.san}.`, train: "best", answer: b.uci, updated: Date.now()
+  });
+  try { await DB.put("marks", rec); } catch (e) { toast("❌ No se pudo guardar la tarjeta: " + e.message); return; }
+  Lib.marks.set(rec.id, rec);
+  toast("📌 Guardada como tarjeta (⚠ Error típico). La repasarás en «🎯 Entrenar › Tarjetas».", 4000);
+  refreshLibraryViews();
 }
 
 /* ---------- 20. Jugar contra la CPU ---------- */
@@ -1209,6 +1543,26 @@ function toggleCpu() {
   render();
   maybeCpuMove();
 }
+
+/* ---------- 21a. Consultas a Lichess: de una en una y respetando sus pausas ----------
+   Lichess pide hacer una sola petición a la vez y esperar un minuto entero tras una respuesta 429. */
+const Lichess = {
+  chain: Promise.resolve(), blockedUntil: 0,
+  waitSeconds() { return Math.max(0, Math.ceil((this.blockedUntil - Date.now()) / 1000)); },
+  fetch(url, opts = {}) {
+    const run = async () => {
+      if (opts.signal && opts.signal.aborted) throw new DOMException("Consulta cancelada", "AbortError");
+      const wait = this.waitSeconds();
+      if (wait > 0) { const e = Error(`Lichess pide esperar: inténtalo de nuevo en ${wait} s.`); e.status = 429; throw e; }
+      const res = await fetch(url, opts);
+      if (res.status === 429) this.blockedUntil = Date.now() + 61000;
+      return res;
+    };
+    const p = this.chain.then(run, run);
+    this.chain = p.catch(() => {});
+    return p;
+  }
+};
 
 /* ---------- 21. Explorador de aperturas ---------- */
 const explorerCache = new Map();
@@ -1264,18 +1618,22 @@ async function fetchExplorer() {
   let data = explorerCache.get(url);
   if (!data) {
     tbody.innerHTML = `<tr><td colspan="4" class="small">Consultando Lichess…</td></tr>`;
+    if (ui.explorerAbort) ui.explorerAbort.abort();
+    const ctrl = ui.explorerAbort = new AbortController();
     try {
-      const res = await fetch(url, { headers: authHeaders() });
+      const res = await Lichess.fetch(url, { headers: authHeaders(), signal: ctrl.signal });
       if (res.status === 401 || res.status === 403) {
         tbody.innerHTML = `<tr><td colspan="4" class="small msg-err">Lichess ha rechazado el token: no es válido, se ha borrado o está mal copiado. Crea otro y pégalo en ⚙ Ajustes (pulsa «🔌 Probar token»).</td></tr>`;
         gbody.innerHTML = `<tr><td colspan="5" class="small">—</td></tr>`;
         return;
       }
-      if (res.status === 429) { tbody.innerHTML = `<tr><td colspan="4" class="small msg-err">Demasiadas consultas seguidas. Espera un minuto.</td></tr>`; return; }
+      if (res.status === 429) { tbody.innerHTML = `<tr><td colspan="4" class="small msg-err">Lichess pide una pausa por demasiadas consultas: se reanudará en ${Lichess.waitSeconds()} s (vuelve a mover o cambia de pestaña).</td></tr>`; return; }
       if (!res.ok) throw Error(res.status);
       data = await res.json();
       explorerCache.set(url, data);
-    } catch {
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+      if (e && e.status === 429) { if (cur() === node) tbody.innerHTML = `<tr><td colspan="4" class="small msg-err">${esc(e.message)}</td></tr>`; return; }
       if (cur() === node) {
         tbody.innerHTML = `<tr><td colspan="4" class="small">No se pudo conectar con Lichess (¿sin conexión?). Puedes usar «Mi biblioteca + .pgn abierto» o la enciclopedia ECO de abajo. En ⚙ Ajustes, «🔌 Probar token» ayuda a ver qué falla.</td></tr>`;
         gbody.innerHTML = `<tr><td colspan="5" class="small">—</td></tr>`;
@@ -1301,15 +1659,22 @@ async function loadRemoteGame(id, db) {
   const url = db === "masters" ? `https://explorer.lichess.ovh/masters/pgn/${encodeURIComponent(id)}` : `https://lichess.org/game/export/${encodeURIComponent(id)}?clocks=false&evals=false`;
   try {
     toast("Descargando partida…");
-    const res = await fetch(url, { headers: Object.assign({ Accept: "application/x-chess-pgn" }, authHeaders()) });
+    const res = await Lichess.fetch(url, { headers: Object.assign({ Accept: "application/x-chess-pgn" }, authHeaders()) });
     if (!res.ok) throw Error(res.status);
     const text = await res.text();
     const out = loadPgnText(text, { endAtEnd: false });
     if (out) { switchTab("study"); toast("Partida cargada."); }
-  } catch { window.open(`https://lichess.org/${encodeURIComponent(id)}`, "_blank", "noopener"); }
+  } catch (e) {
+    if (e && e.status === 429) { toast(e.message, 4000); return; }
+    window.open(`https://lichess.org/${encodeURIComponent(id)}`, "_blank", "noopener");
+  }
 }
 
 /* ---------- B1. Almacén permanente (IndexedDB, con respaldo pequeño en localStorage) ---------- */
+const TAB_ID = Math.random().toString(36).slice(2);
+let libChannel = null;
+try { libChannel = new BroadcastChannel("ajedrezbase-biblioteca"); } catch {}
+const announceLibChange = () => { try { libChannel && libChannel.postMessage({ tab: TAB_ID }); } catch {} };
 const DB = {
   kind: "none", db: null, mem: null,
   async open() {
@@ -1356,6 +1721,7 @@ const DB = {
       const clean = recs.map(r => { const c = Object.assign({}, r); if (c.id == null) delete c.id; return c; });
       const ids = await this._tx(store, "readwrite", s => clean.map(r => s.put(r)));
       recs.forEach((r, i) => { r.id = ids[i]; });
+      announceLibChange();
       return ids;
     }
     const arr = this.mem[store];
@@ -1371,7 +1737,7 @@ const DB = {
   async put(store, rec) { return (await this.putMany(store, [rec]))[0]; },
   async delMany(store, ids) {
     if (!ids.length) return;
-    if (this.kind === "idb") { await this._tx(store, "readwrite", s => { ids.forEach(id => s.delete(id)); return null; }); return; }
+    if (this.kind === "idb") { await this._tx(store, "readwrite", s => { ids.forEach(id => s.delete(id)); return null; }); announceLibChange(); return; }
     const set = new Set(ids);
     this.mem[store] = this.mem[store].filter(x => !set.has(x.id));
     LS.set("ajedrezLibFallback", this.mem);
@@ -1440,6 +1806,13 @@ function updateSaveState() {
   }
   fav.disabled = false;
   const saved = ui.libId && Lib.games.has(ui.libId);
+  if (ui.saveError) {
+    el.className = "save-state dirty";
+    el.textContent = "❌ No se ha podido guardar: " + ui.saveError + ". Pulsa 💾 para reintentarlo.";
+    btn.textContent = "💾 Reintentar";
+    btn.disabled = false;
+    return;
+  }
   if (saved) {
     el.className = "save-state saved" + (ui.dirty ? " dirty" : "");
     el.textContent = ui.dirty ? "⏳ Guardando los cambios…" : "✔ Está en tu biblioteca · los cambios se guardan solos";
@@ -1470,6 +1843,13 @@ async function saveToLibrary(opts = {}) {
   const g = game, rev = ui.rev;
   const title = $("gameName").value.trim() || defaultTitle(g.headers);
   const existing = ui.libId && Lib.games.get(ui.libId);
+  if (existing && ui.recUpdated && existing.updated > ui.recUpdated && !opts.force) {
+    const msg = "esta partida se ha modificado en otra pestaña";
+    if (opts.silent || !confirm(`«${existing.title}» se ha modificado en otra pestaña o ventana después de abrirla aquí.\n\n¿Sustituir esos cambios por los de esta pestaña?`)) {
+      if (g === game) { ui.saveError = msg + " (pulsa 💾 para sustituirla con la versión de esta pestaña, o vuelve a abrirla desde la biblioteca)"; updateSaveState(); }
+      return null;
+    }
+  }
   let base;
   if (existing) base = Object.assign({}, existing);
   else {
@@ -1483,10 +1863,16 @@ async function saveToLibrary(opts = {}) {
   const projected = libBytes() + rec.size - (existing ? existing.size || 0 : 0);
   if (!existing && projected > LIB_SOFT()) toast(`⚠ La biblioteca ocupa ${fmtBytes(projected)}: supera lo recomendado (${fmtBytes(LIB_SOFT())}). Considera exportar y borrar partidas antiguas.`, 6000);
   try { await DB.put("games", rec); }
-  catch (e) { toast("❌ No se pudo guardar: " + (e.message || e), 6000); return null; }
+  catch (e) {
+    if (g === game) { ui.saveError = e.message || String(e); updateSaveState(); }
+    toast("❌ No se pudo guardar: " + (e.message || e), 6000);
+    return null;
+  }
   Lib.games.set(rec.id, rec);
   LocalIdx = null;
   if (g === game) {
+    ui.saveError = "";
+    ui.recUpdated = rec.updated;
     ui.libId = rec.id;
     if (ui.rev === rev) ui.dirty = false;
     else scheduleLibSave();
@@ -1569,7 +1955,8 @@ function renderLibrary() {
     tr.querySelector("[data-fav]").onclick = async e => {
       e.stopPropagation();
       r.fav = !r.fav;
-      await DB.put("games", r);
+      try { await DB.put("games", r); }
+      catch (err) { r.fav = !r.fav; toast("❌ No se pudo guardar la favorita: " + err.message, 5000); return; }
       if (r.id === ui.libId) { ui.fav = r.fav; updateSaveState(); }
       refreshLibraryViews();
     };
@@ -1732,7 +2119,7 @@ function markedNodesOfCurrent() {
 }
 async function openMarkDialog() {
   if (editor.active) { toast("Cierra antes el editor de posición."); return; }
-  if (trainer.active) { toast("Termina antes el entrenamiento."); return; }
+  if (quiz()) { toast("Termina antes el ejercicio."); return; }
   if (!Lib.ready) { toast("La biblioteca aún se está cargando…"); return; }
   const node = cur();
   if (!ui.libId || !Lib.games.has(ui.libId)) {
@@ -1808,7 +2195,7 @@ async function deleteMark(id, ask = true) {
   const m = Lib.marks.get(id);
   if (!m) return;
   if (ask && !confirm(`¿Borrar el marcador ${CATS[m.cat].icon} ${markLabel(m)}?`)) return;
-  await DB.delMany("marks", [id]);
+  try { await DB.delMany("marks", [id]); } catch (e) { toast("❌ No se pudo borrar el marcador: " + e.message, 5000); return; }
   Lib.marks.delete(id);
   refreshLibraryViews();
   renderMoves();
@@ -1861,15 +2248,29 @@ function renderMarks() {
 }
 
 /* ---------- B7. Buscar en comentarios y notas ---------- */
+/* Normaliza conservando la correspondencia con las posiciones del texto original */
+function normMap(t) {
+  let n = "";
+  const map = [];
+  for (let i = 0; i < t.length;) {
+    const ch = String.fromCodePoint(t.codePointAt(i));
+    const nn = norm(ch);
+    for (let k = 0; k < nn.length; k++) map.push(i);
+    n += nn;
+    i += ch.length;
+  }
+  map.push(t.length);
+  return { n, map };
+}
 function highlight(text, q) {
-  const t = String(text);
-  const i = norm(t).indexOf(q);
+  const t = String(text), { n, map } = normMap(t), i = n.indexOf(q);
   if (i < 0) return esc(t);
-  // norm() conserva la longitud en los textos habituales (sólo quita tildes combinadas)
-  return esc(t.slice(0, i)) + "<mark>" + esc(t.slice(i, i + q.length)) + "</mark>" + esc(t.slice(i + q.length));
+  const a = map[i], b = i + q.length < map.length ? map[i + q.length] : t.length;
+  return esc(t.slice(0, a)) + "<mark>" + esc(t.slice(a, b)) + "</mark>" + esc(t.slice(b));
 }
 function snippet(text, q) {
-  const t = String(text), i = norm(t).indexOf(q);
+  const t = String(text), { n, map } = normMap(t), ni = n.indexOf(q);
+  const i = ni < 0 ? -1 : map[ni];
   if (t.length <= 220 || i < 0) return t.length > 220 ? t.slice(0, 217) + "…" : t;
   const a = Math.max(0, i - 80);
   return (a ? "…" : "") + t.slice(a, a + 220) + (a + 220 < t.length ? "…" : "");
@@ -2095,6 +2496,21 @@ async function migrateLegacy() {
     if (nStudies || nBase) toast(`📚 Biblioteca nueva: se han pasado ${nStudies} estudios${nBase ? ` y ${nBase} partidas de tu base PGN anterior (etiqueta «base antigua»)` : ""}${res.dup ? ` (${res.dup} duplicados omitidos)` : ""}.`, 7000);
   } catch (e) { console.warn("Migración pendiente:", e); }
 }
+/* Otra pestaña ha cambiado la biblioteca: se recarga lo guardado (no la partida del tablero) */
+const reloadLibraryFromOtherTab = debounce(async () => {
+  try {
+    const games = await DB.all("games"), marks = await DB.all("marks");
+    Lib.games = new Map(games.map(r => [r.id, r]));
+    Lib.marks = new Map(marks.map(m => [m.id, m]));
+  } catch { return; }
+  LocalIdx = null;
+  if (ui.libId && !Lib.games.has(ui.libId)) { ui.libId = null; toast("⚠ La partida del tablero se ha borrado de la biblioteca en otra pestaña.", 5000); }
+  else if (ui.libId && ui.recUpdated && Lib.games.get(ui.libId).updated > ui.recUpdated) toast("⚠ Esta partida se ha modificado en otra pestaña. Vuelve a abrirla desde la biblioteca para ver esos cambios.", 6000);
+  refreshLibraryViews();
+  renderMoves();
+}, 300);
+if (libChannel) libChannel.onmessage = e => { if (e.data && e.data.tab !== TAB_ID && Lib.ready) reloadLibraryFromOtherTab(); };
+
 async function initLibrary() {
   await DB.open();
   try {
@@ -2108,7 +2524,7 @@ async function initLibrary() {
     const r = [...Lib.games.values()].find(x => x.title === ui.legacyStudy);
     if (r) ui.libId = r.id;
   }
-  if (ui.libId) { const r = Lib.games.get(ui.libId); ui.fav = !!r.fav; if (!ui.tags.length) ui.tags = (r.tags || []).slice(); $("gameTags").value = ui.tags.join(", "); }
+  if (ui.libId) { const r = Lib.games.get(ui.libId); ui.recUpdated = ui.recUpdated || r.updated; ui.fav = !!r.fav; if (!ui.tags.length) ui.tags = (r.tags || []).slice(); $("gameTags").value = ui.tags.join(", "); }
   refreshLibraryViews();
   renderMoves();
 }
@@ -2215,7 +2631,7 @@ const TB_SIDE = { win: "🏆 Ganan las {s}", "maybe-win": "Ganan las {s} (dudoso
 const TB_MOVE = { loss: "🏆 Gana", "maybe-loss": "Gana (dudoso)", "blessed-loss": "Gana, pero tablas por la regla de 50", draw: "🟰 Tablas", "cursed-win": "Pierde, pero tablas por la regla de 50", "maybe-win": "Pierde (dudoso)", win: "❌ Pierde", unknown: "?" };
 function pieceCount(s) { let n = 0; for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } if (s.b[i] !== ".") n++; } return n; }
 async function fetchTablebase(s) {
-  const res = await fetch(`https://tablebase.lichess.ovh/standard?fen=${encodeURIComponent(Chess.toFen(s).replace(/ /g, "_"))}`);
+  const res = await Lichess.fetch(`https://tablebase.lichess.ovh/standard?fen=${encodeURIComponent(Chess.toFen(s).replace(/ /g, "_"))}`);
   if (res.status === 429) throw Error("Demasiadas consultas; espera un minuto.");
   if (!res.ok) throw Error("Error " + res.status);
   return res.json();
@@ -2567,12 +2983,31 @@ function openModal(id) {
     $("setCoords").checked = settings.coords;
     $("setLegal").checked = settings.showLegal;
     $("setAutosave").checked = settings.autosave;
+    $("setAnimate").checked = settings.animate;
+    $("setWheel").checked = settings.wheel;
   }
+  if (!document.querySelector(".modal-back.open")) ui.modalReturn = document.activeElement;
   $(id).classList.add("open");
-  const f = $(id).querySelector("input, select, button");
+  const f = $(id).querySelector("input, select, textarea, button");
   if (f) f.focus();
 }
-function closeModals() { document.querySelectorAll(".modal-back.open").forEach(m => m.classList.remove("open")); }
+function closeModals() {
+  const open = document.querySelectorAll(".modal-back.open");
+  open.forEach(m => m.classList.remove("open"));
+  if (open.length && ui.modalReturn && document.contains(ui.modalReturn)) { try { ui.modalReturn.focus(); } catch {} }
+  ui.modalReturn = null;
+}
+document.addEventListener("keydown", e => {
+  if (e.key !== "Tab") return;
+  const m = document.querySelector(".modal-back.open");
+  if (!m) return;
+  const items = [...m.querySelectorAll("a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])")].filter(x => !x.disabled && x.offsetParent !== null);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  else if (!m.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+});
 document.querySelectorAll(".modal-back").forEach(m => {
   m.addEventListener("click", e => { if (e.target === m || e.target.hasAttribute("data-close")) closeModals(); });
 });
@@ -2586,6 +3021,8 @@ $("setLiveMs").onchange = e => { settings.liveMs = Math.max(500, Math.min(30000,
 $("setToken").onchange = e => { settings.token = e.target.value.trim(); saveSettings(); explorerCache.clear(); refreshExplorer(); };
 $("setCoords").onchange = e => { settings.coords = e.target.checked; saveSettings(); renderBoard(); };
 $("setLegal").onchange = e => { settings.showLegal = e.target.checked; saveSettings(); renderBoard(); };
+$("setAnimate").onchange = e => { settings.animate = e.target.checked; saveSettings(); };
+$("setWheel").onchange = e => { settings.wheel = e.target.checked; saveSettings(); };
 $("setAutosave").onchange = e => { settings.autosave = e.target.checked; saveSettings(); if (!settings.autosave) { try { localStorage.removeItem("ajedrezStudioCurrent"); } catch {} } };
 
 $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; saveSettings(); buildEditorPalettes(); render(); };
@@ -2601,6 +3038,7 @@ $("newGame").onclick = () => {
 };
 $("liveToggle").onchange = e => { settings.live = e.target.checked; if (!ui.cpu.on) saveSettings(); ui.liveNode = null; render(); };
 $("arrowToggle").onchange = e => { settings.arrow = e.target.checked; saveSettings(); renderShapes(); };
+$("threatBtn").onclick = showThreat;
 $("playBestMoveBtn").onclick = () => {
   const node = cur();
   const job = Engine.running && Engine.running.purpose === "live" && ui.liveNode === node ? Engine.running : null;
@@ -2613,7 +3051,7 @@ $("cloudStockfishBtn").onclick = async () => {
   const node = cur();
   $("engineSourceBadge").textContent = "☁ Consultando la nube…";
   try {
-    const res = await fetch(`https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(Chess.toFen(node.state))}&multiPv=3`, { headers: authHeaders() });
+    const res = await Lichess.fetch(`https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(Chess.toFen(node.state))}&multiPv=3`, { headers: authHeaders() });
     if (res.status === 404) throw Error("Esta posición no está en la nube de Lichess (sólo guarda posiciones ya analizadas).");
     if (!res.ok) throw Error("La nube de Lichess no respondió (" + res.status + ").");
     const data = await res.json();
@@ -2654,7 +3092,21 @@ $("promoteVarBtn").onclick = () => { Pgn.promote(cur()); markDirty(); render(); 
 $("mainVarBtn").onclick = () => { Pgn.makeMain(cur()); markDirty(); render(); };
 $("clearShapesBtn").onclick = () => { cur().shapes = []; markDirty(); render(); };
 
-$("autoAnnotateBtn").onclick = analyseGame;
+$("autoAnnotateBtn").onclick = () => analyseGame();
+$("analyseVarBtn").onclick = () => analyseGame({ variation: true });
+$("moveTyped").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const txt = e.target.value.trim();
+  if (!txt) return;
+  if (!canUserMove()) { toast(ui.cpu.thinking ? "La CPU está pensando…" : "Ahora no te toca mover."); return; }
+  try {
+    const lang = settings.notation === "en" ? "en" : settings.notation === "es" ? "es" : "auto";
+    const { move } = Chess.parseMove(cur().state, txt, lang);
+    e.target.value = "";
+    playMove(move, "user");
+  } catch (err) { Sound.play("error"); toast("«" + txt + "»: " + err.message.replace(/^Jugada ilegal o no reconocida: .*$/, "no es una jugada legal en esta posición."), 3500); }
+});
 $("cancelAnalysisBtn").onclick = () => { ui.cancelAnalysis = true; Engine.cancel("batch"); };
 $("explainMoveBtn").onclick = explainCurrentMove;
 
@@ -2736,7 +3188,7 @@ $("closeCollBtn").onclick = () => { if (!Coll.games.length) return; setCollectio
 $("dbFilterInput").oninput = debounce(renderCollection, 150);
 $("saveCollFilteredBtn").onclick = () => saveCollGames(collFiltered());
 
-$("saveGame").onclick = () => saveToLibrary({});
+$("saveGame").onclick = () => saveToLibrary({ force: !!ui.saveError });
 $("gameName").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); if (!ui.libId) saveToLibrary({}); else markDirty(); } });
 $("gameName").addEventListener("change", () => { if (ui.libId) markDirty(); });
 $("gameTags").addEventListener("change", () => { ui.tags = parseTags($("gameTags").value); $("gameTags").value = ui.tags.join(", "); if (ui.libId) markDirty(); });
@@ -2835,6 +3287,215 @@ $("trainDueBtn").onclick = () => {
   if (openLibGame(due[0].id)) startTraining({});
 };
 
+/* ---------- Tablero en SVG: imagen PNG, impresión y minitablero ---------- */
+function boardSvg(state, opts = {}) {
+  const cs = getComputedStyle(document.body);
+  const light = cs.getPropertyValue("--light").trim() || "#f0d9b5", dark = cs.getPropertyValue("--dark").trim() || "#b58863";
+  const flip = !!opts.flipped, S = 100;
+  const X = i => (flip ? 7 - (i & 7) : i & 7) * S, Y = i => (flip ? 7 - (i >> 4) : i >> 4) * S;
+  let out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="${opts.size || 800}" height="${opts.size || 800}">`;
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const i = r * 16 + c;
+    out += `<rect x="${X(i)}" y="${Y(i)}" width="${S}" height="${S}" fill="${(r + c) % 2 ? dark : light}"/>`;
+    if (opts.last && (opts.last.from === i || opts.last.to === i)) out += `<rect x="${X(i)}" y="${Y(i)}" width="${S}" height="${S}" fill="rgba(255,235,59,0.42)"/>`;
+  }
+  if (opts.coords !== false) for (let k = 0; k < 8; k++) {
+    const file = "abcdefgh"[flip ? 7 - k : k], rank = flip ? k + 1 : 8 - k;
+    out += `<text x="${k * S + 92}" y="794" font-size="15" font-weight="700" text-anchor="end" font-family="sans-serif" fill="${k % 2 ? light : dark}">${file}</text>`;
+    out += `<text x="4" y="${k * S + 17}" font-size="15" font-weight="700" font-family="sans-serif" fill="${k % 2 ? light : dark}">${rank}</text>`;
+  }
+  const style = settings.pieceStyle === "unicode" ? "staunton" : settings.pieceStyle;
+  for (let i = 0; i < 128; i++) {
+    if (i & 0x88) { i += 7; continue; }
+    const p = state.b[i];
+    if (p === ".") continue;
+    const svg = getPieceHTML(p, style).replace(/<svg class="piece-svg" viewBox="0 0 45 45">/, `<svg x="${X(i) + 6}" y="${Y(i) + 6}" width="88" height="88" viewBox="0 0 45 45">`);
+    out += svg;
+  }
+  for (const sh of opts.shapes || []) {
+    const col = SHAPE_COLORS[sh.color] || SHAPE_COLORS.green;
+    const x1 = X(sh.from) + 50, y1 = Y(sh.from) + 50, x2 = X(sh.to) + 50, y2 = Y(sh.to) + 50;
+    if (sh.from === sh.to) { out += `<circle cx="${x1}" cy="${y1}" r="44" fill="none" stroke="${col}" stroke-width="7"/>`; continue; }
+    const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    const ex = x2 - ux * 30, ey = y2 - uy * 30, px = -uy, py = ux;
+    out += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="15" stroke-linecap="round"/>`;
+    out += `<polygon points="${(x2 - ux * 6).toFixed(1)},${(y2 - uy * 6).toFixed(1)} ${(ex + px * 22).toFixed(1)},${(ey + py * 22).toFixed(1)} ${(ex - px * 22).toFixed(1)},${(ey - py * 22).toFixed(1)}" fill="${col}"/>`;
+  }
+  return out + "</svg>";
+}
+function nodeShapes(node) { return (node.shapes || []).map(sh => ({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) })); }
+function positionLabel(node) { return node.parent ? `Tras ${numPrefix(node.parent.state)}${dispSan(node)}${node.nag || ""}` : "Posición inicial"; }
+
+/* Minitablero al pasar el ratón por una jugada (lista de jugadas y líneas del motor) */
+const hoverTip = document.createElement("div");
+hoverTip.className = "hover-board";
+hoverTip.hidden = true;
+document.body.append(hoverTip);
+function showHoverBoard(e, state, last) {
+  hoverTip.innerHTML = boardSvg(state, { size: 184, coords: false, last, flipped: ui.flipped });
+  hoverTip.hidden = false;
+  const x = Math.min(innerWidth - 196, e.clientX + 14), y = e.clientY + 200 > innerHeight ? e.clientY - 196 : e.clientY + 14;
+  hoverTip.style.left = x + "px";
+  hoverTip.style.top = y + "px";
+}
+if (window.matchMedia && matchMedia("(hover: hover)").matches) {
+  document.addEventListener("mouseover", e => {
+    const pv = e.target.closest && e.target.closest(".pv-mv");
+    if (pv) { try { showHoverBoard(e, Chess.parseFen(pv.dataset.fen), { from: +pv.dataset.from, to: +pv.dataset.to }); } catch {} return; }
+    const mv = e.target.closest && e.target.closest("#moves .mv");
+    if (mv && !quiz()) { const n = ui.nodeMap.get(+mv.dataset.id); if (n && n !== cur()) { showHoverBoard(e, n.state, n.move); return; } }
+    hoverTip.hidden = true;
+  });
+  document.addEventListener("scroll", () => { hoverTip.hidden = true; }, true);
+  document.addEventListener("mouseout", e => { if (e.target.closest && e.target.closest(".pv-mv, #moves .mv")) hoverTip.hidden = true; });
+}
+
+/* Rueda del ratón sobre el tablero: avanzar y retroceder */
+let wheelLast = 0;
+$("boardWrap").addEventListener("wheel", e => {
+  if (!settings.wheel || editor.active || quiz() || document.querySelector(".modal-back.open")) return;
+  e.preventDefault();
+  const now = Date.now();
+  if (now - wheelLast < 80 || Math.abs(e.deltaY) < 4) return;
+  wheelLast = now;
+  stopAutoplay();
+  if (e.deltaY > 0) goForward(); else goBack();
+}, { passive: false });
+
+/* Exportar la posición como imagen PNG (descarga y, si se puede, copia al portapapeles) */
+function positionPng() {
+  const node = cur(), W = 800, H = 860;
+  const svg = boardSvg(viewState(), { last: editor.active ? null : node.move, shapes: editor.active ? [] : nodeShapes(node), flipped: ui.flipped });
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#0b0e14"; ctx.fillRect(0, 0, W, H);
+      ctx.drawImage(img, 0, 0, W, W);
+      ctx.fillStyle = "#eef2f8"; ctx.font = "600 22px system-ui, sans-serif"; ctx.textBaseline = "middle";
+      const h = game.headers;
+      const title = h.White && h.White !== "Blancas" ? `${h.White} – ${h.Black}` : ($("gameName").value || "AjedrezBase");
+      ctx.fillText(`${title} · ${positionLabel(node)}`.slice(0, 70), 14, W + 30);
+      ctx.fillStyle = "#94a3b8"; ctx.font = "16px system-ui, sans-serif"; ctx.textAlign = "right";
+      ctx.fillText(viewState().t === 1 ? "Juegan blancas" : "Juegan negras", W - 14, W + 30);
+      c.toBlob(b => (b ? resolve(b) : reject(Error("sin imagen"))), "image/png");
+    };
+    img.onerror = () => reject(Error("No se pudo dibujar el tablero"));
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  });
+}
+$("pngBtn").onclick = async () => {
+  const pngP = positionPng();
+  let copied = false;
+  try { if (navigator.clipboard && window.ClipboardItem) { await navigator.clipboard.write([new ClipboardItem({ "image/png": pngP })]); copied = true; } } catch {}
+  try {
+    const blob = await pngP;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = safeName($("gameName").value || "posicion") + ".png";
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast(copied ? "🖼 Imagen descargada y copiada al portapapeles." : "🖼 Imagen descargada.");
+  } catch (e) { toast("No se pudo crear la imagen: " + e.message); }
+};
+
+/* Imprimir (o guardar como PDF) la partida comentada con diagramas */
+function buildPrintView() {
+  const v = $("printView"), h = game.headers;
+  const marked = Lib.ready ? markedNodesOfCurrent() : new Map();
+  const diag = new Set();
+  for (const n of Pgn.mainlineFrom(game.root)) if (marked.has(n.id) || ["??", "?", "!!"].includes(n.nag)) diag.add(n.id);
+  const ml = Pgn.mainlineFrom(game.root);
+  if (ml.length) diag.add(ml[ml.length - 1].id);
+  let count = 0;
+  const diagram = n => {
+    if (count >= 16) return "";
+    count++;
+    const mk = marked.get(n.id);
+    return `<figure class="pv-diagram">${boardSvg(n.state, { size: 260, last: n.move, shapes: nodeShapes(n) })}<figcaption>${esc(positionLabel(n))}${mk ? ` · ${CATS[mk.cat].icon} ${esc(mk.note || CATS[mk.cat].name)}` : ""}</figcaption></figure>`;
+  };
+  const moveTxt = (n, force) => `${n.parent.state.t === 1 || force ? `<span class="pnum">${n.parent.state.full}${n.parent.state.t === 1 ? "." : "…"}</span>` : ""}<b>${esc(dispSan(n))}${esc(n.nag || "")}</b>${n.posNag ? " " + esc(n.posNag) : ""}`;
+  const varText = (node, force) => {
+    let out = "", c = node, f = force;
+    out += moveTxt(c, f) + " ";
+    if (c.comment) { out += `<i>${esc(c.comment)}</i> `; f = true; } else f = false;
+    while (c.children.length) {
+      const m = c.children[0];
+      out += moveTxt(m, f) + " ";
+      f = false;
+      if (m.comment) { out += `<i>${esc(m.comment)}</i> `; f = true; }
+      for (const alt of c.children.slice(1)) { out += "(" + varText(alt, true).trim() + ") "; f = true; }
+      c = m;
+    }
+    return out;
+  };
+  let body = "", para = "", f = true;
+  let c = game.root;
+  if (c.comment) body += `<p><i>${esc(c.comment)}</i></p>`;
+  while (c.children.length) {
+    const m = c.children[0];
+    para += moveTxt(m, f) + " ";
+    f = false;
+    if (m.comment) { para += `<i>${esc(m.comment)}</i> `; f = true; }
+    for (const alt of c.children.slice(1)) { para += "(" + varText(alt, true).trim() + ") "; f = true; }
+    if (diag.has(m.id)) { body += `<p>${para}</p>${diagram(m)}`; para = ""; f = true; }
+    c = m;
+  }
+  if (para) body += `<p>${para}</p>`;
+  const meta = [h.Event, h.Site, (h.Date || "").replace(/\.\?\?/g, ""), h.Round && h.Round !== "-" ? "Ronda " + h.Round : "", h.ECO].filter(x => x && x !== "?").join(" · ");
+  v.innerHTML = `<h1>${esc(h.White || "Blancas")}${h.WhiteElo ? ` (${esc(h.WhiteElo)})` : ""} – ${esc(h.Black || "Negras")}${h.BlackElo ? ` (${esc(h.BlackElo)})` : ""} <span class="pres">${esc(h.Result || "*")}</span></h1>
+    <div class="pmeta">${esc(meta)}</div>${game.root.state && Chess.toFen(game.root.state) !== Chess.START_FEN ? `<figure class="pv-diagram">${boardSvg(game.root.state, { size: 260 })}<figcaption>Posición inicial</figcaption></figure>` : ""}
+    <div class="pmoves">${body}</div><div class="pfoot">AjedrezBase · rkarillo-tech.github.io/ajedrezbase</div>`;
+}
+$("printBtn").onclick = () => { buildPrintView(); setTimeout(() => window.print(), 60); };
+
+/* Enlace para compartir la partida (hasta donde estás) */
+const WEB_URL = "https://rkarillo-tech.github.io/ajedrezbase/";
+function shareLink() {
+  const base = /^https?:$/.test(location.protocol) ? location.href.split("#")[0] : WEB_URL;
+  const line = [...Pgn.pathTo(cur()).slice(1), ...Pgn.mainlineFrom(cur())];
+  const ply = Pgn.pathTo(cur()).length - 1;
+  const q = new URLSearchParams();
+  const fen = Chess.toFen(game.root.state);
+  if (fen !== Chess.START_FEN) q.set("fen", fen);
+  if (line.length) q.set("m", line.map(n => n.uci).join(" "));
+  if (ply) q.set("n", ply);
+  const h = game.headers;
+  if (h.White && h.White !== "Blancas") q.set("w", h.White);
+  if (h.Black && h.Black !== "Negras") q.set("b", h.Black);
+  return base + "#" + q.toString();
+}
+$("linkBtn").onclick = async () => {
+  const url = shareLink();
+  toast((await copyText(url)) ? `🔗 Enlace copiado (${url.length > 1800 ? "largo: " : ""}${Pgn.pathTo(cur()).length - 1 ? "abre la partida en esta jugada" : "abre la partida"}). Pégalo donde quieras.` : "No se pudo copiar el enlace.", 4500);
+};
+function openSharedLink() {
+  const h = location.hash.slice(1);
+  if (!/(^|&)(m|fen)=/.test(h)) return false;
+  const q = new URLSearchParams(h);
+  let g;
+  try { g = Pgn.newGame(q.get("fen") || undefined); } catch { toast("El enlace tiene una posición no válida."); return false; }
+  let node = g.root, target = null;
+  const n = +(q.get("n") || 0);
+  (q.get("m") || "").split(/[\s,]+/).filter(Boolean).forEach((u, i) => {
+    const mv = Chess.moveFromUci(node.state, u);
+    if (!mv) return;
+    node = Pgn.addMove(node, mv);
+    if (i + 1 === n) target = node;
+  });
+  if (q.get("w")) g.headers.White = q.get("w");
+  if (q.get("b")) g.headers.Black = q.get("b");
+  const ok = setGame(g, { name: q.get("w") ? `${q.get("w")} – ${q.get("b") || "?"}` : "Partida compartida", current: target || (n ? node : g.root) });
+  try { history.replaceState(null, "", location.href.split("#")[0]); } catch {}
+  if (ok !== false) toast("🔗 Partida abierta desde un enlace. Si te interesa, pulsa «💾 Guardar en biblioteca».", 5000);
+  return ok !== false;
+}
+window.addEventListener("hashchange", () => openSharedLink());
+
+$("moveViewBtn").onclick = () => { settings.moveView = settings.moveView === "sheet" ? "list" : "sheet"; saveSettings(); $("moveViewBtn").textContent = settings.moveView === "sheet" ? "📜 Ver como lista" : "📋 Ver como planilla"; renderMoves(); };
+
 /* ---------- Ayuda ---------- */
 function openHelp(sectionId) {
   openModal("helpModal");
@@ -2872,13 +3533,14 @@ $("testTokenBtn").onclick = async () => {
   settings.token = tok; saveSettings(); explorerCache.clear();
   out.className = "small"; out.textContent = "Probando…";
   try {
-    const res = await fetch(`https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(Chess.START_FEN)}&moves=1&topGames=0`, { headers: authHeaders() });
+    const res = await Lichess.fetch(`https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(Chess.START_FEN)}&moves=1&topGames=0`, { headers: authHeaders() });
     if (res.ok) { out.className = "small msg-ok"; out.textContent = "✔ Funciona: el explorador de Lichess ya está disponible."; refreshExplorer(); }
     else if (res.status === 401 || res.status === 403) { out.className = "small msg-err"; out.textContent = "❌ Lichess rechaza este token (no válido o borrado). Crea uno nuevo."; }
     else if (res.status === 429) { out.className = "small msg-err"; out.textContent = "Lichess pide esperar un minuto (demasiadas consultas)."; }
     else { out.className = "small msg-err"; out.textContent = "Lichess respondió con un error " + res.status + ". Prueba más tarde."; }
-  } catch {
+  } catch (e) {
     out.className = "small msg-err";
+    if (e && e.status === 429) { out.textContent = e.message; return; }
     out.textContent = "No se pudo conectar con Lichess: comprueba la conexión. Si tienes internet y aun así falla, puede que el navegador bloquee la consulta desde un archivo local; prueba con la versión web: https://rkarillo-tech.github.io/ajedrezbase/";
   }
 };
@@ -2890,7 +3552,7 @@ document.addEventListener("keydown", e => {
   if (document.querySelector(".modal-back.open")) return;
   const k = e.key;
   if (editor.active && !["f", "F", "?"].includes(k)) return;
-  if (trainer.active && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", " "].includes(k)) return;
+  if (quiz() && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", " ", "x", "X"].includes(k)) return;
   if (k === "ArrowLeft") { stopAutoplay(); goBack(); }
   else if (k === "ArrowRight") { stopAutoplay(); goForward(); }
   else if (k === "ArrowUp") goSibling(-1);
@@ -2902,6 +3564,7 @@ document.addEventListener("keydown", e => {
   else if (k === "e" || k === "E") { $("liveToggle").checked = !$("liveToggle").checked; $("liveToggle").dispatchEvent(new Event("change")); }
   else if (k === "?") openHelp();
   else if (k === "m" || k === "M") openMarkDialog();
+  else if (k === "x" || k === "X") showThreat();
   else return;
   e.preventDefault();
 });
@@ -2960,6 +3623,7 @@ document.addEventListener("keydown", e => {
     const r = Pgn.parseGame($("moveInput").value, { lang: "auto" });
     setGame(r.game, { name: "", noConfirm: true });
   }
+  $("moveViewBtn").textContent = settings.moveView === "sheet" ? "📜 Ver como lista" : "📋 Ver como planilla";
   Engine.init();
-  initLibrary();
+  initLibrary().then(() => openSharedLink());
 })();

@@ -6,8 +6,11 @@ Uso:
     python3 -m playwright install chromium
     python3 tests/test_app.py
 
-Las conexiones a Lichess y al CDN de Stockfish se bloquean para que las pruebas no dependan
+Las conexiones a Lichess y a los CDN de Stockfish se bloquean para que las pruebas no dependan
 de la red: se usa el motor interno, que es el respaldo sin conexión.
+
+Si se define STOCKFISH_DIR con la carpeta bin/ del paquete npm «stockfish@19.0.1», se prueba
+además el Stockfish 19 real sirviéndolo desde esa carpeta (así lo hace la integración continua).
 """
 import functools
 import http.server
@@ -58,6 +61,7 @@ def nueva_pagina(ctx, url=URL):
 def contexto(browser, **kw):
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000}, **kw)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
     ctx.route("**/*lichess*/**", lambda r: r.abort())
     return ctx
 
@@ -229,10 +233,122 @@ def prueba_sin_conexion(browser):
         srv.shutdown()
 
 
+def prueba_v11(browser):
+    print("Novedades 1.1: amenaza, aprende de tus errores, planilla, imagen, impresión, enlace")
+    ctx = contexto(browser, accept_downloads=True)
+    pg, errores = nueva_pagina(ctx)
+    pg.fill("#moveInput", "1. e4 e5 2. Dh5 Cc6 3. Ac4")
+    pg.click("#importBtn")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.keyboard.press("x")
+    pg.wait_for_function("!document.getElementById('threatInfo').hidden", timeout=20000)
+    comprobar("Dxf7#" in pg.inner_text("#threatInfo") and pg.locator("#arrowsGroup line[stroke-dasharray]").count() == 1, "«Ver amenaza» descubre Dxf7# con una flecha discontinua")
+    pg.fill("#moveTyped", "g6")
+    pg.locator("#moveTyped").press("Enter")
+    comprobar(pg.inner_text("#moves .mv.active") == "g6", "jugar escribiendo la jugada")
+    pg.fill("#moveInput", "1. e4 e5 2. Ac4 Cc6 3. Dh5 Cf6 4. Dxf7#")
+    pg.click("#importBtn")
+    pg.click("#autoAnnotateBtn")
+    pg.wait_for_function("document.getElementById('reportBox').classList.contains('show')", timeout=120000)
+    comprobar(pg.locator("#retryStart button").count() == 3, "tras el análisis se ofrece «Aprende de tus errores»")
+    pg.locator("#retryStart button", has_text="Todos").click()
+    comprobar(pg.is_visible("#retryBox") and "Error 1 de" in pg.inner_text("#retryBox"), "se abre el primer error")
+    comprobar("oculto" in pg.inner_text("#engineLines"), "el motor se oculta durante el ejercicio")
+    best = pg.evaluate("retryNode().parent.eval.best")
+    casilla(pg, best[:2]).click(); casilla(pg, best[2:4]).click()
+    pg.wait_for_timeout(300)
+    comprobar("Exacto" in pg.inner_text("#retryBox"), "acertar la jugada del motor resuelve el error")
+    pg.locator("#retryBox [data-a=end]").click()
+    comprobar(not pg.evaluate("Retry.active") and "Repaso terminado" in pg.inner_text("#retryBox"), "al terminar se muestra el resumen")
+    pg.click("#moveViewBtn")
+    comprobar(pg.locator("#moves .sheet-row").count() >= 4 and pg.locator("#moves .sheet-cell").count() >= 8, "vista de planilla en dos columnas")
+    pg.click("#moveViewBtn")
+    with pg.expect_download() as dl:
+        pg.click("#pngBtn")
+    png = pathlib.Path(dl.value.path()).read_bytes()
+    comprobar(png[:4] == b"\x89PNG" and len(png) > 20000, "exporta la posición como imagen PNG")
+    pg.evaluate("buildPrintView()")
+    comprobar(pg.locator("#printView .pv-diagram").count() >= 1 and "Dxf7#" in pg.inner_text("#printView"), "prepara la vista de impresión con diagramas")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root)[3])")
+    link = pg.evaluate("shareLink()")
+    pg2, err2 = nueva_pagina(ctx, URL + link[link.index("#"):])
+    pg2.wait_for_timeout(300)
+    comprobar(pg2.evaluate("Pgn.pathTo(cur()).length - 1") == 4 and pg2.evaluate("Pgn.mainlineFrom(game.root).length") == 7, "el enlace abre la partida en la misma jugada")
+    comprobar(not errores and not err2, "sin errores de JavaScript" + (": " + "; ".join(errores + err2) if errores or err2 else ""))
+    ctx.close()
+
+
+def prueba_fiabilidad(browser):
+    print("Fiabilidad: Lichess, varias pestañas")
+    ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
+    ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
+    llamadas = []
+    def lichess(r):
+        llamadas.append(r.request.url)
+        r.fulfill(status=429, body="{}", headers={"Access-Control-Allow-Origin": "*"})
+    ctx.route("**/*lichess*/**", lichess)
+    pg, errores = nueva_pagina(ctx)
+    res = pg.evaluate("""async () => {
+      const r1 = await Lichess.fetch('https://explorer.lichess.ovh/masters?fen=x');
+      let msg = '';
+      try { await Lichess.fetch('https://explorer.lichess.ovh/masters?fen=y'); } catch (e) { msg = e.message; }
+      return { st: r1.status, msg, wait: Lichess.waitSeconds() };
+    }""")
+    comprobar(res["st"] == 429 and "esperar" in res["msg"] and res["wait"] > 50 and len(llamadas) == 1, "tras un 429 de Lichess no se vuelve a consultar durante un minuto")
+    pg.fill("#moveInput", "1. e4 e5 2. Nf3")
+    pg.click("#importBtn")
+    pg2, err2 = nueva_pagina(ctx)
+    pg.click("#saveGame")
+    pg.wait_for_function("Lib.games.size === 1")
+    pg2.wait_for_function("Lib.games.size === 1", timeout=5000)
+    comprobar(True, "una partida guardada en una pestaña aparece en las demás")
+    pg2.click('.tab-btn[data-tab="library"]')
+    pg2.locator("#libBody tr").first.click()
+    pg2.evaluate("document.activeElement.blur(); goTo(game.root)")
+    casilla(pg2, "d2").click(); casilla(pg2, "d4").click()
+    pg2.wait_for_timeout(1800)
+    pg.evaluate("document.activeElement.blur(); goTo(game.root)")
+    casilla(pg, "c2").click(); casilla(pg, "c4").click()
+    pg.wait_for_timeout(1800)
+    comprobar("otra pestaña" in pg.inner_text("#saveState"), "no se sobrescriben a ciegas los cambios hechos en otra pestaña")
+    comprobar(not errores and not err2, "sin errores de JavaScript" + (": " + "; ".join(errores + err2) if errores or err2 else ""))
+    ctx.close()
+
+
+def prueba_stockfish19(browser):
+    sf = os.environ.get("STOCKFISH_DIR")
+    if not sf:
+        print("Stockfish 19 real: omitida (define STOCKFISH_DIR para probarla)")
+        return
+    print("Stockfish 19 real")
+    carpeta = pathlib.Path(sf)
+    ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
+    def servir(r):
+        f = carpeta / r.request.url.split("/")[-1]
+        if not f.exists():
+            return r.abort()
+        r.fulfill(body=f.read_bytes(), content_type="application/wasm" if f.suffix == ".wasm" else "application/javascript", headers={"Access-Control-Allow-Origin": "*"})
+    ctx.route("**/cdn.jsdelivr.net/**", servir)
+    ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/*lichess*/**", lambda r: r.abort())
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("document.getElementById('engineSourceBadge').textContent.includes('Stockfish 19')", timeout=60000)
+    pg.wait_for_function("document.querySelectorAll('#engineLines .pv-line').length >= 3", timeout=30000)
+    comprobar(True, "arranca Stockfish 19 y muestra 3 líneas")
+    pg.fill("#moveInput", "1. e4 e5 2. Ac4 Cc6 3. Dh5 Cf6 4. Dxf7#")
+    pg.click("#importBtn")
+    pg.click("#autoAnnotateBtn")
+    pg.wait_for_function("document.getElementById('reportBox').classList.contains('show')", timeout=120000)
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root)[5].nag") == "??", "Stockfish 19 marca 3...Cf6?? como error grave")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:
