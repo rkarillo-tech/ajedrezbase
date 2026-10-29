@@ -220,6 +220,18 @@ def prueba_ayuda_y_movil(browser):
     pg.set_viewport_size({"width": 390, "height": 844})
     pg.wait_for_timeout(300)
     comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "sin desplazamiento horizontal en el móvil")
+    comprobar(not pg.is_visible("#pieceStyleSelect") and pg.is_visible("#menuBtn"), "en el móvil la cabecera es compacta (piezas, notación y colores en ☰)")
+    pg.click("#menuBtn")
+    comprobar(pg.is_visible("#pieceStyleSelect") and pg.is_visible("#themeSelect"), "☰ muestra las opciones de la cabecera")
+    pg.click("#menuBtn")
+    pos = pg.evaluate("""() => { const y = id => document.getElementById(id).getBoundingClientRect().top;
+      return { tablero: document.getElementById('bottomBar').getBoundingClientRect().bottom, nav: y('navControls'), jugadas: y('moves'), motor: y('engineBox') }; }""")
+    comprobar(pos["tablero"] <= pos["nav"] < pos["jugadas"] < pos["motor"], "en vertical, bajo el tablero van la navegación y las jugadas, y después el motor")
+    pg.set_viewport_size({"width": 844, "height": 390})
+    pg.wait_for_timeout(300)
+    caja = pg.evaluate("""() => { const b = document.getElementById('bottomBar').getBoundingClientRect(), m = document.getElementById('moves').getBoundingClientRect();
+      return { abajo: b.bottom, derecha: b.right, jugadasIzq: m.left, ancho: document.documentElement.scrollWidth }; }""")
+    comprobar(caja["abajo"] <= 390 and caja["jugadasIzq"] > caja["derecha"] and caja["ancho"] <= 844, "en horizontal el tablero cabe entero y las jugadas van a su lado")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
