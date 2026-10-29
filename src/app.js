@@ -54,7 +54,7 @@ const DEFAULTS = {
   pieceStyle: "staunton", lang: "es", theme: "wood", sound: true, engine: "auto", token: "",
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
-  animate: true, wheel: true, moveView: "list"
+  animate: true, wheel: true, moveView: "list", lichessUser: ""
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -1023,6 +1023,8 @@ function setGame(g, opts = {}) {
   if (Retry.active) retryEnd(true);
   Threat.node = null;
   ui.analysedLine = null;
+  ui.report = null;
+  $("reportExtra").innerHTML = "";
   $("retryStart").hidden = true;
   ui.libId = opts.libId || null;
   ui.recUpdated = ui.libId && typeof Lib !== "undefined" && Lib.games.get(ui.libId) ? Lib.games.get(ui.libId).updated : 0;
@@ -1093,6 +1095,51 @@ function hangingInfo(node) {
   if (!def.length || minAtt < val) return `Ojo: ${PIECE_ART[p.toLowerCase()]} de ${Chess.sqName(m.to)} queda ${def.length ? "atacad" + (["r", "q"].includes(p.toLowerCase()) ? "a" : "o") + " por una pieza de menor valor" : "sin defensa"}.`;
   return null;
 }
+/* Ideas estratégicas de una jugada, comparando la posición antes y después.
+   Devuelve [{ txt, w }]: w = importancia (3 alta, 1 baja). */
+function strategicNotes(node) {
+  const p = node.parent, before = p.state, after = node.state, m = node.move, me = before.t, them = -me;
+  const pc = m.piece.toLowerCase(), notes = [];
+  // En mitad de un cambio (se puede recapturar en la misma casilla) la estructura aún no es la definitiva
+  if (m.captured !== "." && Chess.attackers(after.b, m.to, them).length) return notes;
+  const sb = Chess.pawnStructure(before), sa = Chess.pawnStructure(after);
+  const nm = sq => Chess.sqName(sq);
+  // Peones pasados propios nuevos
+  const newPassed = sa[me].passed.filter(x => !sb[me].passed.includes(x) && !(pc === "p" && x === m.to && sb[me].passed.includes(m.from)));
+  const advanced = pc === "p" && sb[me].passed.includes(m.from) && sa[me].passed.includes(m.to);
+  if (newPassed.length) notes.push({ txt: `Crea un peón pasado en ${nm(newPassed[0])}.`, w: 3 });
+  else if (advanced) {
+    const rank = me === 1 ? 8 - (m.to >> 4) : (m.to >> 4) + 1;
+    notes.push({ txt: rank >= 6 ? `El peón pasado avanza a ${nm(m.to)}, cada vez más cerca de coronar.` : `Empuja el peón pasado a ${nm(m.to)}.`, w: rank >= 6 ? 3 : 2 });
+  }
+  // Debilidades en la estructura rival / propia
+  const isoThem = sa[them].isolated.filter(x => !sb[them].isolated.includes(x));
+  if (isoThem.length) notes.push({ txt: `Deja aislado el peón rival de ${nm(isoThem[0])}.`, w: 2 });
+  const dblThem = sa[them].doubled.filter(c => !sb[them].doubled.includes(c));
+  if (dblThem.length) notes.push({ txt: `Dobla los peones rivales en la columna ${"abcdefgh"[dblThem[0]]}.`, w: 2 });
+  const isoMe = sa[me].isolated.filter(x => !sb[me].isolated.includes(x) && x !== m.to);
+  if (isoMe.length && m.captured !== ".") notes.push({ txt: `A cambio, se queda con un peón aislado en ${nm(isoMe[0])}.`, w: 1 });
+  const dblMe = sa[me].doubled.filter(c => !sb[me].doubled.includes(c));
+  if (dblMe.length) notes.push({ txt: `Acepta peones doblados en la columna ${"abcdefgh"[dblMe[0]]}.`, w: 1 });
+  // Pareja de alfiles
+  if (Chess.bishopPair(before, me) && !Chess.bishopPair(after, me) && Chess.bishopPair(after, them)) notes.push({ txt: "Cede la pareja de alfiles.", w: 2 });
+  if (Chess.bishopPair(before, them) && !Chess.bishopPair(after, them) && Chess.bishopPair(after, me)) notes.push({ txt: "Elimina la pareja de alfiles rival y se queda con la suya.", w: 2 });
+  // Casilla fuerte para el caballo (o el alfil)
+  if ((pc === "n" || pc === "b") && Chess.isOutpost(after, m.to, me)) notes.push({ txt: `Instala ${PIECE_ART[pc]} en ${nm(m.to)}, una casilla fuerte apoyada por un peón y que ningún peón rival puede atacar.`, w: 3 });
+  // Torre en séptima
+  if ((pc === "r" || pc === "q") && (me === 1 ? m.to >> 4 === 1 : m.to >> 4 === 6) && (me === 1 ? m.from >> 4 !== 1 : m.from >> 4 !== 6)) notes.push({ txt: `${pc === "r" ? "La torre" : "La dama"} llega a la séptima fila, donde ataca los peones y encierra al rey.`, w: 2 });
+  // Cambio de damas
+  const queens = st => { let n = 0; for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } if (st.b[i] === "Q" || st.b[i] === "q") n++; } return n; };
+  if (m.captured.toLowerCase() === "q" && queens(after) === 0) notes.push({ txt: "Se cambian las damas: la partida se encamina hacia el final.", w: 2 });
+  // Debilitar el enroque
+  if (pc === "p") {
+    const k = Chess.kingSq(before.b, me), kf = k & 7, home = me === 1 ? 7 : 0;
+    const castledK = (k >> 4) === home && kf >= 5, castledQ = (k >> 4) === home && kf <= 2;
+    const f = m.from & 7, fromHome = (m.from >> 4) === (me === 1 ? 6 : 1);
+    if (fromHome && ((castledK && f >= 5) || (castledQ && f <= 2))) notes.push({ txt: "Avanza un peón del enroque: debilita la protección del rey.", w: 1 });
+  }
+  return notes;
+}
 function describeMotif(node) {
   const p = node.parent, s = p.state, m = node.move, pc = m.piece.toLowerCase(), to = Chess.sqName(m.to);
   const out = [];
@@ -1114,7 +1161,11 @@ function describeMotif(node) {
     if (rank >= 6) out.push(`El peón avanza a ${to}, cada vez más cerca de coronar.`);
   }
   if (Chess.inCheck(node.state)) out.push(Chess.legal(node.state).length ? "Da jaque." : "¡Jaque mate!");
-  return out.join(" ");
+  // Hasta dos ideas estratégicas, las más importantes
+  const strat = strategicNotes(node).sort((a, b) => b.w - a.w).slice(0, 2).map(x => x.txt);
+  // Evitar repetir lo del peón que avanza
+  if (strat.some(t => t.startsWith("El peón pasado avanza"))) { const i = out.findIndex(t => t.startsWith("El peón avanza")); if (i >= 0) out.splice(i, 1); }
+  return out.concat(strat).join(" ");
 }
 function classifyMove(n) {
   const p = n.parent;
@@ -1239,6 +1290,11 @@ async function analyseGame(opts = {}) {
     if (important && (!n.comment || n.commentAuto)) {
       const txt = buildComment(n, info);
       if (txt) { n.comment = txt; n.commentAuto = true; }
+    } else if (!n.comment || n.commentAuto) {
+      // Jugadas tranquilas con una idea estratégica clara: un comentario breve
+      const strat = strategicNotes(n).filter(x => x.w >= 2).sort((a, b) => b.w - a.w);
+      if (strat.length) { n.comment = strat.slice(0, 2).map(x => x.txt).join(" "); n.commentAuto = true; }
+      else if (n.commentAuto) { n.comment = ""; n.commentAuto = false; }
     }
   }
   const mean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
@@ -1254,12 +1310,125 @@ async function analyseGame(opts = {}) {
   }
   $("repWName").textContent = game.headers.White || "Blancas";
   $("repBName").textContent = game.headers.Black || "Negras";
+  ui.report = buildGameReport(nodes);
+  renderGameReport();
   $("reportBox").classList.add("show");
   $("analysisStatus").textContent = `✔ Análisis ${opts.variation ? "de la variante " : ""}completado con ${Engine.name} en ${Math.round((Date.now() - t0) / 1000)} s. Se han marcado y comentado las jugadas críticas.`;
   markDirty();
   render();
   renderRetryStart();
 }
+/* ---------- 19a. Informe pedagógico de la partida ---------- */
+const PHASES = [["apertura", "Apertura"], ["medio", "Medio juego"], ["final", "Final"]];
+function phaseOfNode(n, ply) {
+  if (Chess.nonPawnCount(n.parent.state) <= 6) return "final";
+  if (ply <= 20 || (ply <= 30 && ECO.byKey.has(n.parent.key))) return "apertura";
+  return "medio";
+}
+function evalCategory(w) {
+  return w >= 85 ? "ganada para las blancas" : w >= 65 ? "con ventaja de las blancas" : w > 35 ? "equilibrada" : w > 15 ? "con ventaja de las negras" : "ganada para las negras";
+}
+function moveTheme(n, info) {
+  const p = n.parent, mover = info.mover, pe = p.eval, ne = info.after || n.eval;
+  if (pe.mate != null && pe.mate !== 0 && pe.mate * mover > 0 && !(ne.mate != null && ne.mate * mover > 0)) return { key: "mateMissed", txt: `se le escapó un mate en ${Math.abs(pe.mate)}` };
+  if (n.eval.mate != null && n.eval.mate !== 0 && n.eval.mate * mover < 0) return { key: "mateAllowed", txt: `permitió un mate en ${Math.abs(n.eval.mate)}` };
+  if (n.eval.pv && n.eval.pv.length) {
+    const lost = (materialBalance(p.state) - materialBalance(playUcis(n.state, n.eval.pv, 8))) * mover;
+    if (lost >= 2) return { key: "material", txt: `perdió material (unos ${Math.round(lost)} puntos)` };
+  }
+  const wb = mover === 1 ? winPct(pe) : 100 - winPct(pe);
+  if (wb >= 80 && wb - info.loss < 65) return { key: "wasted", txt: "dejó escapar una posición ganadora" };
+  return info.loss >= 15 ? { key: "positional", txt: "cometió un error decisivo de planteamiento" } : { key: "positional", txt: "empeoró su posición" };
+}
+function buildGameReport(nodes) {
+  const h = game.headers, moves = [];
+  nodes.slice(1).forEach((n, k) => {
+    const info = classifyMove(n);
+    if (!info) return;
+    moves.push({ n, info, ply: k + 1, phase: phaseOfNode(n, k + 1), w: winPct(info.after || n.eval) });
+  });
+  if (!moves.length) return null;
+  const name = c => (c === 1 ? h.White || "Blancas" : h.Black || "Negras");
+  // Momentos clave: las jugadas que más cambiaron la partida
+  const key = moves.filter(x => x.info.loss >= 7 && ["?!", "?", "??"].includes(x.info.cls)).sort((a, b) => b.info.loss - a.info.loss).slice(0, 5)
+    .map(x => Object.assign(x, { theme: moveTheme(x.n, x.info) }));
+  // Precisión por fases
+  const mean = a => a.reduce((s2, y) => s2 + y, 0) / (a.length || 1);
+  const harm = a => a.length / a.reduce((s2, y) => s2 + 1 / Math.max(1, y), 0);
+  const phases = {};
+  for (const [ph] of PHASES) for (const c of [1, -1]) {
+    const accs = moves.filter(x => x.phase === ph && x.info.mover === c).map(x => x.info.acc);
+    phases[ph + c] = accs.length ? Math.round((mean(accs) + harm(accs)) / 2) : null;
+  }
+  // Resumen: tramos de valoración (ignorando vaivenes de una sola jugada)
+  const cats = [{ ply: 0, cat: evalCategory(winPct(nodes[0].eval || { cp: 0 })) }];
+  for (let i = 0; i < moves.length; i++) {
+    const c = evalCategory(moves[i].w);
+    const next = moves[i + 1] ? evalCategory(moves[i + 1].w) : c;
+    if (c !== cats[cats.length - 1].cat && (next === c || i === moves.length - 1)) cats.push({ ply: moves[i].ply, cat: c, m: moves[i] });
+  }
+  const lbl = m => `${numPrefix(m.n.parent.state)}${dispSan(m.n)}${m.n.nag || ""}`;
+  const sentences = [];
+  const eco = ECO.detect(nodes[nodes.length - 1]);
+  if (eco) sentences.push(`Apertura: ${eco.entry.eco} ${eco.entry.name}.`);
+  sentences.push(`La partida empezó ${cats[0].cat}.`);
+  const changes = cats.slice(1);
+  const shown = changes.length > 5 ? changes.filter(c => key.some(k => Math.abs(k.ply - c.ply) <= 1)).slice(0, 4) : changes;
+  for (const c of shown) sentences.push(`Tras ${lbl(c.m)} pasó a estar ${c.cat}.`);
+  if (changes.length > shown.length) sentences.push(`La valoración cambió de manos ${changes.length} veces: fue una partida muy disputada.`);
+  const lastNode = nodes[nodes.length - 1], st = gameStatus(lastNode), res = h.Result;
+  if (st.over) sentences.push(`Terminó así: ${st.text.toLowerCase()}.`);
+  else if (res === "1-0" || res === "0-1") sentences.push(`${name(res === "1-0" ? 1 : -1)} ganó la partida${changes.length ? "" : " sin que la valoración cambiara de manos"}.`);
+  else if (res === "1/2-1/2") sentences.push("Terminó en tablas.");
+  else sentences.push(`Al final la posición está ${evalCategory(moves[moves.length - 1].w)}.`);
+  // Por jugador: precisión y qué practicar
+  const players = [1, -1].map(c => {
+    const mine = moves.filter(x => x.info.mover === c);
+    const accs = mine.map(x => x.info.acc);
+    const errs = mine.filter(x => x.info.cls === "?" || x.info.cls === "??");
+    const counts = { "?!": mine.filter(x => x.info.cls === "?!").length, "?": mine.filter(x => x.info.cls === "?").length, "??": mine.filter(x => x.info.cls === "??").length };
+    const themes = {};
+    for (const e of errs) { const t = moveTheme(e.n, e.info); themes[t.key] = (themes[t.key] || 0) + 1; themes["ph_" + e.phase] = (themes["ph_" + e.phase] || 0) + 1; }
+    const practice = [];
+    if (themes.mateMissed) practice.push("Ejercicios de mate en 2 y 3: se te pasó algún mate.");
+    if (themes.mateAllowed) practice.push("Seguridad del rey y patrones de mate: permitiste un ataque decisivo.");
+    if (themes.material) practice.push("Táctica: piezas colgadas, dobles ataques y clavadas (repasa los errores con 🎯).");
+    if (themes.wasted) practice.push("Convertir posiciones ganadas: simplifica cuando vas por delante y evita riesgos innecesarios.");
+    if ((themes.ph_apertura || 0) >= 1) practice.push(`La apertura${eco ? ` (${eco.entry.name})` : ""}: repasa las primeras jugadas con el explorador o la enciclopedia ECO.`);
+    if ((themes.ph_final || 0) >= 1) practice.push("Técnica de finales: practica en la pestaña 👑 Finales contra la tabla perfecta.");
+    if (!practice.length && errs.length) practice.push("Planes y valoración de posiciones: repasa los momentos clave con «🎯 Aprende de tus errores» para ver qué idea fallaba.");
+    if (!practice.length && counts["?!"] >= 3) practice.push("Precisión en posiciones tranquilas: muchas imprecisiones pequeñas; dedica más tiempo a comparar candidatas.");
+    const acc = accs.length ? Math.round((mean(accs) + harm(accs)) / 2) : null;
+    let verdict = `${name(c)}: ${acc != null ? acc + " % de precisión" : "sin datos"}`;
+    const parts = [];
+    if (counts["??"]) parts.push(`${counts["??"]} error${counts["??"] > 1 ? "es" : ""} grave${counts["??"] > 1 ? "s" : ""}`);
+    if (counts["?"]) parts.push(`${counts["?"]} error${counts["?"] > 1 ? "es" : ""}`);
+    if (counts["?!"]) parts.push(`${counts["?!"]} imprecisi${counts["?!"] > 1 ? "ones" : "ón"}`);
+    verdict += parts.length ? `, con ${parts.join(", ")}.` : ", sin errores.";
+    return { c, verdict, practice };
+  });
+  return { key, phases, summary: sentences.join(" "), players };
+}
+function renderGameReport() {
+  const box = $("reportExtra"), R = ui.report;
+  if (!R) { box.innerHTML = ""; return; }
+  const h = game.headers, nm = c => esc(c === 1 ? h.White || "Blancas" : h.Black || "Negras");
+  const pcell = v => (v == null ? "–" : v + "%");
+  let html = `<h3>📝 Resumen</h3><p class="rep-summary">${esc(R.summary)}</p>`;
+  html += `<h3>📍 Momentos clave</h3>`;
+  if (R.key.length) {
+    html += `<ol class="rep-key">` + R.key.map((x, i) => {
+      const n = x.n, p = n.parent;
+      return `<li><a href="#" data-k="${i}"><b>${esc(numPrefix(p.state) + dispSan(n) + (n.nag || ""))}</b></a> (${esc(p.state.t === 1 ? h.White || "blancas" : h.Black || "negras")}): ${esc(x.theme.txt)}; la valoración pasa de ${esc(fmtEval(p.eval))} a ${esc(fmtEval(x.info.after || n.eval))}.</li>`;
+    }).join("") + `</ol>`;
+  } else html += `<p class="small">No hubo errores importantes: ninguna jugada cambió el rumbo de la partida.</p>`;
+  html += `<h3>⏱ Precisión por fases</h3><table class="rep-phases"><thead><tr><th></th><th>${nm(1)}</th><th>${nm(-1)}</th></tr></thead><tbody>` +
+    PHASES.map(([k, label]) => `<tr><td>${label}</td><td>${pcell(R.phases[k + 1])}</td><td>${pcell(R.phases[k + -1])}</td></tr>`).join("") + `</tbody></table>`;
+  html += `<h3>🎯 Qué practicar</h3>` + R.players.map(pl => `<div class="rep-player"><b>${esc(pl.verdict)}</b>${pl.practice.length ? `<ul>${pl.practice.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<div class="small">Nada destacable: ¡buena partida!</div>`}</div>`).join("");
+  box.innerHTML = html;
+  box.querySelectorAll("[data-k]").forEach(a => a.onclick = e => { e.preventDefault(); const x = R.key[+a.dataset.k]; if (x && !quiz()) goTo(x.n); });
+}
+
 async function explainCurrentMove() {
   const n = cur();
   if (!n.parent) { toast("Sitúate en una jugada para comentarla."); return; }
@@ -3184,6 +3353,43 @@ $("ecoSearchInput").oninput = debounce(renderLocalEcoList, 120);
 $("loadSampleDbBtn").onclick = () => { const n = setCollection(SAMPLE_MULTI_PGN, false, "Antología de clásicos"); toast(`🗂 ${n} partidas clásicas abiertas (sin guardar).`); };
 $("openPgnFileBtn").onclick = () => $("pgnFileInput").click();
 $("pgnFileInput").onchange = async e => { const files = [...e.target.files]; e.target.value = ""; if (files.length) await openPgnFiles(files); };
+/* Descargar las partidas públicas de un usuario de Lichess (sin token) a la colección en memoria */
+async function downloadLichessGames() {
+  const user = $("liUser").value.trim();
+  if (!/^[A-Za-z0-9_-]{2,30}$/.test(user)) { toast("Escribe un nombre de usuario de Lichess válido."); $("liUser").focus(); return; }
+  const max = +$("liMax").value || 50, perf = $("liPerf").value || "ultraBullet,bullet,blitz,rapid,classical,correspondence";
+  const q = new URLSearchParams({ max, perfType: perf, opening: "true", clocks: "false", evals: "true", sort: "dateDesc" });
+  if ($("liRated").checked) q.set("rated", "true");
+  if ($("liAnalysed").checked) q.set("analysed", "true");
+  const btn = $("liBtn");
+  btn.disabled = true;
+  btn.textContent = "⏳ Descargando…";
+  $("dbStatus").textContent = `Pidiendo a Lichess las partidas de ${user}… (hasta ${max}; puede tardar unos segundos)`;
+  try {
+    const res = await Lichess.fetch(`https://lichess.org/api/games/user/${encodeURIComponent(user)}?${q}`, { headers: Object.assign({ Accept: "application/x-chess-pgn" }, authHeaders()) });
+    if (res.status === 404) throw Error(`no existe el usuario «${user}» en Lichess`);
+    if (res.status === 429) throw Error(`Lichess pide una pausa: inténtalo en ${Lichess.waitSeconds()} s`);
+    if (!res.ok) throw Error("Lichess respondió con un error " + res.status);
+    const text = await res.text();
+    const n = Pgn.splitGames(text).filter(g => g.movetext.trim()).length;
+    if (!n) { $("dbStatus").textContent = ""; toast(`${user} no tiene partidas que coincidan con esos filtros.`, 4500); return; }
+    const append = Coll.games.length > 0 && confirm(`¿Añadir las ${n} partidas de ${user} a la lista que ya tienes abierta?\n\nAceptar = añadir · Cancelar = sustituirla`);
+    settings.lichessUser = user;
+    saveSettings();
+    setCollection(text, append, `Lichess: ${user}`);
+    $("dbFilterInput").value = "";
+    renderCollection();
+    toast(`☁ ${n} partidas de ${user} descargadas (sólo en memoria). Guarda las que quieras con 💾.`, 4500);
+  } catch (e) {
+    $("dbStatus").textContent = "";
+    toast("No se pudieron descargar: " + (e.message && !/fetch/i.test(e.message) ? e.message : "sin conexión con Lichess"), 5000);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "☁ Descargar";
+  }
+}
+$("liBtn").onclick = downloadLichessGames;
+$("liUser").addEventListener("keydown", e => { if (e.key === "Enter") downloadLichessGames(); });
 $("closeCollBtn").onclick = () => { if (!Coll.games.length) return; setCollection("", false); toast("Fichero cerrado y memoria liberada."); };
 $("dbFilterInput").oninput = debounce(renderCollection, 150);
 $("saveCollFilteredBtn").onclick = () => saveCollGames(collFiltered());
@@ -3447,7 +3653,15 @@ function buildPrintView() {
   const meta = [h.Event, h.Site, (h.Date || "").replace(/\.\?\?/g, ""), h.Round && h.Round !== "-" ? "Ronda " + h.Round : "", h.ECO].filter(x => x && x !== "?").join(" · ");
   v.innerHTML = `<h1>${esc(h.White || "Blancas")}${h.WhiteElo ? ` (${esc(h.WhiteElo)})` : ""} – ${esc(h.Black || "Negras")}${h.BlackElo ? ` (${esc(h.BlackElo)})` : ""} <span class="pres">${esc(h.Result || "*")}</span></h1>
     <div class="pmeta">${esc(meta)}</div>${game.root.state && Chess.toFen(game.root.state) !== Chess.START_FEN ? `<figure class="pv-diagram">${boardSvg(game.root.state, { size: 260 })}<figcaption>Posición inicial</figcaption></figure>` : ""}
-    <div class="pmoves">${body}</div><div class="pfoot">AjedrezBase · rkarillo-tech.github.io/ajedrezbase</div>`;
+    <div class="pmoves">${body}</div>${ui.report ? printReportHtml() : ""}<div class="pfoot">AjedrezBase · rkarillo-tech.github.io/ajedrezbase</div>`;
+}
+function printReportHtml() {
+  const R = ui.report, h = game.headers;
+  const nm = c => esc(c === 1 ? h.White || "Blancas" : h.Black || "Negras");
+  return `<div class="preport"><h2>Informe de la partida</h2><p>${esc(R.summary)}</p>` +
+    (R.key.length ? `<p><b>Momentos clave:</b></p><ol>${R.key.map(x => `<li><b>${esc(numPrefix(x.n.parent.state) + dispSan(x.n) + (x.n.nag || ""))}</b>: ${esc(x.theme.txt)} (${esc(fmtEval(x.n.parent.eval))} → ${esc(fmtEval(x.info.after || x.n.eval))}).</li>`).join("")}</ol>` : "") +
+    `<table><tr><th></th><th>${nm(1)}</th><th>${nm(-1)}</th></tr>${PHASES.map(([k, l]) => `<tr><td>${l}</td><td>${R.phases[k + 1] == null ? "–" : R.phases[k + 1] + "%"}</td><td>${R.phases[k + -1] == null ? "–" : R.phases[k + -1] + "%"}</td></tr>`).join("")}</table>` +
+    R.players.map(pl => `<p><b>${esc(pl.verdict)}</b>${pl.practice.length ? "<br>Practicar: " + pl.practice.map(esc).join(" · ") : ""}</p>`).join("") + `</div>`;
 }
 $("printBtn").onclick = () => { buildPrintView(); setTimeout(() => window.print(), 60); };
 
@@ -3624,6 +3838,7 @@ document.addEventListener("keydown", e => {
     setGame(r.game, { name: "", noConfirm: true });
   }
   $("moveViewBtn").textContent = settings.moveView === "sheet" ? "📜 Ver como lista" : "📋 Ver como planilla";
+  $("liUser").value = settings.lichessUser || "";
   Engine.init();
   initLibrary().then(() => openSharedLink());
 })();

@@ -39,6 +39,23 @@ PGN_SERBIA = """[Event "SRB-chT 2nd League West"]
 (38. Re2 Qe7 39. Qa3 Rb5 (39... g5 40. Rd2 Rh6)) 38... Qe7 39. Qa2 g5 40. Re2 Rh6 41. c4 Qd7
 42. Qa3 Qh3 43. Qf3 Qh2+ 44. Kf1 Qh3+ 45. Kg1 Qd7 46. Qa3 Rb6 {...necitko} 1-0"""
 
+PGN_LICHESS = """[Event "Rated Blitz game"]
+[Site "https://lichess.org/abc"]
+[White "rafa"]
+[Black "otro"]
+[Result "1-0"]
+
+1. e4 { [%eval 0.2] } 1... e5 { [%eval 0.3] } 2. Nf3 Nc6 3. Bc4 Bc5 4. O-O Nf6 1-0
+
+[Event "Rated Rapid game"]
+[Site "https://lichess.org/def"]
+[White "otro"]
+[Black "rafa"]
+[Result "0-1"]
+
+1. d4 d5 2. c4 e6 0-1
+"""
+
 
 def comprobar(cond, msg):
     print(("  ✓ " if cond else "  ✗ ") + msg, flush=True)
@@ -278,6 +295,61 @@ def prueba_v11(browser):
     ctx.close()
 
 
+def prueba_v12(browser):
+    print("Novedades 1.2: informe de la partida, comentarios estratégicos, descarga de Lichess")
+    ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
+    ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
+    llamadas = []
+    def lichess(r):
+        llamadas.append(r.request.url)
+        if "/api/games/user/nadie" in r.request.url:
+            return r.fulfill(status=404, body="", headers={"Access-Control-Allow-Origin": "*"})
+        r.fulfill(status=200, body=PGN_LICHESS, content_type="application/x-chess-pgn", headers={"Access-Control-Allow-Origin": "*"})
+    ctx.route("**/*lichess*/**", lichess)
+    pg, errores = nueva_pagina(ctx)
+    notas = pg.evaluate("""() => {
+      const textos = pgn => { const g = Pgn.parseGame(Pgn.splitGames(pgn)[0], { lang: 'en' }).game; return Pgn.mainlineFrom(g.root).map(n => strategicNotes(n).map(x => x.txt).join(' | ')); };
+      return { esp: textos('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Bxc6 dxc6'),
+               damas: textos('1. d4 d5 2. c4 dxc4 3. e3 Nf6 4. Bxc4 e6 5. Nf3 c5 6. O-O a6 7. dxc5 Qxd1 8. Rxd1') };
+    }""")
+    comprobar("pareja de alfiles" in notas["esp"][7], "comentario estratégico: «… pareja de alfiles» en la variante del cambio de la Española")
+    comprobar(any("damas" in t for t in notas["damas"]), "comentario estratégico: «Se cambian las damas»")
+    pg.fill("#moveInput", "1. e4 e5 2. Ac4 Cc6 3. Dh5 Cf6 4. Dxf7#")
+    pg.click("#importBtn")
+    pg.click("#autoAnnotateBtn")
+    pg.wait_for_function("document.getElementById('reportBox').classList.contains('show')", timeout=120000)
+    informe = pg.inner_text("#reportExtra")
+    comprobar("Momentos clave" in informe and "Precisión por fases" in informe and "practicar" in informe.lower(), "el informe muestra resumen, momentos clave, fases y qué practicar")
+    pg.locator("#reportExtra [data-k]").first.click()
+    comprobar(pg.inner_text("#moves .mv.active") in ("Cf6", "Cf6??", "Nf6"), "pulsar un momento clave lleva a esa jugada")
+    pg.evaluate("buildPrintView()")
+    comprobar("Momentos clave" in pg.inner_text("#printView"), "el informe sale también en la versión para imprimir")
+    pg.click('.tab-btn[data-tab="library"]')
+    pg.click('.sub-btn[data-sub="collection"]')
+    pg.click("#lichessImport summary")
+    pg.fill("#liUser", "rafa")
+    pg.select_option("#liPerf", "blitz")
+    pg.check("#liRated")
+    pg.click("#liBtn")
+    pg.wait_for_function("document.querySelectorAll('#pgnDbBody tr').length === 2", timeout=5000)
+    url = llamadas[-1] if llamadas else ""
+    comprobar("/api/games/user/rafa?" in url and "perfType=blitz" in url and "rated=true" in url and "evals=true" in url, "descarga las partidas del usuario de Lichess con los filtros elegidos")
+    pg.locator("#pgnDbBody tr").first.click()
+    comprobar(pg.evaluate("(game.root.children[0].eval || {}).cp") == 20, "se conservan las evaluaciones que trae Lichess")
+    pg.click('.tab-btn[data-tab="library"]')
+    pg.click('.sub-btn[data-sub="collection"]')
+    pg.fill("#liUser", "nadie")
+    pg.click("#liBtn")
+    pg.wait_for_timeout(500)
+    comprobar("no existe el usuario" in pg.inner_text("#toast"), "avisa si el usuario de Lichess no existe")
+    pg.reload()
+    pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready")
+    comprobar(pg.input_value("#liUser") == "rafa", "recuerda el último usuario de Lichess que funcionó")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -348,7 +420,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

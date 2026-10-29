@@ -4,11 +4,12 @@ Analiza, comenta y entrena **tus partidas de ajedrez** en el navegador: variante
 aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada. Todo en **español** y en
 **un único archivo HTML**: sin servidor, sin cuentas y sin instalar nada. Tus partidas se quedan en tu navegador.
 
-### ▶️ [Abrir en el navegador](https://rkarillo-tech.github.io/ajedrezbase/) · [Descargar el HTML](https://github.com/rkarillo-tech/ajedrezbase/raw/main/index.html) · [Guía de uso](GUIA.md)
+### ▶️ [Abrir en el navegador](https://rkarillo-tech.github.io/ajedrezbase/) · [Descargar el HTML](https://github.com/rkarillo-tech/ajedrezbase/releases/latest/download/ajedrezbase.html) · [Guía de uso](GUIA.md)
 
 > La versión web se puede **instalar como aplicación** (botón «⬇ Instalar» o «Añadir a pantalla de inicio» en el móvil)
 > y entonces **funciona sin conexión**, Stockfish incluido.
 > Si prefieres el archivo suelto, guárdalo donde quieras y ábrelo con Chrome, Edge, Firefox o Safari.
+> Todas las versiones están en [Releases](https://github.com/rkarillo-tech/ajedrezbase/releases) (apartado «Assets» de cada una).
 
 ![AjedrezBase analizando la Partida de la Ópera](assets/captura.png)
 
@@ -20,10 +21,12 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Variantes** | Árbol completo: variantes anidadas, promover, hacer principal, cortar; comentarios y símbolos `!` `?` `±`… en cada jugada |
 | **PGN** | Importa notación española (`Cf3`), inglesa, figurines, coordenadas y PGN completos de Lichess, Chess.com o ChessBase; exporta PGN estándar |
 | **Motor** | Stockfish 19 (NNUE) en el navegador: hasta 3 líneas, flecha, barra de evaluación y **👁 Ver amenaza** (`X`); nube de Lichess y motor propio de respaldo sin conexión |
-| **Análisis** | Analiza la partida (o una variante): marca `??` `?` `?!` `!`, redacta comentarios en español, calcula la precisión y dibuja el gráfico |
+| **Análisis** | Analiza la partida (o una variante): marca `??` `?` `?!` `!`, redacta comentarios en español (también estratégicos: peones pasados o aislados, casillas fuertes, pareja de alfiles…), calcula la precisión y dibuja el gráfico |
+| **Informe** | Resumen de cómo fue la partida, momentos clave por impacto, precisión por fases y qué practicar |
 | **Aprende de tus errores** | Tras el análisis, repasa cada `?` y `??` buscando tú la jugada buena; acepta alternativas casi igual de buenas y guarda los que quieras como tarjetas |
 | **Aperturas** | Explorador de Lichess (maestros y online), explorador de **tus propias partidas** sin conexión y 170 aperturas ECO en español |
 | **Finales** | Tablas Syzygy de 7 piezas con práctica contra la defensa perfecta, y finales fundamentales (Lucena, Philidor, Saavedra…) |
+| **Lichess** | Descarga tus últimas partidas públicas por nombre de usuario (sin token), con sus análisis si los tienen |
 | **Biblioteca** | Guardas sólo lo que te interesa: ⭐ favoritas, etiquetas, buscador, borrado individual, exportar y copias de seguridad |
 | **Marcadores** | 📌 Marca posiciones como idea, táctica, error típico, plan… con nota; búscalas y vuelve a ellas con un clic |
 | **Entrenar** | Repertorio contra tus variantes y **tarjetas** de tus marcadores, con repetición espaciada (1, 3, 7, 16, 35, 75 días) |

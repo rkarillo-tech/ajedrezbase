@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.1.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.2.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -395,6 +395,19 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   .print-view figcaption { font-size: 9.5pt; color: #333; }
   .print-view .pfoot { margin-top: 16px; color: #777; font-size: 8pt; text-align: right; }
 }
+/* Informe */
+.report-extra h3 { color: var(--text); font-size: .88rem; margin: 12px 0 4px; }
+.rep-summary { font-size: .86rem; line-height: 1.55; margin: 0; }
+.rep-key { padding-left: 20px; font-size: .84rem; margin: 4px 0; }
+.rep-key li { margin: 3px 0; }
+.rep-phases { width: 100%; border-collapse: collapse; font-size: .82rem; text-align: center; }
+.rep-phases th, .rep-phases td { padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.rep-phases td:first-child { text-align: left; color: var(--muted); }
+.rep-player { font-size: .84rem; margin: 6px 0; }
+.rep-player ul { margin: 3px 0 0; padding-left: 20px; }
+@media print { .print-view .preport { margin-top: 14px; border-top: 1px solid #999; padding-top: 6px; } .print-view .preport h2 { font-size: 13pt; } .print-view .preport table { border-collapse: collapse; } .print-view .preport td, .print-view .preport th { padding: 2px 10px; border-bottom: 1px solid #ccc; } }
+.lichess-import { margin-top: 8px; background: #101520; border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px 6px; }
+.lichess-import summary { font-weight: 700; color: var(--text); }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel3); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; z-index: 300; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 90vw; }
 .toast.show { opacity: 1; }
 
@@ -651,6 +664,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </table>
         <p class="small">Clasificación por pérdida de probabilidad de ganar (como Lichess). Pulsa una jugada para leer su comentario.</p>
         <div id="retryStart" class="controls" hidden></div>
+        <div id="reportExtra" class="report-extra"></div>
       </div>
 
       <details id="headersDetails">
@@ -841,6 +855,23 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <button id="loadSampleDbBtn" class="sm-btn info-btn">Antología de clásicos</button>
           <button id="closeCollBtn" class="sm-btn danger" title="Libera la memoria que ocupa el fichero">✖ Cerrar fichero</button>
         </div>
+        <details class="lichess-import" id="lichessImport">
+          <summary>☁ Descargar mis partidas de Lichess</summary>
+          <div class="filter-row">
+            <input id="liUser" placeholder="Usuario de Lichess" autocomplete="off" spellcheck="false" aria-label="Usuario de Lichess">
+            <select id="liMax" aria-label="Número de partidas"><option value="20">Últimas 20</option><option value="50" selected>Últimas 50</option><option value="100">Últimas 100</option><option value="300">Últimas 300</option></select>
+            <select id="liPerf" aria-label="Ritmo">
+              <option value="">Todos los ritmos</option><option value="bullet,ultraBullet">Bala</option><option value="blitz">Blitz</option>
+              <option value="rapid">Rápidas</option><option value="classical">Clásicas</option><option value="correspondence">Por correspondencia</option>
+            </select>
+          </div>
+          <div class="controls">
+            <label class="switch"><input type="checkbox" id="liRated"> Sólo puntuables</label>
+            <label class="switch"><input type="checkbox" id="liAnalysed"> Sólo con análisis de Lichess</label>
+            <button id="liBtn" class="primary sm-btn">☁ Descargar</button>
+          </div>
+          <p class="small">Las partidas públicas se descargan sin token y van a esta lista, sólo en memoria (como un .pgn abierto); guarda las que quieras con 💾. Si la partida tiene análisis de Lichess, sus evaluaciones se conservan.</p>
+        </details>
         <input id="dbFilterInput" placeholder="Filtrar por jugador, evento, año, ECO o resultado…" style="margin-top:8px" aria-label="Filtrar partidas">
         <div class="cb-table-wrap" style="max-height:380px">
           <table class="cb-table">
@@ -925,7 +956,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.1.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.2.0 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
 </footer>
@@ -1034,7 +1065,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li><b>Comentar</b>: en «Comentario de la posición» escribe lo que quieras sobre la jugada que lleva a la posición actual. Aparece en cursiva en la lista de jugadas y se exporta en el PGN.</li>
           <li><b>Símbolos</b>: <code>! !! !? ?! ? ??</code> valoran la jugada; <code>+− ± = ∞ ∓ −+</code> valoran la posición. «Limpiar» los quita. El símbolo de la última jugada aparece también en un círculo de color sobre su casilla del tablero.</li>
           <li><b>📋 Ver como planilla</b>: muestra la partida en dos columnas (número · blancas · negras), como en una planilla de torneo; los comentarios y variantes aparecen entre filas. <b>📜 Ver como lista</b> vuelve a la vista continua.</li>
-          <li><b>✍ Redactar comentario con el motor</b>: analiza la jugada actual y escribe un comentario en español (si era un error, cuál era la mejor y cuál es la refutación).</li>
+          <li><b>✍ Redactar comentario con el motor</b>: analiza la jugada actual y escribe un comentario en español: si era un error, cuál era la mejor y cuál es la refutación, y además las ideas estratégicas de la jugada, por ejemplo «Crea un peón pasado en d6», «Deja aislado el peón rival de d5», «Instala el caballo en e5, una casilla fuerte…», «Cede la pareja de alfiles», «La torre llega a la séptima fila» o «Se cambian las damas».</li>
           <li><b>Flechas y círculos</b>: clic derecho y arrastrar dibuja una flecha; clic derecho en una casilla la rodea. Verde por defecto, <kbd>⇧</kbd> roja, <kbd>Alt</kbd> azul, <kbd>⇧</kbd>+<kbd>Alt</kbd> amarilla. Repite el gesto para borrarla, o usa <b>🧽 Borrar flechas</b>. Se guardan en el PGN y Lichess/ChessBase las entienden.</li>
         </ul>
         <div class="example"><b>Ejemplo:</b> en la jugada 12 crees que había algo mejor → pulsa la jugada 11 de las negras en la lista → juega tu idea en el tablero → escribe en el comentario «Más activa: amenaza Cxe5» → dibuja una flecha roja con <kbd>⇧</kbd> + clic derecho mostrando la amenaza.</div>
@@ -1065,8 +1096,17 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
             <ul>
               <li>marca las jugadas: <span class="nag-blunder">??</span> error grave, <span class="nag-mistake">?</span> error, <span class="nag-inacc">?!</span> imprecisión, <span class="nag-brilliant">!</span> jugada única;</li>
               <li>escribe comentarios en las jugadas críticas (cuál era mejor, cuál es la refutación, si se deja material o un mate);</li>
-              <li>muestra un informe con la <b>precisión</b> de cada jugador y la pérdida media en centipeones.</li>
+              <li>muestra un informe con la <b>precisión</b> de cada jugador y la pérdida media en centipeones;</li>
+              <li>añade breves comentarios estratégicos en las jugadas tranquilas con una idea clara (peones pasados o aislados, casillas fuertes, cambio de damas…).</li>
             </ul>
+            Debajo aparece el <b>informe de la partida</b>:
+            <ul>
+              <li><b>📝 Resumen</b>: la apertura y cómo fue cambiando la valoración («empezó equilibrada; tras 21…g5 pasó a ventaja negra…») hasta el resultado.</li>
+              <li><b>📍 Momentos clave</b>: las 5 jugadas que más cambiaron la partida, ordenadas por impacto, con qué pasó (pérdida de material, mate permitido o escapado, ventaja desperdiciada…). Pulsa una para ir a ella.</li>
+              <li><b>⏱ Precisión por fases</b>: apertura, medio juego y final para cada jugador.</li>
+              <li><b>🎯 Qué practicar</b>: recomendaciones según los errores de cada jugador (táctica, mates, finales, la apertura…).</li>
+            </ul>
+            El informe también sale en la versión para imprimir.</li>
             La clasificación se basa en cuánto baja la probabilidad de ganar, igual que en Lichess. Tus propios comentarios y símbolos no se sobrescriben.</li>
           <li><b>📈 Completar gráfico</b> hace una pasada rápida sólo para dibujar el gráfico, sin comentar nada.</li>
           <li><b>Cómo leer el gráfico</b>: de izquierda a derecha, la partida (sólo la línea principal). Cuanto más <b>sube la zona blanca</b>, mejor van las blancas; si baja, las negras. La línea discontinua es la igualdad. +1 peón ≈ 59 %, +3 ≈ 75 %, +5 ≈ 86 %, mate = 100 %. Los puntos de color son los errores; la raya naranja es la jugada en la que estás. Haz clic en el gráfico para saltar a esa jugada.</li>
@@ -1157,8 +1197,10 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li>El fichero se abre <b>sólo en memoria</b>: no se guarda nada y desaparece al cerrar la página o al pulsar <b>✖ Cerrar fichero</b>.</li>
           <li>Filtra por jugador, evento, año, ECO o resultado. Pulsa una fila para ver la partida.</li>
           <li>Para quedarte con alguna: <b>💾</b> en su fila, o <b>«Guardar en la biblioteca las partidas filtradas»</b> para varias de golpe. Las que ya tengas no se duplican (✔).</li>
+          <li><b>☁ Descargar mis partidas de Lichess</b>: escribe tu usuario, cuántas partidas quieres (20 a 300), el ritmo y si sólo puntuables o sólo las analizadas, y pulsa <b>☁ Descargar</b>. No hace falta token. Llegan a esta misma lista, sólo en memoria; guarda con 💾 las que te interesen. Si Lichess ya las analizó, sus evaluaciones se conservan y el gráfico se dibuja al momento.</li>
           <li>Ficheros grandes: hasta unos 200 MB van bien; por encima se pide confirmación y a partir de 400 MB se rechazan. Como referencia, un fichero de 11 MB (21.000 partidas) se abre en menos de un segundo.</li>
         </ul>
+        <div class="example"><b>Ejemplo con Lichess:</b> «☁ Descargar mis partidas» → tu usuario → «Últimas 20», «Rápidas» → abre la que perdiste → «🤖 Analizar y comentar» → lee el informe y pulsa «🎯 Aprende de tus errores».</div>
         <div class="example"><b>Ejemplo:</b> descargas el .pgn de un torneo (500 partidas) → ábrelo → filtra «Carlsen» → guarda sólo esas 11 → cierra el fichero para liberar memoria.</div>
       </details>
 
@@ -1326,7 +1368,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.1.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.2.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -1694,6 +1736,67 @@ var Chess = (function () {
     return cnt;
   }
 
+  /* ---------------- Estructura de peones y casillas fuertes (para los comentarios) ---------------- */
+  /* Devuelve, para cada color (1 blancas, -1 negras), las casillas (índice 0x88) de sus peones
+     pasados y aislados, y las columnas con peones doblados. */
+  function pawnStructure(s) {
+    const files = { 1: [[], [], [], [], [], [], [], []], "-1": [[], [], [], [], [], [], [], []] };
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+      const p = s.b[r * 16 + c];
+      if (p === "P") files[1][c].push(r);
+      else if (p === "p") files[-1][c].push(r);
+    }
+    const res = {};
+    for (const color of [1, -1]) {
+      const mine = files[color], theirs = files[-color], out = { passed: [], isolated: [], doubled: [] };
+      for (let c = 0; c < 8; c++) {
+        if (!mine[c].length) continue;
+        if (mine[c].length > 1) out.doubled.push(c);
+        const iso = (c === 0 || !mine[c - 1].length) && (c === 7 || !mine[c + 1].length);
+        for (const r of mine[c]) {
+          if (iso) out.isolated.push(r * 16 + c);
+          let passed = true;
+          for (let cc = Math.max(0, c - 1); cc <= Math.min(7, c + 1) && passed; cc++) {
+            for (const rr of theirs[cc]) if (color === 1 ? rr < r : rr > r) { passed = false; break; }
+          }
+          // Un peón con otro propio delante en la misma columna no cuenta como pasado
+          if (passed && mine[c].some(rr => (color === 1 ? rr < r : rr > r))) passed = false;
+          if (passed) out.passed.push(r * 16 + c);
+        }
+      }
+      res[color] = out;
+    }
+    return res;
+  }
+  function bishopPair(s, color) {
+    let n = 0;
+    const B = color === 1 ? "B" : "b";
+    for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } if (s.b[i] === B) n++; }
+    return n >= 2;
+  }
+  /* Casilla fuerte («puesto avanzado») para una pieza de «color» en sq: en campo rival (filas 4-6
+     relativas), defendida por un peón propio y sin peones rivales que puedan atacarla nunca. */
+  function isOutpost(s, sq, color) {
+    const r = sq >> 4, c = sq & 7, rel = color === 1 ? 8 - r : r + 1;
+    if (rel < 4 || rel > 6) return false;
+    const own = color === 1 ? "P" : "p", enemy = color === 1 ? "p" : "P";
+    const defenders = color === 1 ? [sq + 15, sq + 17] : [sq - 15, sq - 17];
+    if (!defenders.some(x => on(x) && s.b[x] === own)) return false;
+    for (const cc of [c - 1, c + 1]) {
+      if (cc < 0 || cc > 7) continue;
+      for (let rr = 0; rr < 8; rr++) {
+        if (s.b[rr * 16 + cc] !== enemy) continue;
+        if (color === 1 ? rr < r : rr > r) return false;
+      }
+    }
+    return true;
+  }
+  function nonPawnCount(s) {
+    let n = 0;
+    for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } const p = s.b[i]; if ("NBRQnbrq".includes(p)) n++; }
+    return n;
+  }
+
   /* ---------------- Zobrist ---------------- */
   let seed = 0x9e3779b9;
   const rnd = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return seed >>> 0; };
@@ -2022,7 +2125,8 @@ var Chess = (function () {
   return {
     START_FEN, FILES, VAL, on, color, sqName, sqIdx, parseFen, toFen, boardFen, posKey, clone,
     attacked, attackers, kingSq, inCheck, pseudo, legal, apply, san, sanBase, uci, moveFromUci,
-    parseMove, cleanToken, insufficient, material, hash, evaluate, search, clearTT, workerMain, MATE
+    parseMove, cleanToken, insufficient, material, hash, evaluate, search, clearTT, workerMain, MATE,
+    pawnStructure, bishopPair, isOutpost, nonPawnCount
   };
 })();
 
@@ -2665,7 +2769,7 @@ const DEFAULTS = {
   pieceStyle: "staunton", lang: "es", theme: "wood", sound: true, engine: "auto", token: "",
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
-  animate: true, wheel: true, moveView: "list"
+  animate: true, wheel: true, moveView: "list", lichessUser: ""
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -3681,6 +3785,8 @@ function setGame(g, opts = {}) {
   if (Retry.active) retryEnd(true);
   Threat.node = null;
   ui.analysedLine = null;
+  ui.report = null;
+  $("reportExtra").innerHTML = "";
   $("retryStart").hidden = true;
   ui.libId = opts.libId || null;
   ui.recUpdated = ui.libId && typeof Lib !== "undefined" && Lib.games.get(ui.libId) ? Lib.games.get(ui.libId).updated : 0;
@@ -3751,6 +3857,51 @@ function hangingInfo(node) {
   if (!def.length || minAtt < val) return `Ojo: ${PIECE_ART[p.toLowerCase()]} de ${Chess.sqName(m.to)} queda ${def.length ? "atacad" + (["r", "q"].includes(p.toLowerCase()) ? "a" : "o") + " por una pieza de menor valor" : "sin defensa"}.`;
   return null;
 }
+/* Ideas estratégicas de una jugada, comparando la posición antes y después.
+   Devuelve [{ txt, w }]: w = importancia (3 alta, 1 baja). */
+function strategicNotes(node) {
+  const p = node.parent, before = p.state, after = node.state, m = node.move, me = before.t, them = -me;
+  const pc = m.piece.toLowerCase(), notes = [];
+  // En mitad de un cambio (se puede recapturar en la misma casilla) la estructura aún no es la definitiva
+  if (m.captured !== "." && Chess.attackers(after.b, m.to, them).length) return notes;
+  const sb = Chess.pawnStructure(before), sa = Chess.pawnStructure(after);
+  const nm = sq => Chess.sqName(sq);
+  // Peones pasados propios nuevos
+  const newPassed = sa[me].passed.filter(x => !sb[me].passed.includes(x) && !(pc === "p" && x === m.to && sb[me].passed.includes(m.from)));
+  const advanced = pc === "p" && sb[me].passed.includes(m.from) && sa[me].passed.includes(m.to);
+  if (newPassed.length) notes.push({ txt: `Crea un peón pasado en ${nm(newPassed[0])}.`, w: 3 });
+  else if (advanced) {
+    const rank = me === 1 ? 8 - (m.to >> 4) : (m.to >> 4) + 1;
+    notes.push({ txt: rank >= 6 ? `El peón pasado avanza a ${nm(m.to)}, cada vez más cerca de coronar.` : `Empuja el peón pasado a ${nm(m.to)}.`, w: rank >= 6 ? 3 : 2 });
+  }
+  // Debilidades en la estructura rival / propia
+  const isoThem = sa[them].isolated.filter(x => !sb[them].isolated.includes(x));
+  if (isoThem.length) notes.push({ txt: `Deja aislado el peón rival de ${nm(isoThem[0])}.`, w: 2 });
+  const dblThem = sa[them].doubled.filter(c => !sb[them].doubled.includes(c));
+  if (dblThem.length) notes.push({ txt: `Dobla los peones rivales en la columna ${"abcdefgh"[dblThem[0]]}.`, w: 2 });
+  const isoMe = sa[me].isolated.filter(x => !sb[me].isolated.includes(x) && x !== m.to);
+  if (isoMe.length && m.captured !== ".") notes.push({ txt: `A cambio, se queda con un peón aislado en ${nm(isoMe[0])}.`, w: 1 });
+  const dblMe = sa[me].doubled.filter(c => !sb[me].doubled.includes(c));
+  if (dblMe.length) notes.push({ txt: `Acepta peones doblados en la columna ${"abcdefgh"[dblMe[0]]}.`, w: 1 });
+  // Pareja de alfiles
+  if (Chess.bishopPair(before, me) && !Chess.bishopPair(after, me) && Chess.bishopPair(after, them)) notes.push({ txt: "Cede la pareja de alfiles.", w: 2 });
+  if (Chess.bishopPair(before, them) && !Chess.bishopPair(after, them) && Chess.bishopPair(after, me)) notes.push({ txt: "Elimina la pareja de alfiles rival y se queda con la suya.", w: 2 });
+  // Casilla fuerte para el caballo (o el alfil)
+  if ((pc === "n" || pc === "b") && Chess.isOutpost(after, m.to, me)) notes.push({ txt: `Instala ${PIECE_ART[pc]} en ${nm(m.to)}, una casilla fuerte apoyada por un peón y que ningún peón rival puede atacar.`, w: 3 });
+  // Torre en séptima
+  if ((pc === "r" || pc === "q") && (me === 1 ? m.to >> 4 === 1 : m.to >> 4 === 6) && (me === 1 ? m.from >> 4 !== 1 : m.from >> 4 !== 6)) notes.push({ txt: `${pc === "r" ? "La torre" : "La dama"} llega a la séptima fila, donde ataca los peones y encierra al rey.`, w: 2 });
+  // Cambio de damas
+  const queens = st => { let n = 0; for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } if (st.b[i] === "Q" || st.b[i] === "q") n++; } return n; };
+  if (m.captured.toLowerCase() === "q" && queens(after) === 0) notes.push({ txt: "Se cambian las damas: la partida se encamina hacia el final.", w: 2 });
+  // Debilitar el enroque
+  if (pc === "p") {
+    const k = Chess.kingSq(before.b, me), kf = k & 7, home = me === 1 ? 7 : 0;
+    const castledK = (k >> 4) === home && kf >= 5, castledQ = (k >> 4) === home && kf <= 2;
+    const f = m.from & 7, fromHome = (m.from >> 4) === (me === 1 ? 6 : 1);
+    if (fromHome && ((castledK && f >= 5) || (castledQ && f <= 2))) notes.push({ txt: "Avanza un peón del enroque: debilita la protección del rey.", w: 1 });
+  }
+  return notes;
+}
 function describeMotif(node) {
   const p = node.parent, s = p.state, m = node.move, pc = m.piece.toLowerCase(), to = Chess.sqName(m.to);
   const out = [];
@@ -3772,7 +3923,11 @@ function describeMotif(node) {
     if (rank >= 6) out.push(`El peón avanza a ${to}, cada vez más cerca de coronar.`);
   }
   if (Chess.inCheck(node.state)) out.push(Chess.legal(node.state).length ? "Da jaque." : "¡Jaque mate!");
-  return out.join(" ");
+  // Hasta dos ideas estratégicas, las más importantes
+  const strat = strategicNotes(node).sort((a, b) => b.w - a.w).slice(0, 2).map(x => x.txt);
+  // Evitar repetir lo del peón que avanza
+  if (strat.some(t => t.startsWith("El peón pasado avanza"))) { const i = out.findIndex(t => t.startsWith("El peón avanza")); if (i >= 0) out.splice(i, 1); }
+  return out.concat(strat).join(" ");
 }
 function classifyMove(n) {
   const p = n.parent;
@@ -3897,6 +4052,11 @@ async function analyseGame(opts = {}) {
     if (important && (!n.comment || n.commentAuto)) {
       const txt = buildComment(n, info);
       if (txt) { n.comment = txt; n.commentAuto = true; }
+    } else if (!n.comment || n.commentAuto) {
+      // Jugadas tranquilas con una idea estratégica clara: un comentario breve
+      const strat = strategicNotes(n).filter(x => x.w >= 2).sort((a, b) => b.w - a.w);
+      if (strat.length) { n.comment = strat.slice(0, 2).map(x => x.txt).join(" "); n.commentAuto = true; }
+      else if (n.commentAuto) { n.comment = ""; n.commentAuto = false; }
     }
   }
   const mean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
@@ -3912,12 +4072,125 @@ async function analyseGame(opts = {}) {
   }
   $("repWName").textContent = game.headers.White || "Blancas";
   $("repBName").textContent = game.headers.Black || "Negras";
+  ui.report = buildGameReport(nodes);
+  renderGameReport();
   $("reportBox").classList.add("show");
   $("analysisStatus").textContent = `✔ Análisis ${opts.variation ? "de la variante " : ""}completado con ${Engine.name} en ${Math.round((Date.now() - t0) / 1000)} s. Se han marcado y comentado las jugadas críticas.`;
   markDirty();
   render();
   renderRetryStart();
 }
+/* ---------- 19a. Informe pedagógico de la partida ---------- */
+const PHASES = [["apertura", "Apertura"], ["medio", "Medio juego"], ["final", "Final"]];
+function phaseOfNode(n, ply) {
+  if (Chess.nonPawnCount(n.parent.state) <= 6) return "final";
+  if (ply <= 20 || (ply <= 30 && ECO.byKey.has(n.parent.key))) return "apertura";
+  return "medio";
+}
+function evalCategory(w) {
+  return w >= 85 ? "ganada para las blancas" : w >= 65 ? "con ventaja de las blancas" : w > 35 ? "equilibrada" : w > 15 ? "con ventaja de las negras" : "ganada para las negras";
+}
+function moveTheme(n, info) {
+  const p = n.parent, mover = info.mover, pe = p.eval, ne = info.after || n.eval;
+  if (pe.mate != null && pe.mate !== 0 && pe.mate * mover > 0 && !(ne.mate != null && ne.mate * mover > 0)) return { key: "mateMissed", txt: `se le escapó un mate en ${Math.abs(pe.mate)}` };
+  if (n.eval.mate != null && n.eval.mate !== 0 && n.eval.mate * mover < 0) return { key: "mateAllowed", txt: `permitió un mate en ${Math.abs(n.eval.mate)}` };
+  if (n.eval.pv && n.eval.pv.length) {
+    const lost = (materialBalance(p.state) - materialBalance(playUcis(n.state, n.eval.pv, 8))) * mover;
+    if (lost >= 2) return { key: "material", txt: `perdió material (unos ${Math.round(lost)} puntos)` };
+  }
+  const wb = mover === 1 ? winPct(pe) : 100 - winPct(pe);
+  if (wb >= 80 && wb - info.loss < 65) return { key: "wasted", txt: "dejó escapar una posición ganadora" };
+  return info.loss >= 15 ? { key: "positional", txt: "cometió un error decisivo de planteamiento" } : { key: "positional", txt: "empeoró su posición" };
+}
+function buildGameReport(nodes) {
+  const h = game.headers, moves = [];
+  nodes.slice(1).forEach((n, k) => {
+    const info = classifyMove(n);
+    if (!info) return;
+    moves.push({ n, info, ply: k + 1, phase: phaseOfNode(n, k + 1), w: winPct(info.after || n.eval) });
+  });
+  if (!moves.length) return null;
+  const name = c => (c === 1 ? h.White || "Blancas" : h.Black || "Negras");
+  // Momentos clave: las jugadas que más cambiaron la partida
+  const key = moves.filter(x => x.info.loss >= 7 && ["?!", "?", "??"].includes(x.info.cls)).sort((a, b) => b.info.loss - a.info.loss).slice(0, 5)
+    .map(x => Object.assign(x, { theme: moveTheme(x.n, x.info) }));
+  // Precisión por fases
+  const mean = a => a.reduce((s2, y) => s2 + y, 0) / (a.length || 1);
+  const harm = a => a.length / a.reduce((s2, y) => s2 + 1 / Math.max(1, y), 0);
+  const phases = {};
+  for (const [ph] of PHASES) for (const c of [1, -1]) {
+    const accs = moves.filter(x => x.phase === ph && x.info.mover === c).map(x => x.info.acc);
+    phases[ph + c] = accs.length ? Math.round((mean(accs) + harm(accs)) / 2) : null;
+  }
+  // Resumen: tramos de valoración (ignorando vaivenes de una sola jugada)
+  const cats = [{ ply: 0, cat: evalCategory(winPct(nodes[0].eval || { cp: 0 })) }];
+  for (let i = 0; i < moves.length; i++) {
+    const c = evalCategory(moves[i].w);
+    const next = moves[i + 1] ? evalCategory(moves[i + 1].w) : c;
+    if (c !== cats[cats.length - 1].cat && (next === c || i === moves.length - 1)) cats.push({ ply: moves[i].ply, cat: c, m: moves[i] });
+  }
+  const lbl = m => `${numPrefix(m.n.parent.state)}${dispSan(m.n)}${m.n.nag || ""}`;
+  const sentences = [];
+  const eco = ECO.detect(nodes[nodes.length - 1]);
+  if (eco) sentences.push(`Apertura: ${eco.entry.eco} ${eco.entry.name}.`);
+  sentences.push(`La partida empezó ${cats[0].cat}.`);
+  const changes = cats.slice(1);
+  const shown = changes.length > 5 ? changes.filter(c => key.some(k => Math.abs(k.ply - c.ply) <= 1)).slice(0, 4) : changes;
+  for (const c of shown) sentences.push(`Tras ${lbl(c.m)} pasó a estar ${c.cat}.`);
+  if (changes.length > shown.length) sentences.push(`La valoración cambió de manos ${changes.length} veces: fue una partida muy disputada.`);
+  const lastNode = nodes[nodes.length - 1], st = gameStatus(lastNode), res = h.Result;
+  if (st.over) sentences.push(`Terminó así: ${st.text.toLowerCase()}.`);
+  else if (res === "1-0" || res === "0-1") sentences.push(`${name(res === "1-0" ? 1 : -1)} ganó la partida${changes.length ? "" : " sin que la valoración cambiara de manos"}.`);
+  else if (res === "1/2-1/2") sentences.push("Terminó en tablas.");
+  else sentences.push(`Al final la posición está ${evalCategory(moves[moves.length - 1].w)}.`);
+  // Por jugador: precisión y qué practicar
+  const players = [1, -1].map(c => {
+    const mine = moves.filter(x => x.info.mover === c);
+    const accs = mine.map(x => x.info.acc);
+    const errs = mine.filter(x => x.info.cls === "?" || x.info.cls === "??");
+    const counts = { "?!": mine.filter(x => x.info.cls === "?!").length, "?": mine.filter(x => x.info.cls === "?").length, "??": mine.filter(x => x.info.cls === "??").length };
+    const themes = {};
+    for (const e of errs) { const t = moveTheme(e.n, e.info); themes[t.key] = (themes[t.key] || 0) + 1; themes["ph_" + e.phase] = (themes["ph_" + e.phase] || 0) + 1; }
+    const practice = [];
+    if (themes.mateMissed) practice.push("Ejercicios de mate en 2 y 3: se te pasó algún mate.");
+    if (themes.mateAllowed) practice.push("Seguridad del rey y patrones de mate: permitiste un ataque decisivo.");
+    if (themes.material) practice.push("Táctica: piezas colgadas, dobles ataques y clavadas (repasa los errores con 🎯).");
+    if (themes.wasted) practice.push("Convertir posiciones ganadas: simplifica cuando vas por delante y evita riesgos innecesarios.");
+    if ((themes.ph_apertura || 0) >= 1) practice.push(`La apertura${eco ? ` (${eco.entry.name})` : ""}: repasa las primeras jugadas con el explorador o la enciclopedia ECO.`);
+    if ((themes.ph_final || 0) >= 1) practice.push("Técnica de finales: practica en la pestaña 👑 Finales contra la tabla perfecta.");
+    if (!practice.length && errs.length) practice.push("Planes y valoración de posiciones: repasa los momentos clave con «🎯 Aprende de tus errores» para ver qué idea fallaba.");
+    if (!practice.length && counts["?!"] >= 3) practice.push("Precisión en posiciones tranquilas: muchas imprecisiones pequeñas; dedica más tiempo a comparar candidatas.");
+    const acc = accs.length ? Math.round((mean(accs) + harm(accs)) / 2) : null;
+    let verdict = `${name(c)}: ${acc != null ? acc + " % de precisión" : "sin datos"}`;
+    const parts = [];
+    if (counts["??"]) parts.push(`${counts["??"]} error${counts["??"] > 1 ? "es" : ""} grave${counts["??"] > 1 ? "s" : ""}`);
+    if (counts["?"]) parts.push(`${counts["?"]} error${counts["?"] > 1 ? "es" : ""}`);
+    if (counts["?!"]) parts.push(`${counts["?!"]} imprecisi${counts["?!"] > 1 ? "ones" : "ón"}`);
+    verdict += parts.length ? `, con ${parts.join(", ")}.` : ", sin errores.";
+    return { c, verdict, practice };
+  });
+  return { key, phases, summary: sentences.join(" "), players };
+}
+function renderGameReport() {
+  const box = $("reportExtra"), R = ui.report;
+  if (!R) { box.innerHTML = ""; return; }
+  const h = game.headers, nm = c => esc(c === 1 ? h.White || "Blancas" : h.Black || "Negras");
+  const pcell = v => (v == null ? "–" : v + "%");
+  let html = `<h3>📝 Resumen</h3><p class="rep-summary">${esc(R.summary)}</p>`;
+  html += `<h3>📍 Momentos clave</h3>`;
+  if (R.key.length) {
+    html += `<ol class="rep-key">` + R.key.map((x, i) => {
+      const n = x.n, p = n.parent;
+      return `<li><a href="#" data-k="${i}"><b>${esc(numPrefix(p.state) + dispSan(n) + (n.nag || ""))}</b></a> (${esc(p.state.t === 1 ? h.White || "blancas" : h.Black || "negras")}): ${esc(x.theme.txt)}; la valoración pasa de ${esc(fmtEval(p.eval))} a ${esc(fmtEval(x.info.after || n.eval))}.</li>`;
+    }).join("") + `</ol>`;
+  } else html += `<p class="small">No hubo errores importantes: ninguna jugada cambió el rumbo de la partida.</p>`;
+  html += `<h3>⏱ Precisión por fases</h3><table class="rep-phases"><thead><tr><th></th><th>${nm(1)}</th><th>${nm(-1)}</th></tr></thead><tbody>` +
+    PHASES.map(([k, label]) => `<tr><td>${label}</td><td>${pcell(R.phases[k + 1])}</td><td>${pcell(R.phases[k + -1])}</td></tr>`).join("") + `</tbody></table>`;
+  html += `<h3>🎯 Qué practicar</h3>` + R.players.map(pl => `<div class="rep-player"><b>${esc(pl.verdict)}</b>${pl.practice.length ? `<ul>${pl.practice.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<div class="small">Nada destacable: ¡buena partida!</div>`}</div>`).join("");
+  box.innerHTML = html;
+  box.querySelectorAll("[data-k]").forEach(a => a.onclick = e => { e.preventDefault(); const x = R.key[+a.dataset.k]; if (x && !quiz()) goTo(x.n); });
+}
+
 async function explainCurrentMove() {
   const n = cur();
   if (!n.parent) { toast("Sitúate en una jugada para comentarla."); return; }
@@ -5842,6 +6115,43 @@ $("ecoSearchInput").oninput = debounce(renderLocalEcoList, 120);
 $("loadSampleDbBtn").onclick = () => { const n = setCollection(SAMPLE_MULTI_PGN, false, "Antología de clásicos"); toast(`🗂 ${n} partidas clásicas abiertas (sin guardar).`); };
 $("openPgnFileBtn").onclick = () => $("pgnFileInput").click();
 $("pgnFileInput").onchange = async e => { const files = [...e.target.files]; e.target.value = ""; if (files.length) await openPgnFiles(files); };
+/* Descargar las partidas públicas de un usuario de Lichess (sin token) a la colección en memoria */
+async function downloadLichessGames() {
+  const user = $("liUser").value.trim();
+  if (!/^[A-Za-z0-9_-]{2,30}$/.test(user)) { toast("Escribe un nombre de usuario de Lichess válido."); $("liUser").focus(); return; }
+  const max = +$("liMax").value || 50, perf = $("liPerf").value || "ultraBullet,bullet,blitz,rapid,classical,correspondence";
+  const q = new URLSearchParams({ max, perfType: perf, opening: "true", clocks: "false", evals: "true", sort: "dateDesc" });
+  if ($("liRated").checked) q.set("rated", "true");
+  if ($("liAnalysed").checked) q.set("analysed", "true");
+  const btn = $("liBtn");
+  btn.disabled = true;
+  btn.textContent = "⏳ Descargando…";
+  $("dbStatus").textContent = `Pidiendo a Lichess las partidas de ${user}… (hasta ${max}; puede tardar unos segundos)`;
+  try {
+    const res = await Lichess.fetch(`https://lichess.org/api/games/user/${encodeURIComponent(user)}?${q}`, { headers: Object.assign({ Accept: "application/x-chess-pgn" }, authHeaders()) });
+    if (res.status === 404) throw Error(`no existe el usuario «${user}» en Lichess`);
+    if (res.status === 429) throw Error(`Lichess pide una pausa: inténtalo en ${Lichess.waitSeconds()} s`);
+    if (!res.ok) throw Error("Lichess respondió con un error " + res.status);
+    const text = await res.text();
+    const n = Pgn.splitGames(text).filter(g => g.movetext.trim()).length;
+    if (!n) { $("dbStatus").textContent = ""; toast(`${user} no tiene partidas que coincidan con esos filtros.`, 4500); return; }
+    const append = Coll.games.length > 0 && confirm(`¿Añadir las ${n} partidas de ${user} a la lista que ya tienes abierta?\n\nAceptar = añadir · Cancelar = sustituirla`);
+    settings.lichessUser = user;
+    saveSettings();
+    setCollection(text, append, `Lichess: ${user}`);
+    $("dbFilterInput").value = "";
+    renderCollection();
+    toast(`☁ ${n} partidas de ${user} descargadas (sólo en memoria). Guarda las que quieras con 💾.`, 4500);
+  } catch (e) {
+    $("dbStatus").textContent = "";
+    toast("No se pudieron descargar: " + (e.message && !/fetch/i.test(e.message) ? e.message : "sin conexión con Lichess"), 5000);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "☁ Descargar";
+  }
+}
+$("liBtn").onclick = downloadLichessGames;
+$("liUser").addEventListener("keydown", e => { if (e.key === "Enter") downloadLichessGames(); });
 $("closeCollBtn").onclick = () => { if (!Coll.games.length) return; setCollection("", false); toast("Fichero cerrado y memoria liberada."); };
 $("dbFilterInput").oninput = debounce(renderCollection, 150);
 $("saveCollFilteredBtn").onclick = () => saveCollGames(collFiltered());
@@ -6105,7 +6415,15 @@ function buildPrintView() {
   const meta = [h.Event, h.Site, (h.Date || "").replace(/\.\?\?/g, ""), h.Round && h.Round !== "-" ? "Ronda " + h.Round : "", h.ECO].filter(x => x && x !== "?").join(" · ");
   v.innerHTML = `<h1>${esc(h.White || "Blancas")}${h.WhiteElo ? ` (${esc(h.WhiteElo)})` : ""} – ${esc(h.Black || "Negras")}${h.BlackElo ? ` (${esc(h.BlackElo)})` : ""} <span class="pres">${esc(h.Result || "*")}</span></h1>
     <div class="pmeta">${esc(meta)}</div>${game.root.state && Chess.toFen(game.root.state) !== Chess.START_FEN ? `<figure class="pv-diagram">${boardSvg(game.root.state, { size: 260 })}<figcaption>Posición inicial</figcaption></figure>` : ""}
-    <div class="pmoves">${body}</div><div class="pfoot">AjedrezBase · rkarillo-tech.github.io/ajedrezbase</div>`;
+    <div class="pmoves">${body}</div>${ui.report ? printReportHtml() : ""}<div class="pfoot">AjedrezBase · rkarillo-tech.github.io/ajedrezbase</div>`;
+}
+function printReportHtml() {
+  const R = ui.report, h = game.headers;
+  const nm = c => esc(c === 1 ? h.White || "Blancas" : h.Black || "Negras");
+  return `<div class="preport"><h2>Informe de la partida</h2><p>${esc(R.summary)}</p>` +
+    (R.key.length ? `<p><b>Momentos clave:</b></p><ol>${R.key.map(x => `<li><b>${esc(numPrefix(x.n.parent.state) + dispSan(x.n) + (x.n.nag || ""))}</b>: ${esc(x.theme.txt)} (${esc(fmtEval(x.n.parent.eval))} → ${esc(fmtEval(x.info.after || x.n.eval))}).</li>`).join("")}</ol>` : "") +
+    `<table><tr><th></th><th>${nm(1)}</th><th>${nm(-1)}</th></tr>${PHASES.map(([k, l]) => `<tr><td>${l}</td><td>${R.phases[k + 1] == null ? "–" : R.phases[k + 1] + "%"}</td><td>${R.phases[k + -1] == null ? "–" : R.phases[k + -1] + "%"}</td></tr>`).join("")}</table>` +
+    R.players.map(pl => `<p><b>${esc(pl.verdict)}</b>${pl.practice.length ? "<br>Practicar: " + pl.practice.map(esc).join(" · ") : ""}</p>`).join("") + `</div>`;
 }
 $("printBtn").onclick = () => { buildPrintView(); setTimeout(() => window.print(), 60); };
 
@@ -6282,6 +6600,7 @@ document.addEventListener("keydown", e => {
     setGame(r.game, { name: "", noConfirm: true });
   }
   $("moveViewBtn").textContent = settings.moveView === "sheet" ? "📜 Ver como lista" : "📋 Ver como planilla";
+  $("liUser").value = settings.lichessUser || "";
   Engine.init();
   initLibrary().then(() => openSharedLink());
 })();

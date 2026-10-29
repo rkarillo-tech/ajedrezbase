@@ -323,6 +323,67 @@ var Chess = (function () {
     return cnt;
   }
 
+  /* ---------------- Estructura de peones y casillas fuertes (para los comentarios) ---------------- */
+  /* Devuelve, para cada color (1 blancas, -1 negras), las casillas (índice 0x88) de sus peones
+     pasados y aislados, y las columnas con peones doblados. */
+  function pawnStructure(s) {
+    const files = { 1: [[], [], [], [], [], [], [], []], "-1": [[], [], [], [], [], [], [], []] };
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+      const p = s.b[r * 16 + c];
+      if (p === "P") files[1][c].push(r);
+      else if (p === "p") files[-1][c].push(r);
+    }
+    const res = {};
+    for (const color of [1, -1]) {
+      const mine = files[color], theirs = files[-color], out = { passed: [], isolated: [], doubled: [] };
+      for (let c = 0; c < 8; c++) {
+        if (!mine[c].length) continue;
+        if (mine[c].length > 1) out.doubled.push(c);
+        const iso = (c === 0 || !mine[c - 1].length) && (c === 7 || !mine[c + 1].length);
+        for (const r of mine[c]) {
+          if (iso) out.isolated.push(r * 16 + c);
+          let passed = true;
+          for (let cc = Math.max(0, c - 1); cc <= Math.min(7, c + 1) && passed; cc++) {
+            for (const rr of theirs[cc]) if (color === 1 ? rr < r : rr > r) { passed = false; break; }
+          }
+          // Un peón con otro propio delante en la misma columna no cuenta como pasado
+          if (passed && mine[c].some(rr => (color === 1 ? rr < r : rr > r))) passed = false;
+          if (passed) out.passed.push(r * 16 + c);
+        }
+      }
+      res[color] = out;
+    }
+    return res;
+  }
+  function bishopPair(s, color) {
+    let n = 0;
+    const B = color === 1 ? "B" : "b";
+    for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } if (s.b[i] === B) n++; }
+    return n >= 2;
+  }
+  /* Casilla fuerte («puesto avanzado») para una pieza de «color» en sq: en campo rival (filas 4-6
+     relativas), defendida por un peón propio y sin peones rivales que puedan atacarla nunca. */
+  function isOutpost(s, sq, color) {
+    const r = sq >> 4, c = sq & 7, rel = color === 1 ? 8 - r : r + 1;
+    if (rel < 4 || rel > 6) return false;
+    const own = color === 1 ? "P" : "p", enemy = color === 1 ? "p" : "P";
+    const defenders = color === 1 ? [sq + 15, sq + 17] : [sq - 15, sq - 17];
+    if (!defenders.some(x => on(x) && s.b[x] === own)) return false;
+    for (const cc of [c - 1, c + 1]) {
+      if (cc < 0 || cc > 7) continue;
+      for (let rr = 0; rr < 8; rr++) {
+        if (s.b[rr * 16 + cc] !== enemy) continue;
+        if (color === 1 ? rr < r : rr > r) return false;
+      }
+    }
+    return true;
+  }
+  function nonPawnCount(s) {
+    let n = 0;
+    for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } const p = s.b[i]; if ("NBRQnbrq".includes(p)) n++; }
+    return n;
+  }
+
   /* ---------------- Zobrist ---------------- */
   let seed = 0x9e3779b9;
   const rnd = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return seed >>> 0; };
@@ -651,6 +712,7 @@ var Chess = (function () {
   return {
     START_FEN, FILES, VAL, on, color, sqName, sqIdx, parseFen, toFen, boardFen, posKey, clone,
     attacked, attackers, kingSq, inCheck, pseudo, legal, apply, san, sanBase, uci, moveFromUci,
-    parseMove, cleanToken, insufficient, material, hash, evaluate, search, clearTT, workerMain, MATE
+    parseMove, cleanToken, insufficient, material, hash, evaluate, search, clearTT, workerMain, MATE,
+    pawnStructure, bishopPair, isOutpost, nonPawnCount
   };
 })();

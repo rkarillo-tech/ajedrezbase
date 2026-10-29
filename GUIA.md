@@ -50,7 +50,7 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - **Comentar**: en «Comentario de la posición» escribe lo que quieras sobre la jugada que lleva a la posición actual. Aparece en cursiva en la lista de jugadas y se exporta en el PGN.
 - **Símbolos**: `! !! !? ?! ? ??` valoran la jugada; `+− ± = ∞ ∓ −+` valoran la posición. «Limpiar» los quita. El símbolo de la última jugada aparece también en un círculo de color sobre su casilla del tablero.
 - **📋 Ver como planilla**: muestra la partida en dos columnas (número · blancas · negras), como en una planilla de torneo; los comentarios y variantes aparecen entre filas. **📜 Ver como lista** vuelve a la vista continua.
-- **✍ Redactar comentario con el motor**: analiza la jugada actual y escribe un comentario en español (si era un error, cuál era la mejor y cuál es la refutación).
+- **✍ Redactar comentario con el motor**: analiza la jugada actual y escribe un comentario en español: si era un error, cuál era la mejor y cuál es la refutación, y además las ideas estratégicas de la jugada, por ejemplo «Crea un peón pasado en d6», «Deja aislado el peón rival de d5», «Instala el caballo en e5, una casilla fuerte…», «Cede la pareja de alfiles», «La torre llega a la séptima fila» o «Se cambian las damas».
 - **Flechas y círculos**: clic derecho y arrastrar dibuja una flecha; clic derecho en una casilla la rodea. Verde por defecto, `⇧` roja, `Alt` azul, `⇧`+`Alt` amarilla. Repite el gesto para borrarla, o usa **🧽 Borrar flechas**. Se guardan en el PGN y Lichess/ChessBase las entienden.
 
 > **Ejemplo:** en la jugada 12 crees que había algo mejor → pulsa la jugada 11 de las negras en la lista → juega tu idea en el tablero → escribe en el comentario «Más activa: amenaza Cxe5» → dibuja una flecha roja con `⇧` + clic derecho mostrando la amenaza.
@@ -71,7 +71,14 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - **🤖 Analizar y comentar** (pestaña Estudio) evalúa todas las jugadas de la línea principal y:
   - marca las jugadas: ?? error grave, ? error, ?! imprecisión, ! jugada única;
   - escribe comentarios en las jugadas críticas (cuál era mejor, cuál es la refutación, si se deja material o un mate);
-  - muestra un informe con la **precisión** de cada jugador y la pérdida media en centipeones.
+  - muestra un informe con la **precisión** de cada jugador y la pérdida media en centipeones;
+  - añade breves comentarios estratégicos en las jugadas tranquilas con una idea clara (peones pasados o aislados, casillas fuertes, cambio de damas…).
+- Debajo aparece el **informe de la partida**:
+  - **📝 Resumen**: la apertura y cómo fue cambiando la valoración («empezó equilibrada; tras 21…g5 pasó a ventaja negra…») hasta el resultado.
+  - **📍 Momentos clave**: las 5 jugadas que más cambiaron la partida, ordenadas por impacto, con qué pasó (pérdida de material, mate permitido o escapado, ventaja desperdiciada…). Pulsa una para ir a ella.
+  - **⏱ Precisión por fases**: apertura, medio juego y final para cada jugador.
+  - **🎯 Qué practicar**: recomendaciones según los errores de cada jugador (táctica, mates, finales, la apertura…).
+- El informe también sale en la versión para imprimir.
 - La clasificación se basa en cuánto baja la probabilidad de ganar, igual que en Lichess. Tus propios comentarios y símbolos no se sobrescriben.
 - **📈 Completar gráfico** hace una pasada rápida sólo para dibujar el gráfico, sin comentar nada.
 - **Cómo leer el gráfico**: de izquierda a derecha, la partida (sólo la línea principal). Cuanto más **sube la zona blanca**, mejor van las blancas; si baja, las negras. La línea discontinua es la igualdad. +1 peón ≈ 59 %, +3 ≈ 75 %, +5 ≈ 86 %, mate = 100 %. Los puntos de color son los errores; la raya naranja es la jugada en la que estás. Haz clic en el gráfico para saltar a esa jugada.
@@ -140,7 +147,10 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - El fichero se abre **sólo en memoria**: no se guarda nada y desaparece al cerrar la página o al pulsar **✖ Cerrar fichero**.
 - Filtra por jugador, evento, año, ECO o resultado. Pulsa una fila para ver la partida.
 - Para quedarte con alguna: **💾** en su fila, o **«Guardar en la biblioteca las partidas filtradas»** para varias de golpe. Las que ya tengas no se duplican (✔).
+- **☁ Descargar mis partidas de Lichess**: escribe tu usuario, cuántas partidas quieres (20 a 300), el ritmo y si sólo puntuables o sólo las analizadas, y pulsa **☁ Descargar**. No hace falta token. Llegan a esta misma lista, sólo en memoria; guarda con 💾 las que te interesen. Si Lichess ya las analizó, sus evaluaciones se conservan y el gráfico se dibuja al momento.
 - Ficheros grandes: hasta unos 200 MB van bien; por encima se pide confirmación y a partir de 400 MB se rechazan. Como referencia, un fichero de 11 MB (21.000 partidas) se abre en menos de un segundo.
+
+> **Ejemplo con Lichess:** «☁ Descargar mis partidas» → tu usuario → «Últimas 20», «Rápidas» → abre la que perdiste → «🤖 Analizar y comentar» → lee el informe y pulsa «🎯 Aprende de tus errores».
 
 > **Ejemplo:** descargas el .pgn de un torneo (500 partidas) → ábrelo → filtra «Carlsen» → guarda sólo esas 11 → cierra el fichero para liberar memoria.
 

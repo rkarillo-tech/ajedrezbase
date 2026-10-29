@@ -56,6 +56,18 @@ r = Pgn.parseGame("1. e4 { [%csl Gd4][%cal Ge2e4,Rd7d5] buena [%eval 0.3] } e5")
 const n1 = r.game.root.children[0];
 comprobar(n1.shapes.length === 3 && n1.comment === "buena" && n1.eval.cp === 30, "flechas, círculos y [%eval] de Lichess");
 
+console.log("Estructura y casillas fuertes");
+{
+  const s1 = Chess.parseFen("4k3/8/8/3P4/8/2P5/2P1P3/4K3 w - - 0 1");
+  const ps = Chess.pawnStructure(s1)[1].passed.map(Chess.sqName).sort().join(), iso = Chess.pawnStructure(s1)[1].isolated.map(Chess.sqName).sort().join();
+  comprobar(ps === "c3,d5,e2" && Chess.pawnStructure(s1)[1].doubled.join() === "2" && iso === "", "peones pasados y doblados");
+  const s2 = Chess.parseFen("4k3/pp4pp/8/4N3/3P4/8/8/4K3 w - - 0 1");
+  comprobar(Chess.isOutpost(s2, Chess.sqIdx("e5"), 1), "e5 es casilla fuerte para el caballo");
+  const s3 = Chess.parseFen("4k3/pp3ppp/8/4N3/3P4/8/8/4K3 w - - 0 1");
+  comprobar(!Chess.isOutpost(s3, Chess.sqIdx("e5"), 1), "no es casilla fuerte si un peón rival puede echar al caballo");
+  comprobar(Chess.bishopPair(Chess.parseFen(Chess.START_FEN), 1), "pareja de alfiles en la posición inicial");
+}
+
 console.log("Datos incluidos");
 let ecoOk = true;
 for (const e of ECO_BOOK) if (Pgn.parseGame(e.moves, { lang: "en" }).error) { ecoOk = false; console.log("    ECO con error: " + e.name); }
