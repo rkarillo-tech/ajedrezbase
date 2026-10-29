@@ -8,7 +8,7 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 ## 🧭 1. De un vistazo: cómo está organizada la pantalla
 - **Columna izquierda**: el tablero con la **barra de evaluación** (a su izquierda), los nombres de los jugadores con el material capturado, el **panel del motor**, el **gráfico de la partida**, los botones de navegación y la **lista de jugadas** con sus variantes.
 - **Columna derecha**, arriba: la **barra de la partida actual** (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, cinco pestañas:
-**📖 Estudio** (importar, comentar, analizar), **🌍 Aperturas**, **📚 Biblioteca**, **👑 Finales** y **🎯 Entrenar**.
+**📖 Estudio** (importar, comentar, analizar), **🌍 Aperturas**, **📚 Biblioteca** (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), **👑 Finales** y **🎯 Entrenar**.
 - **Barra superior**: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU y su nivel, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.
 - En el móvil todo se apila: primero el tablero y después las herramientas.
 
@@ -154,7 +154,32 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 
 > **Ejemplo:** descargas el .pgn de un torneo (500 partidas) → ábrelo → filtra «Carlsen» → guarda sólo esas 11 → cierra el fichero para liberar memoria.
 
-## 🌍 13. Aperturas: explorador y enciclopedia (y el token de Lichess)
+## 📊 13. Estadísticas personales
+- En **📚 Biblioteca › 📊 Estadísticas** escribe tu nombre tal como sale en las cabeceras de tus partidas (por ejemplo, tu usuario de Lichess) y pulsa **Guardar**. Si usas varios, sepáralos con punto y coma: `rafa; Karino Arillo, Rafael`. Debajo salen como botones los nombres que más aparecen en tu biblioteca, para añadirlos con un clic.
+- Se calculan con **tus partidas guardadas en la biblioteca**: número de partidas, resultados, puntuación, precisión media y errores por partida.
+- Debajo verás:
+  - **💡 Conclusiones**: tu fase más floja, tu error más habitual, si puntúas menos con un color y tu mejor y peor apertura.
+  - Los resultados **por color** y la precisión **por fases** (apertura, medio juego y final).
+  - **🔍 Tus errores más frecuentes**, con un botón **🎯 Entrenar** en cada fila que abre ejercicios de ese tipo.
+  - **📖 Aperturas**: cómo te va con cada una. Pulsa una fila para ver esas partidas en «Mis partidas».
+  - **📈 Evolución por meses** de tu precisión y tu puntuación (con los datos también en una tabla).
+- Filtra por periodo, ritmo (bala, blitz, rápidas…) y color.
+- La precisión y los errores sólo cuentan las partidas **analizadas**. Las que traen el análisis de Lichess ya cuentan. Para el resto pulsa **🤖 Analizarlas ahora**: el motor las analiza una tras otra mientras sigues usando la aplicación. Elige antes el ritmo de análisis (rápido, normal o profundo); se puede detener cuando quieras.
+
+> **Ejemplo:** descargas tus últimas 100 partidas rápidas de Lichess y las guardas → escribes tu usuario en Estadísticas → pulsas «🤖 Analizarlas ahora» → las conclusiones dicen que tu fase más floja es el final y que «Mates que permitiste» es tu error más habitual → pulsas su 🎯 Entrenar.
+
+## 🔍 14. Buscar la posición, la estructura de peones o el material
+- Pon en el tablero la posición que te interesa (de una partida, del editor o de un FEN) y ve a **📚 Biblioteca › 🔍 Posición**.
+- Elige qué buscar:
+  - **La misma posición**: mismas piezas en las mismas casillas y mismo turno.
+  - **La misma estructura de peones**: los mismos peones en las mismas casillas, estén donde estén las piezas. Sirve para estudiar los planes típicos de una estructura (Carlsbad, peón aislado de dama…).
+  - **El mismo material**: por ejemplo, torre y peón contra torre. Ideal para repasar finales.
+- Busca en tu biblioteca y, si lo marcas, también en el .pgn abierto. Te dice cuántas partidas hay, cómo terminaron y cómo te fue a ti.
+- Pulsa un resultado para abrir la partida justo en ese momento.
+
+> **Ejemplo:** abres el .pgn de un torneo, juegas en el tablero tu línea de la Defensa Francesa hasta la jugada 6 y buscas «La misma posición»: ves las partidas que la siguieron y cuántas ganaron las blancas.
+
+## 🌍 15. Aperturas: explorador y enciclopedia (y el token de Lichess)
 - La pestaña **🌍 Aperturas** muestra, para la posición del tablero, qué jugadas se han hecho, cuántas veces y con qué resultado (barra blanco / tablas / negro), y partidas de ejemplo que puedes cargar.
 - Tres fuentes:
   - **Maestros**: partidas reales de jugadores de +2200 (necesita token de Lichess).
@@ -172,21 +197,22 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 
 > El token se guarda sólo en este navegador y sólo se envía a Lichess. Si lo pierdes o lo quieres anular, bórralo en esa misma página de Lichess y crea otro.
 
-## 👑 14. Finales: tablas Syzygy y finales fundamentales
+## 👑 16. Finales: tablas Syzygy y finales fundamentales
 - Con **7 piezas o menos**, **🔍 Consultar posición** da el resultado exacto con juego perfecto y la valoración de cada jugada: 🏆 gana, 🟰 tablas, ❌ pierde. DTZ = jugadas hasta que se reinicia la regla de 50; DTM = jugadas hasta el mate.
 - **Practicar**: activa la casilla y juega; el rival responderá con la defensa perfecta de la tabla. Ideal para comprobar si sabes ganar (o hacer tablas) un final.
 - **Finales fundamentales**: Lucena, Philidor, Saavedra, oposición, regla del cuadrado y los mates básicos, con una explicación de la idea clave.
 
 > **Ejemplo:** carga «Posición de Lucena» → activa «Practicar» → intenta ganar con blancas; si la tabla dice «🟰 Tablas» tras tu jugada, has perdido la victoria.
 
-## 🎯 15. Entrenar: repertorio y tarjetas
+## 🎯 17. Entrenar: repertorio, errores de tus partidas y tarjetas
 - **Entrenar una partida o repertorio**: carga una partida con tus líneas y variantes → pestaña **🎯 Entrenar** → elige con qué bando entrenas → **▶ Empezar**. Tú haces tus jugadas; el rival responde eligiendo al azar entre tus variantes. **💡 Pista** marca la pieza y, si la pulsas otra vez, la jugada.
 - Si la partida está en la biblioteca, se programa su repaso: si fallas, vuelve mañana; si la haces perfecta, se espacia (1, 3, 7, 16, 35, 75 días). **📅 Entrenar la siguiente partida pendiente** te pone la que toca.
+- **🎯 Errores de tus partidas**: ejercicios con las posiciones de los `?` y `??` de las partidas analizadas de tu biblioteca. Elige el tipo (táctica, encuentra el mate, defensa, convertir la ventaja, planteamiento, apertura o final) y cuántos, y pulsa **▶ Pendientes**, o **Al azar** para repasar aunque no toque. Con **Sólo mis jugadas** marcado salen sólo tus errores; para eso tienes que poner tu nombre en Estadísticas. Los que fallas vuelven al día siguiente y los que aciertas se espacian. Al terminar, **↩ Volver a tu partida**.
 - **🧠 Tarjetas de tus marcadores**: **▶ Repasar pendientes** te muestra, una a una, las posiciones que marcaste para que encuentres la jugada. **↩ Volver a la partida** te devuelve a donde estabas.
 
 > **Ejemplo de repertorio:** crea una partida con 1.e4 c5 2.Cf3 d6 3.d4 y añade como variantes las respuestas que preparas contra 2…Cc6 y 2…e6 → guárdala con la etiqueta «repertorio» → entrénala con blancas cada vez que te lo pida.
 
-## 💾 16. Ocupación de memoria y espacio
+## 💾 18. Ocupación de memoria y espacio
 - Arriba de **📚 Biblioteca** tienes el medidor:
   - **Biblioteca (permanente)**: lo que ocupan tus partidas y marcadores guardados. Se recomiendan hasta 100 MB (unas 50.000–100.000 partidas), porque se carga entera al abrir la página.
   - **Fichero .pgn abierto**: lo que ocupa en memoria el fichero que tengas abierto (recomendado hasta 200 MB).
@@ -195,13 +221,13 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - **🔒 Proteger datos** pide al navegador que no borre tu biblioteca aunque se quede sin espacio (algunos navegadores sólo lo conceden a páginas que usas a menudo o que tienes en marcadores).
 - Para liberar espacio: borra partidas que no uses, cierra el fichero .pgn al terminar y guarda copias de seguridad de vez en cuando.
 
-## 🛠 17. Ajustes y personalización
+## 🛠 19. Ajustes y personalización
 - **Barra superior**: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.
 - **⚙ Ajustes**: motor (automático o sólo interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, coordenadas, mostrar jugadas legales y recordar la partida al recargar.
 - **🔊** activa o silencia los sonidos.
 - Todos los ajustes se recuerdan en este navegador.
 
-## ⌨ 18. Atajos de teclado
+## ⌨ 20. Atajos de teclado
 | Tecla | Acción |
 | --- | --- |
 | `←` `→` | Jugada anterior / siguiente |
@@ -218,24 +244,24 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 
 Los atajos no funcionan mientras escribes en un recuadro de texto.
 
-## 📤 19. Imagen, impresión y enlaces para compartir
+## 📤 21. Imagen, impresión y enlaces para compartir
 - **🖼 Imagen**: descarga la posición del tablero como PNG, con sus flechas y círculos y un pie con la partida y la jugada. Si el navegador lo permite, además la copia al portapapeles para pegarla en un correo, un chat o un documento.
 - **🖨 Imprimir**: prepara la partida comentada para imprimirla o guardarla como PDF (elige «Guardar como PDF» en la ventana de impresión): cabecera con jugadores y evento, jugadas con comentarios y variantes, y diagramas en las jugadas marcadas con 📌, en las ??, ? y !! y en la posición final.
 - **🔗 Enlace**: copia un enlace que abre la partida justo en la jugada en la que estás, con las jugadas de la línea (y la posición inicial si no es la normal). Quien lo abra la verá en su navegador sin que se guarde nada; puede guardarla con 💾 si le interesa. Los comentarios y las variantes no viajan en el enlace: para eso, comparte el .pgn.
 
 > **Ejemplo:** quieres preguntarle a un compañero del club por la jugada 18 → sitúate en ella → **🔗 Enlace** → pégalo en WhatsApp. Para tu cuaderno de estudio → **🖨 Imprimir** → «Guardar como PDF».
 
-## 📲 20. Versión web, instalación y uso sin conexión
+## 📲 22. Versión web, instalación y uso sin conexión
 - **Versión web**: [rkarillo-tech.github.io/ajedrezbase](https://rkarillo-tech.github.io/ajedrezbase/). Es la forma recomendada: Stockfish y las consultas a Lichess funcionan sin problemas y tu biblioteca queda siempre en la misma dirección.
 - **Instalarla**: en la versión web aparece el botón **⬇ Instalar** arriba (o el icono de instalar en la barra de direcciones de Chrome y Edge). En el móvil: Android con Chrome → menú ⋮ → «Instalar aplicación»; iPhone/iPad con Safari → Compartir → «Añadir a pantalla de inicio».
 - **Sin conexión**: una vez abierta con internet, la aplicación (incluido Stockfish) queda guardada y funciona sin conexión. Sólo necesitan internet el explorador de Lichess, la nube y las tablas Syzygy.
 - **Actualizaciones**: con conexión siempre se carga la última versión; no hay que hacer nada.
 - **Archivo suelto**: también puedes descargar `index.html` y abrirlo con doble clic. Funciona igual, pero la biblioteca de esa copia es distinta de la de la versión web.
 
-## 🩺 21. Problemas frecuentes
+## 🩺 23. Problemas frecuentes
 **«Lichess ha rechazado la consulta: hace falta un token personal»**
 
-Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 13. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.
+Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 15. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.
 
 **«Lichess pide esperar» o «demasiadas consultas»**
 
@@ -248,6 +274,14 @@ Tienes la aplicación abierta en dos pestañas o ventanas. Para no perder nada, 
 **«Motor interno ⚠» en vez de Stockfish**
 
 El navegador no ha dejado arrancar Stockfish (pasa en vistas previas de archivos o sin conexión la primera vez). Abre la versión web ([rkarillo-tech.github.io/ajedrezbase](https://rkarillo-tech.github.io/ajedrezbase/)) o el archivo directamente con Chrome, Edge o Firefox (doble clic).
+
+**Las estadísticas dicen que no hay partidas mías**
+
+Tu nombre tiene que coincidir con el de las cabeceras «White»/«Black» de tus partidas (no importan mayúsculas ni tildes). Usa los botones con los nombres más frecuentes, y si usas varios, sepáralos con «;». Además, las partidas tienen que estar guardadas en la biblioteca, no sólo en el .pgn abierto.
+
+**«No hay ejercicios» en «Errores de tus partidas»**
+
+Los ejercicios salen de las partidas analizadas de tu biblioteca. Analízalas con «🤖 Analizar y comentar» y guárdalas, o pulsa «🤖 Analizarlas ahora» en Estadísticas. Prueba también a desmarcar «Sólo mis jugadas» o a elegir «Todos los errores».
 
 **Importo en inglés y veo las jugadas en español**
 

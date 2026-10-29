@@ -1,9 +1,9 @@
-/* AjedrezBase 1.2.1 · service worker: permite instalar la aplicación y usarla sin conexión.
+/* AjedrezBase 1.3.0 · service worker: permite instalar la aplicación y usarla sin conexión.
    - La página se pide primero a la red (así siempre tienes la última versión) y, si no hay
      conexión, se sirve la copia guardada.
    - Stockfish (19 Lite y, si se usa, 10) se guarda la primera vez y se reutiliza entre versiones.
    - Las consultas a Lichess nunca pasan por aquí: van siempre a la red. */
-const VERSION = "1.2.1";
+const VERSION = "1.3.0";
 const CACHE = "ajedrezbase-app-" + VERSION;
 const ENGINE_CACHE = "ajedrezbase-motor";
 const ENGINES = ["https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js", "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm", "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"];

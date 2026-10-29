@@ -331,6 +331,8 @@ details > summary { cursor: pointer; color: var(--muted); font-size: .84rem; mar
 .sub-btn.active { background: var(--panel3); border-color: var(--info); }
 .filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .filter-row input { flex: 1; min-width: 160px; }
+.filter-row input[type="checkbox"] { flex: none; min-width: 0; }
+.filter-row .switch { align-self: center; }
 .filter-row select { width: auto; }
 .lib-table td { vertical-align: middle; }
 .lib-table tr.current { background: rgba(102,187,106,.12); }
@@ -405,6 +407,37 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 .rep-phases td:first-child { text-align: left; color: var(--muted); }
 .rep-player { font-size: .84rem; margin: 6px 0; }
 .rep-player ul { margin: 3px 0 0; padding-left: 20px; }
+/* Estadísticas */
+.name-chips { margin: 4px 0 8px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.stats-out { margin-top: 6px; }
+.st-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 6px; margin: 6px 0; }
+.st-tile { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.st-tile span { font-size: .72rem; color: var(--muted); }
+.st-tile b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.st-tile b small { font-size: .7rem; color: var(--muted); font-weight: 600; }
+.st-tile > small { font-size: .7rem; color: var(--muted); }
+.st-conc { padding-left: 20px; font-size: .84rem; margin: 4px 0; line-height: 1.5; }
+.st-bars { display: flex; flex-direction: column; gap: 5px; }
+.st-bar-row { display: grid; grid-template-columns: minmax(150px, 1.4fr) 1fr auto auto; gap: 8px; align-items: center; font-size: .8rem; }
+.st-bar { height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+.st-bar i { display: block; height: 100%; background: #1e88e5; border-radius: 4px; }
+.st-bar-val { color: var(--muted); font-size: .74rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.st-chart { width: 100%; height: auto; display: block; margin-top: 4px; }
+.st-chart .st-grid { stroke: var(--border); stroke-width: 1; }
+.st-chart .st-ax { fill: var(--muted); font-size: 10px; }
+.st-chart .st-lbl { fill: var(--text); font-size: 10.5px; font-weight: 600; }
+.st-legend { display: flex; gap: 14px; font-size: .76rem; color: var(--muted); }
+.st-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.st-table summary { cursor: pointer; font-size: .76rem; color: var(--muted); margin-top: 4px; }
+.cb-table tr[data-eco] { cursor: pointer; }
+.pos-target { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: center; margin: 6px 0; }
+@media (max-width: 560px) {
+  .st-bar-row { grid-template-columns: 1fr auto; }
+  .st-bar-row .st-bar { grid-column: 1 / -1; grid-row: 2; }
+  .st-bar-row .sm-btn { justify-self: start; }
+  .st-chart .st-ax { font-size: 16px; }
+  .st-chart .st-lbl { font-size: 16px; }
+}
 @media print { .print-view .preport { margin-top: 14px; border-top: 1px solid #999; padding-top: 6px; } .print-view .preport h2 { font-size: 13pt; } .print-view .preport table { border-collapse: collapse; } .print-view .preport td, .print-view .preport th { padding: 2px 10px; border-bottom: 1px solid #ccc; } }
 .lichess-import { margin-top: 8px; background: #101520; border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px 6px; }
 .lichess-import summary { font-weight: 700; color: var(--text); }
@@ -797,6 +830,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <button class="sub-btn" data-sub="marks">📌 Marcadores <span id="markCount" class="srs-pill">0</span></button>
         <button class="sub-btn" data-sub="search">🔎 Buscar notas</button>
         <button class="sub-btn" data-sub="collection">🗂 Abrir .pgn <span id="collCount" class="srs-pill">0</span></button>
+        <button class="sub-btn" data-sub="stats">📊 Estadísticas</button>
+        <button class="sub-btn" data-sub="position">🔍 Posición</button>
       </div>
 
       <!-- Mis partidas -->
@@ -844,6 +879,41 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <button id="commentSearchBtn" class="primary">🔎 Buscar</button>
         </div>
         <div id="searchResults" class="mark-list"></div>
+      </div>
+
+      <!-- Estadísticas personales -->
+      <div class="subpane" id="sub-stats" hidden>
+        <label for="myNames" class="small">Tus nombres como jugador, tal como salen en las partidas (si son varios, sepáralos con punto y coma «;»)</label>
+        <div class="filter-row">
+          <input id="myNames" placeholder="Ej.: rafa; Karino Arillo, Rafael; tu usuario de Lichess…" autocomplete="off" spellcheck="false">
+          <button id="myNamesSave" class="sm-btn primary">Guardar</button>
+        </div>
+        <div id="nameChips" class="small name-chips"></div>
+        <div class="filter-row">
+          <select id="stPeriod" aria-label="Periodo"><option value="0">Desde siempre</option><option value="365">Último año</option><option value="180">Últimos 6 meses</option><option value="90">Últimos 3 meses</option><option value="30">Último mes</option></select>
+          <select id="stTc" aria-label="Ritmo"><option value="">Todos los ritmos</option><option value="bullet">Bala</option><option value="blitz">Blitz</option><option value="rapid">Rápidas</option><option value="classical">Clásicas</option><option value="corr">Correspondencia</option></select>
+          <select id="stColor" aria-label="Color"><option value="0">Blancas y negras</option><option value="1">Sólo con blancas</option><option value="-1">Sólo con negras</option></select>
+          <select id="stBatchMs" aria-label="Tiempo por jugada al analizar las pendientes" title="Tiempo por jugada al analizar las partidas pendientes"><option value="300">Análisis rápido (0,3 s/jug.)</option><option value="1000">Análisis normal (1 s/jug.)</option><option value="2500">Análisis profundo (2,5 s/jug.)</option></select>
+        </div>
+        <div id="statsBatch" class="note-box" hidden></div>
+        <div id="statsOut" class="report-extra stats-out"></div>
+      </div>
+
+      <!-- Buscar posición, estructura o material -->
+      <div class="subpane" id="sub-position" hidden>
+        <p class="small">Busca en tu biblioteca (y en el .pgn abierto) las partidas que pasan por la posición del tablero, o que tienen su misma estructura de peones o su mismo material. Pulsa un resultado para abrir la partida en ese momento.</p>
+        <div class="filter-row">
+          <select id="posMode" aria-label="Qué buscar">
+            <option value="exact">La misma posición</option>
+            <option value="pawns">La misma estructura de peones</option>
+            <option value="material">El mismo material</option>
+          </select>
+          <label class="switch"><input type="checkbox" id="posColl" checked> Incluir el .pgn abierto</label>
+          <button id="posBtn" class="primary">🔍 Buscar</button>
+        </div>
+        <div id="posTarget" class="pos-target"></div>
+        <div id="posStatus" class="small"></div>
+        <div id="posResults" class="mark-list"></div>
       </div>
 
       <!-- Fichero .pgn abierto (colección temporal) -->
@@ -941,6 +1011,33 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <button id="cardsAllBtn" class="sm-btn">Repasar todas</button>
           <button id="cardsBackBtn" class="sm-btn" hidden>↩ Volver a la partida</button>
         </div>
+      </div>
+
+      <div class="section">
+        <h2>
+          <span>🎯 Errores de tus partidas</span>
+          <span id="drillBadge" class="srs-pill">0 pendientes</span>
+        </h2>
+        <p class="small">Ejercicios con las posiciones en las que se cometió un error (? o ??) en las partidas analizadas de tu biblioteca: encuentra la jugada buena. Los que fallas vuelven mañana; los que aciertas se espacian.</p>
+        <div class="filter-row">
+          <select id="drillType" aria-label="Tipo de ejercicio">
+            <option value="">Todos los errores</option>
+            <option value="material">Táctica: pérdidas de material</option>
+            <option value="mateMissed">Encuentra el mate</option>
+            <option value="mateAllowed">Defensa: mates permitidos</option>
+            <option value="wasted">Convertir la ventaja</option>
+            <option value="positional">Errores de planteamiento</option>
+            <option value="apertura">Errores en la apertura</option>
+            <option value="final">Errores en el final</option>
+          </select>
+          <select id="drillCount" aria-label="Número de ejercicios"><option value="10">10 ejercicios</option><option value="20" selected>20 ejercicios</option><option value="50">50 ejercicios</option></select>
+        </div>
+        <div class="controls">
+          <label class="switch" id="drillMineLbl"><input type="checkbox" id="drillMine" checked> Sólo mis jugadas</label>
+          <button id="drillDueBtn" class="primary">▶ Pendientes</button>
+          <button id="drillAllBtn" class="sm-btn">Al azar</button>
+        </div>
+        <div id="drillInfo" class="small"></div>
       </div>
 
       <div class="section">

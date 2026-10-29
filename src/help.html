@@ -16,7 +16,7 @@
         <ul>
           <li><b>Columna izquierda</b>: el tablero con la <b>barra de evaluación</b> (a su izquierda), los nombres de los jugadores con el material capturado, el <b>panel del motor</b>, el <b>gráfico de la partida</b>, los botones de navegación y la <b>lista de jugadas</b> con sus variantes.</li>
           <li><b>Columna derecha</b>, arriba: la <b>barra de la partida actual</b> (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, cinco pestañas:
-            <b>📖 Estudio</b> (importar, comentar, analizar), <b>🌍 Aperturas</b>, <b>📚 Biblioteca</b>, <b>👑 Finales</b> y <b>🎯 Entrenar</b>.</li>
+            <b>📖 Estudio</b> (importar, comentar, analizar), <b>🌍 Aperturas</b>, <b>📚 Biblioteca</b> (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), <b>👑 Finales</b> y <b>🎯 Entrenar</b>.</li>
           <li><b>Barra superior</b>: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU y su nivel, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.</li>
           <li>En el móvil todo se apila: primero el tablero y después las herramientas.</li>
         </ul>
@@ -206,8 +206,43 @@
         <div class="example"><b>Ejemplo:</b> descargas el .pgn de un torneo (500 partidas) → ábrelo → filtra «Carlsen» → guarda sólo esas 11 → cierra el fichero para liberar memoria.</div>
       </details>
 
+      <details id="help-estadisticas">
+        <summary>📊 13. Estadísticas personales</summary>
+        <ul>
+          <li>En <b>📚 Biblioteca › 📊 Estadísticas</b> escribe tu nombre tal como sale en las cabeceras de tus partidas (por ejemplo, tu usuario de Lichess) y pulsa <b>Guardar</b>. Si usas varios, sepáralos con punto y coma: <code>rafa; Karino Arillo, Rafael</code>. Debajo salen como botones los nombres que más aparecen en tu biblioteca, para añadirlos con un clic.</li>
+          <li>Se calculan con <b>tus partidas guardadas en la biblioteca</b>: número de partidas, resultados, puntuación, precisión media y errores por partida.</li>
+          <li>Debajo verás:
+            <ul>
+              <li><b>💡 Conclusiones</b>: tu fase más floja, tu error más habitual, si puntúas menos con un color y tu mejor y peor apertura.</li>
+              <li>Los resultados <b>por color</b> y la precisión <b>por fases</b> (apertura, medio juego y final).</li>
+              <li><b>🔍 Tus errores más frecuentes</b>, con un botón <b>🎯 Entrenar</b> en cada fila que abre ejercicios de ese tipo.</li>
+              <li><b>📖 Aperturas</b>: cómo te va con cada una. Pulsa una fila para ver esas partidas en «Mis partidas».</li>
+              <li><b>📈 Evolución por meses</b> de tu precisión y tu puntuación (con los datos también en una tabla).</li>
+            </ul></li>
+          <li>Filtra por periodo, ritmo (bala, blitz, rápidas…) y color.</li>
+          <li>La precisión y los errores sólo cuentan las partidas <b>analizadas</b>. Las que traen el análisis de Lichess ya cuentan. Para el resto pulsa <b>🤖 Analizarlas ahora</b>: el motor las analiza una tras otra mientras sigues usando la aplicación. Elige antes el ritmo de análisis (rápido, normal o profundo); se puede detener cuando quieras.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> descargas tus últimas 100 partidas rápidas de Lichess y las guardas → escribes tu usuario en Estadísticas → pulsas «🤖 Analizarlas ahora» → las conclusiones dicen que tu fase más floja es el final y que «Mates que permitiste» es tu error más habitual → pulsas su 🎯 Entrenar.</div>
+      </details>
+
+      <details id="help-posicion">
+        <summary>🔍 14. Buscar la posición, la estructura de peones o el material</summary>
+        <ul>
+          <li>Pon en el tablero la posición que te interesa (de una partida, del editor o de un FEN) y ve a <b>📚 Biblioteca › 🔍 Posición</b>.</li>
+          <li>Elige qué buscar:
+            <ul>
+              <li><b>La misma posición</b>: mismas piezas en las mismas casillas y mismo turno.</li>
+              <li><b>La misma estructura de peones</b>: los mismos peones en las mismas casillas, estén donde estén las piezas. Sirve para estudiar los planes típicos de una estructura (Carlsbad, peón aislado de dama…).</li>
+              <li><b>El mismo material</b>: por ejemplo, torre y peón contra torre. Ideal para repasar finales.</li>
+            </ul></li>
+          <li>Busca en tu biblioteca y, si lo marcas, también en el .pgn abierto. Te dice cuántas partidas hay, cómo terminaron y cómo te fue a ti.</li>
+          <li>Pulsa un resultado para abrir la partida justo en ese momento.</li>
+        </ul>
+        <div class="example"><b>Ejemplo:</b> abres el .pgn de un torneo, juegas en el tablero tu línea de la Defensa Francesa hasta la jugada 6 y buscas «La misma posición»: ves las partidas que la siguieron y cuántas ganaron las blancas.</div>
+      </details>
+
       <details id="help-aperturas">
-        <summary>🌍 13. Aperturas: explorador y enciclopedia (y el token de Lichess)</summary>
+        <summary>🌍 15. Aperturas: explorador y enciclopedia (y el token de Lichess)</summary>
         <ul>
           <li>La pestaña <b>🌍 Aperturas</b> muestra, para la posición del tablero, qué jugadas se han hecho, cuántas veces y con qué resultado (barra blanco / tablas / negro), y partidas de ejemplo que puedes cargar.</li>
           <li>Tres fuentes:
@@ -233,7 +268,7 @@
       </details>
 
       <details id="help-finales">
-        <summary>👑 14. Finales: tablas Syzygy y finales fundamentales</summary>
+        <summary>👑 16. Finales: tablas Syzygy y finales fundamentales</summary>
         <ul>
           <li>Con <b>7 piezas o menos</b>, <b>🔍 Consultar posición</b> da el resultado exacto con juego perfecto y la valoración de cada jugada: 🏆 gana, 🟰 tablas, ❌ pierde. DTZ = jugadas hasta que se reinicia la regla de 50; DTM = jugadas hasta el mate.</li>
           <li><b>Practicar</b>: activa la casilla y juega; el rival responderá con la defensa perfecta de la tabla. Ideal para comprobar si sabes ganar (o hacer tablas) un final.</li>
@@ -243,17 +278,18 @@
       </details>
 
       <details id="help-entrenar">
-        <summary>🎯 15. Entrenar: repertorio y tarjetas</summary>
+        <summary>🎯 17. Entrenar: repertorio, errores de tus partidas y tarjetas</summary>
         <ul>
           <li><b>Entrenar una partida o repertorio</b>: carga una partida con tus líneas y variantes → pestaña <b>🎯 Entrenar</b> → elige con qué bando entrenas → <b>▶ Empezar</b>. Tú haces tus jugadas; el rival responde eligiendo al azar entre tus variantes. <b>💡 Pista</b> marca la pieza y, si la pulsas otra vez, la jugada.</li>
           <li>Si la partida está en la biblioteca, se programa su repaso: si fallas, vuelve mañana; si la haces perfecta, se espacia (1, 3, 7, 16, 35, 75 días). <b>📅 Entrenar la siguiente partida pendiente</b> te pone la que toca.</li>
+          <li><b>🎯 Errores de tus partidas</b>: ejercicios con las posiciones de los <code>?</code> y <code>??</code> de las partidas analizadas de tu biblioteca. Elige el tipo (táctica, encuentra el mate, defensa, convertir la ventaja, planteamiento, apertura o final) y cuántos, y pulsa <b>▶ Pendientes</b>, o <b>Al azar</b> para repasar aunque no toque. Con <b>Sólo mis jugadas</b> marcado salen sólo tus errores; para eso tienes que poner tu nombre en Estadísticas. Los que fallas vuelven al día siguiente y los que aciertas se espacian. Al terminar, <b>↩ Volver a tu partida</b>.</li>
           <li><b>🧠 Tarjetas de tus marcadores</b>: <b>▶ Repasar pendientes</b> te muestra, una a una, las posiciones que marcaste para que encuentres la jugada. <b>↩ Volver a la partida</b> te devuelve a donde estabas.</li>
         </ul>
         <div class="example"><b>Ejemplo de repertorio:</b> crea una partida con 1.e4 c5 2.Cf3 d6 3.d4 y añade como variantes las respuestas que preparas contra 2…Cc6 y 2…e6 → guárdala con la etiqueta «repertorio» → entrénala con blancas cada vez que te lo pida.</div>
       </details>
 
       <details id="help-ocupacion">
-        <summary>💾 16. Ocupación de memoria y espacio</summary>
+        <summary>💾 18. Ocupación de memoria y espacio</summary>
         <ul>
           <li>Arriba de <b>📚 Biblioteca</b> tienes el medidor:
             <ul>
@@ -268,7 +304,7 @@
       </details>
 
       <details id="help-ajustes">
-        <summary>🛠 17. Ajustes y personalización</summary>
+        <summary>🛠 19. Ajustes y personalización</summary>
         <ul>
           <li><b>Barra superior</b>: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.</li>
           <li><b>⚙ Ajustes</b>: motor (automático o sólo interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, coordenadas, mostrar jugadas legales y recordar la partida al recargar.</li>
@@ -278,7 +314,7 @@
       </details>
 
       <details id="help-atajos">
-        <summary>⌨ 18. Atajos de teclado</summary>
+        <summary>⌨ 20. Atajos de teclado</summary>
         <table class="kbd-table">
           <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Jugada anterior / siguiente</td></tr>
           <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Cambiar entre variantes alternativas</td></tr>
@@ -296,7 +332,7 @@
       </details>
 
       <details id="help-compartir">
-        <summary>📤 19. Imagen, impresión y enlaces para compartir</summary>
+        <summary>📤 21. Imagen, impresión y enlaces para compartir</summary>
         <ul>
           <li><b>🖼 Imagen</b>: descarga la posición del tablero como PNG, con sus flechas y círculos y un pie con la partida y la jugada. Si el navegador lo permite, además la copia al portapapeles para pegarla en un correo, un chat o un documento.</li>
           <li><b>🖨 Imprimir</b>: prepara la partida comentada para imprimirla o guardarla como PDF (elige «Guardar como PDF» en la ventana de impresión): cabecera con jugadores y evento, jugadas con comentarios y variantes, y diagramas en las jugadas marcadas con 📌, en las ??, ? y !! y en la posición final.</li>
@@ -306,7 +342,7 @@
       </details>
 
       <details id="help-instalar">
-        <summary>📲 20. Versión web, instalación y uso sin conexión</summary>
+        <summary>📲 22. Versión web, instalación y uso sin conexión</summary>
         <ul>
           <li><b>Versión web</b>: <a href="https://rkarillo-tech.github.io/ajedrezbase/" target="_blank" rel="noopener">rkarillo-tech.github.io/ajedrezbase</a>. Es la forma recomendada: Stockfish y las consultas a Lichess funcionan sin problemas y tu biblioteca queda siempre en la misma dirección.</li>
           <li><b>Instalarla</b>: en la versión web aparece el botón <b>⬇ Instalar</b> arriba (o el icono de instalar en la barra de direcciones de Chrome y Edge). En el móvil: Android con Chrome → menú ⋮ → «Instalar aplicación»; iPhone/iPad con Safari → Compartir → «Añadir a pantalla de inicio».</li>
@@ -317,16 +353,20 @@
       </details>
 
       <details id="help-problemas">
-        <summary>🩺 21. Problemas frecuentes</summary>
+        <summary>🩺 23. Problemas frecuentes</summary>
         <dl class="faq">
           <dt>«Lichess ha rechazado la consulta: hace falta un token personal»</dt>
-          <dd>Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 13. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.</dd>
+          <dd>Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 15. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.</dd>
           <dt>«Lichess pide esperar» o «demasiadas consultas»</dt>
           <dd>Lichess limita las consultas seguidas. La aplicación hace una cada vez y, si Lichess pide una pausa, espera el minuto que exige antes de volver a preguntar. Basta con esperar.</dd>
           <dt>«Esta partida se ha modificado en otra pestaña»</dt>
           <dd>Tienes la aplicación abierta en dos pestañas o ventanas. Para no perder nada, no se guarda encima de los cambios de la otra: vuelve a abrir la partida desde la biblioteca, o pulsa 💾 si quieres quedarte con la versión de esta pestaña.</dd>
           <dt>«Motor interno ⚠» en vez de Stockfish</dt>
           <dd>El navegador no ha dejado arrancar Stockfish (pasa en vistas previas de archivos o sin conexión la primera vez). Abre la versión web (<a href="https://rkarillo-tech.github.io/ajedrezbase/" target="_blank" rel="noopener">rkarillo-tech.github.io/ajedrezbase</a>) o el archivo directamente con Chrome, Edge o Firefox (doble clic).</dd>
+          <dt>Las estadísticas dicen que no hay partidas mías</dt>
+          <dd>Tu nombre tiene que coincidir con el de las cabeceras «White»/«Black» de tus partidas (no importan mayúsculas ni tildes). Usa los botones con los nombres más frecuentes, y si usas varios, sepáralos con «;». Además, las partidas tienen que estar guardadas en la biblioteca, no sólo en el .pgn abierto.</dd>
+          <dt>«No hay ejercicios» en «Errores de tus partidas»</dt>
+          <dd>Los ejercicios salen de las partidas analizadas de tu biblioteca. Analízalas con «🤖 Analizar y comentar» y guárdalas, o pulsa «🤖 Analizarlas ahora» en Estadísticas. Prueba también a desmarcar «Sólo mis jugadas» o a elegir «Todos los errores».</dd>
           <dt>Importo en inglés y veo las jugadas en español</dt>
           <dd>Es normal: la «Notación» de la barra superior sólo cambia cómo se muestran. Elige «Inglesa» si prefieres verlas como en el PGN.</dd>
           <dt>«No aparece mi biblioteca»</dt>

@@ -350,6 +350,86 @@ def prueba_v12(browser):
     ctx.close()
 
 
+PGN_MIAS = """[Event "Rated Blitz game"]
+[Site "https://lichess.org/a1"]
+[Date "2026.09.10"]
+[White "otro"]
+[Black "rafa"]
+[Result "1-0"]
+[TimeControl "180+2"]
+
+1. e4 { [%eval 0.3] } 1... e5 { [%eval 0.3] } 2. Bc4 { [%eval 0.2] } 2... Nc6 { [%eval 0.3] } 3. Qh5 { [%eval 0.2] } 3... Nf6 { [%eval #1] } 4. Qxf7# 1-0
+
+[Event "Rated Blitz game"]
+[Site "https://lichess.org/a2"]
+[Date "2026.10.02"]
+[White "rafa"]
+[Black "otro"]
+[Result "1-0"]
+[TimeControl "180+2"]
+
+1. d4 { [%eval 0.2] } 1... d5 { [%eval 0.3] } 2. c4 { [%eval 0.3] } 2... e6 { [%eval 0.4] } 3. Nc3 { [%eval 0.3] } 3... Nf6 { [%eval 0.3] } 4. Bg5 { [%eval 0.3] } 4... Be7 { [%eval 0.3] } 1-0
+"""
+
+
+def prueba_v13(browser):
+    print("Novedades 1.3: estadísticas, ejercicios con tus errores y búsqueda de posición")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("t => setCollection(t, false, 'mías')", PGN_MIAS)
+    pg.evaluate("saveCollGames([0, 1])")
+    pg.wait_for_function("Lib.games.size === 2")
+    pg.click('.tab-btn[data-tab="library"]')
+    pg.click('.sub-btn[data-sub="stats"]')
+    pg.wait_for_timeout(300)
+    comprobar("Escribe arriba tu nombre" in pg.inner_text("#statsOut") and "rafa (2)" in pg.inner_text("#nameChips"), "sin nombres configurados pide el tuyo y sugiere los más frecuentes")
+    pg.fill("#myNames", "rafa")
+    pg.click("#myNamesSave")
+    pg.wait_for_function("document.querySelector('#statsOut .st-tiles')", timeout=10000)
+    txt = pg.inner_text("#statsOut")
+    comprobar("2 analizadas" in txt and "+1 =0 −1" in txt and "50 %" in txt, "estadísticas: partidas, resultados y puntuación (con los análisis que trae el PGN)")
+    comprobar("Mates que permitiste" in txt and pg.locator("#statsOut .st-chart").count() == 1, "estadísticas: errores más frecuentes y evolución por meses")
+    pg.select_option("#stColor", "1")
+    pg.wait_for_function("document.querySelector('#statsOut .st-tiles b').textContent === '1'", timeout=5000)
+    comprobar(True, "el filtro de color recalcula las estadísticas")
+    antes = pg.evaluate("Pgn.mainlineFrom(game.root).length")
+    pg.click('.tab-btn[data-tab="tools"]')
+    pg.wait_for_function("document.getElementById('drillInfo').textContent.includes('1 posición')", timeout=10000)
+    comprobar("1 pendiente" in pg.inner_text("#drillBadge"), "los errores de tus partidas aparecen como ejercicios pendientes")
+    pg.click("#drillDueBtn")
+    pg.wait_for_function("Retry.active && Retry.state === 'ask'", timeout=30000)
+    comprobar("Ejercicio 1 de 1" in pg.inner_text("#retryBox") and "3...Cf6" in pg.inner_text("#retryBox"), "el ejercicio muestra la partida y el error cometido")
+    best = pg.evaluate("retryNode().parent.eval.best")
+    casilla(pg, best[:2]).click(); casilla(pg, best[2:4]).click()
+    pg.wait_for_function("Retry.state === 'solved'", timeout=30000)
+    pg.wait_for_timeout(300)
+    comprobar(pg.evaluate("Object.values([...Lib.games.values()].find(r => r.drills).drills)[0].box") == 1, "el repaso queda registrado para volver más adelante")
+    pg.locator("#retryBox [data-a=end]").click()
+    pg.locator("#retryBox [data-back-retry]").click()
+    comprobar(not pg.evaluate("Retry.active") and pg.evaluate("Pgn.mainlineFrom(game.root).length") == antes, "«Volver a tu partida» recupera lo que tenías en el tablero")
+    pg.click('.tab-btn[data-tab="study"]')
+    pg.fill("#moveInput", "1. e4 e5 2. Ac4 Cc6 3. Dh5")
+    pg.click("#importBtn")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.click('.tab-btn[data-tab="library"]')
+    pg.click('.sub-btn[data-sub="position"]')
+    pg.uncheck("#posColl")
+    pg.click("#posBtn")
+    pg.wait_for_function("!PosSearch.running && document.getElementById('posStatus').textContent")
+    comprobar(pg.locator("#posResults .mark-card").count() == 1 and "1 partida con la misma posición" in pg.inner_text("#posStatus"), "encuentra en la biblioteca la partida que pasa por la posición del tablero")
+    pg.select_option("#posMode", "pawns")
+    pg.click("#posBtn")
+    pg.wait_for_function("!PosSearch.running && document.getElementById('posStatus').textContent.includes('estructura')")
+    comprobar(pg.locator("#posResults .mark-card").count() == 1 and "tras <b>1...e5</b>".replace("<b>", "").replace("</b>", "") in pg.inner_text("#posResults"), "busca también por estructura de peones (desde la primera vez que aparece)")
+    pg.select_option("#posMode", "exact")
+    pg.click("#posBtn")
+    pg.wait_for_function("!PosSearch.running && document.getElementById('posStatus').textContent.includes('misma posición')")
+    pg.locator("#posResults .mark-card").first.click()
+    comprobar(pg.evaluate("Pgn.pathTo(cur()).length - 1") == 5 and pg.evaluate("ui.activeTab") == "study" and pg.evaluate("Pgn.mainlineFrom(game.root).length") == 7, "al pulsar un resultado se abre la partida en ese momento")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -442,7 +522,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

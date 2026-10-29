@@ -27,9 +27,11 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Aperturas** | Explorador de Lichess (maestros y online), explorador de **tus propias partidas** sin conexión y 170 aperturas ECO en español |
 | **Finales** | Tablas Syzygy de 7 piezas con práctica contra la defensa perfecta, y finales fundamentales (Lucena, Philidor, Saavedra…) |
 | **Lichess** | Descarga tus últimas partidas públicas por nombre de usuario (sin token), con sus análisis si los tienen |
+| **Estadísticas** | Con tus partidas guardadas: puntuación y precisión por color, ritmo y fase, tus errores más frecuentes, cómo te va con cada apertura, evolución por meses y conclusiones; analiza de golpe las pendientes |
+| **Buscar posición** | Encuentra en tu biblioteca o en un `.pgn` las partidas con la posición del tablero, su estructura de peones o su material, y ábrelas en ese momento |
 | **Biblioteca** | Guardas sólo lo que te interesa: ⭐ favoritas, etiquetas, buscador, borrado individual, exportar y copias de seguridad |
 | **Marcadores** | 📌 Marca posiciones como idea, táctica, error típico, plan… con nota; búscalas y vuelve a ellas con un clic |
-| **Entrenar** | Repertorio contra tus variantes y **tarjetas** de tus marcadores, con repetición espaciada (1, 3, 7, 16, 35, 75 días) |
+| **Entrenar** | Repertorio contra tus variantes, **ejercicios con los errores de todas tus partidas** (táctica, mates, defensa, convertir la ventaja, finales…) y **tarjetas** de tus marcadores, con repetición espaciada (1, 3, 7, 16, 35, 75 días) |
 | **Compartir** | Imagen PNG de la posición (también al portapapeles), impresión o PDF de la partida comentada con diagramas, y enlace que abre la partida en una jugada |
 | **Más** | Editor de posición arrastrando piezas, jugar contra la CPU (8 niveles), jugar escribiendo la jugada, planilla de dos columnas, rueda del ratón, ficheros `.pgn` de miles de partidas, medidor de memoria |
 
@@ -43,6 +45,8 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 4. Añade tus variantes moviendo en el tablero, tus comentarios y tus flechas.
 5. Si la partida te interesa, **💾 Guardar en biblioteca**. A partir de ahí sus cambios se guardan solos.
 6. Marca con **📌** (o `M`) las posiciones que quieras recordar y repásalas en **🎯 Entrenar › Tarjetas**.
+7. Con tus partidas en la biblioteca (por ejemplo, descargadas de Lichess), pon tu nombre en **📚 Biblioteca › 📊 Estadísticas**
+   para ver en qué fallas, y entrénalo en **🎯 Entrenar › Errores de tus partidas**.
 
 Todo está explicado con ejemplos en la **[guía de uso](GUIA.md)**, que también está dentro de la aplicación (botón **❓ Ayuda** o tecla `?`).
 
@@ -60,6 +64,10 @@ Para pasarla de un sitio a otro, usa **⬇ Copia de seguridad** y **⬆ Restaura
 
 **¿Se guarda todo lo que importo?** No. Importar o abrir un `.pgn` no guarda nada; sólo lo que guardas con 💾.
 En **📚 Biblioteca** tienes un medidor de lo que ocupa todo.
+
+**¿De dónde salen las estadísticas?** De las partidas guardadas en tu biblioteca en las que juegas tú (por eso hay que
+poner tu nombre tal como sale en las partidas). La precisión y los errores salen de las analizadas: las que traen el análisis
+de Lichess cuentan directamente, y el resto se analiza con el botón **🤖 Analizarlas ahora**.
 
 **¿Necesito internet?** Instalada desde la versión web, no: la aplicación y Stockfish quedan guardados.
 Sólo necesitan conexión el explorador de Lichess, la evaluación en la nube y las tablas Syzygy.
