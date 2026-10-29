@@ -3988,6 +3988,10 @@ document.querySelectorAll(".modal-back").forEach(m => {
   m.addEventListener("click", e => { if (e.target === m || e.target.hasAttribute("data-close")) closeModals(); });
 });
 $("settingsBtn").onclick = () => openModal("settingsModal");
+$("menuBtn").onclick = () => {
+  const open = document.querySelector("header").classList.toggle("menu-open");
+  $("menuBtn").setAttribute("aria-expanded", open);
+};
 $("licBtn").onclick = () => openModal("licModal");
 $("helpBtn").onclick = () => openHelp();
 $("setEngine").onchange = e => { settings.engine = e.target.value; saveSettings(); Engine.init(); };

@@ -10,7 +10,7 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 - **Columna derecha**, arriba: la **barra de la partida actual** (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, cinco pestañas:
 **📖 Estudio** (importar, comentar, analizar), **🌍 Aperturas**, **📚 Biblioteca** (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), **👑 Finales** y **🎯 Entrenar**.
 - **Barra superior**: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.
-- En el móvil todo se apila: primero el tablero y después las herramientas.
+- **En el móvil**, en vertical: debajo del tablero tienes los botones para avanzar y retroceder y la lista de jugadas, y más abajo el motor, el gráfico y las pestañas (deslízalas a los lados). Las piezas, la notación, los colores y el sonido están en el botón **☰** de arriba. En horizontal, el tablero ocupa la izquierda y las jugadas y el motor la derecha.
 
 > **Ejemplo rápido (2 minutos):** pega una partida en «📖 Estudio» → pulsa **Importar** → recórrela con las flechas `←` `→` → pulsa **🤖 Analizar y comentar** → si te gusta, **💾 Guardar en biblioteca**.
 
