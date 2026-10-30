@@ -1,0 +1,92 @@
+[Event "Curso de estrategia"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "Cómo hacer un plan: la estructura de peones manda"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "D36"]
+[Result "*"]
+
+{ Cuando no hay táctica, ¿qué se juega? Se hace un plan, y el plan sale de evaluar la posición con estos elementos: 1) material, 2) seguridad de los reyes, 3) actividad de las piezas, 4) estructura de peones y 5) espacio. De todos ellos, la estructura de peones es el más duradero: los peones no retroceden. Veremos la estructura «Carlsbad», que nace en el Gambito de Dama, y el plan que dicta: el ataque de minorías. } 1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. cxd5 exd5 { [%csl Gd4,Gd5,Ge3,Gc6] La variante del cambio fija la estructura: las blancas tienen dos peones en el flanco de dama (a2, b2) frente a tres negros (a7, b7, c6). } 5. Bg5 c6 6. e3 Be7 7. Bd3 Nbd7 8. Qc2 O-O 9. Nf3 Re8 10. O-O Nf8 { Las negras llevan el caballo a g6 para defender el flanco de rey. } 11. Rab1 { [%cal Gb2b4,Gb4b5] ¡El plan! La torre apoya el avance b4-b5: dos peones (la minoría) atacan a tres. Parece absurdo, pero el objetivo no es ganar peones, sino crear una debilidad: tras b5 y bxc6, las negras se quedarán con un peón débil en c6 o en d5. } 11... a5 { Las negras intentan frenar el avance. } 12. a3 Ng6 13. b4 axb4 14. axb4 Bd6 15. b5 { [%cal Gb5c6] El ataque de minorías ha llegado a su objetivo: si las negras cambian en b5, el peón de d5 quedará aislado; si no, bxc6 dejará un peón retrasado en c6. Mientras tanto, las negras buscarán contrajuego en el flanco de rey, que es su plan en esta estructura. Lección: los planes no se inventan, se deducen de la estructura. } *
+
+[Event "Curso de estrategia"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "Alfil bueno y alfil malo"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "2b3k1/pp3ppp/4p3/3pP3/3P4/5N2/PP3PPP/6K1 w - - 0 1"]
+[Result "*"]
+
+{ [%csl Rd5,Re6,Rc8] Un alfil es «malo» cuando sus propios peones centrales están fijos en casillas de su mismo color: le tapan las diagonales y no puede atacar los peones rivales, que están en el otro color. Aquí los peones negros de d5 y e6 están en casillas claras, como el alfil de c8. El caballo blanco, en cambio, puede buscar casillas fuertes. La ventaja es pequeña pero duradera: es el tipo de ventaja que se gana poco a poco. } 1. Ne1 { [%cal Ge1d3,Gd3c5,Gd3f4] El caballo busca casillas desde las que no pueda ser expulsado por peones: c5 y f4 son las mejores. } 1... Kf8 2. Nd3 Ke7 3. Nc5 { [%cal Gc5b7] Desde c5 ataca b7 y molesta al alfil. } 3... b6 { Las negras echan al caballo… pero colocan otro peón en casilla oscura… } 4. Nb3 { …y el caballo se reorganiza hacia d2-f3 o c1-d3. } 4... Kd7 5. Kf1 { [%cal Gf1e2,Ge2d3] El rey se activa: en los finales, el rey es una pieza más. } 5... a5 6. Ke2 Bb7 { El alfil negro sólo puede defender. } 7. Kd3 { Las blancas tienen el rey más activo y la mejor pieza menor. Plan: f4, g4 y f5 para abrir una segunda debilidad en el flanco de rey. Regla: con un alfil malo, intenta cambiarlo o poner tus peones en casillas de otro color. } *
+
+[Event "Curso de estrategia"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "La columna abierta y la séptima fila"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "r4rk1/pp3ppp/4p3/8/8/4P3/PP3PPP/2R2RK1 w - - 0 1"]
+[Result "*"]
+
+{ [%cal Gc1c7] Las torres necesitan columnas abiertas (sin peones). Quien domina la columna abierta puede entrar con su torre en la séptima fila, donde ataca los peones desde un lado y encierra al rey rival. Aquí las blancas ya tienen la columna c y las negras no han desarrollado su torre de a8. } 1. Rc7 { [%cal Gc7b7,Gc7f7] ¡Torre en séptima! Ataca b7 y presiona f7. } 1... b5 { Defender b7 avanzándolo deja ahora el peón de a7 expuesto. } 2. Rfc1 { [%cal Gc1c7] Las torres se doblan: dos torres en la columna abierta son mucho más fuertes que una. } 2... a5 3. Rb7 Rfb8 4. Rcc7 { [%csl Rf7,Rg7] ¡Dos torres en séptima! Atacan f7 y amenazan el mate en g7/h7 si las negras se descuidan. Las negras tienen que cambiar una torre para aliviar la presión. Recuerda: columna abierta → doblar torres → séptima fila. } *
+
+[Event "Curso de estrategia"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "Casillas fuertes y casillas débiles: la casilla d5"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[ECO "B33"]
+[Result "*"]
+
+{ [%csl Gd5] Una casilla es débil cuando ya ningún peón propio puede defenderla. Para el rival, esa casilla es un puesto avanzado ideal para un caballo, porque no podrá ser expulsado. En la Siciliana Sveshnikov las negras juegan …e5 y aceptan un agujero en d5 a cambio de actividad. } 1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 e5 { [%csl Rd5,Rd6] El precio de …e5: d5 queda débil para siempre (los peones c y e negros ya no pueden controlarla) y el peón de d6 será retrasado. } 6. Ndb5 d6 7. Bg5 { [%cal Gg5f6,Gf6d5] Las blancas quieren cambiar el caballo de f6, que es el defensor de d5. } 7... a6 8. Na3 b5 9. Bxf6 gxf6 { [%csl Rf6,Rf7,Rh7] Las negras aceptan una estructura rota a cambio de la pareja de alfiles y la presión central. } 10. Nd5 { [%csl Gd5] ¡El caballo en el puesto avanzado! Desde d5 controla c7, e7, f6 y b6. Las negras no pueden echarlo con un peón. } 10... f5 { Contrajuego: las negras atacan e4 y abren la diagonal de su alfil de f8 (que irá a g7). } 11. Bd3 Be6 12. O-O Bxd5 { Las negras no toleran el caballo y lo cambian por su alfil. } 13. exd5 Ne7 { [%csl Gd5] Ahora en d5 hay un peón blanco que bloquea el juego negro en el centro. Las blancas jugarán c3 y Cc2-e3; las negras, …Ag7 y …e4. Lección: un caballo en una casilla fuerte vale tanto que el rival a menudo tiene que entregar un alfil para eliminarlo. } *
+
+[Event "Curso de estrategia"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "El peón aislado de dama"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[ECO "B14"]
+[Result "*"]
+
+{ [%csl Gd4] Un peón aislado no tiene peones propios en las columnas vecinas. Es una debilidad estática (no se puede proteger con peones y la casilla de delante es un buen sitio para que el rival bloquee), pero da ventajas dinámicas: espacio, casillas centrales (e5 y c5) y columnas semiabiertas para las piezas. Regla general: con el peón aislado, ataca en el medio juego; contra el peón aislado, cambia piezas y busca el final. } 1. e4 c6 2. d4 d5 3. exd5 cxd5 4. c4 { El ataque Panov: lleva a posiciones de peón aislado. } 4... Nf6 5. Nc3 e6 6. Nf3 Be7 7. cxd5 Nxd5 { [%csl Gd4,Rd5] Ya está: las blancas tienen un peón aislado en d4. La casilla d5, delante de él, es ideal para las piezas negras. } 8. Bd3 Nc6 9. O-O O-O 10. Re1 { [%cal Gd3h7,Ge1e6] Plan blanco: piezas activas apuntando al enroque negro, el caballo a e5 y, a veces, la ruptura d4-d5 para abrir el juego. } 10... Bf6 { [%cal Gf6d4] Plan negro: presionar el peón aislado, bloquearlo en d5 y cambiar piezas. } 11. Be4 { [%cal Ge4d5] Las blancas cambian el caballo de d5, el mejor bloqueador. La lucha gira en torno a d4 y d5: si las blancas consiguen jugar d5 con ventaja, su peón aislado se convertirá en una fuerza; si las negras cambian las piezas menores, el peón será una debilidad en el final. } *
+
+[Event "Curso de estrategia"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "La pareja de alfiles contra la mayoría de peones"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[ECO "C69"]
+[Result "*"]
+
+{ Los desequilibrios hacen interesante el ajedrez. En la variante del cambio de la Española, las blancas regalan la pareja de alfiles a cambio de una mejor estructura de peones: cuatro contra tres en el flanco de rey, mientras que la mayoría negra del flanco de dama está doblada y no puede crear un peón pasado. } 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Bxc6 { [%csl Gc6] Las blancas entregan el alfil por el caballo. } 4... dxc6 { [%csl Rc6,Rc7] Las negras recapturan hacia el centro, abriendo la columna d y la diagonal del alfil de c8. Sus peones del flanco de dama quedan doblados. } 5. O-O f6 { Defiende e5 con solidez. } 6. d4 exd4 7. Nxd4 { [%csl Ge4,Gf2,Gg2,Gh2] Mayoría blanca en el flanco de rey: cuatro peones contra tres (e, f, g, h frente a f, g, h). En un final de peones, las blancas podrían crear un peón pasado y las negras no. } 7... c5 8. Nb3 Qxd1 9. Rxd1 Bd6 { [%cal Gd6h2,Gc8h3] Las negras compensan con la pareja de alfiles, que son muy fuertes en posiciones abiertas. Plan blanco: cambiar piezas (sobre todo un alfil negro) y avanzar la mayoría con f4 y e5. Plan negro: mantener los alfiles, abrir el juego y activar las torres. Lección: no hay ventajas absolutas, sino desequilibrios que cada bando debe aprovechar. } *
+
+[Event "Curso de estrategia"]
+[Site "AjedrezBase"]
+[Round "7"]
+[Title "El peón pasado y el bloqueo"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "3r2k1/pp3ppp/3n4/3P4/8/6P1/PP3PBP/3R2K1 w - - 0 1"]
+[Result "*"]
+[Orientation "black"]
+
+{ [%csl Gd5,Gd6] Un peón pasado (sin peones rivales que puedan frenarlo en su columna ni en las vecinas) es una gran ventaja, porque amenaza coronar y obliga al rival a vigilarlo. Nimzowitsch enseñaba: «los peones pasados deben ser bloqueados». La mejor pieza para bloquear es el caballo: delante del peón no le estorba, ataca casillas en todas direcciones y no puede ser expulsado por el peón. } 1. Bf1 { [%cal Gf1d3] Las blancas reorganizan el alfil para apoyar el peón. } 1... Kf8 { El rey negro se acerca al centro: en los finales, rey activo. } 2. Bd3 Ke7 3. Kf1 Kd7 { [%csl Gd6,Gd7] El bloqueo está completo: caballo en d6 y rey detrás, en d7. El peón no avanza. } 4. Ke2 Rc8 { [%cal Gc8c1,Gc8c2] Con el peón bloqueado, la torre negra se libera y busca la columna abierta para crear contrajuego. Las blancas tienen algo de ventaja por el peón pasado, pero sin bloqueo sería mucho mayor. Recuerda: bloquea el peón pasado con una pieza (mejor un caballo) en la casilla de delante. } *
+
+[Event "Curso de estrategia"]
+[Site "AjedrezBase"]
+[Round "8"]
+[Title "Con ventaja material, cambia piezas"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "3rk3/5pp1/7p/8/8/1P6/P4PPP/3R2K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Ga2,Gb3] Las blancas tienen dos peones de más en el flanco de dama. Regla de oro: el bando con ventaja material debe cambiar piezas, no peones. Cuantas menos piezas quedan, más pesa el material de más: un final de peones con dos peones de más está ganado, mientras que con torres el rival aún puede dar jaques, activar su torre o atacar peones. } 1. Rxd8+ { [%cal Gd1d8] ¡Cambio de torres! El rey negro tiene que recapturar. } (1. Re1+ { Mantener las torres también es bueno, pero da al rival una pieza activa con la que defenderse: no compliques lo que es fácil. }) 1... Kxd8 2. Kf1 { [%cal Gf1e2,Ge2d3] El rey se acerca al centro. Ahora es un final de peones: las blancas avanzarán los peones del flanco de dama, y el rey negro tendrá que frenarlos, abandonando a sus peones. } 2... Kc7 3. Ke2 Kb6 4. Kd3 Kb5 5. Kc3 Ka5 6. Kb2 f5 7. a3 g5 8. b4+ { [%cal Gb4b5,Ga3a4] Los peones avanzan apoyados por el rey. El rey negro tendrá que retirarse y las blancas coronarán, o irán a comerse los peones del flanco de rey. Al revés: si tienes menos material, evita los cambios y busca complicaciones. } 1-0

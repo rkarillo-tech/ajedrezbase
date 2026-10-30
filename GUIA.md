@@ -7,8 +7,8 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 
 ## 🧭 1. De un vistazo: cómo está organizada la pantalla
 - **Columna izquierda**: el tablero con la **barra de evaluación** (a su izquierda), los nombres de los jugadores con el material capturado, el **panel del motor**, el **gráfico de la partida**, los botones de navegación y la **lista de jugadas** con sus variantes.
-- **Columna derecha**, arriba: la **barra de la partida actual** (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, cinco pestañas:
-**📖 Estudio** (importar, comentar, analizar), **🌍 Aperturas**, **📚 Biblioteca** (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), **👑 Finales** y **🎯 Entrenar**.
+- **Columna derecha**, arriba: la **barra de la partida actual** (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, seis pestañas:
+**📖 Estudio** (importar, comentar, analizar), **📘 Cursos** (lecciones paso a paso), **🌍 Aperturas**, **📚 Biblioteca** (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), **👑 Finales** y **🎯 Entrenar**.
 - **Barra superior**: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.
 - **En el móvil**, en vertical: debajo del tablero tienes los botones para avanzar y retroceder y la lista de jugadas, y más abajo el motor, el gráfico y las pestañas (deslízalas a los lados). Las piezas, la notación, los colores y el sonido están en el botón **☰** de arriba. En horizontal, el tablero ocupa la izquierda y las jugadas y el motor la derecha.
 
@@ -220,7 +220,17 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 
 > **Ejemplo de repertorio:** crea una partida con 1.e4 c5 2.Cf3 d6 3.d4 y añade como variantes las respuestas que preparas contra 2…Cc6 y 2…e6 → guárdala con la etiqueta «repertorio» → entrénala con blancas cada vez que te lo pida.
 
-## 🔮 18. Adivina la jugada
+## 📘 18. Cursos: aperturas, táctica, estrategia y finales
+- En la pestaña **📘 Cursos** tienes cuatro cursos con más de cuarenta lecciones comentadas paso a paso: **Aperturas** (principios, errores típicos, Italiana, Española, Gambito de Dama, Siciliana, Francesa, Caro-Kann, India de Rey y Londres), **Táctica** (horquilla, clavada, enfilada, descubierta, sobrecarga, mates típicos y ejercicios 🧩), **Estrategia** (planes, estructuras de peones, alfil bueno y malo, columnas, casillas fuertes, peón aislado, peón pasado) y **Finales** (mates básicos, oposición, regla del cuadrado, Lucena, Philidor…).
+- Pulsa una lección y se abre en el tablero. Debajo aparece su explicación: avanza con **▶ Siguiente** (o `→`) y en cada jugada leerás el porqué, con flechas y casillas marcadas en el tablero. Las alternativas y los errores típicos están como variantes en la lista de jugadas: pulsa en ellas para verlas y **↩ Línea principal** para volver.
+- Puedes mover tú las piezas en cualquier momento para probar otra idea, y usar el motor para comprobarla.
+- **🎯 Practicar** te pide que juegues tú las jugadas de la lección (el rival responde solo), y en los ejercicios 🧩, **🎯 Resolver** te deja buscar la solución sin verla.
+- Las lecciones que terminas se marcan con ✔. **⬇ Descargar .pgn** guarda el curso como fichero, y **🗂 Abrir como .pgn** lo abre en la biblioteca para que guardes las lecciones que quieras (y puedas añadirles tus notas y marcadores).
+- Todas las lecciones están escritas para AjedrezBase y comprobadas con Stockfish.
+
+> **Ejemplo:** 📘 Cursos → Finales → «La posición de Lucena» → lee la explicación y avanza con ▶ hasta el final → pulsa 🎯 Practicar y juega tú el «puente».
+
+## 🔮 19. Adivina la jugada
 - Reproduce una partida intentando acertar, una a una, las jugadas de un bando. En **🎯 Entrenar › 🔮 Adivina la jugada** elige la partida: **la del tablero** (empieza en la jugada en la que estés), **una clásica** de la antología al azar o **una de tus partidas** guardadas al azar (si pusiste tu nombre en Estadísticas, adivinas tus propias jugadas).
 - El bando **automático** es el de abajo para la partida del tablero, el ganador en las clásicas y el tuyo en tus partidas. Puedes elegirlo tú.
 - En cada jugada, haz la tuya en el tablero. El motor la puntúa de **0 a 5** según lo que pierde respecto a la mejor (5 = excelente, 4 = muy buena, 3 = buena, 2 = dudosa, 1 = floja, 0 = error) y puntúa igual la jugada de la partida, así que al final comparas tu puntuación con la del jugador. También se cuentan las **coincidencias** con la partida.
@@ -229,7 +239,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 
 > **Ejemplo:** elige «Una clásica de la antología» y «Bando: automático» → ▶ Empezar → si te toca «La Inmortal», juegas las blancas de Anderssen. ¿Encontrarás 23.Ae7#?
 
-## 🙈 19. A ciegas y visualización
+## 🙈 20. A ciegas y visualización
 - **🙈 Ocultar piezas** (o la tecla `B`) esconde las piezas del tablero: sigues viendo la última jugada marcada y puedes mover pulsando las casillas o escribiendo la jugada en el recuadro de debajo del tablero. **👁 Ojear** las muestra dos segundos.
 - **🤖 Jugar a ciegas vs CPU** abre la partida contra la CPU con las piezas ocultas; al terminar se vuelven a mostrar.
 - **Sigue la línea de memoria**: ves una posición de una partida (clásica o tuya) y, escritas, las siguientes 2, 4, 6 u 8 medias jugadas, sin que se muevan las piezas. Después te pregunta dónde ha acabado una pieza (pulsa la casilla) o qué hay en una casilla (elige la respuesta). Al contestar, el tablero muestra la posición final. Son 10 preguntas.
@@ -238,7 +248,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 
 > **Ejemplo:** empieza con «Sigue la línea» a 2 medias jugadas; cuando aciertes 9 de 10, sube a 4, luego a 6… Y prueba una partida a ciegas contra la CPU de nivel 1 sin reloj.
 
-## 💾 20. Ocupación de memoria y espacio
+## 💾 21. Ocupación de memoria y espacio
 - Arriba de **📚 Biblioteca** tienes el medidor:
   - **Biblioteca (permanente)**: lo que ocupan tus partidas y marcadores guardados. Se recomiendan hasta 100 MB (unas 50.000–100.000 partidas), porque se carga entera al abrir la página.
   - **Fichero .pgn abierto**: lo que ocupa en memoria el fichero que tengas abierto (recomendado hasta 200 MB).
@@ -247,13 +257,13 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 - **🔒 Proteger datos** pide al navegador que no borre tu biblioteca aunque se quede sin espacio (algunos navegadores sólo lo conceden a páginas que usas a menudo o que tienes en marcadores).
 - Para liberar espacio: borra partidas que no uses, cierra el fichero .pgn al terminar y guarda copias de seguridad de vez en cuando.
 
-## 🛠 21. Ajustes y personalización
+## 🛠 22. Ajustes y personalización
 - **Barra superior**: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.
 - **⚙ Ajustes**: motor (automático o sólo interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, coordenadas, mostrar jugadas legales y recordar la partida al recargar.
 - **🔊** activa o silencia los sonidos.
 - Todos los ajustes se recuerdan en este navegador.
 
-## ⌨ 22. Atajos de teclado
+## ⌨ 23. Atajos de teclado
 | Tecla | Acción |
 | --- | --- |
 | `←` `→` | Jugada anterior / siguiente |
@@ -271,21 +281,21 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 
 Los atajos no funcionan mientras escribes en un recuadro de texto.
 
-## 📤 23. Imagen, impresión y enlaces para compartir
+## 📤 24. Imagen, impresión y enlaces para compartir
 - **🖼 Imagen**: descarga la posición del tablero como PNG, con sus flechas y círculos y un pie con la partida y la jugada. Si el navegador lo permite, además la copia al portapapeles para pegarla en un correo, un chat o un documento.
 - **🖨 Imprimir**: prepara la partida comentada para imprimirla o guardarla como PDF (elige «Guardar como PDF» en la ventana de impresión): cabecera con jugadores y evento, jugadas con comentarios y variantes, y diagramas en las jugadas marcadas con 📌, en las ??, ? y !! y en la posición final.
 - **🔗 Enlace**: copia un enlace que abre la partida justo en la jugada en la que estás, con las jugadas de la línea (y la posición inicial si no es la normal). Quien lo abra la verá en su navegador sin que se guarde nada; puede guardarla con 💾 si le interesa. Los comentarios y las variantes no viajan en el enlace: para eso, comparte el .pgn.
 
 > **Ejemplo:** quieres preguntarle a un compañero del club por la jugada 18 → sitúate en ella → **🔗 Enlace** → pégalo en WhatsApp. Para tu cuaderno de estudio → **🖨 Imprimir** → «Guardar como PDF».
 
-## 📲 24. Versión web, instalación y uso sin conexión
+## 📲 25. Versión web, instalación y uso sin conexión
 - **Versión web**: [rkarillo-tech.github.io/ajedrezbase](https://rkarillo-tech.github.io/ajedrezbase/). Es la forma recomendada: Stockfish y las consultas a Lichess funcionan sin problemas y tu biblioteca queda siempre en la misma dirección.
 - **Instalarla**: en la versión web aparece el botón **⬇ Instalar** arriba (o el icono de instalar en la barra de direcciones de Chrome y Edge). En el móvil: Android con Chrome → menú ⋮ → «Instalar aplicación»; iPhone/iPad con Safari → Compartir → «Añadir a pantalla de inicio».
 - **Sin conexión**: una vez abierta con internet, la aplicación (incluido Stockfish) queda guardada y funciona sin conexión. Sólo necesitan internet el explorador de Lichess, la nube y las tablas Syzygy.
 - **Actualizaciones**: con conexión siempre se carga la última versión; no hay que hacer nada.
 - **Archivo suelto**: también puedes descargar `index.html` y abrirlo con doble clic. Funciona igual, pero la biblioteca de esa copia es distinta de la de la versión web.
 
-## 🩺 25. Problemas frecuentes
+## 🩺 26. Problemas frecuentes
 **«Lichess ha rechazado la consulta: hace falta un token personal»**
 
 Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 15. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.

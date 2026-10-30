@@ -574,6 +574,44 @@ def prueba_v14(browser):
     ctx.close()
 
 
+def prueba_cursos(browser):
+    print("Novedades 1.5: cursos")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.click('.tab-btn[data-tab="courses"]')
+    comprobar(pg.locator("#courseList details.course").count() == 4 and "0 de 43" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los cuatro cursos y el progreso")
+    pg.locator('details[data-course="finales"] summary').click()
+    pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").click()
+    comprobar(pg.is_visible("#lessonBox") and "construir el puente" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("1K1k4/1P6"), "abrir una lección la pone en el tablero con su explicación")
+    comprobar(pg.locator("#arrowsGroup line, #arrowsGroup circle").count() >= 1, "las casillas y flechas de la lección se dibujan en el tablero")
+    pg.locator("#lessonBox [data-l=fwd]").click()
+    comprobar("alejar al rey" in pg.inner_text("#lessonBox").lower() or "aparta" in pg.inner_text("#lessonBox") and "paso 1 de" in pg.inner_text("#lessonBox"), "▶ Siguiente avanza y muestra el comentario de la jugada")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    comprobar("Lección terminada" in pg.inner_text("#lessonBox") and pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").locator(".lesson-num").inner_text() == "✔", "al llegar al final la lección queda marcada como terminada")
+    pg.locator("#lessonBox [data-l=next]").click()
+    comprobar("Philidor" in pg.inner_text("#lessonBox") and pg.evaluate("ui.flipped"), "«Lección siguiente» abre la siguiente (con las negras abajo si toca)")
+    pg.locator("#lessonBox [data-l=practice]").click()
+    comprobar(pg.evaluate("trainer.active && trainer.side === -1") and not pg.is_visible("#lessonBox"), "🎯 Practicar entrena las jugadas de la lección y oculta la explicación")
+    pg.click("#stopTrainBtn")
+    pg.click('.tab-btn[data-tab="courses"]')
+    pg.locator('details[data-course="tactica"] summary').click()
+    pg.locator('details[data-course="tactica"] .lesson-row', has_text="mate del pastor").click()
+    pg.locator("#lessonBox [data-l=practice]").click()
+    casilla(pg, "h5").click(); casilla(pg, "f7").click()
+    pg.wait_for_timeout(300)
+    comprobar("Perfecto" in pg.inner_text("#trainFeedback") and not pg.evaluate("trainer.active"), "los ejercicios se resuelven con 🎯 Resolver")
+    pg.click("#backToCoursesBtn")
+    pg.reload()
+    pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+    pg.click('.tab-btn[data-tab="courses"]')
+    comprobar("2 de 43" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
+    pg.locator('details[data-course="aperturas"] summary').click()
+    pg.locator('details[data-course="aperturas"] [data-coll]').click()
+    comprobar(pg.inner_text("#collCount") == "11" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -666,7 +704,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

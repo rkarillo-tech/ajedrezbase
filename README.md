@@ -31,6 +31,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Buscar posición** | Encuentra en tu biblioteca o en un `.pgn` las partidas con la posición del tablero, su estructura de peones o su material, y ábrelas en ese momento |
 | **Biblioteca** | Guardas sólo lo que te interesa: ⭐ favoritas, etiquetas, buscador, borrado individual, exportar y copias de seguridad |
 | **Marcadores** | 📌 Marca posiciones como idea, táctica, error típico, plan… con nota; búscalas y vuelve a ellas con un clic |
+| **Cursos** | Más de 40 lecciones en español comentadas paso a paso: aperturas, táctica (con ejercicios), estrategia y finales, con flechas, variantes y práctica; también se pueden descargar en PGN |
 | **Jugar contra la CPU** | 8 niveles y 5 estilos (equilibrado, ⚔ agresivo, 🏰 posicional, 🛡 defensivo, 🎲 humano), reloj de 1+0 a 30+0 con incremento, rendirse, tablas, deshacer sin reloj y revancha; también a ciegas |
 | **Adivina la jugada** | Reproduce una partida clásica o tuya acertando las jugadas de un bando: el motor puntúa cada intento de 0 a 5 y comparas tu puntuación con la del jugador |
 | **A ciegas y visualización** | Piezas ocultas (`B`) para jugar a ciegas, «sigue la línea» de memoria (2 a 8 medias jugadas), color de las casillas y encuentra la casilla en 30 s con récord |
@@ -117,9 +118,11 @@ src/eco.js            Libro ECO en español, finales clásicos y antología de p
 src/pieces.js         Dibujo de las piezas
 src/app.js            Interfaz, motor, análisis, biblioteca (IndexedDB), marcadores, entrenador
 src/help.html         Guía de uso (también se exporta a GUIA.md)
+cursos/               Cursos en PGN (aperturas, táctica, estrategia y finales), incluidos en la aplicación al construirla
 assets/               Icono (icon.svg y sus PNG, generados con tools/gen_icons.py) y captura
 notas/                Notas de cada versión
 tests/                Pruebas del núcleo (Node) y de extremo a extremo (Playwright)
+tools/                Iconos y revisor de los cursos (revisar_cursos.js, con Stockfish opcional)
 ```
 
 **Principios:** un solo archivo que funciona con doble clic; nada sale del navegador salvo las consultas a Lichess
@@ -134,6 +137,14 @@ tests/run_all.sh                                   # todas las pruebas
 # Opcional: probar también con el Stockfish 19 real (sin depender de la red durante la prueba)
 npm pack stockfish@19.0.1 && mkdir -p /tmp/sf && tar xzf stockfish-19.0.1.tgz -C /tmp/sf
 STOCKFISH_DIR=/tmp/sf/package/bin python3 tests/test_app.py
+```
+
+Los cursos son ficheros PGN normales en `cursos/` (una lección por partida, con las etiquetas `Title`, `Round`, `Level`
+y, si hace falta, `Orientation "black"` o `Type "ejercicio"`). Al cambiarlos, revísalos y vuelve a construir:
+
+```bash
+node tools/revisar_cursos.js                                         # que se lean bien y tengan título y explicación
+SF=/tmp/sf/package/bin/stockfish-19-lite-single.js node tools/revisar_cursos.js   # además, ninguna jugada mala sin marcar
 ```
 
 Para publicar una versión: sube `VERSION`, añade `notas/vX.Y.Z.md`, ejecuta `python3 build.py` y crea una

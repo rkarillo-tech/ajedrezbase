@@ -1,0 +1,124 @@
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "Los tres principios de la apertura"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[ECO "C50"]
+[Result "*"]
+
+{ [%csl Gd4,Ge4,Gd5,Ge5] En la apertura no se trata de memorizar jugadas, sino de cumplir tres objetivos: 1) ocupar o controlar el centro (e4, d4, e5, d5), 2) desarrollar las piezas menores (caballos y alfiles) hacia el centro, y 3) poner el rey a salvo con el enroque. Reglas prácticas: no muevas la misma pieza dos veces sin motivo, no saques la dama demasiado pronto, no persigas peones lejanos y conecta tus torres. } 1. e4 { [%cal Ge2e4,Gd1h5,Gf1a6] Ocupa el centro y abre camino a la dama y al alfil de f1. } 1... e5 { Las negras hacen lo mismo y disputan el centro. } 2. Nf3 { [%cal Gf3e5] Desarrolla un caballo hacia el centro y ataca el peón de e5: desarrollo con amenaza. } 2... Nc6 { Desarrolla y defiende e5. } (2... f6? { Defender el peón con un peón debilita el rey y quita la mejor casilla al caballo. } 3. Nxe5! { [%cal Gd1h5] Un sacrificio que funciona por la debilidad de la diagonal e8-h5. } 3... fxe5? 4. Qh5+ g6 (4... Ke7 5. Qxe5+ Kf7 6. Bc4+ { y el rey negro está perdido. }) 5. Qxe5+ { [%cal Ge5e8,Ge5h8] Ataque doble al rey y a la torre de h8. }) 3. Bc4 { [%cal Gc4f7] El alfil apunta a f7, el punto más débil del campo negro (sólo lo defiende el rey). } 3... Bc5 { Las negras copian la idea: su alfil mira a f2. } 4. c3 { Prepara d4 para tener dos peones en el centro. } 4... Nf6 { Desarrolla y ataca e4. } 5. d3 { Una versión tranquila: refuerza e4 y abre la diagonal del alfil de c1. } 5... d6 6. O-O { [%cal Ge1g1] ¡Enroque! El rey a salvo y la torre se acerca al centro. } 6... O-O 7. Re1 { La torre a la columna e, donde apoya el centro. } 7... a6 { Prepara un hueco para el alfil (…Aa7) por si las blancas atacan con b4 o d4. } 8. Nbd2 { El último caballo se desarrolla hacia f1-g3, una maniobra típica de esta apertura. Las dos partes han cumplido los tres principios: posición equilibrada y rica en planes. Repasa: cada jugada ha desarrollado una pieza, luchado por el centro o protegido al rey. } *
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "Errores típicos: la dama a pasear"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[ECO "C20"]
+[Result "*"]
+
+{ Sacar la dama al principio es tentador porque amenaza cosas enseguida, pero el rival la atacará con sus piezas menores y ganará tiempo para desarrollarse. Veamos cómo se defiende bien contra la amenaza del «mate del pastor» y cómo las negras acaban mejor desarrolladas. } 1. e4 e5 2. Qh5 { [%cal Gh5f7,Gh5e5] La dama ataca e5 y f7 a la vez. } 2... Nc6 { Defiende e5 y desarrolla. } 3. Bc4 { [%cal Gc4f7,Gh5f7] Ahora amenaza mate en f7: dos piezas lo atacan y sólo el rey lo defiende. } 3... g6 { [%cal Gg6h5] Defiende f7 indirectamente: echa a la dama. } (3... Nf6?? 4. Qxf7# { El mate del pastor. ¡Mira siempre qué amenaza el rival antes de desarrollar! }) 4. Qf3 { Vuelve a amenazar f7. } 4... Nf6 { [%cal Gf6e4] Tapa la diagonal de la dama, desarrolla y ataca e4. } 5. Ne2 Bg7 { Las negras tienen ya dos piezas fuera y van a enrocar; la dama blanca está mal colocada en f3 (quita esa casilla a su caballo). } 6. Nbc3 d6 7. h3 O-O { Las negras han completado el desarrollo del flanco de rey y han enrocado; las blancas han gastado tres jugadas con la dama. Lección: la dama, al principio, mejor en casa; primero los caballos y los alfiles. } *
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "La apertura Italiana"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[ECO "C54"]
+[Result "*"]
+
+{ [%cal Gc4f7] La Italiana (o Giuoco Piano) es la apertura ideal para aprender: desarrollo rápido, lucha por el centro y ataque a f7. Las blancas quieren jugar c3 y d4 para formar un centro de peones; las negras deben contraatacar el centro a tiempo. } 1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 (3... Nf6 { La defensa de los dos caballos: más aguda. } 4. Ng5 { [%cal Gg5f7,Gc4f7] Ataca f7 dos veces. } 4... d5! { [%cal Gd5c4] Hay que tapar la diagonal. } 5. exd5 Na5! { [%cal Ga5c4] Las negras atacan el alfil en vez de recapturar en d5: ofrecen un peón a cambio de desarrollo. Recapturar con 5...Cxd5 permite el ataque «del hígado frito» 6.Cxf7. }) 4. c3 { [%cal Gc3d4] Prepara d4. } 4... Nf6 { Desarrolla y presiona e4. } 5. d4 { [%cal Gd4c5] El golpe central: ataca e5 y el alfil de c5 queda mirando una pared. } 5... exd4 6. cxd4 Bb4+ { El alfil se aparta dando jaque. } 7. Bd2 Bxd2+ 8. Nbxd2 d5! { [%cal Gd5e4,Gd5c4] El contraataque clave: las negras rompen el centro blanco antes de que avance a e5. } 9. exd5 Nxd5 10. Qb3 { [%cal Gb3d5,Gb3f7] Presiona d5 y f7. } 10... Nce7 { Defiende el caballo de d5 con otra pieza. } 11. O-O O-O 12. Rfe1 c6 { [%csl Gd4] Posición típica: las blancas tienen un peón aislado en d4 (más espacio y piezas activas, pero un peón débil a largo plazo) y las negras un caballo muy firme en d5. } *
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "La apertura Española (Ruy López)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "C96"]
+[Result "*"]
+
+{ [%cal Gb5c6,Gc6e5] La Española es la apertura clásica por excelencia. El alfil de b5 ataca al caballo que defiende e5: no amenaza ganar el peón todavía, pero ejerce una presión duradera. Las negras suelen preguntar al alfil con …a6 y …b5. } 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 { [%cal Ga6b5] La defensa Morphy: se pregunta al alfil. } 4. Ba4 (4. Bxc6 dxc6 5. Nxe5? { Parece ganar un peón… } 5... Qd4! { [%cal Gd4e5,Gd4e4] …pero la dama ataca el caballo y el peón de e4 a la vez, y las negras recuperan el peón. }) 4... Nf6 5. O-O { Las blancas enrocan antes de defender e4: si las negras lo capturan, Te1 lo recupera. } 5... Be7 6. Re1 b5 7. Bb3 d6 8. c3 { [%cal Gc2c3,Gd2d4] Prepara d4 y hace un hueco al alfil en c2. } 8... O-O 9. h3 { [%csl Gg4] Evita …Ag4, que clavaría el caballo de f3. Típico en la Española: las blancas preparan d4 con calma. } 9... Na5 10. Bc2 c5 11. d4 Qc7 { [%cal Gc5d4,Gc7e5] La variante Chigorin. Las negras tienen juego en el flanco de dama; las blancas, más espacio en el centro. } 12. Nbd2 { El caballo irá a f1 y g3 (o e3) para participar en el ataque sobre el flanco de rey. Es una posición estratégica muy rica. } (12. dxe5 dxe5 { abre el centro sin ventaja. }) *
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "El arca de Noé: una trampa de la Española"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "C71"]
+[Result "0-1"]
+
+{ Una trampa que lleva siglos cazando alfiles en la Española. Enseña una idea útil: un alfil en b3 puede quedar atrapado por los peones a, b y c. } 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 d6 5. d4 b5 6. Bb3 Nxd4 7. Nxd4 exd4 8. Qxd4? { [%csl Rb3] Natural… pero error. Había que jugar 8.Ad5 o 8.c3. } (8. Bd5 { y la posición está equilibrada. }) 8... c5! { [%cal Gc5d4] La dama tiene que retirarse y el peón sigue avanzando. } 9. Qd5 Be6 { [%cal Ge6d5] Con tiempo. } 10. Qc6+ Bd7 11. Qd5 c4 { [%csl Rb3] El alfil de b3 está atrapado: ha caído en «el arca de Noé». Las negras ganan una pieza. } 0-1
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "El Gambito de Dama"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "D63"]
+[Result "*"]
+
+{ [%cal Gc4d5] Con 1.d4 el juego es más posicional. El Gambito de Dama no es un verdadero gambito: si las negras toman en c4, las blancas recuperan el peón y se quedan con el centro. La defensa clásica de las negras es mantener d5 con …e6. } 1. d4 d5 2. c4 { [%cal Gc4d5] Ataca el centro negro desde el lado. } 2... e6 { Defiende d5 con un peón. El precio: el alfil de c8 queda encerrado detrás de e6, el gran problema de esta defensa. } (2... dxc4 3. e3 b5? { Intentar quedarse con el peón es un error. } 4. a4 c6 5. axb5 cxb5 6. Qf3 { [%cal Gf3a8] ¡La torre de a8 cae! Las blancas ganan una pieza. }) 3. Nc3 Nf6 4. Bg5 { [%cal Gg5f6,Gf6d5] Clava el caballo, que defiende d5. } 4... Be7 (4... Nbd7 { Una trampa famosa: } 5. cxd5 exd5 6. Nxd5?? { [%cal Gd5f6] Parece que gana un peón, porque el caballo de f6 está clavado… } 6... Nxd5! 7. Bxd8 Bb4+ { [%cal Gb4e1] ¡La clavada no era absoluta! } 8. Qd2 Bxd2+ 9. Kxd2 Kxd8 { Las negras ganan una pieza: es la «trampa del elefante». }) 5. e3 O-O 6. Nf3 Nbd7 7. Rc1 c6 8. Bd3 dxc4 9. Bxc4 Nd5 { [%cal Gd5g5,Gd5c3] La maniobra liberadora de Capablanca: las negras cambian piezas para tener más espacio. } 10. Bxe7 Qxe7 11. O-O Nxc3 12. Rxc3 e5 { [%cal Ge5d4] ¡Por fin! Con …e5 se libera el alfil de c8. Las negras igualan. Lección: en las posiciones cerradas, el bando con menos espacio debe cambiar piezas y buscar rupturas de peón. } *
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "7"]
+[Title "La defensa Siciliana"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[ECO "B90"]
+[Orientation "black"]
+[Result "*"]
+
+{ [%cal Gc5d4] La respuesta más combativa a 1.e4. Las negras no copian a las blancas: con …c5 controlan d4 desde el lado y crean un desequilibrio. Si las blancas abren el centro con d4, las negras cambian un peón lateral (c) por uno central (d): tendrán dos peones centrales y la columna c semiabierta. A cambio, las blancas tienen ventaja de desarrollo y suelen atacar al rey. } 1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 { [%csl Gd6,Ge7] Estructura típica: las negras tienen d6 y e7 en el centro; las blancas, sólo e4. } 4... Nf6 { Ataca e4 y obliga a defenderlo con Cc3. } 5. Nc3 a6 { [%cal Ga6b5] La Najdorf, la favorita de Fischer y Kaspárov: controla b5 y prepara …e5 o …b5. } 6. Be3 { El «ataque inglés»: las blancas enrocarán largo y lanzarán los peones del flanco de rey. } 6... e5 { [%csl Gd5] Gana espacio y echa al caballo. El precio: la casilla d5 queda débil y el peón de d6 será retrasado. } 7. Nb3 Be6 { [%cal Ge6d5] El alfil vigila d5, la casilla clave de la posición. } 8. f3 { Prepara g4 y protege e4. } 8... Be7 9. Qd2 O-O 10. O-O-O Nbd7 11. g4 b5 { [%cal Gb5b4,Gg4g5] ¡Enroques opuestos! Cada bando ataca al rey rival con sus peones: el que llegue antes, gana. En estas posiciones cada tiempo cuenta. } *
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "8"]
+[Title "La defensa Francesa (variante del avance)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "C02"]
+[Orientation "black"]
+[Result "*"]
+
+{ [%cal Ge6d5] La Francesa es una defensa sólida: con …e6 y …d5 las negras discuten el centro. Su problema es el alfil de c8, encerrado por sus propios peones. En la variante del avance (3.e5) se forman dos cadenas de peones y el plan negro es claro: atacar la base de la cadena blanca, el peón de d4. } 1. e4 e6 2. d4 d5 3. e5 { [%csl Gd4,Ge5] Las blancas ganan espacio en el flanco de rey. Cadena blanca: d4-e5. } 3... c5 { [%cal Gc5d4] Golpe a la base de la cadena: d4. Es la regla de Nimzowitsch: las cadenas de peones se atacan por la base. } 4. c3 Nc6 { Más presión sobre d4. } 5. Nf3 Qb6 { [%cal Gb6d4,Gb6b2] La dama se suma al ataque a d4 y vigila b2. } 6. Be2 cxd4 7. cxd4 Nge7 { [%cal Ge7f5,Gf5d4] El caballo va a f5, desde donde ataca d4 por cuarta vez. } 8. Na3 Nf5 9. Nc2 { Las blancas sostienen d4 con todas sus piezas. } 9... Bb4+ 10. Kf1 { [%csl Gf1] Las blancas pierden el enroque, pero mantienen el centro. Es la lucha típica de la Francesa: las negras contra d4, las blancas defendiéndolo y buscando atacar en el flanco de rey. } *
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "9"]
+[Title "La defensa Caro-Kann"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "B19"]
+[Orientation "black"]
+[Result "*"]
+
+{ [%cal Gc6d5] La Caro-Kann es la hermana sólida de la Francesa: con …c6 y …d5 las negras discuten el centro, pero sin encerrar el alfil de c8, que sale a f5 o g4 antes de jugar …e6. Estructura muy firme y finales cómodos. } 1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Bf5 { [%cal Gf5e4] El alfil sale antes de jugar …e6 y ataca el caballo. } (4... Nd7 5. Qe2 Ngf6?? { [%csl Re7] Una trampa: el peón de e7 está clavado contra el rey por la dama… } 6. Nd6# { [%cal Gd6e8] ¡Mate con el caballo! El peón de e7 no puede capturar porque está clavado. }) 5. Ng3 Bg6 6. h4 { [%cal Gh4h5] Las blancas amenazan h5, que atraparía el alfil. } 6... h6 7. Nf3 Nd7 { [%cal Gd7e5] Controla e5 para que el caballo blanco no pueda instalarse ahí. } 8. h5 Bh7 9. Bd3 Bxd3 10. Qxd3 e6 { [%csl Gc6,Ge6] Ahora sí …e6: el alfil malo ya está fuera (cambiado). La estructura negra es sólida como una roca. } 11. Bd2 Ngf6 12. O-O-O Be7 { Las blancas tienen más espacio; las negras, una posición sin debilidades. Plan negro: …Dc7, …O-O-O o …O-O, y la ruptura …c5. } *
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "10"]
+[Title "La India de Rey: cadenas de peones"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[ECO "E99"]
+[Orientation "black"]
+[Result "*"]
+
+{ [%cal Gg7d4] Las defensas «indias» no ocupan el centro con peones al principio: lo controlan con piezas (el alfil en fianchetto en g7) y lo atacan más tarde con …e5 o …c5. Es una idea hipermoderna. En la India de Rey se cierra el centro y cada bando ataca en un flanco. } 1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 { [%cal Gg7a1] El alfil en fianchetto: una pieza muy poderosa. } 4. e4 d6 5. Nf3 O-O 6. Be2 e5 { [%cal Ge5d4] El contraataque central. } 7. O-O Nc6 8. d5 { [%csl Gd5,Ge4,Ge5,Gd6] El centro se cierra. Regla de las cadenas: se ataca en el flanco hacia el que «apunta» la cadena. Las blancas atacan en el flanco de dama (con c5); las negras, en el de rey (con …f5). } 8... Ne7 9. Ne1 Nd7 { [%cal Gf7f5] Los caballos se apartan para dejar paso a los peones: f4 en las blancas y …f5 en las negras. } 10. Be3 f5 11. f3 f4 { [%cal Gg6g5,Gg5g4] ¡Ataque al rey! Las negras empujarán …g5-g4. } 12. Bf2 g5 { Es la variante Mar del Plata: carrera de ataques en flancos opuestos. Las blancas avanzarán c5 en el flanco de dama. Lo importante no es contar peones, sino quién llega antes al rey. } *
+
+[Event "Curso de aperturas"]
+[Site "AjedrezBase"]
+[Round "11"]
+[Title "El sistema Londres"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[ECO "D02"]
+[Result "*"]
+
+{ [%cal Gc1f4] Un sistema muy práctico para empezar con 1.d4: las blancas colocan sus piezas casi siempre igual (d4, Af4, e3, Cf3, Ad3, c3, Cbd2) y no necesitan aprender mucha teoría. El alfil de c1 sale a f4 ANTES de jugar e3, para no quedar encerrado. } 1. d4 d5 2. Bf4 { [%cal Gf4c7] El alfil malo de las blancas sale antes de e3. } 2... Nf6 3. e3 c5 { [%cal Gc5d4] La respuesta más incisiva: atacar d4. } 4. c3 { [%csl Gc3,Gd4,Ge3] Sostiene d4. La estructura c3-d4-e3 es la «pirámide» del Londres. } 4... Nc6 5. Nd2 e6 6. Ngf3 Bd6 { Las negras ofrecen cambiar su alfil malo por el bueno de f4. } 7. Bg3 { Las blancas mantienen el alfil: si las negras cambian en g3, la columna h se abre para las blancas. } 7... O-O 8. Bd3 { [%cal Gd3h7] Todas las piezas apuntan al enroque negro. El plan típico es Ce5, f4 y atacar en el flanco de rey. Sencillo, sólido y con ideas claras. } *

@@ -1,0 +1,121 @@
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "El mate de dama y rey contra rey"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/8/8/4k3/8/8/8/3QK3 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Ge5] Objetivo: dar mate con dama y rey contra el rey solo, sin ahogar. Es el primer final que hay que dominar, porque casi todos los finales con un peón de más acaban en él cuando el peón corona. La idea es doble: 1) la dama encierra al rey rival en una «caja» cada vez más pequeña, siempre a un salto de caballo de él, y 2) cuando el rey ya está en el borde, nuestro rey se acerca para ayudar a dar el mate. La dama sola no puede dar mate: necesita a su rey. } 1. Qd3 { [%cal Gd3e5] [%csl Rd4,Rd5,Rd6,Re4,Rf5] La dama se pone a un salto de caballo del rey negro (de d3 a e5). Así le quita casillas sin darle jaque ni dejarse atacar. Fíjate en la caja: el rey ya no puede ir a la columna d ni a la tercera fila. } 1... Ke6 2. Qd4 { [%cal Gd4e6] Otra vez a un salto de caballo. La dama «persigue» al rey sin dar jaques inútiles: los jaques sólo sirven si encierran más al rey. } 2... Kf5 3. Qe3 { [%cal Ge3f5] La caja se reduce: el rey negro no puede volver al centro (columna e y tercera fila controladas). } 3... Kg4 4. Qf2 { [%cal Gf2g4] Seguimos con el mismo patrón. El rey negro está ya en las dos últimas columnas. } 4... Kh3 5. Qg1 { [%csl Gh3] [%cal Gg1g8] ¡Ya está en el borde! La dama controla toda la columna g y la casilla h2: el rey negro sólo puede moverse entre h3, h4 y h5. Ahora la dama deja de moverse: es el turno de nuestro rey. } 5... Kh4 6. Kf2 { [%cal Ge1f2,Gf2f3] El rey blanco se acerca. Mientras la dama mantenga la columna g, el rey negro no puede escapar. } 6... Kh5 7. Kf3 { El rey blanco sigue acercándose por la columna f, en paralelo al rey negro, hasta quedar enfrente de él. } 7... Kh4 (7... Kh6 8. Kf4 Kh7 9. Kf5 Kh8 { Si el rey negro huye a la esquina… } 10. Kf6 { [%cal Gf6g7] ¡Cuidado aquí! Muchos jugadores, con prisa, juegan 10.Dg6?? y es ahogado: el rey negro no está en jaque y no tiene casillas. Primero se acerca el rey. } (10. Qg6 { [%csl Rh8] ?? ¡Ahogado! El rey negro no está en jaque y no tiene ninguna jugada: tablas. Es el error más común en este final. }) 10... Kh7 11. Qg7# { [%cal Gf6g7] Mate: la dama, protegida por su rey, da jaque y cubre todas las casillas. }) 8. Qg4# { [%csl Rh4] [%cal Gf3g4] Mate. La dama da jaque protegida por el rey, que además le quita al rey negro las casillas de escape. Resumen: 1) dama a un salto de caballo para encerrar, 2) rey rival al borde, 3) acercar nuestro rey y 4) mate, ¡vigilando siempre el ahogado! } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "El mate de torre y rey contra rey"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/8/2k5/4R3/2K5/8/8/8 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gc6] [%cal Ge5a5,Ge5h5] La torre sola no basta para dar mate: necesita a su rey todavía más que la dama. La torre corta al rey rival (aquí la quinta fila: el rey negro no puede bajar) y la regla de oro es: cuando los reyes están enfrentados en «oposición» (en la misma columna, con una casilla entre ellos), la torre da jaque y el rey rival retrocede una fila. Si no están enfrentados, se hace una jugada de espera con la torre o se acerca el rey. } 1. Re6+ { [%cal Gc4c6] Los reyes están en oposición (c4 y c6): ¡jaque! El rey negro tiene que retroceder a la séptima fila. } 1... Kd7 { Ataca la torre. } 2. Kd5 { Protege la torre y vuelve a acercarse. La caja del rey negro ahora es la séptima y la octava fila. } 2... Kc7 3. Re7+ { Otra vez buscamos la oposición… pero aquí el jaque también sirve porque el rey negro ya no tiene más que la última fila. } 3... Kd8 4. Kd6 { Los reyes en oposición (d6 y d8) y la torre ataca la séptima. } 4... Kc8 { El rey negro se escapa de la oposición. } 5. Rh7 { [%cal Gh7h1] Jugada de espera: la torre se aleja del rey negro y sigue cortando la séptima fila. Ahora el rey blanco seguirá al negro. } 5... Kb8 6. Kc6 { El rey blanco sigue al negro, una columna por detrás. } 6... Ka8 (6... Kc8 { Si vuelve a la oposición… } 7. Rh8#) 7. Kb6 { Ahora sí: oposición en la columna b. } 7... Kb8 8. Rh8# { [%cal Gh8b8] [%csl Rb8] Mate en la última fila. Resumen: torre que corta, rey que se acerca, jaque sólo en oposición y jugada de espera cuando hace falta. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "La regla del cuadrado"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/8/8/P3k3/8/8/8/7K w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Ga5,Ga8,Gd8,Gd5] ¿Alcanza el rey al peón pasado? No hace falta calcular: se dibuja el cuadrado que va desde el peón hasta su casilla de coronación (aquí a5-a8-d8-d5). Si el rey defensor puede entrar en el cuadrado con su jugada, alcanza al peón. Si no, el peón corona. Ojo: cuando el peón avanza, el cuadrado se encoge. } 1. a6 { [%csl Ga6,Ga8,Gc8,Gc6] Juegan las blancas y el peón avanza: el nuevo cuadrado es a6-a8-c8-c6. El rey negro, en e5, no puede entrar en él de un paso. Si en la posición inicial les hubiera tocado a las negras, 1...Rd5 entraba en el cuadrado y el rey alcanzaba al peón. } 1... Kd6 2. a7 Kc7 3. a8=Q { [%csl Ga8] El peón corona a tiempo. Recuerda también la excepción: un peón en su casilla inicial puede avanzar dos casillas, así que su cuadrado se cuenta desde la tercera fila. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "Rey y peón contra rey: la oposición"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "4k3/8/8/8/8/8/4P3/4K3 w - - 0 1"]
+[Result "1-0"]
+
+{ El final más importante de todos. Con rey y peón contra rey, el bando fuerte gana si su rey llega delante de su peón y conquista una «casilla clave». La herramienta es la oposición: los reyes enfrentados con una casilla en medio; el que NO tiene que mover «tiene la oposición» y obliga al otro a ceder el paso. Regla práctica: el rey va delante, el peón detrás. } 1. Kd2 { [%cal Ge1d2] ¡No se empuja el peón! Primero sube el rey. Si jugáramos 1.e4, el peón quedaría solo y el rey negro lo frenaría. } 1... Ke7 2. Ke3 Ke6 3. Ke4 { [%csl Gd4,Ge4,Gf4] ¡Casilla clave! Con el peón en la segunda, tercera o cuarta fila, las casillas clave están dos filas por delante de él: aquí d4, e4 y f4. Si el rey del bando fuerte pisa una, gana. Además los reyes están en oposición (e4 y e6) y les toca mover a las negras: tienen que apartarse y dejar pasar al rey blanco. } 3... Kd6 4. Kf5 { [%cal Ge4f5] El rey blanco «rodea» al negro y sube. } 4... Ke7 5. Ke5 { [%csl Gd6,Ge6,Gf6] El rey sigue por delante de su peón. Cuando el peón llegue a e4, sus casillas clave serán d6, e6 y f6: el rey blanco se adelanta a ocuparlas. } 5... Kf7 6. Kd6 { Ya está en una casilla clave del peón cuando avance: ahora da igual quién mueva, el peón coronará. } 6... Kf6 7. e4 { Ahora sí avanza el peón, protegido de cerca por su rey. } 7... Kf7 8. e5 Ke8 9. Ke6 { [%csl Ge6,Ge8] Oposición otra vez: el rey blanco delante del peón y el negro tiene que mover. } 9... Kf8 10. Kd7 { Controla e8, la casilla de coronación. } 10... Kf7 11. e6+ Kf8 12. e7+ Kf7 13. e8=Q+ { El peón corona. Recuerda: sin oposición (por ejemplo, si el peón estuviera en la sexta con el rey detrás y le tocara mover al bando fuerte) el resultado puede ser tablas por ahogado. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "Peón de torre y alfil del color equivocado"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "7k/8/5K1P/8/8/8/8/5B2 w - - 0 1"]
+[Result "1/2-1/2"]
+
+{ [%csl Rh8] Una excepción importantísima: con un peón de torre (columna a o h), si el alfil no controla la casilla de coronación y el rey defensor llega a la esquina, son tablas aunque el bando fuerte tenga alfil y peón de más. Aquí el peón corona en h8, casilla oscura, y el alfil blanco es de casillas claras: no puede echar al rey negro de la esquina. } 1. Bd3 { [%cal Gd3h7] El alfil controla h7, pero el rey negro no se mueve de la esquina. } 1... Kg8 2. h7+ Kh8 3. Kg6 { [%csl Rh8] Ahogado: el rey negro no está en jaque y no tiene casillas (g8 la ataca el peón y g7 el rey). Tablas. } 1/2-1/2
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "La rotura de peones"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "6k1/ppp5/8/PPP5/8/8/8/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Ga5,Gb5,Gc5] Tres peones contra tres, frente a frente, y los reyes muy lejos. Parece un bloqueo, pero el bando que tiene los peones más avanzados puede «romper» con un sacrificio y conseguir un peón pasado que corona antes de que llegue el rey rival. Es un motivo clásico que hay que conocer de memoria. } 1. b6! { [%cal Gb5b6] Se ofrece el peón central del grupo. Las negras tienen que capturar, porque si no 2.bxa7 o 2.bxc7 corona. } 1... cxb6 (1... axb6 2. c6! { El mismo truco por el otro lado. } 2... bxc6 3. a6 { y el peón de a corona. }) 2. a6! { [%cal Ga6a8] Otro sacrificio: ahora la b7 tiene que capturar. } 2... bxa6 3. c6 { [%cal Gc6c8] ¡Peón pasado y libre! El rey negro está demasiado lejos. } 3... Kf7 4. c7 Ke7 5. c8=Q { Corona. La rotura sólo funciona si el rey rival está lejos: cuenta siempre las jugadas que necesita el peón para coronar y las que necesita el rey para alcanzarlo. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "7"]
+[Title "La posición de Lucena: construir el puente"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gb8,Gb7] El final de torres más importante para el bando que gana. El peón está en séptima y su rey delante, pero el rey blanco no puede salir: si sale, la torre negra da jaques por detrás o desde el lado. La solución es «construir el puente»: cortar al rey rival y usar la torre como escudo contra los jaques. } 1. Rd1+ { [%cal Gd1d8] Primero se aparta al rey negro de la columna del peón. } 1... Ke7 2. Rd4! { [%cal Gd4b4] ¡La clave! La torre se coloca en la cuarta fila para luego tapar los jaques en b4. Es el «puente». } 2... Ra1 { Las negras esperan. } 3. Kc7 { El rey blanco sale por fin. } 3... Rc1+ 4. Kb6 Rb1+ 5. Kc6 Rc1+ 6. Kb5 Rb1+ 7. Rb4 { [%cal Gb4b1] ¡El puente! La torre tapa el jaque y el peón coronará. Resumen: 1) jaque para alejar al rey rival, 2) torre a la cuarta fila, 3) sacar el rey y 4) tapar con la torre. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "8"]
+[Title "La posición de Philidor: la defensa en la tercera fila"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "4k3/7R/8/4PK2/8/8/8/1r6 b - - 0 1"]
+[Result "1/2-1/2"]
+[Orientation "black"]
+
+{ [%csl Ge8] La defensa más importante de los finales de torre con un peón de menos. El rey defensor está delante del peón. La torre se coloca en la tercera fila (la sexta desde el punto de vista de las blancas) para que el rey blanco no pueda avanzar. Cuando el peón llegue a esa fila, la torre se va al fondo y da jaques por detrás, porque el rey blanco ya no tiene dónde esconderse. } 1... Rb6! { [%cal Gb6h6] ¡A la tercera fila! El rey blanco no puede pasar a la sexta. } 2. e6 { Si las blancas esperan, las negras esperan también en la sexta fila. Si avanzan el peón, la sexta ya no le sirve al rey blanco como refugio… } 2... Rb1! { [%cal Gb1b8] ¡Al fondo! Ahora la torre dará jaques por detrás y el rey blanco no tiene dónde protegerse, porque el peón ya no le tapa. } 3. Kf6 Rf1+ 4. Ke5 Re1+ 5. Kd6 Rd1+ 6. Ke5 Re1+ { Jaque perpetuo o tablas: el rey blanco no puede acercarse a la torre ni esconderse. Resumen: torre en la tercera fila mientras el peón no avance; cuando avance, torre al fondo y jaques por detrás. } 1/2-1/2
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "9"]
+[Title "La torre detrás del peón pasado (regla de Tarrasch)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "r7/5pk1/P5p1/8/8/6P1/5PK1/R7 w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Ga1a6] [%csl Ga6,Ra8] Regla de Tarrasch: las torres van detrás de los peones pasados, tanto de los propios como de los del rival. Detrás de su peón, la torre gana fuerza a medida que el peón avanza. Delante, como la torre negra en a8, se queda atada a una casilla y es pasiva. Aquí las blancas tienen un peón pasado en la columna a, bien apoyado por la torre desde atrás. } 1. a7! { [%cal Ga1a8] El peón llega a la séptima. Ahora la torre negra no puede moverse de a8 (si se va, el peón corona) y el rey negro tampoco puede comerse el peón, que está defendido por la torre. Las negras sólo pueden mover el rey y esperar, mientras la torre blanca, desde atrás, no tiene ninguna tarea que la ate. } 1... Kh7 2. Kf3 { El rey blanco tiene libertad total: va a la columna b para apoyar el peón. } 2... Kg7 3. Ke4 Kh7 4. Kd5 Kg7 5. Kc6 { [%cal Gc6b7] Amenaza Rb7 y luego coronar. La torre negra tendrá que entregarse por el peón. } 5... Kh7 6. Kb7 Rxa7+ 7. Rxa7 { Las blancas ganan una torre limpia. Recuerda: torre detrás del peón pasado propio (o del rival) y rey activo. La torre delante del peón es pasiva. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "10"]
+[Title "Alfiles de distinto color: la fortaleza"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/8/4k3/8/4PP2/3K3b/3B4/8 w - - 0 1"]
+[Result "1/2-1/2"]
+[Orientation "black"]
+
+{ [%csl Gd2,Gh3] Alfiles de distinto color: el blanco va por las casillas oscuras y el negro por las claras. Es el final con más tendencia a tablas: el defensor salva a menudo un final con uno, o incluso dos peones de menos. El rey defensor bloquea en las casillas que no ve su alfil y el alfil controla las de su color por las que tienen que pasar los peones. Aquí las negras tienen dos peones de menos y hacen tablas. } 1. e5 { [%csl Gf5] Las blancas ganan espacio, pero ahora el peón e queda fijo y la casilla f5 (clara) es un agujero para el alfil negro. } (1. f5+ { Si avanza el otro peón… } 1... Kf6 { el rey se planta delante (en f6, casilla oscura) y el alfil vigila e4-e6 por las claras. }) 1... Bf5+ { [%cal Gf5e6] [%csl Gf5,Ge6] ¡La fortaleza! El alfil en f5 frena al peón f y el rey en e6 frena al peón e. Ningún peón puede avanzar. } 2. Kd4 Bg4 { El alfil se mueve por su diagonal sin abandonar el control de f5. } 3. Ke4 Bf5+ (3... Kf7? { ¡No! El rey abandona e6 y… } 4. f5 { las blancas consiguen dos peones unidos y avanzados: ganan. }) 4. Kf3 Kd5 { El rey también puede salir a molestar mientras el alfil sujeta los peones. } 5. Ke3 Bg4 6. Bc3 Ke6 { Las blancas no pueden progresar: tablas. Resumen: con alfiles de distinto color, el defensor bloquea los peones en casillas del color de su alfil y pone el rey delante en las otras. } 1/2-1/2
