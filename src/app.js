@@ -450,7 +450,7 @@ function renderShapes() {
   const list = [];
   if (!editor.active) {
     for (const sh of cur().shapes || []) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
-    if (ui.engineArrow && settings.arrow && !quiz() && ui.engineArrow.node === cur()) list.push({ color: "engine", from: ui.engineArrow.from, to: ui.engineArrow.to });
+    if (ui.engineArrow && settings.arrow && !quiz() && ui.engineArrow.node === cur() && !(ui.lesson && ui.lesson.game === game)) list.push({ color: "engine", from: ui.engineArrow.from, to: ui.engineArrow.to });
     if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
     if (Retry.active) for (const a of Retry.arrows) list.push(a);
@@ -1012,6 +1012,7 @@ function render() {
   }
   updateButtons();
   updateSaveState();
+  renderLesson();
   requestLive();
   if (ui.activeTab === "explorer") refreshExplorer();
   if (ui.activeTab === "library" && ui.librarySub === "position") renderPosTarget();
@@ -1038,6 +1039,7 @@ function setGame(g, opts = {}) {
   if (!opts.keepVis) $("visBox").hidden = true;
   clockStop();
   Clock.shown = false;
+  ui.lesson = null;
   game = g;
   game.current = opts.current || g.root;
   ui.selected = null;
@@ -3906,6 +3908,16 @@ function finishTraining() {
     stopTraining(false);
     return;
   }
+  const L = ui.lesson && ui.lesson.game === game ? ui.lesson : null;
+  if (L) {
+    const l = courseLessons(L.course)[L.i];
+    if (perfect) markLessonDone(L.course, l.round);
+    Sound.play(perfect ? "ok" : "end");
+    trainFeedback(`${perfect ? "🏆 ¡Perfecto! Has jugado toda la lección sin errores ni pistas." : `✔ Lección practicada: ${trainer.errors} error${trainer.errors === 1 ? "" : "es"} y ${trainer.hints} pista${trainer.hints === 1 ? "" : "s"}. Repítela hasta hacerla perfecta.`}<br><button id="backToCoursesBtn" class="sm-btn primary" style="margin-top:6px">📘 Volver a los cursos</button>`, perfect ? "ok" : "");
+    $("backToCoursesBtn").onclick = () => switchTab("courses");
+    stopTraining(false);
+    return;
+  }
   let srsMsg = "";
   const it = trainer.libId && Lib.games.get(trainer.libId);
   if (it) {
@@ -3944,6 +3956,7 @@ function switchTab(name) {
   if (name === "explorer") refreshExplorer();
   if (name === "library") { refreshLibraryViews(); if (ui.librarySub === "collection") renderCollection(); if (ui.librarySub === "position") renderPosTarget(); }
   if (name === "tools") renderDrillInfo();
+  if (name === "courses") renderCourses();
   if (name === "endgames" && pieceCount(cur().state) <= 7) querySyzygy();
 }
 document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
@@ -4833,6 +4846,117 @@ function renderPosTarget() {
   $("posTarget").innerHTML = `${miniBoard(Chess.toFen(s))}<div class="small">${mode === "exact" ? "Busca partidas que pasen exactamente por la posición del tablero (mismas piezas en las mismas casillas y mismo turno)." :
     mode === "pawns" ? "Busca partidas con los mismos peones en las mismas casillas, aunque las piezas estén en otro sitio: ideal para estudiar planes típicos de una estructura." :
       `Busca partidas que lleguen al mismo material: ${esc(materialText(s))}. Muy útil para finales (por ejemplo, torre y peón contra torre).`}</div>`;
+}
+
+/* ---------- B16. Cursos: lecciones en PGN comentadas paso a paso (cursos/*.pgn) ---------- */
+const COURSE_PGN = /*__COURSES__*/{};
+const COURSES = [
+  { id: "aperturas", icon: "📖", name: "Aperturas", desc: "Los principios, los errores típicos y las aperturas principales con blancas y con negras, explicando el porqué de cada jugada." },
+  { id: "tactica", icon: "⚔", name: "Táctica", desc: "Horquillas, clavadas, enfiladas, descubiertas, sobrecarga y mates típicos, con ejercicios para resolver." },
+  { id: "estrategia", icon: "🧭", name: "Estrategia", desc: "Cómo hacer un plan: estructuras de peones, piezas buenas y malas, columnas, casillas fuertes y peones pasados." },
+  { id: "finales", icon: "👑", name: "Finales", desc: "Los mates básicos, rey y peón, la oposición, Lucena, Philidor y los finales que hay que saber de memoria." }
+];
+const courseCache = {};
+function courseLessons(id) {
+  if (!courseCache[id]) {
+    courseCache[id] = Pgn.splitGames(COURSE_PGN[id] || "").map(g => {
+      const h = g.headers;
+      return { g, round: +h.Round || 0, title: h.Title || "Lección", level: h.Level || "", exercise: h.Type === "ejercicio", black: h.Orientation === "black" };
+    });
+  }
+  return courseCache[id];
+}
+const courseDone = () => LS.get("ajedrezCursos", {});
+function markLessonDone(id, round) {
+  const d = courseDone();
+  d[id] = [...new Set([...(d[id] || []), round])].sort((a, b) => a - b);
+  LS.set("ajedrezCursos", d);
+  renderCourses();
+}
+function renderCourses() {
+  const box = $("courseList");
+  if (!box) return;
+  const done = courseDone();
+  const open = new Set([...box.querySelectorAll("details[open]")].map(d => d.dataset.course));
+  if (!box.children.length && ui.lesson) open.add(ui.lesson.course);
+  let total = 0, finished = 0;
+  box.innerHTML = COURSES.map(c => {
+    const L = courseLessons(c.id), ok = new Set(done[c.id] || []);
+    total += L.length;
+    finished += L.filter(l => ok.has(l.round)).length;
+    const rows = L.map((l, i) => `<button class="lesson-row${ui.lesson && ui.lesson.course === c.id && ui.lesson.i === i ? " current" : ""}" data-c="${c.id}" data-i="${i}">
+        <span class="lesson-num">${ok.has(l.round) ? "✔" : l.round}</span><span class="lesson-title">${l.exercise ? "🧩 " : ""}${esc(l.title)}</span><span class="srs-pill">${esc(l.level)}</span></button>`).join("");
+    return `<details class="course" data-course="${c.id}"${open.has(c.id) ? " open" : ""}>
+      <summary><span class="course-icon">${c.icon}</span><span><b>${esc(c.name)}</b> <span class="small">${L.filter(l => ok.has(l.round)).length} de ${L.length} lecciones</span><br><span class="small">${esc(c.desc)}</span></span></summary>
+      <div class="lesson-list">${rows}</div>
+      <div class="controls"><button class="sm-btn" data-dl="${c.id}" title="Descargar el curso como fichero .pgn">⬇ Descargar .pgn</button><button class="sm-btn" data-coll="${c.id}" title="Abrirlo en «Biblioteca › Abrir .pgn» para guardar las lecciones que quieras">🗂 Abrir como .pgn</button></div>
+    </details>`;
+  }).join("");
+  $("courseProgress").textContent = `${finished} de ${total} lecciones`;
+  $("courseProgress").className = "srs-pill" + (finished ? " ok" : "");
+  box.querySelectorAll("[data-i]").forEach(b => b.onclick = () => openLesson(b.dataset.c, +b.dataset.i));
+  box.querySelectorAll("[data-dl]").forEach(b => b.onclick = () => download(`ajedrezbase_curso_${b.dataset.dl}.pgn`, COURSE_PGN[b.dataset.dl], "application/x-chess-pgn"));
+  box.querySelectorAll("[data-coll]").forEach(b => b.onclick = () => {
+    const c = COURSES.find(x => x.id === b.dataset.coll);
+    const n = setCollection(COURSE_PGN[c.id], false, "Curso de " + c.name.toLowerCase());
+    switchTab("library"); switchSub("collection");
+    toast(`🗂 ${n} lecciones abiertas (sin guardar). Guarda las que quieras con 💾.`);
+  });
+}
+function openLesson(id, i) {
+  const l = courseLessons(id)[i], c = COURSES.find(x => x.id === id);
+  if (!l) return false;
+  if (!confirmLeave()) return false;
+  leaveModes();
+  const r = Pgn.parseGame(l.g, { lang: "en" });
+  ui.flipped = l.black;
+  if (setGame(r.game, { noConfirm: true, name: `📘 ${c.name} ${l.round}: ${l.title}` }) === false) return false;
+  ui.lesson = { course: id, i, game: r.game, done: false };
+  renderCourses();
+  renderLesson();
+  setTimeout(() => { const b = $("lessonBox").getBoundingClientRect(), t = $("topBar").getBoundingClientRect(); if (t.top < 0 || b.bottom > innerHeight) $("topBar").scrollIntoView({ block: "start", behavior: "smooth" }); }, 40);
+  return true;
+}
+/* Panel de la lección, debajo del tablero: la explicación completa de la posición y los botones para seguir */
+function renderLesson() {
+  const box = $("lessonBox");
+  const L = ui.lesson;
+  if (!L || L.game !== game || quiz() || editor.active) { box.hidden = true; return; }
+  const c = COURSES.find(x => x.id === L.course), lessons = courseLessons(L.course), l = lessons[L.i];
+  const line = Pgn.mainlineFrom(game.root), n = cur();
+  const onMain = Pgn.isMainline(n), step = onMain ? Pgn.pathTo(n).length - 1 : -1;
+  const atEnd = onMain && !n.children.length;
+  if (atEnd && !L.done) { L.done = true; markLessonDone(L.course, l.round); }
+  const text = n === game.root ? game.root.comment : n.comment;
+  const where = n === game.root ? "Posición inicial" : `${numPrefix(n.parent.state)}${dispSan(n)}${n.nag || ""}`;
+  const next = lessons[L.i + 1];
+  box.hidden = false;
+  box.innerHTML = `<div class="retry-head">${c.icon} ${esc(c.name)} · ${l.round} de ${lessons.length}: ${esc(l.title)}</div>
+    <div class="lesson-step small">${esc(where)}${step >= 0 ? ` · paso ${step} de ${line.length}` : " · variante"}</div>
+    <div class="lesson-text">${text ? esc(text) : `<span class="small">${n === game.root ? "Pulsa ▶ para empezar." : "Sin comentario en esta jugada: sigue con ▶ o mira las flechas del tablero."}</span>`}</div>
+    ${atEnd ? `<div class="retry-msg">✔ <b>Lección terminada.</b>${next ? "" : " ¡Has llegado al final del curso!"}</div>` : ""}
+    <div class="controls">
+      <button class="sm-btn" data-l="back" ${n.parent ? "" : "disabled"}>◀</button>
+      <button class="sm-btn${atEnd ? "" : " primary"}" data-l="fwd" ${n.children.length ? "" : "disabled"}>${n === game.root ? "▶ Empezar" : "▶ Siguiente"}</button>
+      ${n.parent && !onMain ? `<button class="sm-btn" data-l="main" title="Volver a la línea principal">↩ Línea principal</button>` : ""}
+      <button class="sm-btn info-btn" data-l="practice" title="${l.exercise ? "Resuelve el ejercicio tú mismo" : "Juega tú las jugadas de la lección desde el principio"}">🎯 ${l.exercise ? "Resolver" : "Practicar"}</button>
+      ${next ? `<button class="sm-btn${atEnd ? " primary" : ""}" data-l="next">Lección siguiente ▶</button>` : ""}
+      <button class="sm-btn" data-l="close" title="Cerrar el panel de la lección">✖</button>
+    </div>`;
+  box.querySelectorAll("[data-l]").forEach(b => b.onclick = () => lessonAction(b.dataset.l));
+}
+function lessonAction(a) {
+  const L = ui.lesson;
+  if (!L) return;
+  if (a === "back") goBack();
+  else if (a === "fwd") { goForward(); soundFor(cur()); }
+  else if (a === "main") { let n = cur(); while (n.parent && !Pgn.isMainline(n)) n = n.parent; goTo(n); }
+  else if (a === "next") openLesson(L.course, L.i + 1);
+  else if (a === "close") { ui.lesson = null; renderLesson(); renderCourses(); }
+  else if (a === "practice") {
+    const l = courseLessons(L.course)[L.i];
+    startTraining({ side: l.exercise ? game.root.state.t : l.black ? -1 : 1 });
+  }
 }
 
 /* ---------- Tablero en SVG: imagen PNG, impresión y minitablero ---------- */

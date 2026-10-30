@@ -1,0 +1,172 @@
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "Antes de capturar: contar y desconfiar de lo gratis"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Result "0-1"]
+
+{ La táctica empieza por una costumbre: antes de cada jugada, pregúntate qué amenaza el rival y qué piezas están sin defender. Y antes de comerte algo «gratis», mira qué gana el rival a cambio. En esta lección veremos una trampa célebre (el gambito Blackburne-Shilling) en la que las blancas se comen un peón y una torre… y reciben mate. } 1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4?! { [%cal Gd4f3,Rf3e5] Una jugada tramposa: el caballo deja sin defensa el peón de e5. Objetivamente no es buena (pierde tiempo), pero esconde un veneno. } 4. Nxe5? { [%csl Re5] Parece que gana un peón «gratis» y además ataca f7. Pero deja sin protección el enroque (g2) y el caballo queda expuesto. Lo correcto era 4.Cxd4 exd4 5.O-O, con buen juego para las blancas. } (4. Nxd4 exd4 5. O-O { y las blancas, con más desarrollo, juegan cómodas. }) 4... Qg5! { [%cal Gg5g2,Gg5e5] Ataque doble: la dama ataca el caballo de e5 y el peón de g2; si cae g2, después caerá la torre de h1. } 5. Nxf7? { Las blancas siguen con su plan, atacando dama y torre… pero no ven el contraataque. Había que jugar 5.Axf7+. } (5. Bxf7+ Kd8 6. O-O Qxe5 { las negras quedan algo mejor, pero la partida sigue. }) 5... Qxg2 { Ahora amenaza la torre de h1 y también mate. } 6. Rf1 { Salva la torre. } 6... Qxe4+ { [%cal Ge4e1] Jaque. Sólo se puede tapar. } 7. Be2 { [%csl Re2] El alfil queda clavado: no puede moverse porque detrás está su rey. } 7... Nf3# { [%cal Gf3e1] [%csl Re1] Mate «de la coz» con el caballo: el alfil clavado no puede capturarlo y el rey no tiene casillas. Lección: antes de comer, mira las respuestas forzadas del rival (jaques, capturas y amenazas). } 0-1
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "El ataque doble: la horquilla"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "2q3k1/5ppp/8/3N4/8/8/5PPP/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gc8,Gg8] Un ataque doble es una jugada que ataca dos cosas a la vez: el rival sólo puede salvar una. El caballo es el rey de las horquillas porque salta y ataca en estrella. Las mejores dianas son el rey (el jaque obliga a responder) y las piezas sin defensa o más valiosas que el atacante. Busca siempre: ¿hay una casilla desde la que mi caballo ataque a la vez el rey y la dama? } 1. Ne7+! { [%cal Ge7g8,Ge7c8] ¡Horquilla! El caballo da jaque al rey y ataca la dama de c8 a la vez. } 1... Kf8 2. Nxc8 { Las blancas ganan la dama por el caballo. Otras horquillas que conviene vigilar: el peón que ataca dos piezas, la dama que da jaque y ataca una pieza suelta, y el alfil que ataca dos piezas en una diagonal. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "La clavada"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "4k3/5ppp/4n3/8/3P4/8/5PPP/4R1K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Ge1e8] [%csl Re6] Una pieza está clavada cuando no puede moverse sin dejar expuesta otra más valiosa detrás. Si detrás está el rey, la clavada es «absoluta» y la pieza no puede moverse en absoluto. Aquí el caballo de e6 está clavado por la torre de e1 contra el rey de e8. La pieza clavada no se puede escapar: ¡ataquémosla con algo más pequeño! } 1. d5! { [%cal Gd5e6] El peón ataca al caballo clavado. Las negras no pueden moverlo porque dejarían su rey en jaque. } 1... Kd7 { Las negras intentan defenderlo con el rey, pero no sirve. } 2. dxe6+ fxe6 { Las blancas ganan una pieza por un peón. Regla: «la pieza clavada no se puede mover; atácala otra vez». Las clavadas típicas en la apertura son Ab5 contra el caballo de c6 (con el rey en e8) y Ag5 contra el caballo de f6 (con la dama en d8). } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "La enfilada (o rayos X)"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/8/8/8/q3k3/8/8/1K5R w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Ge4,Ga4] La enfilada es la clavada al revés: la pieza valiosa está delante y la menos valiosa detrás. Al atacar a la de delante (normalmente con jaque), esta tiene que apartarse y queda indefensa la de detrás. Aquí rey y dama negros están en la misma fila. } 1. Rh4+! { [%cal Gh4e4,Ge4a4] Jaque al rey por la cuarta fila. El rey tiene que salir de la fila… } 1... Ke5 2. Rxa4 { [%cal Gh4a4] …y la torre se come la dama que estaba detrás. Busca siempre dos piezas rivales en la misma fila, columna o diagonal: puede haber una clavada o una enfilada. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "El ataque a la descubierta y el jaque doble"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "3qk3/ppp2ppp/8/4N3/8/8/PPP2PPP/4R1K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Ge1e8] [%csl Ge5] Una pieza tapa la línea de otra (aquí, el caballo de e5 tapa la torre de e1). Si el caballo se mueve, la torre da jaque «a la descubierta»… y el caballo queda libre para atacar lo que quiera, porque el rival tiene que ocuparse del jaque. Es una de las armas más potentes del ajedrez. } 1. Nc6+! { [%cal Ge1e8,Gc6d8] Jaque a la descubierta de la torre y, además, el caballo ataca la dama de d8. } (1. Nd7+? { No sirve cualquier descubierta: aquí el rey captura el caballo… } 1... Kxd7 { …porque d7 no está defendida. }) 1... Kd7 2. Rd1+ { Antes de comer, un jaque más para ganar tiempo. } 2... Kxc6 3. Rxd8 { Las blancas ganan la dama. Variante: el «jaque doble», en el que dan jaque a la vez la pieza que se mueve y la que se descubre, es aún más fuerte, porque el rey sólo puede escapar moviéndose. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "La sobrecarga: una pieza con dos tareas"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "3r2k1/4qppp/8/8/8/8/3Q1PPP/3R2K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Re7,Rd8] Una pieza está sobrecargada cuando tiene que hacer dos cosas a la vez. Aquí la dama negra de e7 es la única defensora de la torre de d8 y, a la vez, de la última fila. Las blancas atacan d8 con la dama y, detrás, con la torre. Si capturamos en d8, la dama negra no puede hacer las dos cosas. } 1. Qxd8+! { [%cal Gd2d8] Se sacrifica la dama… } 1... Qf8 { La mejor defensa: tapar con la dama. } (1... Qxd8? { Si la dama captura… } 2. Rxd8# { …la torre da mate en la última fila, porque la dama ya no la defiende. }) 2. Qxf8+ Kxf8 { Las blancas han ganado una torre limpia. Pregúntate siempre: ¿qué defiende cada pieza rival? Si una defiende dos cosas, atácalas a la vez. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "7"]
+[Title "El mate del pasillo"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "3r2k1/5ppp/8/8/8/8/5PPP/6K1 b - - 0 1"]
+[Result "0-1"]
+[Orientation "black"]
+
+{ [%csl Rf2,Rg2,Rh2,Rg1] El rey blanco está encerrado por sus propios peones: no tiene ninguna casilla de escape en la segunda fila. Una torre (o la dama) que llegue a la primera fila da mate. Es uno de los mates más frecuentes en partidas de aficionados. } 1... Rd1# { [%cal Gd8d1] Mate. Cómo evitarlo: cuando cambian las piezas, haz una «ventanita» (h3 o g3) para tu rey, o deja una torre vigilando la primera fila. Y cómo aprovecharlo: cuando el rey rival no tenga ventanita, cuenta cuántas piezas defienden su última fila. } 0-1
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "8"]
+[Title "El mate de la coz (mate ahogado)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "r6k/6pp/8/4N3/2Q5/8/6PP/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Rh8] El caballo puede dar mate a un rey rodeado de sus propias piezas. La combinación clásica, conocida como «legado de Philidor», encadena un jaque doble y un sacrificio de dama para que el rival se tape él mismo la última casilla. } 1. Nf7+ { [%cal Gf7h8] Primer paso: jaque con el caballo. } 1... Kg8 2. Nh6+ { [%cal Gc4g8,Gh6g8] ¡Jaque doble! Dan jaque el caballo y la dama (por la diagonal que acaba de abrir el caballo). } 2... Kh8 (2... Kf8 3. Qf7# { Si el rey va a f8, mate inmediato. }) 3. Qg8+!! { [%cal Gc4g8] ¡Sacrificio de dama! La torre está obligada a capturar… } 3... Rxg8 4. Nf7# { [%csl Rh8] …y el rey queda ahogado por sus propias piezas: el caballo da mate. Patrón: rey en la esquina, peones en g7 y h7, y una dama en la diagonal a2-g8 con un caballo cerca. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "9"]
+[Title "El sacrificio griego (Axh7+)"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "rnbq1rk1/pppn1ppp/4p3/3pP3/1b1P4/2NB1N2/PPP2PPP/R1BQK2R w KQ - 4 7"]
+[Result "1-0"]
+
+{ [%cal Gd3h7,Gf3g5,Gd1h5] El sacrificio clásico contra el enroque corto. Condiciones: alfil en d3 apuntando a h7, caballo que pueda saltar a g5, dama que pueda llegar a h5, peón en e5 que quite la casilla f6 al caballo defensor y ningún caballo negro en f6. Aquí se cumplen todas: el caballo negro se ha ido a d7. } 7. Bxh7+! { [%cal Gd3h7] Se entrega el alfil para abrir el enroque. } 7... Kxh7 (7... Kh8 { Rechazar el sacrificio también pierde: las blancas han ganado un peón y siguen atacando con Cg5 y Dh5. }) 8. Ng5+ { [%cal Gf3g5] El caballo da jaque y prepara la entrada de la dama. } 8... Kg8 (8... Kg6 { Si el rey sale, la dama entra por g4 con un ataque demoledor. }) 9. Qh5 { [%cal Gd1h5,Gh5h7] Amenaza Dh7#. Las negras tienen que devolver material. } 9... Re8? { Esta jugada natural pierde de inmediato. La mejor defensa era 9...Dxg5 10.Axg5, aunque las blancas quedan con ventaja decisiva. } (9... Qxg5 10. Bxg5 { las blancas tienen dama por pieza y peón. }) 10. Qxf7+ Kh8 11. Qh5+ Kg8 12. Qh7+ Kf8 13. Qh8+ Ke7 14. Qxg7# { Mate. Antes de sacrificar, comprueba las condiciones: si falta alguna (por ejemplo, el rival puede defender con Cf6 o con …Af5), el sacrificio puede ser un regalo. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "10"]
+[Title "Ejercicio: el mate del pastor"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4"]
+[Result "1-0"]
+
+{ [%csl Rf7] Juegan las blancas y dan mate en una. Pista: ¿qué casilla está atacada dos veces y defendida sólo por el rey? } 4. Qxf7# { [%cal Gh5f7,Gc4f7] Mate: la dama, protegida por el alfil, captura en f7. Las negras debían defender f7 con 3...De7 o 3...g6 en vez de 3...Cf6. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "11"]
+[Title "Ejercicio: el mate del loco"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2"]
+[Result "0-1"]
+[Orientation "black"]
+
+{ Juegan las negras y dan mate en una. Las blancas han debilitado la diagonal de su rey con f3 y g4. } 2... Qh4# { [%cal Gd8h4,Gh4e1] El mate más rápido posible. No muevas los peones de f y g al principio de la partida: abren la diagonal e1-h4 hacia tu rey. } 0-1
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "12"]
+[Title "Ejercicio: la horquilla real"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r3k2r/ppp2ppp/8/3N4/8/8/PPP2PPP/R3K2R w KQkq - 0 1"]
+[Result "1-0"]
+
+{ Juegan las blancas y ganan material. Pista: ¿desde qué casilla ataca el caballo al rey y a la torre a la vez? } 1. Nxc7+ { [%cal Gc7e8,Gc7a8] Jaque y ataque a la torre de a8. } 1... Kd7 2. Nxa8 { Las blancas ganan la calidad y un peón. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "13"]
+[Title "Ejercicio: el ataque doble de la dama"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "4k3/8/8/7b/8/8/8/1Q2K3 w - - 0 1"]
+[Result "1-0"]
+
+{ Juegan las blancas y ganan el alfil. Pista: la dama ataca en todas las direcciones; busca un jaque que también ataque al alfil. } 1. Qb5+ { [%cal Gb5e8,Gb5h5] Jaque por la diagonal y ataque al alfil por la quinta fila. } 1... Ke7 2. Qxh5 { Las blancas ganan el alfil. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "14"]
+[Title "Ejercicio: el mate de Légal"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "rn1qkbnr/ppp2p1p/3p2p1/4p3/2B1P1b1/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 0 5"]
+[Result "1-0"]
+
+{ Juegan las blancas. El alfil de g4 «clava» el caballo de f3 contra la dama… pero la clavada no es absoluta. ¿Puedes aprovecharlo? } 5. Nxe5! { [%cal Gf3e5] ¡Se rompe la clavada! El caballo ataca f7 y entrega la dama. } 5... dxe5 { La mejor respuesta: las negras no toman la dama y pierden «sólo» un peón. } (5... Bxd1? { Si se come la dama… } 6. Bxf7+ Ke7 7. Nd5# { [%cal Gd5e7,Gf7e8] ¡Mate de Légal! Tres piezas menores contra el rey sin salida. }) 6. Qxg4 { Las blancas recuperan la pieza y ganan un peón. } 1-0

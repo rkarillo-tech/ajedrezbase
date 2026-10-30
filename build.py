@@ -10,6 +10,7 @@ o publicar tal cual. sw.js y sf-worker.js sólo se usan cuando se sirve por http
 """
 import base64
 import html
+import json
 import re
 import sys
 from html.parser import HTMLParser
@@ -169,12 +170,25 @@ def build_guide(help_html):
     return head + body + "\n"
 
 
+# ---------------------------------------------------------------- cursos
+COURSES = ["aperturas", "tactica", "estrategia", "finales"]
+
+
+def courses_js():
+    """Los cursos (cursos/*.pgn) van dentro de la aplicación para que funcionen sin conexión."""
+    data = {c: (ROOT / "cursos" / f"{c}.pgn").read_text(encoding="utf-8") for c in COURSES}
+    return json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+
+
 # ---------------------------------------------------------------- construcción
 def build():
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     mit = (ROOT / "LICENSE").read_text(encoding="utf-8").strip()
     pieces = 'const glyphUnicode = { K:"♔", Q:"♕", R:"♖", B:"♗", N:"♘", P:"♙", k:"♚", q:"♛", r:"♜", b:"♝", n:"♞", p:"♟" };\n' + read("pieces.js")
     app = read("app.js").replace("/*__PIECES__*/", pieces)
+    if "/*__COURSES__*/{}" not in app:
+        raise SystemExit("src/app.js: falta el marcador de los cursos")
+    app = app.replace("/*__COURSES__*/{}", courses_js())
     parts = {"CORE": read("core.js"), "PGN": read("pgn.js"), "ECO": read("eco.js"), "APP": app}
     for name, code in parts.items():
         if "</script" in code.lower():

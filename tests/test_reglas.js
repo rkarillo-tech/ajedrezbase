@@ -75,6 +75,12 @@ comprobar(ecoOk && ECO_BOOK.length > 150, `las ${ECO_BOOK.length} líneas del li
 comprobar(CLASSIC_ENDGAMES.every(e => { try { Chess.parseFen(e.fen); return true; } catch { return false; } }), "posiciones de los finales clásicos válidas");
 const games = Pgn.splitGames(SAMPLE_MULTI_PGN);
 comprobar(games.length === 6 && games.every(g => !Pgn.parseGame(g).error), "la antología de clásicos se lee entera");
+for (const c of ["aperturas", "tactica", "estrategia", "finales"]) {
+  const lecciones = Pgn.splitGames(fs.readFileSync(path.join(__dirname, "..", "cursos", c + ".pgn"), "utf8"));
+  const malas = lecciones.filter(g => { const r = Pgn.parseGame(g, { lang: "en" }); return r.error || !r.game.headers.Title || !r.game.root.comment || !r.game.root.children.length; });
+  malas.forEach(g => console.log("    Lección con error en " + c + ": " + (Pgn.parseGame(g, { lang: "en" }).game.headers.Title || "?")));
+  comprobar(lecciones.length >= 8 && !malas.length, `curso de ${c}: ${lecciones.length} lecciones legales, con título y explicación`);
+}
 
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log("\nTodas las pruebas del núcleo superadas.");
