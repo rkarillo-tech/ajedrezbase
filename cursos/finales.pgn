@@ -119,3 +119,15 @@
 [Orientation "black"]
 
 { [%csl Gd2,Gh3] Alfiles de distinto color: el blanco va por las casillas oscuras y el negro por las claras. Es el final con más tendencia a tablas: el defensor salva a menudo un final con uno, o incluso dos peones de menos. El rey defensor bloquea en las casillas que no ve su alfil y el alfil controla las de su color por las que tienen que pasar los peones. Aquí las negras tienen dos peones de menos y hacen tablas. } 1. e5 { [%csl Gf5] Las blancas ganan espacio, pero ahora el peón e queda fijo y la casilla f5 (clara) es un agujero para el alfil negro. } (1. f5+ { Si avanza el otro peón… } 1... Kf6 { el rey se planta delante (en f6, casilla oscura) y el alfil vigila e4-e6 por las claras. }) 1... Bf5+ { [%cal Gf5e6] [%csl Gf5,Ge6] ¡La fortaleza! El alfil en f5 frena al peón f y el rey en e6 frena al peón e. Ningún peón puede avanzar. } 2. Kd4 Bg4 { El alfil se mueve por su diagonal sin abandonar el control de f5. } 3. Ke4 Bf5+ (3... Kf7? { ¡No! El rey abandona e6 y… } 4. f5 { las blancas consiguen dos peones unidos y avanzados: ganan. }) 4. Kf3 Kd5 { El rey también puede salir a molestar mientras el alfil sujeta los peones. } 5. Ke3 Bg4 6. Bc3 Ke6 { Las blancas no pueden progresar: tablas. Resumen: con alfiles de distinto color, el defensor bloquea los peones en casillas del color de su alfil y pone el rey delante en las otras. } 1/2-1/2
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "11"]
+[Title "El peón pasado alejado"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/5kpp/8/8/8/P7/5KPP/8 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Ga3] En los finales de peones, un peón pasado lejos del resto (aquí el de la columna a) es una ventaja enorme, aunque no pueda coronar solo: obliga al rey rival a irse a frenarlo, y mientras tanto nuestro rey se come los peones del otro flanco. Es el «peón pasado alejado». } 1. Kf3 { Primero se centraliza el rey: en los finales el rey es una pieza de ataque. } 1... Ke6 2. Ke4 Kd6 3. a4 { [%cal Ga4a8] El peón avanza y el rey negro tiene que vigilarlo. } 3... Kc5 4. a5 Kb5 5. Kf5 { [%cal Gf5g6,Gf5f6] ¡Ahora! El rey negro se ha ido a por el peón de a, y el rey blanco va a por los peones del flanco de rey. } 5... Kxa5 6. Ke6 { El peón de a era un «cebo»: el rey negro está ahora muy lejos. } 6... Kb4 7. Kf7 g5 8. Kg7 h5 9. Kg6 g4 10. Kxh5 g3 11. hxg3 { Las blancas se han comido todos los peones negros y su peón de g coronará. Resumen: con un peón pasado alejado, empújalo para desviar al rey rival y lleva tu rey al otro flanco. } 1-0

@@ -171,7 +171,7 @@ def build_guide(help_html):
 
 
 # ---------------------------------------------------------------- cursos
-COURSES = ["aperturas", "tactica", "estrategia", "finales"]
+COURSES = ["aperturas", "tactica", "estrategia", "finales", "partidas"]
 
 
 def courses_js():

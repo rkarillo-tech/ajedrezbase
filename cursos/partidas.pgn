@@ -1,0 +1,253 @@
+[Event "Curso de partidas magistrales"]
+[Site "París"]
+[Date "1858.??.??"]
+[Round "1"]
+[White "Morphy, Paul"]
+[Black "Duque de Brunswick y Conde Isouard"]
+[Result "1-0"]
+[Title "Morphy: desarrollo, iniciativa y sacrificio (la Partida de la Ópera)"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[ECO "C41"]
+
+{ París, 1858. Paul Morphy juega en el palco de la Ópera contra dos aficionados
+aliados, el duque de Brunswick y el conde Isouard. Es la partida perfecta para
+entender por qué en la apertura importa el desarrollo: Morphy saca todas sus
+piezas mientras las negras pierden tiempo, y cuando abre el juego, sus piezas
+activas deciden en pocas jugadas. } 1. e4 e5 2. Nf3 d6 3. d4 Bg4?! { Clava el
+caballo, pero pronto tendrá que cambiar el alfil por él: las blancas se quedan
+con la pareja de alfiles y ventaja de desarrollo. } 4. dxe5 Bxf3 { Forzado: si
+4...dxe5, 5.Dxd8+ Rxd8 6.Cxe5 gana un peón. } 5. Qxf3 dxe5 6. Bc4 { [%cal
+Gc4f7,Gf3f7] Amenaza 7.Dxf7#. Fíjate: las blancas sólo han movido dos piezas,
+pero las dos atacan. } 6... Nf6?! { Tapa la diagonal de la dama, pero deja b7 y
+f7 a merced de la dama blanca. Era mejor 6...Df6. } 7. Qb3! { [%cal Gb3f7,Gb3b7]
+Ataque doble: f7 y b7. } 7... Qe7 8. Nc3 { Morphy no se come el peón de b7
+(8.Dxb7 Db4+ cambiaría las damas): prefiere desarrollar otra pieza. Con ventaja
+de desarrollo, ¡no cambies las damas! } 8... c6 9. Bg5 b5? { [%csl Rb5] Las
+negras quieren expulsar al alfil, pero abren el juego mientras su rey sigue en
+el centro. } 10. Nxb5! { Morphy entrega el caballo por dos peones para abrir
+líneas hacia el rey negro. } 10... cxb5 11. Bxb5+ { Ahora el caballo de d7
+quedará clavado. } 11... Nbd7 12. O-O-O! { [%cal Gd1d7] El enroque largo pone la
+torre en la columna d, donde ataca la pieza clavada. Desarrollo y ataque en una
+sola jugada. } 12... Rd8 13. Rxd7! { ¡Otra entrega! Elimina un defensor. } 13...
+Rxd7 14. Rd1 { [%csl Rh8,Rf8][%cal Gd1d8] La última pieza entra en juego. Todas
+las piezas blancas atacan; la torre de h8 y el alfil de f8 negros todavía no se
+han movido. } 14... Qe6? { Desclava el caballo de f6, pero permite el final. }
+(14... a5 { aguantaba algo más, aunque las blancas ganan igual. }) 15. Bxd7+
+Nxd7 16. Qb8+!! { [%cal Gb3b8] ¡Sacrificio de dama! El caballo está obligado a
+capturar y abandona la defensa de d8. } 16... Nxb8 17. Rd8# { [%cal Gd1d8,Gb5e8]
+Mate con las dos últimas piezas que quedaban: alfil y torre. Lección: desarrollo
+rápido, abrir líneas cuando el rey rival está en el centro y no perder tiempo
+con la dama. } 1-0
+
+[Event "Curso de partidas magistrales"]
+[Site "Berlín"]
+[Date "1852.??.??"]
+[Round "2"]
+[White "Anderssen, Adolf"]
+[Black "Dufresne, Jean"]
+[Result "1-0"]
+[Title "Anderssen: la Siempreviva y el gambito Evans"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "C52"]
+
+{ Berlín, 1852. Adolf Anderssen, el mejor jugador de su época, juega el gambito
+Evans: entrega un peón para ganar tiempo y montar un centro. La partida es
+famosa por su combinación final, una de las más bellas de la historia. Los
+análisis con motor muestran que no todo fue perfecto, y eso también es una
+lección: en el ajedrez práctico, la iniciativa vale mucho. } 1. e4 e5 2. Nf3 Nc6
+3. Bc4 Bc5 4. b4!? { [%cal Gb4c5] El gambito Evans: se entrega un peón para
+ganar tiempo con c3 y d4 contra el alfil de c5. } 4... Bxb4 5. c3 Ba5 6. d4 {
+Las blancas forman un centro y abren líneas para sus piezas. } 6... exd4 7. O-O
+{ Las blancas ya han dado dos peones a cambio de un gran desarrollo. } 7... d3
+8. Qb3 Qf6 9. e5 Qg6 10. Re1 Nge7 11. Ba3 { [%cal Ga3f8] El alfil apunta a e7 y
+f8: clava el caballo y dificulta el enroque corto negro. } 11... b5?! { Era
+mejor enrocar largo o …O-O cuanto antes. Las negras devuelven un peón para abrir
+la columna b. } 12. Qxb5 Rb8 13. Qa4 Bb6 14. Nbd2 Bb7?! { Otra jugada de
+desarrollo, pero el rey sigue en el centro. } 15. Ne4 Qf5? { La dama se aleja de
+la defensa. Era mejor 15...d2. } 16. Bxd3 { Ataca la dama y despeja la columna
+d. } 16... Qh5 17. Nf6+!? { [%cal Gf6e8] Un sacrificio espectacular para abrir
+la columna g y el rey negro. El motor prefiere 17.Tad1, pero ante el tablero la
+amenaza es tremenda. } 17... gxf6 18. exf6 Rg8 19. Rad1!! { [%cal Gd1d7] Una
+jugada tranquila en medio del ataque: amenaza Txd7+ y entrega la torre de e1.
+Todas las piezas blancas apuntan al rey negro. } 19... Qxf3? { Las negras
+aceptan el regalo y amenazan mate en g2… pero las blancas mueven antes. Con
+19...Txg2+! las negras habrían salvado la partida. } (19... Rxg2+ { Las negras
+dan jaques y el ataque blanco se queda en nada. }) 20. Rxe7+! { Jaque y elimina
+un defensor. } 20... Nxe7?? { Pierde en el acto. 20...Rd8 todavía resistía. }
+21. Qxd7+!! { [%cal Ga4d7] ¡Sacrificio de dama para abrir la última línea! }
+21... Kxd7 22. Bf5+! { [%cal Gf5d7,Gd1d7] Jaque doble: dan jaque el alfil de f5
+y la torre de d1. El rey sólo puede moverse. } 22... Ke8 23. Bd7+ Kf8 24. Bxe7#
+{ Mate con los dos alfiles. Lección: con el rey rival en el centro, cada pieza
+que se suma al ataque cuenta más que el material. } 1-0
+
+[Event "Curso de partidas magistrales"]
+[Site "Londres"]
+[Date "1851.06.21"]
+[Round "3"]
+[White "Anderssen, Adolf"]
+[Black "Kieseritzky, Lionel"]
+[Result "1-0"]
+[Title "Anderssen: la Inmortal y el gambito de rey"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "C33"]
+
+{ Londres, 1851. Una partida amistosa entre Adolf Anderssen y Lionel Kieseritzky
+que se ganó el nombre de «la Inmortal»: las blancas entregan un alfil, las dos
+torres y la dama, y dan mate con sus tres piezas menores. Es una ventana al
+ajedrez romántico del siglo XIX, en el que se buscaba el ataque por encima de
+todo. Los comentarios señalan también lo que el motor ve hoy. } 1. e4 e5 2. f4!?
+{ El gambito de rey: entrega un peón para abrir la columna f y dominar el centro
+con d4. } 2... exf4 3. Bc4 Qh4+ { El rey blanco pierde el enroque. } 4. Kf1 b5!?
+{ Contragambito: devuelve el peón para desviar el alfil. } 5. Bxb5 Nf6 6. Nf3
+Qh6 7. d3 Nh5 8. Nh4?! { Amenaza Cf5, pero aleja el caballo del centro. } 8...
+Qg5 9. Nf5 c6 10. g4?! { Agresivo. Las blancas no defienden el alfil de b5: lo
+entregan para ganar tiempo contra la dama negra. } 10... Nf6 11. Rg1 cxb5? { Las
+negras ganan el alfil, pero sus piezas siguen sin desarrollar y la dama quedará
+acosada. 11...h5 era mejor. } 12. h4 Qg6 13. h5 Qg5 14. Qf3 Ng8 15. Bxf4 { Las
+blancas recuperan el peón y ganan otra pieza activa. } 15... Qf6 16. Nc3 Bc5 17.
+Nd5!? { [%cal Gd5c7,Gd5f6] Entrega la torre de a1 (y la de g1): la dama negra se
+irá muy lejos del rey. } 17... Qxb2 18. Bd6!? { [%csl Rf8] La jugada más famosa
+de la partida: entrega las dos torres para cerrar el paso al alfil de f8 y a la
+dama. El motor muestra que con la mejor defensa la posición estaba igualada
+(18.Te1 era más fuerte), pero ante el tablero era imposible de calcular. } 18...
+Bxg1? { Las negras capturan la torre… y el ataque blanco llega antes. Mejor era
+18...Dxa1+. } 19. e5 Qxa1+ 20. Ke2 Na6?? { Pierde. Con 20...Aa6 las negras se
+defendían. } 21. Nxg7+ { Jaque, y el rey sólo puede ir a d8. } 21... Kd8 22.
+Qf6+!! { [%cal Gf3f6] ¡Y ahora la dama! El caballo está obligado a capturar. }
+22... Nxf6 23. Be7# { Mate con alfil y dos caballos, habiendo entregado dos
+torres, un alfil y la dama. Lección: la actividad de las piezas puede valer más
+que el material, sobre todo contra un rey en el centro. } 1-0
+
+[Event "Curso de partidas magistrales"]
+[Site "Nueva York"]
+[Date "1956.10.17"]
+[Round "4"]
+[White "Byrne, Donald"]
+[Black "Fischer, Robert James"]
+[Result "0-1"]
+[Title "Fischer con 13 años: la Partida del Siglo"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[ECO "D92"]
+[Orientation "black"]
+
+{ Nueva York, 1956. Bobby Fischer, con trece años, gana con negras a Donald
+Byrne, uno de los mejores jugadores de Estados Unidos. Es un modelo de juego
+hipermoderno (la Grünfeld) y contiene uno de los sacrificios de dama más famosos
+de la historia. La lección central: aprovechar un rey sin enrocar con todas las
+piezas. } 1. Nf3 Nf6 2. c4 g6 { Fischer prepara el fianchetto: el alfil de g7
+controlará el centro desde lejos. } 3. Nc3 Bg7 4. d4 O-O 5. Bf4 d5 { Una defensa
+Grünfeld: las negras discuten el centro con piezas y peones. } 6. Qb3 dxc4 7.
+Qxc4 c6 8. e4 Nbd7 { Las blancas tienen el centro, pero su rey sigue en e1.
+Fischer prepara …Cb6 para atacar la dama. } 9. Rd1 Nb6 10. Qc5 Bg4 11. Bg5? {
+Las blancas siguen sin enrocar. Era imprescindible 11.Ae2 y O-O. } (11. Be2 { y
+las blancas enrocan. }) 11... Na4!! { [%cal Ga4c3] Si 12.Cxa4, Cxe4 y la dama
+blanca y el rey en e1 sufren. El caballo no se puede tomar sin pagar caro. } 12.
+Qa3 Nxc3 13. bxc3 Nxe4 { El centro blanco se derrumba. } 14. Bxe7 { El alfil
+ataca la dama y la torre de f8. Parece que las blancas ganan material, pero… }
+14... Qb6! { ¡Fischer deja la torre de f8! Su dama ataca f2 y su caballo saltará
+con fuerza. } 15. Bc4 Nxc3! { Ataca la torre de d1 y la dama. } 16. Bc5 Rfe8+ {
+El rey blanco, sin enrocar, se convierte en el blanco de todas las piezas
+negras. } 17. Kf1 Be6!! { [%cal Ge6c4] ¡La jugada del siglo! Fischer entrega la
+dama. Si 18.Axe6, Db5+ con un ataque ganador; y si 18.Axb6, comienza el
+«molinillo». } 18. Bxb6? { Byrne acepta el sacrificio. 18.Dxc3 resistía más,
+aunque las negras están mejor. } 18... Bxc4+ 19. Kg1 Ne2+ { Empieza el
+molinillo: el caballo da jaques a la descubierta… } 20. Kf1 Nxd4+ { …y va
+recogiendo material a cada jaque. } 21. Kg1 Ne2+ 22. Kf1 Nc3+ { Torre, alfil y
+peón por la dama: las negras tienen ya más material y un ataque decisivo. } 23.
+Kg1 axb6 { Fischer recupera el alfil. Ahora tiene torre, dos alfiles y caballo
+contra dama: una superioridad aplastante. } 24. Qb4 Ra4 25. Qxb6 Nxd1 26. h3
+Rxa2 27. Kh2 Nxf2 28. Re1 Rxe1 29. Qd8+ Bf8 30. Nxe1 Bd5 31. Nf3 Ne4 32. Qb8 b5
+33. h4 h5 34. Ne5 Kg7 35. Kg1 Bc5+ 36. Kf1 Ng3+ 37. Ke1 Bb4+ 38. Kd1 Bb3+ 39.
+Kc1 Ne2+ 40. Kb1 Nc3+ 41. Kc1 Rc2# { Mate con las piezas menores coordinadas.
+Lección: el rey que no enroca a tiempo puede quedar expuesto a todas las piezas
+rivales. } 0-1
+
+[Event "Curso de partidas magistrales"]
+[Site "Moscú"]
+[Date "1985.10.15"]
+[Round "5"]
+[White "Karpov, Anatoly"]
+[Black "Kasparov, Garry"]
+[Result "0-1"]
+[Title "Kaspárov: el pulpo de d3 (Karpov–Kaspárov, 1985)"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[ECO "B44"]
+[Orientation "black"]
+
+{ Moscú, 1985, partida 16 del Campeonato del Mundo. Kaspárov, con negras, ofrece
+un peón en la Siciliana y consigue a cambio un caballo instalado en d3, en pleno
+campo blanco: «el pulpo». Es la lección perfecta sobre los puestos avanzados y
+sobre lo mal que juegan las piezas mal colocadas (los caballos blancos en a3 y
+b1). } 1. e4 c5 2. Nf3 e6 3. d4 cxd4 4. Nxd4 Nc6 5. Nb5 { Las blancas atacan d6
+y preparan c4 para controlar d5. } 5... d6 6. c4 Nf6 7. N1c3 a6 8. Na3 d5!? {
+¡El gambito Kaspárov! Entrega un peón para activar sus piezas de inmediato,
+sobre todo el caballo de c6, que irá a b4 y d3. } 9. cxd5 exd5 10. exd5 Nb4 {
+[%cal Gb4d3] El caballo se dirige a d3. } 11. Be2 Bc5 12. O-O O-O 13. Bf3 Bf5
+14. Bg5 Re8 15. Qd2?! { Permite …b5 y …Cd3. 15.Cc4 era mejor. } 15... b5 16.
+Rad1 Nd3! { [%cal Gd3b2,Gd3f2,Gd3c1,Gd3e1] ¡El pulpo! Un caballo protegido, en
+la tercera fila del rival, que ninguna pieza menor blanca puede cambiar
+fácilmente. Ataca b2, f2, c1 y e1. } 17. Nab1?! { El caballo de a3 vuelve a casa
+sin papel en la partida. Los caballos blancos de a3 y b1 contrastan con el pulpo
+de d3. } 17... h6 18. Bh4 b4 { Echa al otro caballo blanco de c3: el caballo
+negro de d3 es el rey del tablero. } 19. Na4 Bd6 20. Bg3 Rc8 21. b3 g5 { Las
+negras ganan espacio en el flanco de rey: las piezas blancas no pueden ayudar
+porque están mal colocadas. } 22. Bxd6 Qxd6 23. g3 Nd7 24. Bg2?! { Las blancas
+siguen sin poder liberarse. } 24... Qf6 25. a3 a5 26. axb4 axb4 27. Qa2 Bg6 28.
+d6 { Las blancas intentan aprovechar su peón pasado, pero el pulpo sigue firme.
+} 28... g4 29. Qd2 Kg7 30. f3? { Debilita el enroque. 30.h3 era mejor. } 30...
+Qxd6 31. fxg4 Qd4+ 32. Kh1 Nf6 33. Rf4 Ne4 34. Qxd3 Nf2+! { El otro caballo
+también entra en el campo blanco. } 35. Rxf2 Bxd3 36. Rfd2 Qe3 37. Rxd3 Rc1 {
+Con las piezas blancas desordenadas, las negras invaden la primera fila. } 38.
+Nb2? { Error en una posición ya perdida. } 38... Qf2 39. Nd2 Rxd1+ 40. Nxd1 Re1+
+{ Las blancas se rinden. Lección: un caballo en un puesto avanzado protegido, en
+el campo rival, puede paralizar a todo el ejército contrario. } 0-1
+
+[Event "Curso de partidas magistrales"]
+[Site "Wijk aan Zee"]
+[Date "1999.01.20"]
+[Round "6"]
+[White "Kasparov, Garry"]
+[Black "Topalov, Veselin"]
+[Result "1-0"]
+[Title "Kaspárov: la Inmortal moderna (Kaspárov–Topalov, 1999)"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[WhiteElo "2812"]
+[BlackElo "2700"]
+[ECO "B07"]
+
+{ Wijk aan Zee, 1999. Kaspárov, entonces campeón del mundo, juega contra Topalov
+la que muchos consideran la mejor partida de ataque de la era moderna. Con
+enroques en el mismo flanco (el largo), Kaspárov sacrifica una torre en d4 y
+persigue al rey negro por todo el tablero hasta la casilla d1. La lección:
+cuando el rey rival sale de su refugio, un ataque con pocas piezas pero muy
+coordinadas puede ser decisivo. } 1. e4 d6 2. d4 Nf6 3. Nc3 g6 4. Be3 Bg7 5. Qd2
+c6 6. f3 b5 7. Nge2 Nbd7 8. Bh6 { Las blancas cambian el alfil de g7, el mejor
+defensor del rey negro. } 8... Bxh6 9. Qxh6 Bb7 10. a3 e5 11. O-O-O Qe7 12. Kb1
+a6 13. Nc1 O-O-O { Los dos reyes en el flanco de dama. El rey negro parece
+seguro… } 14. Nb3 exd4 15. Rxd4 c5 16. Rd1 Nb6 17. g3 Kb8 18. Na5 Ba8 19. Bh3 d5
+20. Qf4+ Ka7 21. Rhe1 d4 22. Nd5 { Entrega el caballo para abrir la columna e. }
+22... Nbxd5 23. exd5 Qd6 { Parece que las negras lo tienen todo controlado.
+Pero… } 24. Rxd4!! { [%cal Gd1d4] ¡Sacrificio de torre! Abre la gran diagonal y
+la columna c hacia el rey negro. } 24... cxd4?! { Aceptar el sacrificio era lo
+natural, pero el motor indica que 24...Rb6 era más prudente. } 25. Re7+!! {
+[%cal Ge7a7] ¡Otra pieza! Si 25...Dxe7, 26.Dxd4+ y el ataque blanco es
+demoledor. } 25... Kb6 26. Qxd4+ { El rey negro sale de su escondite… } 26...
+Kxa5 27. b4+ { …y es perseguido por todo el tablero. } 27... Ka4 28. Qc3 Qxd5
+29. Ra7! { La torre ataca el alfil y amenaza Txa6. } 29... Bb7 30. Rxb7 Qc4 31.
+Qxf6 Kxa3? { Las negras toman otro peón, pero el rey llega todavía más lejos.
+31...Td1+ era mejor. } 32. Qxa6+ Kxb4 33. c3+! { Y otro peón sacrificado para
+atraer al rey. } 33... Kxc3 34. Qa1+ Kd2 35. Qb2+ { El rey negro ya está en la
+segunda fila blanca. } 35... Kd1 36. Bf1!! { Una jugada tranquila con efecto
+decisivo: amenaza la dama negra y prepara Txd7. } 36... Rd2 37. Rd7!! { Desvía
+la torre negra de la defensa. } 37... Rxd7 38. Bxc4 bxc4 39. Qxh8 { Las blancas
+recuperan todo el material y tienen un ataque ganador. } 39... Rd3 40. Qa8 c3
+41. Qa4+ Ke1 42. f4 f5 43. Kc1 Rd2 44. Qa7 { Las negras abandonan. Lección: el
+rey que sale de su refugio, aunque esté protegido por material de más, puede
+caer ante pocas piezas muy activas. } 1-0
+
