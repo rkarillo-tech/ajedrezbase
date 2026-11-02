@@ -1040,6 +1040,7 @@ function setGame(g, opts = {}) {
   clockStop();
   Clock.shown = false;
   ui.lesson = null;
+  ui.snapFor = null;
   game = g;
   game.current = opts.current || g.root;
   ui.selected = null;
@@ -2761,7 +2762,7 @@ function resolvePath(root, path, exact) {
 const marksOfGame = id => [...Lib.marks.values()].filter(m => m.gameId === id);
 function libBytes() {
   let b = 0;
-  for (const r of Lib.games.values()) b += (r.pgn || "").length + 400;
+  for (const r of Lib.games.values()) b += (r.pgn || "").length + 400 + (r.orig ? r.orig.pgn.length : 0) + (r.versions || []).reduce((s, v) => s + v.pgn.length, 0);
   for (const m of Lib.marks.values()) b += 300 + (m.note || "").length;
   return b;
 }
@@ -2785,6 +2786,10 @@ function updateSaveState() {
     btn.disabled = false;
     return;
   }
+  const rec = saved && Lib.games.get(ui.libId), nVer = rec ? (rec.orig ? 1 : 0) + (rec.versions || []).length : 0;
+  $("gcVersions").hidden = !saved;
+  $("versionsBtn").disabled = !nVer;
+  $("versionsBtn").textContent = nVer ? `🕘 Versiones (${nVer})` : "🕘 Sin versiones anteriores";
   if (saved) {
     el.className = "save-state saved" + (ui.dirty ? " dirty" : "");
     el.textContent = ui.dirty ? "⏳ Guardando los cambios…" : "✔ Está en tu biblioteca · los cambios se guardan solos";
@@ -2809,13 +2814,14 @@ const scheduleLibSave = debounce(() => { if (ui.dirty && ui.libId && Lib.games.h
 
 /* Guarda la partida del tablero. La parte síncrona (exportar) ocurre antes de cualquier espera,
    así que es seguro llamarla justo antes de cambiar de partida. */
+const MAX_VERSIONS = 5;
 async function saveToLibrary(opts = {}) {
   if (!Lib.ready) { toast("La biblioteca aún se está cargando…"); return null; }
   if (trainer.active && trainer.card) return null;
   const g = game, rev = ui.rev;
   const title = $("gameName").value.trim() || defaultTitle(g.headers);
   const existing = ui.libId && Lib.games.get(ui.libId);
-  if (existing && ui.recUpdated && existing.updated > ui.recUpdated && !opts.force) {
+  if (existing && !opts.copy && ui.recUpdated && existing.updated > ui.recUpdated && !opts.force) {
     const msg = "esta partida se ha modificado en otra pestaña";
     if (opts.silent || !confirm(`«${existing.title}» se ha modificado en otra pestaña o ventana después de abrirla aquí.\n\n¿Sustituir esos cambios por los de esta pestaña?`)) {
       if (g === game) { ui.saveError = msg + " (pulsa 💾 para sustituirla con la versión de esta pestaña, o vuelve a abrirla desde la biblioteca)"; updateSaveState(); }
@@ -2823,17 +2829,30 @@ async function saveToLibrary(opts = {}) {
     }
   }
   let base;
-  if (existing) base = Object.assign({}, existing);
+  if (existing && opts.copy) {
+    base = { created: Date.now(), srs: null };
+  } else if (existing) base = Object.assign({}, existing);
   else {
     const sig = gameSig(g);
     const dup = [...Lib.games.values()].find(r => r.sig === sig);
     if (dup && !opts.force && !confirm(`Ya tienes en la biblioteca una partida igual («${dup.title}»).\n\n¿Guardar otra copia de todos modos?`)) return null;
     base = { created: Date.now(), srs: null };
   }
-  const rec = Object.assign(base, recordFromGame(g, { title, fav: ui.fav, tags: ui.tags.slice(), created: base.created, srs: base.srs || null }));
-  if (existing) rec.id = existing.id;
+  const copyTitle = opts.copy ? `${title} (copia)` : title;
+  const rec = Object.assign(base, recordFromGame(g, { title: copyTitle, fav: opts.copy ? false : ui.fav, tags: ui.tags.slice(), created: base.created, srs: base.srs || null }));
+  if (opts.copy) { delete rec.orig; delete rec.versions; delete rec.drills; }
+  if (existing && !opts.copy) {
+    rec.id = existing.id;
+    // Antes del primer cambio de cada sesión se guarda una foto: el original siempre y las últimas versiones
+    if (existing.pgn !== rec.pgn && ui.snapFor !== existing.id) {
+      const snap = { t: existing.updated || existing.created || Date.now(), pgn: existing.pgn, title: existing.title, plies: existing.plies };
+      if (!existing.orig) rec.orig = snap;
+      else if (existing.pgn !== existing.orig.pgn) rec.versions = [snap, ...(existing.versions || [])].slice(0, MAX_VERSIONS);
+      ui.snapFor = existing.id;
+    }
+  }
   const projected = libBytes() + rec.size - (existing ? existing.size || 0 : 0);
-  if (!existing && projected > LIB_SOFT()) toast(`⚠ La biblioteca ocupa ${fmtBytes(projected)}: supera lo recomendado (${fmtBytes(LIB_SOFT())}). Considera exportar y borrar partidas antiguas.`, 6000);
+  if ((!existing || opts.copy) && projected > LIB_SOFT()) toast(`⚠ La biblioteca ocupa ${fmtBytes(projected)}: supera lo recomendado (${fmtBytes(LIB_SOFT())}). Considera exportar y borrar partidas antiguas.`, 6000);
   try { await DB.put("games", rec); }
   catch (e) {
     if (g === game) { ui.saveError = e.message || String(e); updateSaveState(); }
@@ -2850,15 +2869,53 @@ async function saveToLibrary(opts = {}) {
     else scheduleLibSave();
     $("gameName").value = rec.title;
   }
-  if (!opts.silent) toast(existing ? `💾 «${rec.title}» actualizada.` : `💾 «${rec.title}» guardada en tu biblioteca.`);
+  if (opts.copy) toast(`📑 Copia guardada como «${rec.title}». Ahora editas la copia; la original queda como estaba.`, 4500);
+  else if (!opts.silent) toast(existing ? `💾 «${rec.title}» actualizada.` : `💾 «${rec.title}» guardada en tu biblioteca.`);
   refreshLibraryViews();
   scheduleAutosave();
   return rec;
 }
 function confirmLeave() {
   if (!ui.dirty || (trainer.active && trainer.card)) return true;
+  if (ui.lesson && ui.lesson.game === game && !ui.libId) return true;   // las pruebas en una lección no se guardan: el curso sigue intacto
   if (ui.libId && Lib.games.has(ui.libId)) { saveToLibrary({ silent: true }); return true; }
   return confirm("La partida actual tiene cambios y no está guardada en la biblioteca.\n\nAceptar = descartarlos y continuar\nCancelar = volver para guardarla (💾)");
+}
+/* Versiones de una partida de la biblioteca: el original y las últimas fotos antes de cada sesión de cambios */
+const fmtWhen = ts => new Date(ts).toLocaleString("es-ES", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+function versionsOf(rec) {
+  const list = [];
+  if (rec.orig) list.push(Object.assign({ kind: "orig" }, rec.orig));
+  (rec.versions || []).slice().sort((a, b) => a.t - b.t).forEach((v, i) => list.push(Object.assign({ kind: "ver", n: i + 1 }, v)));
+  return list;
+}
+function openVersions() {
+  const rec = ui.libId && Lib.games.get(ui.libId);
+  if (!rec) return;
+  if (ui.dirty) saveToLibrary({ silent: true });
+  const list = versionsOf(rec);
+  const box = $("versionsList");
+  box.innerHTML = list.map((v, i) => `<div class="version-row"><span class="version-what">${v.kind === "orig" ? "📜 <b>Original</b>" : `🕘 Versión ${v.n}`} · ${esc(fmtWhen(v.t))}<br><span class="small">${esc(v.title || rec.title)}${v.plies != null ? ` · ${v.plies} medias jugadas` : ""}</span></span>
+      <button class="sm-btn" data-open="${i}" title="Abre esta versión en el tablero como una partida nueva, sin guardar">👁 Abrir como copia</button>
+      <button class="sm-btn warn-btn" data-restore="${i}" title="Vuelve a esta versión (la actual se guarda en el historial)">↺ Restaurar</button></div>`).join("")
+    + `<div class="version-row"><span class="version-what">✏ <b>Actual</b> · ${esc(fmtWhen(rec.updated))}<br><span class="small">${esc(rec.title)} · ${rec.plies} medias jugadas</span></span></div>`;
+  box.querySelectorAll("[data-open]").forEach(b => b.onclick = () => {
+    const v = list[+b.dataset.open], r = Pgn.parseGame(v.pgn, { lang: "en" });
+    closeModals();
+    setGame(r.game, { name: `${v.title || rec.title} (${v.kind === "orig" ? "original" : "versión " + v.n})` });
+    toast("👁 Versión abierta como copia: no está guardada. Si quieres conservarla aparte, pulsa 💾.", 4000);
+  });
+  box.querySelectorAll("[data-restore]").forEach(b => b.onclick = async () => {
+    const v = list[+b.dataset.restore];
+    if (!confirm(`¿Volver a ${v.kind === "orig" ? "la versión original" : "la versión " + v.n} de «${rec.title}»?\n\nLa versión actual se guardará en el historial.`)) return;
+    const r = Pgn.parseGame(v.pgn, { lang: "en" });
+    closeModals();
+    setGame(r.game, { noConfirm: true, libId: rec.id, name: rec.title, fav: rec.fav, tags: rec.tags });
+    ui.dirty = true;
+    if (await saveToLibrary({ silent: true, force: true })) toast(`↺ Restaurada ${v.kind === "orig" ? "la versión original" : "la versión " + v.n}.`);
+    render();
+  });
+  openModal("versionsModal");
 }
 function openLibGame(id, path) {
   const rec = Lib.games.get(id);
@@ -4001,6 +4058,8 @@ document.querySelectorAll(".modal-back").forEach(m => {
   m.addEventListener("click", e => { if (e.target === m || e.target.hasAttribute("data-close")) closeModals(); });
 });
 $("settingsBtn").onclick = () => openModal("settingsModal");
+$("versionsBtn").onclick = openVersions;
+$("copyGameBtn").onclick = () => saveToLibrary({ copy: true, force: true });
 $("menuBtn").onclick = () => {
   const open = document.querySelector("header").classList.toggle("menu-open");
   $("menuBtn").setAttribute("aria-expanded", open);
@@ -4910,6 +4969,8 @@ function openLesson(id, i) {
   if (!confirmLeave()) return false;
   leaveModes();
   const r = Pgn.parseGame(l.g, { lang: "en" });
+  const mark = n => { n.__lesson = true; n.children.forEach(mark); };
+  mark(r.game.root);
   ui.flipped = l.black;
   if (setGame(r.game, { noConfirm: true, name: `📘 ${c.name} ${l.round}: ${l.title}` }) === false) return false;
   ui.lesson = { course: id, i, game: r.game, done: false };
@@ -4932,28 +4993,38 @@ function placeLessonBox() {
 }
 wideLayout.addEventListener ? wideLayout.addEventListener("change", placeLessonBox) : wideLayout.addListener(placeLessonBox);
 placeLessonBox();
+/* La línea principal de la lección tal como viene en el curso (sin las jugadas que pruebe el usuario) */
+function lessonLine() {
+  const out = [];
+  for (let n = game.root; ;) { n = n.children.find(c => c.__lesson); if (!n) break; out.push(n); }
+  return out;
+}
 /* Panel de la lección: la explicación completa de la posición y los botones para seguir */
 function renderLesson() {
   const box = $("lessonBox");
   const L = ui.lesson;
   if (!L || L.game !== game || quiz() || editor.active) { box.hidden = true; return; }
   const c = COURSES.find(x => x.id === L.course), lessons = courseLessons(L.course), l = lessons[L.i];
-  const line = Pgn.mainlineFrom(game.root), n = cur();
-  const onMain = Pgn.isMainline(n), step = onMain ? Pgn.pathTo(n).length - 1 : -1;
-  const atEnd = onMain && !n.children.length;
+  const line = lessonLine(), n = cur();
+  const onMain = n === game.root || line.includes(n), step = onMain ? line.indexOf(n) + 1 : -1;
+  const atEnd = n === (line.length ? line[line.length - 1] : game.root) && line.length > 0;
   if (atEnd && !L.done) { L.done = true; markLessonDone(L.course, l.round); }
+  const mine = !n.__lesson;
   const text = n === game.root ? game.root.comment : n.comment;
   const where = n === game.root ? "Posición inicial" : `${numPrefix(n.parent.state)}${dispSan(n)}${n.nag || ""}`;
   const next = lessons[L.i + 1];
   box.hidden = false;
   box.innerHTML = `<div class="retry-head">${c.icon} ${esc(c.name)} · ${l.round} de ${lessons.length}: ${esc(l.title)}</div>
-    <div class="lesson-step small">${esc(where)}${step >= 0 ? ` · paso ${step} de ${line.length}` : " · variante"}</div>
-    <div class="lesson-text">${text ? esc(text) : `<span class="small">${n === game.root ? "Pulsa ▶ para empezar." : "Sin comentario en esta jugada: sigue con ▶ o mira las flechas del tablero."}</span>`}</div>
+    <div class="lesson-step small">${esc(where)}${mine ? " · 🧪 tu prueba" : step >= 0 ? ` · paso ${step} de ${line.length}` : " · variante de la lección"}</div>
+    <div class="lesson-text">${mine
+      ? `🧪 <b>Jugada tuya</b>, fuera de la lección.${n.eval ? ` Valoración del motor: <b>${esc(fmtEval(n.eval))}</b>.` : settings.live ? " El motor la está analizando: mira su valoración en el panel del motor." : " Activa «Analizar» (tecla E) para que el motor la valore."} Sigue probando o vuelve con <b>↩ Línea principal</b>; <b>↺ Reiniciar</b> borra todas tus pruebas.${text ? `<br>📝 ${esc(text)}` : ""}`
+      : text ? esc(text) : `<span class="small">${n === game.root ? "Pulsa ▶ para empezar." : "Sin comentario en esta jugada: sigue con ▶ o mira las flechas del tablero."}</span>`}</div>
     ${atEnd ? `<div class="retry-msg">✔ <b>Lección terminada.</b>${next ? "" : " ¡Has llegado al final del curso!"}</div>` : ""}
     <div class="controls">
       <button class="sm-btn" data-l="back" ${n.parent ? "" : "disabled"}>◀</button>
       <button class="sm-btn${atEnd ? "" : " primary"}" data-l="fwd" ${n.children.length ? "" : "disabled"}>${n === game.root ? "▶ Empezar" : "▶ Siguiente"}</button>
-      ${n.parent && !onMain ? `<button class="sm-btn" data-l="main" title="Volver a la línea principal">↩ Línea principal</button>` : ""}
+      ${!onMain ? `<button class="sm-btn" data-l="main" title="Volver a la línea principal">↩ Línea principal</button>` : ""}
+      <button class="sm-btn" data-l="reset" title="Vuelve a abrir la lección desde el principio y borra tus pruebas">↺ Reiniciar</button>
       <button class="sm-btn info-btn" data-l="practice" title="${l.exercise ? "Resuelve el ejercicio tú mismo" : "Juega tú las jugadas de la lección desde el principio"}">🎯 ${l.exercise ? "Resolver" : "Practicar"}</button>
       ${next ? `<button class="sm-btn${atEnd ? " primary" : ""}" data-l="next">Lección siguiente ▶</button>` : ""}
       <button class="sm-btn" data-l="close" title="Cerrar el panel de la lección">✖</button>
@@ -4965,11 +5036,14 @@ function lessonAction(a) {
   if (!L) return;
   if (a === "back") goBack();
   else if (a === "fwd") { goForward(); soundFor(cur()); }
-  else if (a === "main") { let n = cur(); while (n.parent && !Pgn.isMainline(n)) n = n.parent; goTo(n); }
+  else if (a === "main") { const line = lessonLine(); let n = cur(); while (n.parent && !line.includes(n)) n = n.parent; goTo(n); }
   else if (a === "next") openLesson(L.course, L.i + 1);
+  else if (a === "reset") { if (openLesson(L.course, L.i)) toast("↺ Lección reiniciada."); }
   else if (a === "close") { ui.lesson = null; renderLesson(); renderCourses(); }
   else if (a === "practice") {
     const l = courseLessons(L.course)[L.i];
+    // Se practica la lección tal como viene, sin las jugadas que hayas probado
+    if (game.root.children.some(function own(c) { return !c.__lesson || c.children.some(own); }) && !openLesson(L.course, L.i)) return;
     startTraining({ side: l.exercise ? game.root.state.t : l.black ? -1 : 1 });
   }
 }

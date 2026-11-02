@@ -626,6 +626,54 @@ def prueba_cursos(browser):
     ctx.close()
 
 
+def prueba_versiones(browser):
+    print("Novedades 1.7: versiones de las partidas y pruebas en las lecciones")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.fill("#moveInput", "1. e4 e5 2. Nf3 Nc6 3. Bb5")
+    pg.click("#importBtn")
+    pg.click("#saveGame")
+    pg.wait_for_function("Lib.games.size === 1")
+    comprobar(pg.is_visible("#copyGameBtn") and pg.is_disabled("#versionsBtn"), "una partida guardada ofrece guardar copia; aún no tiene versiones anteriores")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    casilla(pg, "a7").click(); casilla(pg, "a6").click()
+    pg.wait_for_function("!ui.dirty && Lib.games.get(ui.libId).plies === 6", timeout=8000)
+    comprobar(pg.evaluate("Lib.games.get(ui.libId).orig.plies") == 5 and "Versiones (1)" in pg.inner_text("#versionsBtn"), "antes del primer cambio se guarda el original")
+    pg.evaluate("cur().comment = 'comentario estropeado'; markDirty()")
+    pg.wait_for_function("!ui.dirty", timeout=8000)
+    comprobar(pg.evaluate("(Lib.games.get(ui.libId).versions || []).length") == 0, "en la misma sesión no se acumulan versiones a cada cambio")
+    pg.click("#versionsBtn")
+    comprobar(pg.locator("#versionsList .version-row").count() == 2 and "Original" in pg.inner_text("#versionsList"), "el cuadro de versiones muestra el original y la actual")
+    pg.locator("#versionsList [data-restore]").first.click()
+    pg.wait_for_function("Lib.games.get(ui.libId).plies === 5 && !ui.dirty", timeout=8000)
+    rec = pg.evaluate("(() => { const r = Lib.games.get(ui.libId); return { orig: r.orig.plies, vers: (r.versions || []).map(v => v.plies) }; })()")
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).length") == 5 and rec["orig"] == 5 and rec["vers"] == [6], "restaurar el original guarda la versión actual en el historial")
+    pg.click("#copyGameBtn")
+    pg.wait_for_function("Lib.games.size === 2")
+    comprobar("(copia)" in pg.input_value("#gameName") and pg.evaluate("!Lib.games.get(ui.libId).orig"), "guardar como copia crea una partida nueva y deja la original")
+    pg.reload()
+    pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+    comprobar(pg.evaluate("[...Lib.games.values()].some(r => r.orig && r.versions && r.versions.length === 1)"), "las versiones se conservan al recargar")
+    pg.click('.tab-btn[data-tab="courses"]')
+    pg.locator('details[data-course="finales"] summary').click()
+    pg.locator('details[data-course="finales"] .lesson-row', has_text="cuadrado").click()
+    pg.locator("#lessonBox [data-l=fwd]").click()
+    pg.evaluate("document.activeElement.blur()")
+    casilla(pg, "e5").click(); casilla(pg, "e4").click()
+    comprobar("Jugada tuya" in pg.inner_text("#lessonBox") and pg.locator("#lessonBox [data-l=main]").count() == 1, "una jugada propia en la lección se identifica como prueba")
+    pg.locator("#lessonBox [data-l=main]").click()
+    comprobar(pg.inner_text("#moves .mv.active").startswith("a6"), "«Línea principal» vuelve a la lección")
+    pg.locator("#lessonBox [data-l=reset]").click()
+    comprobar(pg.evaluate("cur() === game.root && game.root.children.length === 1 && game.root.children[0].children.length === 1"), "↺ Reiniciar borra las pruebas")
+    casilla(pg, "a5").click(); casilla(pg, "a6").click()
+    dialogos = []
+    pg.on("dialog", lambda d: dialogos.append(d.message))
+    pg.locator("#lessonBox [data-l=next]").click()
+    comprobar(not dialogos and "oposición" in pg.inner_text("#lessonBox"), "pasar de lección no pregunta por las pruebas sin guardar")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -718,7 +766,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:
