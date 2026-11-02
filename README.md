@@ -31,8 +31,9 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Buscar posición** | Encuentra en tu biblioteca o en un `.pgn` las partidas con la posición del tablero, su estructura de peones o su material, y ábrelas en ese momento |
 | **Biblioteca** | Guardas sólo lo que te interesa: ⭐ favoritas, etiquetas, buscador, borrado individual, exportar y copias de seguridad; 🕘 versiones de cada partida (el original nunca se pierde) y guardar como copia |
 | **Marcadores** | 📌 Marca posiciones como idea, táctica, error típico, plan… con nota; búscalas y vuelve a ellas con un clic |
-| **Cursos** | Más de 50 lecciones en español comentadas paso a paso: aperturas, táctica (con ejercicios), estrategia, finales y partidas magistrales, con flechas, variantes y práctica; también se pueden descargar en PGN |
-| **Jugar contra la CPU** | 8 niveles y 5 estilos (equilibrado, ⚔ agresivo, 🏰 posicional, 🛡 defensivo, 🎲 humano), reloj de 1+0 a 30+0 con incremento, rendirse, tablas, deshacer sin reloj y revancha; también a ciegas |
+| **Cursos** | Más de 50 lecciones en español comentadas paso a paso: aperturas, repertorios para entrenar (con repasos espaciados), táctica (con ejercicios), estrategia, finales y partidas magistrales, con flechas, variantes y práctica; también se pueden descargar en PGN |
+| **Jugar contra la CPU** | 8 niveles y 5 estilos (equilibrado, ⚔ agresivo, 🏰 posicional, 🛡 defensivo, 🎲 humano), reloj de 1+0 a 30+0 con incremento, rendirse, tablas, deshacer sin reloj y revancha; también a ciegas. Al acabar, 📋 informe del entrenador con tus errores más caros para practicarlos |
+| **Problemas de táctica** | Banco de problemas generados y comprobados con Stockfish, por temas (mates, horquilla, clavada, descubierta, sacrificio, final…) y dificultad, con repaso espaciado y nivel aproximado tipo Elo |
 | **Adivina la jugada** | Reproduce una partida clásica o tuya acertando las jugadas de un bando: el motor puntúa cada intento de 0 a 5 y comparas tu puntuación con la del jugador |
 | **A ciegas y visualización** | Piezas ocultas (`B`) para jugar a ciegas, «sigue la línea» de memoria (2 a 8 medias jugadas), color de las casillas y encuentra la casilla en 30 s con récord |
 | **Entrenar** | Repertorio contra tus variantes, **ejercicios con los errores de todas tus partidas** (táctica, mates, defensa, convertir la ventaja, finales…) y **tarjetas** de tus marcadores, con repetición espaciada (1, 3, 7, 16, 35, 75 días) |
@@ -124,7 +125,7 @@ cursos/               Cursos en PGN (aperturas, táctica, estrategia, finales y 
 assets/               Icono (icon.svg y sus PNG, generados con tools/gen_icons.py) y captura
 notas/                Notas de cada versión
 tests/                Pruebas del núcleo (Node) y de extremo a extremo (Playwright)
-tools/                Iconos, revisor de los cursos (revisar_cursos.js) y generador de las partidas comentadas
+tools/                Iconos, revisor de los cursos, generadores de las partidas comentadas, los repertorios y los problemas
 ```
 
 **Principios:** un solo archivo que funciona con doble clic; nada sale del navegador salvo las consultas a Lichess
@@ -147,6 +148,14 @@ y, si hace falta, `Orientation "black"` o `Type "ejercicio"`). Al cambiarlos, re
 ```bash
 node tools/revisar_cursos.js                                         # que se lean bien y tengan título y explicación
 SF=/tmp/sf/package/bin/stockfish-19-lite-single.js node tools/revisar_cursos.js   # además, ninguna jugada mala sin marcar
+```
+
+Los repertorios y las partidas comentadas se generan con `node tools/repertorios.js` y `node tools/partidas_comentadas.js`.
+El banco de problemas (`cursos/problemas.json`) se genera y se depura con Stockfish:
+
+```bash
+SF=/tmp/sf/package/bin/stockfish-19-lite-single.js node tools/generar_problemas.js 300   # partidas de Stockfish contra sí mismo
+SF=/tmp/sf/package/bin/stockfish-19-lite-single.js node tools/depurar_problemas.js       # revisión más profunda y equilibrio
 ```
 
 Para publicar una versión: sube `VERSION`, añade `notas/vX.Y.Z.md`, ejecuta `python3 build.py` y crea una

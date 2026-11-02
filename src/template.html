@@ -525,7 +525,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   .board-side > * { order: 20; }
   #navControls { order: 1; }
   #statusText { order: 2; }
-  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox { order: 3; }
+  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback { order: 3; }
   #moves { order: 4; max-height: 32vh; }
   #varControls { order: 5; }
   #typeMoveRow { order: 6; }
@@ -574,7 +574,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #navControls #editPosBtn, #navControls #undoBtn { grid-column: span 3; min-height: 28px; font-size: .74rem; }
   #playBtn { font-size: .74rem; }
   #statusText { order: 2; margin-top: 3px; }
-  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox { order: 3; }
+  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback { order: 3; }
   #moves { order: 4; max-height: 52vh; max-height: 52dvh; min-height: 90px; margin-top: 4px; }
   #varControls { order: 5; }
   #typeMoveRow { order: 6; }
@@ -1154,6 +1154,23 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       </div>
       <div class="controls"><button id="trainDueBtn" class="sm-btn warn-btn">📅 Entrenar la siguiente partida pendiente</button><span id="gameDueBadge" class="srs-pill">0 pendientes</span></div>
       <div id="trainFeedback" class="note-box" aria-live="polite" hidden></div>
+
+      <div class="section">
+        <h2>
+          <span>🧩 Problemas de táctica</span>
+          <span id="puzzleBadge" class="srs-pill"></span>
+        </h2>
+        <p class="small">Posiciones de partidas en las que una jugada gana: encuéntrala. Cada problema tiene un tema (mates, horquillas, clavadas, sacrificios, finales…) y una dificultad. Los que fallas vuelven al día siguiente y los que aciertas se espacian; tu nivel aproximado se ajusta con cada problema. Empieza por los de tu nivel.</p>
+        <div class="filter-row">
+          <select id="puzzleTheme" aria-label="Tema"></select>
+          <select id="puzzleLevel" aria-label="Dificultad"></select>
+          <select id="puzzleCount" aria-label="Número de problemas"><option value="5">5 problemas</option><option value="10" selected>10 problemas</option><option value="20">20 problemas</option></select>
+        </div>
+        <div class="controls">
+          <button id="puzzleStartBtn" class="primary">▶ Empezar</button>
+          <span id="puzzleInfo" class="small"></span>
+        </div>
+      </div>
 
       <div class="section">
         <h2>

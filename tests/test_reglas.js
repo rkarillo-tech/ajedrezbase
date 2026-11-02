@@ -75,12 +75,22 @@ comprobar(ecoOk && ECO_BOOK.length > 150, `las ${ECO_BOOK.length} líneas del li
 comprobar(CLASSIC_ENDGAMES.every(e => { try { Chess.parseFen(e.fen); return true; } catch { return false; } }), "posiciones de los finales clásicos válidas");
 const games = Pgn.splitGames(SAMPLE_MULTI_PGN);
 comprobar(games.length === 6 && games.every(g => !Pgn.parseGame(g).error), "la antología de clásicos se lee entera");
-for (const c of ["aperturas", "tactica", "estrategia", "finales", "partidas"]) {
+for (const c of ["aperturas", "repertorios", "tactica", "estrategia", "finales", "partidas"]) {
   const lecciones = Pgn.splitGames(fs.readFileSync(path.join(__dirname, "..", "cursos", c + ".pgn"), "utf8"));
   const malas = lecciones.filter(g => { const r = Pgn.parseGame(g, { lang: "en" }); return r.error || !r.game.headers.Title || !r.game.root.comment || !r.game.root.children.length; });
   malas.forEach(g => console.log("    Lección con error en " + c + ": " + (Pgn.parseGame(g, { lang: "en" }).game.headers.Title || "?")));
-  comprobar(lecciones.length >= 6 && !malas.length, `curso de ${c}: ${lecciones.length} lecciones legales, con título y explicación`);
+  comprobar(lecciones.length >= 3 && !malas.length, `curso de ${c}: ${lecciones.length} lecciones legales, con título y explicación`);
 }
+
+const problemas = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "cursos", "problemas.json"), "utf8"));
+const malos = problemas.filter(p => {
+  try {
+    let s = Chess.parseFen(p.fen);
+    for (const u of p.moves) { const m = Chess.moveFromUci(s, u); if (!m) return true; s = Chess.apply(s, m); }
+    return !(p.moves.length % 2 === 0) || !p.id || !Array.isArray(p.themes) || !(p.rating > 0);
+  } catch { return true; }
+});
+comprobar(problemas.length >= 100 && !malos.length && new Set(problemas.map(p => p.id)).size === problemas.length, `los ${problemas.length} problemas de táctica son legales, con tema, dificultad e identificador único`);
 
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log("\nTodas las pruebas del núcleo superadas.");

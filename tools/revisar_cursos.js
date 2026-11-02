@@ -70,7 +70,11 @@ const fmt = v => (Math.abs(v) >= 1900 ? (v > 0 ? "#" : "-#") : (v / 100).toFixed
       if (!sf) continue;
       const line = Pgn.mainlineFrom(r.game.root);
       const checks = [];
-      for (const n of line) {
+      if (h.Type === "repertorio") {
+        // En un repertorio se memorizan todas las variantes: se revisan todas las jugadas del árbol
+        const all = n => n.children.forEach(c => { if (Chess.legal(c.parent.state).length) checks.push(c); all(c); });
+        all(r.game.root);
+      } else for (const n of line) {
         // ¿Pierde mucho la jugada? Se compara la mejor del motor con la jugada hecha
         const before = n.parent.state;
         if (!Chess.legal(before).length) continue;
