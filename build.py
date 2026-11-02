@@ -173,13 +173,19 @@ def build_guide(help_html):
 
 
 # ---------------------------------------------------------------- cursos
-COURSES = ["aperturas", "tactica", "estrategia", "finales", "partidas"]
+COURSES = ["aperturas", "repertorios", "tactica", "estrategia", "finales", "partidas"]
 
 
 def courses_js():
     """Los cursos (cursos/*.pgn) van dentro de la aplicación para que funcionen sin conexión."""
     data = {c: (ROOT / "cursos" / f"{c}.pgn").read_text(encoding="utf-8") for c in COURSES}
     return json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+
+
+def puzzles_js():
+    """El banco de problemas (cursos/problemas.json, generado con tools/generar_problemas.js)."""
+    data = json.loads((ROOT / "cursos" / "problemas.json").read_text(encoding="utf-8"))
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 
 
 # ---------------------------------------------------------------- construcción
@@ -191,6 +197,9 @@ def build():
     if "/*__COURSES__*/{}" not in app:
         raise SystemExit("src/app.js: falta el marcador de los cursos")
     app = app.replace("/*__COURSES__*/{}", courses_js())
+    if "/*__PUZZLES__*/[]" not in app:
+        raise SystemExit("src/app.js: falta el marcador de los problemas")
+    app = app.replace("/*__PUZZLES__*/[]", puzzles_js())
     parts = {"CORE": read("core.js"), "PGN": read("pgn.js"), "ECO": read("eco.js"), "APP": app}
     for name, code in parts.items():
         if "</script" in code.lower():

@@ -169,7 +169,7 @@ const ui = {
   activeTab: "study", engineArrow: null, liveNode: null,
   libId: null, dirty: false, rev: 0, saveError: "", recUpdated: 0, explorerAbort: null, fav: false, tags: [], legacyStudy: null, markCtx: null, librarySub: "games"
 };
-const trainer = { active: false, side: 1, errors: 0, hints: 0, correct: 0, hintLevel: 0, hintArrow: null, hintSq: -1, libId: null, markId: null, card: false, busy: false };
+const trainer = { active: false, side: 1, errors: 0, hints: 0, correct: 0, hintLevel: 0, hintArrow: null, hintSq: -1, libId: null, markId: null, card: false, puzzle: false, busy: false };
 const editor = { active: false, state: null, tool: "MOVE", sel: null, origin: null };
 const cur = () => game.current;
 /* ¿Estamos en un ejercicio o jugando contra la CPU? Entonces se oculta el motor y no se navega por la partida */
@@ -708,7 +708,7 @@ function renderStatus() {
   let txt = st.text;
   if (ui.cpu.thinking) txt += " · 🤖 la CPU está pensando…";
   else if (ui.cpu.on && !st.over) txt += cur().state.t === ui.cpu.side ? " · turno de la CPU" : " · tu turno";
-  if (trainer.active) txt = "🎯 Entrenamiento · " + txt;
+  if (trainer.active) txt = (trainer.puzzle ? "🧩 Problema · " : "🎯 Entrenamiento · ") + txt;
   if (Retry.active) txt = "🎯 Aprende de tus errores · " + txt;
   if (Guess.active) txt = "🔮 Adivina la jugada · " + txt;
   if (Vis.active) txt = "🙈 Visualización: responde en el panel de abajo";
@@ -2140,6 +2140,41 @@ function cpuGameOver(result, text) {
   cpuPanel(sc === 1 ? "🏆 ¡Has ganado!" : sc === 0 ? "❌ Has perdido." : "🟰 Tablas.", text);
   render();
 }
+/* 📋 Informe del entrenador: tras la partida contra la CPU, tus errores más caros y un ejercicio con cada uno */
+async function coachReport() {
+  const box = $("cpuBox"), user = -ui.cpu.side, desc = `${cpuLevelName(ui.cpu.level)} · ${CPU_STYLES[ui.cpu.style]}`;
+  if (Pgn.mainlineFrom(game.root).filter(n => n.parent.state.t === user).length < 3) { toast("La partida es demasiado corta para hacer un informe."); return; }
+  box.innerHTML = `<div class="retry-head">📋 Informe del entrenador</div><div class="small">⏳ El motor está analizando la partida (verás el avance en «📖 Estudio»)…</div>`;
+  await analyseGame();
+  if (!ui.report || ui.analysing) { cpuPanel("Partida terminada", ""); return; }
+  const nodes = (ui.analysedLine || []).slice(1).filter(n => n.parent.state.t === user);
+  const rows = nodes.map(n => ({ n, c: classifyMove(n) })).filter(x => x.c);
+  const acc = rows.length ? Math.round(rows.reduce((s, x) => s + x.c.acc, 0) / rows.length) : null;
+  const count = k => rows.filter(x => x.c.cls === k).length;
+  const worst = rows.filter(x => ["??", "?", "?!"].includes(x.c.cls) && x.n.parent.eval && x.n.parent.eval.best && x.n.parent.eval.best !== x.n.uci)
+    .sort((a, b) => b.c.loss - a.c.loss).slice(0, 3);
+  const phase = n => { const ply = Pgn.pathTo(n).length - 1; return PHASES.find(([k]) => k === phaseOfNode(n, ply))[1].toLowerCase(); };
+  const phases = worst.map(x => phase(x.n));
+  const advice = !worst.length ? "¡Partida muy limpia! Prueba a subir el nivel de la CPU."
+    : phases.filter(f => f === "apertura").length >= 2 ? "Tus errores llegan pronto: repasa los principios y tus aperturas en «📘 Cursos»."
+    : phases.filter(f => f === "final").length >= 2 ? "Los errores aparecen en el final: te vendrá bien el curso de finales."
+    : worst.some(x => x.c.cls === "??") ? "Hay errores graves: antes de cada jugada, comprueba qué piezas quedan sin defender y qué amenaza el rival. Los «🧩 Problemas de táctica» entrenan justo eso."
+    : "Son imprecisiones más que errores: compara tus jugadas con las del motor (⚖) para ver qué planes eran mejores.";
+  const items = worst.map((x, i) => {
+    const p = x.n.parent, b = Chess.moveFromUci(p.state, p.eval.best);
+    const bestSan = b ? formatSan(Chess.san(p.state, b), settings.lang, p.state.t) : p.eval.best;
+    return `<li><a href="#" data-go="${i}"><b>${esc(numPrefix(p.state) + dispSan(x.n) + (x.n.nag || x.c.cls))}</b></a> (${esc(phase(x.n))}): de ${esc(fmtEval(p.eval))} a ${esc(fmtEval(x.c.after))}. Era mejor <b>${esc(bestSan)}</b>.</li>`;
+  }).join("");
+  box.hidden = false;
+  box.innerHTML = `<div class="retry-head">📋 Informe del entrenador</div>
+    <div>Tu precisión: <b>${acc != null ? acc + " %" : "–"}</b> · ${count("??")} error${count("??") === 1 ? "" : "es"} grave${count("??") === 1 ? "" : "s"}, ${count("?")} error${count("?") === 1 ? "" : "es"} y ${count("?!")} imprecisi${count("?!") === 1 ? "ón" : "ones"} <span class="small">(CPU ${esc(desc)})</span></div>
+    ${worst.length ? `<div class="retry-msg"><b>Tus ${worst.length === 1 ? "momento más caro" : worst.length + " momentos más caros"}:</b><ol style="margin:4px 0 0 18px; padding:0">${items}</ol></div>` : ""}
+    <div class="retry-msg">💡 ${esc(advice)}</div>
+    <div class="controls">${worst.length ? `<button class="sm-btn primary" data-k="retry">🎯 Practicar ${worst.length === 1 ? "este error" : "estos errores"}</button>` : ""}<button class="sm-btn" data-k="save">💾 Guardar la partida</button><button class="sm-btn info-btn" data-k="rematch">🔁 Revancha</button><button class="sm-btn" data-k="close">Cerrar</button></div>`;
+  box.querySelectorAll("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); goTo(worst[+a.dataset.go].n); });
+  const act = { retry: () => { box.hidden = true; startRetry(0, worst.map(x => x.n)); }, save: () => saveToLibrary({}), rematch: () => cpuAction("rematch"), close: () => { box.hidden = true; } };
+  box.querySelectorAll("[data-k]").forEach(b => b.onclick = act[b.dataset.k]);
+}
 function cpuUndo() {
   if (Clock.running) return;
   const user = -ui.cpu.side, path = Pgn.pathTo(cur()), start = path.indexOf(ui.cpu.startNode);
@@ -2165,7 +2200,7 @@ function cpuPanel(head, text) {
   box.hidden = false;
   if (ui.cpu.over || head) {
     box.innerHTML = `<div class="retry-head">🏁 ${esc(head || "Partida terminada")}</div><div>${esc(text || "")} <span class="small">(CPU ${esc(desc)})</span></div>
-      <div class="controls"><button class="sm-btn primary" data-c="analyse">🤖 Analizar la partida</button><button class="sm-btn" data-c="save">💾 Guardar</button><button class="sm-btn info-btn" data-c="rematch">🔁 Revancha</button><button class="sm-btn" data-c="close">Cerrar</button></div>`;
+      <div class="controls"><button class="sm-btn primary" data-c="coach" title="El motor analiza la partida y te enseña tus errores más caros, para practicarlos">📋 Informe del entrenador</button><button class="sm-btn" data-c="save">💾 Guardar</button><button class="sm-btn info-btn" data-c="rematch">🔁 Revancha</button><button class="sm-btn" data-c="close">Cerrar</button></div>`;
   } else {
     box.innerHTML = `<div class="retry-head">🤖 Partida contra la CPU</div><div class="small">${esc(desc)}</div>
       <div class="controls">${ui.cpu.tc ? "" : `<button class="sm-btn" data-c="undo" title="Deshace tu última jugada y la respuesta de la CPU">↶ Deshacer</button>`}<button class="sm-btn" data-c="draw">½ Ofrecer tablas</button><button class="sm-btn danger" data-c="resign">🏳 Rendirse</button><button class="sm-btn" data-c="stop" title="Deja la partida sin resultado y vuelve al análisis">⏹ Terminar</button></div>`;
@@ -2178,6 +2213,7 @@ function cpuAction(a) {
   else if (a === "resign") { if (confirm("¿Seguro que quieres rendirte?")) cpuGameOver(ui.cpu.side === 1 ? "1-0" : "0-1", "Te has rendido."); }
   else if (a === "stop") stopCpu(false);
   else if (a === "analyse") { $("cpuBox").hidden = true; switchTab("study"); analyseGame(); }
+  else if (a === "coach") coachReport();
   else if (a === "save") saveToLibrary({});
   else if (a === "close") { $("cpuBox").hidden = true; Clock.shown = false; renderClocks(); }
   else if (a === "rematch") {
@@ -3466,7 +3502,7 @@ function restoreStash() {
   Cards.stash = null;
   Cards.queue = [];
   $("cardsBackBtn").hidden = true;
-  const onCard = (trainer.active && trainer.card) || game.headers.Event === "Tarjeta" || game.headers.Event === "Ejercicio";
+  const onCard = (trainer.active && (trainer.card || trainer.puzzle)) || ["Tarjeta", "Ejercicio", "Problema"].includes(game.headers.Event);
   if (Retry.active && retryNode() && retryNode().__drill) retryEnd(true);
   if (!onCard && !confirmLeave()) { Cards.stash = st; $("cardsBackBtn").hidden = false; return; }
   if (trainer.active) stopTraining(true);
@@ -3972,7 +4008,7 @@ function startTraining(opts = {}) {
   stopAutoplay();
   Object.assign(trainer, {
     active: true, side: opts.side != null ? opts.side : +$("trainSide").value, errors: 0, hints: 0, correct: 0, hintLevel: 0, hintArrow: null, hintSq: -1,
-    libId: opts.card ? null : ui.libId, markId: opts.markId || null, card: !!opts.card, busy: false
+    libId: opts.card || opts.puzzle ? null : ui.libId, markId: opts.markId || null, card: !!opts.card, puzzle: !!opts.puzzle, busy: false
   });
   ui.flipped = trainer.side === -1;
   game.current = game.root;
@@ -3985,11 +4021,14 @@ function startTraining(opts = {}) {
   switchTab("tools");
   render();
   trainerNext();
+  // Que se vea el tablero (y, en el móvil, el mensaje del entrenador, que va debajo)
+  setTimeout(() => { const tb = $("topBar").getBoundingClientRect(), bb = $("bottomBar").getBoundingClientRect(); if (tb.top < 0 || bb.bottom > innerHeight) (wideLayout.matches ? scrollTo({ top: 0, behavior: "smooth" }) : $("topBar").scrollIntoView({ block: "start", behavior: "smooth" })); }, 60);
 }
 function trainerNext() {
   const node = cur();
   if (!node.children.length) { finishTraining(); return; }
   if (trainerUserTurn()) {
+    if (trainer.puzzle) { puzzlePrompt(); return; }
     if (trainer.card) {
       const m = Lib.marks.get(trainer.markId);
       trainFeedback(`🧠 Tarjeta${m ? ` · ${CATS[m.cat].icon} ${esc(CATS[m.cat].name)}` : ""}: juegan las ${node.state.t === 1 ? "blancas" : "negras"}. ¿Qué jugarías?${Cards.queue.length ? `<br><span class="small">Quedan ${Cards.queue.length} más.</span>` : ""}`);
@@ -4011,7 +4050,9 @@ function trainerNext() {
 }
 function trainerUserMove(move) {
   const node = cur();
-  const hit = node.children.find(c => Pgn.sameMove(c.move, move));
+  let hit = node.children.find(c => Pgn.sameMove(c.move, move));
+  // En los problemas vale cualquier jugada que dé mate
+  if (!hit && trainer.puzzle) { const after = Chess.apply(node.state, move); if (!Chess.legal(after).length && Chess.inCheck(after)) { hit = Pgn.addMove(node, move); hit.children = []; } }
   if (hit) {
     trainer.correct++;
     trainer.hintLevel = 0; trainer.hintArrow = null; trainer.hintSq = -1;
@@ -4024,7 +4065,8 @@ function trainerUserMove(move) {
     trainer.errors++;
     Sound.play("error");
     const L = Chess.legal(node.state), san = formatSan(Chess.san(node.state, move, L), settings.lang, node.state.t);
-    trainFeedback(trainer.card ? `❌ ${esc(san)} no es la jugada buscada. Inténtalo otra vez o pulsa 💡 para una pista.` : `❌ ${esc(san)} no está en tu repertorio. Errores: ${trainer.errors}. Pulsa 💡 si necesitas una pista.`, "bad");
+    trainFeedback(trainer.card || trainer.puzzle ? `❌ ${esc(san)} no es la jugada buscada. Inténtalo otra vez o pulsa 💡 para una pista.` : `❌ ${esc(san)} no está en tu repertorio. Errores: ${trainer.errors}. Pulsa 💡 si necesitas una pista.`, "bad");
+    if (trainer.puzzle) { $("trainFeedback").insertAdjacentHTML("beforeend", puzzleButtons()); wirePuzzleButtons(); }
     renderBoard();
     const el = boardEl.querySelector(`.square[data-sq="${move.to}"]`);
     if (el) el.classList.add("flash-bad");
@@ -4050,9 +4092,25 @@ function finishTraining() {
     stopTraining(false);
     return;
   }
+  if (trainer.puzzle) { finishPuzzle(perfect); return; }
   const L = ui.lesson && ui.lesson.game === game ? ui.lesson : null;
   if (L) {
     const l = courseLessons(L.course)[L.i];
+    if (l.repertoire) {
+      const all = repSrs(), key = L.course + ":" + l.round, s = all[key] || { box: 0, reps: 0 };
+      s.reps++;
+      s.box = perfect ? Math.min(SRS_DAYS.length - 1, s.box + 1) : 1;
+      s.due = Date.now() + SRS_DAYS[s.box] * 864e5;
+      all[key] = s;
+      LS.set("ajedrezRepasos", all);
+      if (perfect) markLessonDone(L.course, l.round); else renderCourses();
+      Sound.play(perfect ? "ok" : "end");
+      trainFeedback(`${perfect ? "🏆 ¡Línea perfecta!" : `✔ Línea terminada con ${trainer.errors} error${trainer.errors === 1 ? "" : "es"} y ${trainer.hints} pista${trainer.hints === 1 ? "" : "s"}.`} Próximo repaso del repertorio: ${SRS_DAYS[s.box] === 1 ? "mañana" : "en " + SRS_DAYS[s.box] + " días"}.<br><span class="small">Cada vez el rival elige otras respuestas: repite para recorrer todo el árbol.</span><br><button id="repAgainBtn" class="sm-btn primary" style="margin-top:6px">🔁 Otra línea</button> <button id="backToCoursesBtn" class="sm-btn" style="margin-top:6px">📘 Volver a los cursos</button>`, perfect ? "ok" : "");
+      $("backToCoursesBtn").onclick = () => switchTab("courses");
+      $("repAgainBtn").onclick = () => startTraining({ side: l.black ? -1 : 1 });
+      stopTraining(false);
+      return;
+    }
     if (perfect) markLessonDone(L.course, l.round);
     Sound.play(perfect ? "ok" : "end");
     trainFeedback(`${perfect ? "🏆 ¡Perfecto! Has jugado toda la lección sin errores ni pistas." : `✔ Lección practicada: ${trainer.errors} error${trainer.errors === 1 ? "" : "es"} y ${trainer.hints} pista${trainer.hints === 1 ? "" : "s"}. Repítela hasta hacerla perfecta.`}<br><button id="backToCoursesBtn" class="sm-btn primary" style="margin-top:6px">📘 Volver a los cursos</button>`, perfect ? "ok" : "");
@@ -4079,6 +4137,7 @@ function stopTraining(silent) {
   trainer.active = false;
   trainer.busy = false;
   trainer.card = false;
+  trainer.puzzle = false;
   trainer.hintArrow = null;
   trainer.hintSq = -1;
   $("trainStatusBadge").textContent = "Inactivo";
@@ -4090,6 +4149,116 @@ function stopTraining(silent) {
   render();
 }
 
+/* ---------- 26. Problemas de táctica (cursos/problemas.json, generados con Stockfish) ---------- */
+const PUZZLES = /*__PUZZLES__*/[];
+const PUZZLE_THEMES = {
+  mateIn1: "Mate en 1", mateIn2: "Mate en 2", mateIn3: "Mate en 3", mateIn4: "Mate en 4", fork: "Horquilla", pin: "Clavada",
+  discoveredAttack: "Ataque a la descubierta", doubleCheck: "Jaque doble", hangingPiece: "Pieza colgada", sacrifice: "Sacrificio",
+  backRankMate: "Mate del pasillo", smotheredMate: "Mate de la coz", promotion: "Coronación", endgame: "Final", short: "Una sola jugada"
+};
+const PUZZLE_LEVELS = [[0, 1100, "Fácil"], [1100, 1500, "Medio"], [1500, 1900, "Difícil"], [1900, 9999, "Muy difícil"]];
+const puzzleLevelOf = r => PUZZLE_LEVELS.findIndex(([a, b]) => r >= a && r < b);
+const Puz = { queue: [], cur: null, done: 0, ok: 0, total: 0, delta: 0 };
+const puzSrs = () => LS.get("ajedrezProblemas", {});
+const puzRating = () => LS.get("ajedrezNivelProblemas", { r: 1200, n: 0 });
+function puzzleThemesText(p) { return p.themes.filter(x => PUZZLE_THEMES[x]).map(x => PUZZLE_THEMES[x]).join(", ") || "Táctica"; }
+function puzzlePool() {
+  const th = $("puzzleTheme").value, lv = $("puzzleLevel").value;
+  return PUZZLES.filter(p => (!th || p.themes.includes(th) || (th === "mate" && p.themes.some(x => x.startsWith("mateIn")))) && (lv === "" || puzzleLevelOf(p.rating) === +lv));
+}
+function initPuzzleFilters() {
+  const count = k => PUZZLES.filter(p => k === "mate" ? p.themes.some(x => x.startsWith("mateIn")) : p.themes.includes(k)).length;
+  const opts = [["", `Todos los temas (${PUZZLES.length})`], ["mate", `Todos los mates (${count("mate")})`]]
+    .concat(Object.entries(PUZZLE_THEMES).map(([k, v]) => [k, `${v} (${count(k)})`]).filter(([k]) => count(k) > 0));
+  $("puzzleTheme").innerHTML = opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+  $("puzzleLevel").innerHTML = `<option value="">Todas las dificultades</option>` + PUZZLE_LEVELS.map(([a, b, n], i) => `<option value="${i}">${n} (${b > 3000 ? "más de " + a : a + "–" + b})</option>`).join("");
+}
+function renderPuzzleInfo() {
+  if (!$("puzzleInfo")) return;
+  const pool = puzzlePool(), s = puzSrs(), now = Date.now(), R = puzRating();
+  const due = pool.filter(p => s[p.id] && s[p.id].due <= now).length, seen = pool.filter(p => s[p.id]).length;
+  $("puzzleInfo").textContent = `${pool.length} problemas · ${seen} hechos · ${due} para repasar hoy`;
+  $("puzzleBadge").textContent = R.n ? `Tu nivel: ${Math.round(R.r)}` : "Nivel inicial: 1200";
+  $("puzzleBadge").className = "srs-pill" + (due ? " due" : "");
+}
+function startPuzzles() {
+  if (!PUZZLES.length) { toast("No hay problemas en esta versión."); return; }
+  if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
+  const pool = puzzlePool(), s = puzSrs(), now = Date.now(), R = puzRating().r;
+  if (!pool.length) { toast("No hay problemas con ese tema y esa dificultad."); return; }
+  const n = +$("puzzleCount").value;
+  // Primero los que toca repasar; después, nuevos de dificultad parecida a tu nivel
+  const due = pool.filter(p => s[p.id] && s[p.id].due <= now).sort((a, b) => s[a.id].due - s[b.id].due);
+  const fresh = pool.filter(p => !s[p.id]).map(p => ({ p, k: Math.abs(p.rating - R) + Math.random() * 300 })).sort((a, b) => a.k - b.k).map(x => x.p);
+  let list = due.concat(fresh).slice(0, n);
+  if (!list.length) list = pool.slice().sort(() => Math.random() - 0.5).slice(0, n);   // todos hechos: repaso al azar
+  if (!stashBoard()) return;
+  leaveModes();
+  Object.assign(Puz, { queue: list, done: 0, ok: 0, total: list.length, delta: 0 });
+  nextPuzzle();
+}
+function nextPuzzle() {
+  const p = Puz.queue.shift();
+  if (!p) { endPuzzles(); return; }
+  Puz.cur = p;
+  const g = Pgn.newGame(p.fen);
+  let n = g.root;
+  for (const u of p.moves) { const m = Chess.moveFromUci(n.state, u); if (!m) break; n = Pgn.addMove(n, m); }
+  g.headers.Event = "Problema";
+  g.headers.Site = "AjedrezBase";
+  const side = -g.root.state.t;
+  ui.flipped = side === -1;
+  setGame(g, { noConfirm: true, name: `🧩 Problema ${Puz.done + 1} de ${Puz.total} · ${PUZZLE_LEVELS[puzzleLevelOf(p.rating)][2]}` });
+  startTraining({ side, puzzle: true });
+}
+function puzzlePrompt() {
+  const p = Puz.cur, side = trainer.side === 1 ? "blancas" : "negras";
+  trainFeedback(`🧩 Problema ${Puz.done + 1} de ${Puz.total} · ${PUZZLE_LEVELS[puzzleLevelOf(p.rating)][2]} (${p.rating}) · juegan las <b>${side}</b>.<br>El rival acaba de jugar ${esc(numPrefix(cur().parent.state) + dispSan(cur()))}: encuentra la mejor jugada.${trainer.correct ? " ¡Bien! Sigue." : ""}` + puzzleButtons());
+  wirePuzzleButtons();
+}
+const puzzleButtons = () => `<div class="controls"><button class="sm-btn" data-pz="hint">💡 Pista</button><button class="sm-btn danger" data-pz="end">⏹ Terminar</button></div>`;
+function wirePuzzleButtons() {
+  $("trainFeedback").querySelectorAll("[data-pz]").forEach(b => b.onclick = () => {
+    if (b.dataset.pz === "end") endPuzzles();
+    else { trainerHint(); $("trainFeedback").insertAdjacentHTML("beforeend", puzzleButtons()); wirePuzzleButtons(); }
+  });
+}
+function finishPuzzle(perfect) {
+  const p = Puz.cur, all = puzSrs(), st = all[p.id] || { box: 0, reps: 0 };
+  st.reps++;
+  st.box = perfect ? Math.min(SRS_DAYS.length - 1, st.box + 1) : 1;
+  st.due = Date.now() + SRS_DAYS[st.box] * 864e5;
+  st.ok = perfect;
+  all[p.id] = st;
+  LS.set("ajedrezProblemas", all);
+  // Nivel aproximado al estilo Elo: sube si resuelves problemas de tu nivel o superiores
+  const R = puzRating(), K = R.n < 20 ? 48 : 24;
+  const exp = 1 / (1 + Math.pow(10, (p.rating - R.r) / 400)), d = Math.round(K * ((perfect ? 1 : 0) - exp));
+  R.r = Math.max(400, R.r + d); R.n++;
+  LS.set("ajedrezNivelProblemas", R);
+  Puz.done++; if (perfect) Puz.ok++; Puz.delta += d;
+  Sound.play(perfect ? "ok" : "end");
+  const left = Puz.queue.length;
+  trainFeedback(`${perfect ? "✔ <b>¡Resuelto!</b>" : `Resuelto con ${trainer.errors} error${trainer.errors === 1 ? "" : "es"} y ${trainer.hints} pista${trainer.hints === 1 ? "" : "s"}: volverá mañana.`} Tema: ${esc(puzzleThemesText(p))}.<br>Tu nivel: <b>${Math.round(R.r)}</b> (${d >= 0 ? "+" : ""}${d}).<br>
+    ${left ? `<button id="nextPuzzleBtn" class="sm-btn primary" style="margin-top:6px">Siguiente problema ▶ (quedan ${left})</button>` : `<button id="nextPuzzleBtn" class="sm-btn primary" style="margin-top:6px">Ver resumen ▶</button>`}
+    <button id="stopPuzzlesBtn" class="sm-btn" style="margin-top:6px">⏹ Terminar</button>`, perfect ? "ok" : "");
+  $("nextPuzzleBtn").onclick = nextPuzzle;
+  $("stopPuzzlesBtn").onclick = endPuzzles;
+  trainer.active = false;
+  stopTraining(false);
+  renderPuzzleInfo();
+}
+function endPuzzles() {
+  if (trainer.active && trainer.puzzle) stopTraining(true);
+  Puz.queue = [];
+  const R = puzRating();
+  trainFeedback(`🧩 Sesión terminada: <b>${Puz.ok}</b> de ${Puz.done} resueltos a la primera. Tu nivel: <b>${Math.round(R.r)}</b> (${Puz.delta >= 0 ? "+" : ""}${Puz.delta} en esta sesión).<br>
+    <span class="small">Los que has fallado vuelven mañana; los acertados se espacian (3, 7, 16… días).</span><br>
+    <button id="puzzlesBackBtn" class="sm-btn" style="margin-top:6px">↩ Volver a tu partida</button>`, Puz.ok === Puz.done ? "ok" : "");
+  $("puzzlesBackBtn").onclick = () => { restoreStash(); };
+  renderPuzzleInfo();
+}
+
 /* ---------- 27. Pestañas, modales y botones ---------- */
 function switchTab(name) {
   ui.activeTab = name;
@@ -4097,7 +4266,7 @@ function switchTab(name) {
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === "tab-" + name));
   if (name === "explorer") refreshExplorer();
   if (name === "library") { refreshLibraryViews(); if (ui.librarySub === "collection") renderCollection(); if (ui.librarySub === "position") renderPosTarget(); }
-  if (name === "tools") renderDrillInfo();
+  if (name === "tools") { renderDrillInfo(); renderPuzzleInfo(); }
   if (name === "courses") renderCourses();
   if (name === "endgames" && pieceCount(cur().state) <= 7) querySyzygy();
 }
@@ -4471,6 +4640,8 @@ $("edFen").onchange = e => {
 
 $("startTrainBtn").onclick = () => startTraining();
 $("guessStartBtn").onclick = startGuess;
+$("puzzleStartBtn").onclick = startPuzzles;
+["puzzleTheme", "puzzleLevel"].forEach(id => $(id).onchange = renderPuzzleInfo);
 $("visStartBtn").onclick = startVis;
 $("visMode").onchange = () => { $("visPlies").hidden = $("visMode").value !== "line"; };
 $("blindBtn").onclick = () => setBlind(!ui.blind);
@@ -5001,6 +5172,7 @@ function renderPosTarget() {
 const COURSE_PGN = /*__COURSES__*/{};
 const COURSES = [
   { id: "aperturas", icon: "📖", name: "Aperturas", desc: "Los principios, los errores típicos y las aperturas principales con blancas y con negras, explicando el porqué de cada jugada." },
+  { id: "repertorios", icon: "🗂", name: "Repertorios para entrenar", desc: "Repertorios completos con blancas (1.e4) y con negras (Caro-Kann y Gambito de Dama), con el porqué de cada jugada. Entrénalos con 🎯: los repasos se espacian solos." },
   { id: "tactica", icon: "⚔", name: "Táctica", desc: "Horquillas, clavadas, enfiladas, descubiertas, sobrecarga y mates típicos, con ejercicios para resolver." },
   { id: "estrategia", icon: "🧭", name: "Estrategia", desc: "Cómo hacer un plan: estructuras de peones, piezas buenas y malas, columnas, casillas fuertes y peones pasados." },
   { id: "finales", icon: "👑", name: "Finales", desc: "Los mates básicos, rey y peón, la oposición, Lucena, Philidor y los finales que hay que saber de memoria." },
@@ -5011,12 +5183,19 @@ function courseLessons(id) {
   if (!courseCache[id]) {
     courseCache[id] = Pgn.splitGames(COURSE_PGN[id] || "").map(g => {
       const h = g.headers;
-      return { g, round: +h.Round || 0, title: h.Title || "Lección", level: h.Level || "", exercise: h.Type === "ejercicio", black: h.Orientation === "black" };
+      return { g, round: +h.Round || 0, title: h.Title || "Lección", level: h.Level || "", exercise: h.Type === "ejercicio", repertoire: h.Type === "repertorio", black: h.Orientation === "black" };
     });
   }
   return courseCache[id];
 }
 const courseDone = () => LS.get("ajedrezCursos", {});
+/* Repasos espaciados de los repertorios: { "repertorios:1": { box, due, reps } } */
+const repSrs = () => LS.get("ajedrezRepasos", {});
+function repSrsText(s) {
+  if (!s) return "sin empezar";
+  const d = Math.ceil((s.due - Date.now()) / 864e5);
+  return d <= 0 ? "📅 toca hoy" : d === 1 ? "mañana" : `en ${d} días`;
+}
 function markLessonDone(id, round) {
   const d = courseDone();
   d[id] = [...new Set([...(d[id] || []), round])].sort((a, b) => a - b);
@@ -5029,20 +5208,22 @@ function renderCourses() {
   const done = courseDone();
   const open = new Set([...box.querySelectorAll("details[open]")].map(d => d.dataset.course));
   if (!box.children.length && ui.lesson) open.add(ui.lesson.course);
-  let total = 0, finished = 0;
+  let total = 0, finished = 0, dueReps = 0;
+  const srs = repSrs();
   box.innerHTML = COURSES.map(c => {
     const L = courseLessons(c.id), ok = new Set(done[c.id] || []);
+    L.forEach(l => { const s = srs[c.id + ":" + l.round]; if (l.repertoire && s && s.due <= Date.now()) dueReps++; });
     total += L.length;
     finished += L.filter(l => ok.has(l.round)).length;
     const rows = L.map((l, i) => `<button class="lesson-row${ui.lesson && ui.lesson.course === c.id && ui.lesson.i === i ? " current" : ""}" data-c="${c.id}" data-i="${i}">
-        <span class="lesson-num">${ok.has(l.round) ? "✔" : l.round}</span><span class="lesson-title">${l.exercise ? "🧩 " : ""}${esc(l.title)}</span><span class="srs-pill">${esc(l.level)}</span></button>`).join("");
+        <span class="lesson-num">${ok.has(l.round) ? "✔" : l.round}</span><span class="lesson-title">${l.exercise ? "🧩 " : l.repertoire ? "🗂 " : ""}${esc(l.title)}</span>${l.repertoire ? (s => `<span class="srs-pill${s && s.due <= Date.now() ? " due" : ""}" title="Próximo repaso">${esc(repSrsText(s))}</span>`)(srs[c.id + ":" + l.round]) : ""}<span class="srs-pill">${esc(l.level)}</span></button>`).join("");
     return `<details class="course" data-course="${c.id}"${open.has(c.id) ? " open" : ""}>
       <summary><span class="course-icon">${c.icon}</span><span><b>${esc(c.name)}</b> <span class="small">${L.filter(l => ok.has(l.round)).length} de ${L.length} lecciones</span><br><span class="small">${esc(c.desc)}</span></span></summary>
       <div class="lesson-list">${rows}</div>
       <div class="controls"><button class="sm-btn" data-dl="${c.id}" title="Descargar el curso como fichero .pgn">⬇ Descargar .pgn</button><button class="sm-btn" data-coll="${c.id}" title="Abrirlo en «Biblioteca › Abrir .pgn» para guardar las lecciones que quieras">🗂 Abrir como .pgn</button></div>
     </details>`;
   }).join("");
-  $("courseProgress").textContent = `${finished} de ${total} lecciones`;
+  $("courseProgress").textContent = `${finished} de ${total} lecciones${dueReps ? ` · 📅 ${dueReps} repertorio${dueReps === 1 ? "" : "s"} para repasar` : ""}`;
   $("courseProgress").className = "srs-pill" + (finished ? " ok" : "");
   box.querySelectorAll("[data-i]").forEach(b => b.onclick = () => openLesson(b.dataset.c, +b.dataset.i));
   box.querySelectorAll("[data-dl]").forEach(b => b.onclick = () => download(`ajedrezbase_curso_${b.dataset.dl}.pgn`, COURSE_PGN[b.dataset.dl], "application/x-chess-pgn"));
@@ -5081,8 +5262,17 @@ function placeLessonBox() {
   if (!side && box.parentElement === $("toolsPanel")) $("visBox").after(box);
   box.classList.toggle("side", side);
 }
-wideLayout.addEventListener ? wideLayout.addEventListener("change", placeLessonBox) : wideLayout.addListener(placeLessonBox);
-placeLessonBox();
+/* En el móvil, los mensajes del entrenador (repertorio, problemas, tarjetas) van debajo del tablero */
+const trainFeedbackHome = { parent: $("trainFeedback").parentElement, next: $("trainFeedback").nextElementSibling };
+function placeTrainFeedback() {
+  const el = $("trainFeedback");
+  if (!wideLayout.matches) { if (el.parentElement === trainFeedbackHome.parent) $("lessonBox").after(el); }
+  else if (el.parentElement !== trainFeedbackHome.parent) trainFeedbackHome.parent.insertBefore(el, trainFeedbackHome.next);
+  el.classList.toggle("under-board", !wideLayout.matches);
+}
+const onLayout = () => { placeLessonBox(); placeTrainFeedback(); };
+wideLayout.addEventListener ? wideLayout.addEventListener("change", onLayout) : wideLayout.addListener(onLayout);
+onLayout();
 /* La línea principal de la lección tal como viene en el curso (sin las jugadas que pruebe el usuario) */
 function lessonLine() {
   const out = [];
@@ -5115,7 +5305,7 @@ function renderLesson() {
       <button class="sm-btn${atEnd ? "" : " primary"}" data-l="fwd" ${n.children.length ? "" : "disabled"}>${n === game.root ? "▶ Empezar" : "▶ Siguiente"}</button>
       ${!onMain ? `<button class="sm-btn" data-l="main" title="Volver a la línea principal">↩ Línea principal</button>` : ""}
       <button class="sm-btn" data-l="reset" title="Vuelve a abrir la lección desde el principio y borra tus pruebas">↺ Reiniciar</button>
-      <button class="sm-btn info-btn" data-l="practice" title="${l.exercise ? "Resuelve el ejercicio tú mismo" : "Juega tú las jugadas de la lección desde el principio"}">🎯 ${l.exercise ? "Resolver" : "Practicar"}</button>
+      <button class="sm-btn info-btn" data-l="practice" title="${l.exercise ? "Resuelve el ejercicio tú mismo" : l.repertoire ? "Juega tus jugadas del repertorio; el rival elige al azar entre sus respuestas" : "Juega tú las jugadas de la lección desde el principio"}">🎯 ${l.exercise ? "Resolver" : l.repertoire ? "Entrenar repertorio" : "Practicar"}</button>
       ${next ? `<button class="sm-btn${atEnd ? " primary" : ""}" data-l="next">Lección siguiente ▶</button>` : ""}
       <button class="sm-btn" data-l="close" title="Cerrar el panel de la lección">✖</button>
     </div>`;
@@ -5459,6 +5649,7 @@ document.addEventListener("keydown", e => {
   $("branchMode").value = settings.branchMode;
   $("explorerDbSelect").value = settings.explorerDb;
   buildEditorPalettes();
+  initPuzzleFilters();
   renderLocalEcoList();
   initEndgamePresets();
   renderCollection();

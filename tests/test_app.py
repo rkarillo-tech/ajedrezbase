@@ -579,7 +579,7 @@ def prueba_cursos(browser):
     ctx = contexto(browser)
     pg, errores = nueva_pagina(ctx)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar(pg.locator("#courseList details.course").count() == 5 and "0 de 53" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los cinco cursos y el progreso")
+    comprobar(pg.locator("#courseList details.course").count() == 6 and "0 de 56" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los seis cursos y el progreso")
     pg.locator('details[data-course="finales"] summary').click()
     pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").click()
     comprobar(pg.is_visible("#lessonBox") and "construir el puente" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("1K1k4/1P6"), "abrir una lección la pone en el tablero con su explicación")
@@ -618,7 +618,7 @@ def prueba_cursos(browser):
     pg.reload()
     pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar("2 de 53" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
+    comprobar("2 de 56" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
     pg.locator('details[data-course="aperturas"] summary').click()
     pg.locator('details[data-course="aperturas"] [data-coll]').click()
     comprobar(pg.inner_text("#collCount") == "11" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")
@@ -699,6 +699,69 @@ def prueba_motor_ayuda(browser):
         comprobar(pg.evaluate("cur().parent.children.length") == antes + 1 and "propone el motor" in pg.inner_text("#moveCompare"), "«Probar la del motor» la juega como variante")
     pg.click("#settingsBtn")
     comprobar("Motor interno" in pg.inner_text("#engineStatus") and "jsDelivr" in pg.inner_text("#engineStatus") and "bloqueador" in pg.inner_text("#engineStatus"), "Ajustes explica por qué no se ha cargado Stockfish 19")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def jugar_lo_que_toca(pg, max_jugadas=40):
+    """Hace, en el entrenador, la jugada esperada (la primera de las variantes) hasta que termine."""
+    for _ in range(max_jugadas):
+        pg.wait_for_function("!trainer.active || (trainerUserTurn() && !trainer.busy)", timeout=10000)
+        if not pg.evaluate("trainer.active"):
+            return
+        u = pg.evaluate("cur().children[0].uci")
+        casilla(pg, u[:2]).click(); casilla(pg, u[2:4]).click()
+        pg.wait_for_timeout(120)
+
+
+def prueba_entrenamiento_19(browser):
+    print("Novedades 1.9: repertorios, problemas de táctica e informe del entrenador")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    # Repertorios
+    pg.click('.tab-btn[data-tab="courses"]')
+    pg.locator('details[data-course="repertorios"] summary').click()
+    comprobar(pg.locator('details[data-course="repertorios"] .lesson-row').count() == 3, "el curso de repertorios tiene tres repertorios")
+    pg.locator('details[data-course="repertorios"] .lesson-row', has_text="Caro-Kann").click()
+    comprobar(pg.evaluate("ui.flipped") and "Entrenar repertorio" in pg.inner_text("#lessonBox"), "un repertorio con negras se abre con las negras abajo y se entrena con 🎯")
+    pg.locator("#lessonBox [data-l=practice]").click()
+    jugar_lo_que_toca(pg)
+    pg.wait_for_function("document.getElementById('trainFeedback').textContent.includes('Próximo repaso')", timeout=10000)
+    comprobar("Línea perfecta" in pg.inner_text("#trainFeedback") and pg.evaluate("Object.values(LS.get('ajedrezRepasos', {}))[0].box") == 1, "al terminar una línea se programa el repaso del repertorio")
+    pg.click('.tab-btn[data-tab="courses"]')
+    comprobar("mañana" in pg.locator('details[data-course="repertorios"] .lesson-row', has_text="Caro-Kann").inner_text(), "la lista de cursos dice cuándo toca repasar cada repertorio")
+    # Problemas de táctica
+    pg.click('.tab-btn[data-tab="tools"]')
+    comprobar(pg.evaluate("PUZZLES.length") >= 20 and pg.locator("#puzzleTheme option").count() >= 4, "hay un banco de problemas con varios temas")
+    pg.select_option("#puzzleCount", "5")
+    pg.click("#puzzleStartBtn")
+    pg.wait_for_function("trainer.active && trainer.puzzle && trainerUserTurn() && !trainer.busy", timeout=10000)
+    comprobar("Problema 1 de 5" in pg.inner_text("#trainFeedback") and pg.evaluate("Pgn.pathTo(cur()).length") == 2, "el problema empieza con la jugada del rival ya hecha")
+    jugar_lo_que_toca(pg)
+    pg.wait_for_function("document.getElementById('trainFeedback').textContent.includes('Tu nivel')", timeout=10000)
+    comprobar("Resuelto" in pg.inner_text("#trainFeedback") and pg.evaluate("LS.get('ajedrezNivelProblemas', {}).n") == 1, "resolver un problema ajusta tu nivel y lo programa para repasarlo")
+    pg.click("#stopPuzzlesBtn")
+    comprobar("Sesión terminada" in pg.inner_text("#trainFeedback") and "1 hechos" in pg.inner_text("#puzzleInfo") or "1 hechos" in pg.inner_text("#puzzleInfo"), "al terminar se resume la sesión")
+    pg.click("#puzzlesBackBtn")
+    # Informe del entrenador
+    pg.click('.tab-btn[data-tab="study"]')
+    pg.fill("#moveInput", "1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6")
+    pg.click("#importBtn")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuColor", "-1")
+    pg.select_option("#cpuClock", "")
+    pg.select_option("#cpuFrom", "here")
+    pg.click("#cpuStartBtn")
+    pg.wait_for_function("ui.cpu.over", timeout=20000)
+    comprobar("Informe del entrenador" in pg.inner_text("#cpuBox"), "al terminar contra la CPU se ofrece el informe del entrenador")
+    pg.locator("#cpuBox [data-c=coach]").click()
+    pg.wait_for_function("document.getElementById('cpuBox').textContent.includes('Tu precisión')", timeout=120000)
+    txt = pg.inner_text("#cpuBox")
+    comprobar("3...Cf6" in txt and "Era mejor" in txt and "💡" in txt, "el informe enseña tus errores más caros, la jugada buena y un consejo")
+    pg.locator("#cpuBox [data-k=retry]").click()
+    comprobar(pg.evaluate("Retry.active") and "Error 1 de" in pg.inner_text("#retryBox"), "los errores del informe se practican como ejercicios")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -824,7 +887,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:
