@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Revisa los cursos (cursos/*.pgn): que cada lección se lea sin errores, que tenga título y número,
    y, si se indica Stockfish, que las jugadas de la línea principal no pierdan mucho sin estar
-   marcadas con ? o ?? (y que las marcadas con ?? o ? sean de verdad malas).
+   marcadas con ?, ??, ?! o !? (y que las marcadas con ?? o ? sean de verdad malas).
 
    node tools/revisar_cursos.js                                   sólo lectura y etiquetas
    SF=ruta/a/stockfish-19-lite-single.js node tools/revisar_cursos.js [curso] [ms]
@@ -85,7 +85,8 @@ const fmt = v => (Math.abs(v) >= 1900 ? (v > 0 ? "#" : "-#") : (v / 100).toFixed
         else after = -score((await sf.eval(fenA)).ev);
         const best = score(a.ev), drop = best - after;
         const label = `${name}: ${Chess.toFen(n.parent.state).split(" ")[1] === "w" ? n.parent.state.full + "." : n.parent.state.full + "..."}${n.san}${n.nag || ""}`;
-        const bad = n.nag === "?" || n.nag === "??";
+        const bad = ["?", "??", "?!", "!?"].includes(n.nag);   // marcada: el comentario ya explica lo que pasa
+        if (a.best === n.uci) continue;   // es la del motor: la diferencia es sólo ruido del análisis
         const decided = (best > 900 && after > 600) || (best < -300 && after < -300);   // ya ganada o ya perdida
         if (!bad && drop > 150 && !decided) report(`${label} pierde ${fmt(drop)} (mejor ${a.best}: ${fmt(best)} → ${fmt(after)})`);
         if (n.nag === "??" && drop < 150) report(`${label} marcada ?? pero sólo pierde ${fmt(drop)}`);

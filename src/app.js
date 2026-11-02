@@ -4854,7 +4854,8 @@ const COURSES = [
   { id: "aperturas", icon: "📖", name: "Aperturas", desc: "Los principios, los errores típicos y las aperturas principales con blancas y con negras, explicando el porqué de cada jugada." },
   { id: "tactica", icon: "⚔", name: "Táctica", desc: "Horquillas, clavadas, enfiladas, descubiertas, sobrecarga y mates típicos, con ejercicios para resolver." },
   { id: "estrategia", icon: "🧭", name: "Estrategia", desc: "Cómo hacer un plan: estructuras de peones, piezas buenas y malas, columnas, casillas fuertes y peones pasados." },
-  { id: "finales", icon: "👑", name: "Finales", desc: "Los mates básicos, rey y peón, la oposición, Lucena, Philidor y los finales que hay que saber de memoria." }
+  { id: "finales", icon: "👑", name: "Finales", desc: "Los mates básicos, rey y peón, la oposición, Lucena, Philidor y los finales que hay que saber de memoria." },
+  { id: "partidas", icon: "🏆", name: "Partidas magistrales", desc: "Partidas célebres de Morphy, Anderssen, Fischer, Karpov y Kaspárov, comentadas jugada a jugada: qué ideas las decidieron y dónde se equivocaron." }
 ];
 const courseCache = {};
 function courseLessons(id) {
@@ -4914,10 +4915,24 @@ function openLesson(id, i) {
   ui.lesson = { course: id, i, game: r.game, done: false };
   renderCourses();
   renderLesson();
-  setTimeout(() => { const b = $("lessonBox").getBoundingClientRect(), t = $("topBar").getBoundingClientRect(); if (t.top < 0 || b.bottom > innerHeight) $("topBar").scrollIntoView({ block: "start", behavior: "smooth" }); }, 40);
+  setTimeout(() => {
+    const b = $("lessonBox").getBoundingClientRect(), tb = $("topBar").getBoundingClientRect();
+    if (wideLayout.matches) { if (tb.top < 0 || $("bottomBar").getBoundingClientRect().bottom > innerHeight) scrollTo({ top: 0, behavior: "smooth" }); }
+    else if (tb.top < 0 || b.bottom > innerHeight) $("topBar").scrollIntoView({ block: "start", behavior: "smooth" });
+  }, 40);
   return true;
 }
-/* Panel de la lección, debajo del tablero: la explicación completa de la posición y los botones para seguir */
+/* En el ordenador el panel de la lección va en la columna derecha, junto al tablero; en el móvil, debajo del tablero */
+const wideLayout = matchMedia("(min-width: 981px)");
+function placeLessonBox() {
+  const box = $("lessonBox"), side = wideLayout.matches;
+  if (side && box.parentElement !== $("toolsPanel")) $("toolsPanel").prepend(box);
+  if (!side && box.parentElement === $("toolsPanel")) $("visBox").after(box);
+  box.classList.toggle("side", side);
+}
+wideLayout.addEventListener ? wideLayout.addEventListener("change", placeLessonBox) : wideLayout.addListener(placeLessonBox);
+placeLessonBox();
+/* Panel de la lección: la explicación completa de la posición y los botones para seguir */
 function renderLesson() {
   const box = $("lessonBox");
   const L = ui.lesson;

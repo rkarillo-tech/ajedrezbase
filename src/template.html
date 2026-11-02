@@ -73,7 +73,7 @@ h1 { font-size: 1.12rem; margin: 0; white-space: nowrap; }
 
 main {
   max-width: 1600px; margin: auto; padding: 12px;
-  display: grid; grid-template-columns: minmax(320px, 620px) minmax(380px, 1fr); gap: 14px; align-items: start;
+  display: grid; grid-template-columns: minmax(320px, min(620px, calc(100vh - 140px))) minmax(380px, 1fr); gap: 14px; align-items: start;
 }
 .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 11px; padding: 12px; min-width: 0; }
 
@@ -105,6 +105,8 @@ main {
 .guess-score { display: flex; gap: 10px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); margin-top: 3px; }
 .guess-score b { color: var(--text); }
 .retry-box.lesson-box { background: #121b2b; border-color: var(--info); }
+/* En el ordenador, la lección va arriba de la columna derecha, junto al tablero, y no se va al desplazar */
+.retry-box.lesson-box.side { position: sticky; top: 62px; z-index: 5; margin: 0 0 10px; max-height: calc(100vh - 80px); overflow-y: auto; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
 .lesson-text { margin-top: 5px; font-size: .9rem; line-height: 1.5; white-space: pre-line; }
 .lesson-step { color: var(--muted); }
 .course { border: 1px solid var(--border); border-radius: 8px; margin-top: 8px; background: #101520; }
@@ -1100,7 +1102,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <span>📘 Cursos de ajedrez</span>
         <span id="courseProgress" class="srs-pill"></span>
       </h2>
-      <p class="small">Lecciones comentadas paso a paso, con flechas que señalan las ideas. Abre una lección y avanza con <b>▶ Siguiente</b> (o la flecha <kbd>→</kbd>): debajo del tablero verás la explicación de cada jugada. Si mueves tú una pieza, pruebas tu propia variante. Con <b>🎯 Practicar</b> juegas tú las jugadas de la lección, y los ejercicios 🧩 se resuelven igual.</p>
+      <p class="small">Lecciones comentadas paso a paso, con flechas que señalan las ideas. Abre una lección y avanza con <b>▶ Siguiente</b> (o la flecha <kbd>→</kbd>): junto al tablero (debajo, en el móvil) verás la explicación de cada jugada. Si mueves tú una pieza, pruebas tu propia variante. Con <b>🎯 Practicar</b> juegas tú las jugadas de la lección, y los ejercicios 🧩 se resuelven igual.</p>
       <div id="courseList" class="course-list"></div>
     </div>
 

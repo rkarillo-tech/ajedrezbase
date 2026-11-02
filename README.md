@@ -31,7 +31,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Buscar posición** | Encuentra en tu biblioteca o en un `.pgn` las partidas con la posición del tablero, su estructura de peones o su material, y ábrelas en ese momento |
 | **Biblioteca** | Guardas sólo lo que te interesa: ⭐ favoritas, etiquetas, buscador, borrado individual, exportar y copias de seguridad |
 | **Marcadores** | 📌 Marca posiciones como idea, táctica, error típico, plan… con nota; búscalas y vuelve a ellas con un clic |
-| **Cursos** | Más de 40 lecciones en español comentadas paso a paso: aperturas, táctica (con ejercicios), estrategia y finales, con flechas, variantes y práctica; también se pueden descargar en PGN |
+| **Cursos** | Más de 50 lecciones en español comentadas paso a paso: aperturas, táctica (con ejercicios), estrategia, finales y partidas magistrales, con flechas, variantes y práctica; también se pueden descargar en PGN |
 | **Jugar contra la CPU** | 8 niveles y 5 estilos (equilibrado, ⚔ agresivo, 🏰 posicional, 🛡 defensivo, 🎲 humano), reloj de 1+0 a 30+0 con incremento, rendirse, tablas, deshacer sin reloj y revancha; también a ciegas |
 | **Adivina la jugada** | Reproduce una partida clásica o tuya acertando las jugadas de un bando: el motor puntúa cada intento de 0 a 5 y comparas tu puntuación con la del jugador |
 | **A ciegas y visualización** | Piezas ocultas (`B`) para jugar a ciegas, «sigue la línea» de memoria (2 a 8 medias jugadas), color de las casillas y encuentra la casilla en 30 s con récord |
@@ -118,11 +118,11 @@ src/eco.js            Libro ECO en español, finales clásicos y antología de p
 src/pieces.js         Dibujo de las piezas
 src/app.js            Interfaz, motor, análisis, biblioteca (IndexedDB), marcadores, entrenador
 src/help.html         Guía de uso (también se exporta a GUIA.md)
-cursos/               Cursos en PGN (aperturas, táctica, estrategia y finales), incluidos en la aplicación al construirla
+cursos/               Cursos en PGN (aperturas, táctica, estrategia, finales y partidas), incluidos en la aplicación al construirla
 assets/               Icono (icon.svg y sus PNG, generados con tools/gen_icons.py) y captura
 notas/                Notas de cada versión
 tests/                Pruebas del núcleo (Node) y de extremo a extremo (Playwright)
-tools/                Iconos y revisor de los cursos (revisar_cursos.js, con Stockfish opcional)
+tools/                Iconos, revisor de los cursos (revisar_cursos.js) y generador de las partidas comentadas
 ```
 
 **Principios:** un solo archivo que funciona con doble clic; nada sale del navegador salvo las consultas a Lichess

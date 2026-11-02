@@ -170,3 +170,44 @@
 [Result "1-0"]
 
 { Juegan las blancas. El alfil de g4 «clava» el caballo de f3 contra la dama… pero la clavada no es absoluta. ¿Puedes aprovecharlo? } 5. Nxe5! { [%cal Gf3e5] ¡Se rompe la clavada! El caballo ataca f7 y entrega la dama. } 5... dxe5 { La mejor respuesta: las negras no toman la dama y pierden «sólo» un peón. } (5... Bxd1? { Si se come la dama… } 6. Bxf7+ Ke7 7. Nd5# { [%cal Gd5e7,Gf7e8] ¡Mate de Légal! Tres piezas menores contra el rey sin salida. }) 6. Qxg4 { Las blancas recuperan la pieza y ganan un peón. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "15"]
+[Title "Ejercicio: el jaque a la descubierta"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "3k4/8/8/8/1q6/8/3B4/3RK3 w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Gd1d8] Juegan las blancas y ganan la dama. Pista: el alfil de d2 tapa la columna de la torre… y la dama negra está en una casilla que el alfil puede alcanzar. } 1. Bxb4+ { [%cal Gd1d8,Gd2b4] El alfil captura la dama y, al apartarse, la torre da jaque a la descubierta. Las negras no tienen tiempo de recuperar nada. } 1... Kc7 2. Bc3 { Las blancas tienen torre y alfil contra nada: ganan fácilmente. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "16"]
+[Title "Ejercicio: la enfilada con el alfil"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "1q6/8/8/4k3/8/8/1P6/K5B1 w - - 0 1"]
+[Result "1-0"]
+
+{ Juegan las blancas y ganan la dama. Pista: el rey y la dama negros están en la misma diagonal. } 1. Bh2+ { [%cal Gh2b8] Jaque por la diagonal h2-b8. El rey tiene que apartarse y deja la dama sin protección. } 1... Kd4 2. Bxb8 { Las blancas ganan la dama y, con el peón de más, el final está ganado. } 1-0
+
+[Event "Curso de táctica"]
+[Site "AjedrezBase"]
+[Round "17"]
+[Title "Ejercicio: el final de la Partida de la Ópera"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[White "Morphy, Paul"]
+[Black "Duque de Brunswick y Conde Isouard"]
+[SetUp "1"]
+[FEN "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 0 16"]
+[Result "1-0"]
+
+{ [%csl Rd7,Re8] París, 1858. Juega Morphy con blancas y da mate en dos. Pista: el caballo de d7 es el único defensor de la última fila; ¿cómo puedes desviarlo? } 16. Qb8+!! { [%cal Gb3b8] ¡Sacrificio de dama! El caballo tiene que capturar y deja libre la casilla d8. } 16... Nxb8 17. Rd8# { [%cal Gd1d8,Gg5d8] Mate: la torre, protegida por el alfil de g5, no se puede capturar. Si quieres ver la partida entera comentada, la tienes en el curso de partidas magistrales. } 1-0
