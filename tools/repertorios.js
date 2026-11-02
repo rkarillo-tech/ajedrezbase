@@ -134,6 +134,63 @@ const REPS = [
       "d4 d5 Nf3 Nf6 e3 e6 Bd3 c5": "El Colle-Zukertort: las blancas quieren atacar el enroque con Ce5 y f4. Las negras desarrollan con naturalidad y presionan el centro.",
       "d4 d5 Nf3 Nf6 Bf4 c5 e3 Nc6 c3 Qb6": "Ataca b2: si las blancas lo defienden con la dama, …c4 gana espacio en el flanco de dama."
     }
+  },
+  {
+    title: "Repertorio con negras contra 1.c4, 1.Cf3 y otras", side: "black", level: "Intermedio",
+    intro: "Para completar el Gambito de Dama Declinado: contra las aperturas de flanco (Inglesa, Réti, Bird, Larsen, fianchetto de rey) las negras juegan …e6, …d5 y …Cf6 con la misma estructura. Muchas líneas transponen al Gambito de Dama, así que no hay que aprender nada nuevo; contra los sistemas sin d4, las negras ocupan el centro con comodidad. Entrénalo con 🎯 jugando con negras.",
+    lines: [
+      "c4 e6 Nc3 d5 d4 Nf6",
+      "c4 e6 Nf3 d5 d4 Nf6",
+      "c4 e6 Nf3 d5 g3 Nf6 Bg2 Be7 O-O O-O b3 c5",
+      "c4 e6 g3 d5 Bg2 Nf6 Nf3 Be7 O-O O-O",
+      "Nf3 d5 d4 Nf6 c4 e6",
+      "Nf3 d5 c4 e6 g3 Nf6 Bg2 Be7 O-O O-O",
+      "Nf3 d5 g3 Nf6 Bg2 e6 O-O Be7 d3 O-O Nbd2 c5 e4 Nc6",
+      "f4 d5 Nf3 Nf6 e3 g6 Be2 Bg7 O-O O-O",
+      "b3 e5 Bb2 Nc6 e3 d5",
+      "g3 d5 Bg2 Nf6 Nf3 e6 O-O Be7"
+    ],
+    notes: {
+      "c4 e6": "Contra la Inglesa, …e6 y …d5: la misma estructura del Gambito de Dama Declinado.",
+      "c4 e6 Nc3 d5 d4 Nf6": "Transpone al Gambito de Dama: sigue con tu repertorio contra 1.d4.",
+      "c4 e6 Nf3 d5 g3": "La Réti con fianchetto: las negras mantienen el centro y desarrollan con naturalidad.",
+      "c4 e6 Nf3 d5 g3 Nf6 Bg2 Be7 O-O O-O b3 c5": "Con …c5 las negras ganan espacio en el centro y liberan el juego.",
+      "Nf3 d5": "Contra 1.Cf3, …d5 ocupa el centro: si las blancas juegan d4 y c4, es un Gambito de Dama.",
+      "Nf3 d5 g3 Nf6 Bg2 e6 O-O Be7 d3": "El ataque indio de rey: las blancas preparan e4. Las negras ganan espacio con …c5 y …Cc6.",
+      "f4 d5": "La apertura Bird: las negras ocupan el centro.",
+      "f4 d5 Nf3 Nf6 e3 g6": "El fianchetto controla la gran diagonal y la casilla e5, que las blancas debilitan con f4.",
+      "b3 e5": "Contra la Larsen, …e5: el alfil de b2 choca contra un centro bien protegido.",
+      "g3 d5": "Contra el fianchetto de rey, centro y desarrollo: …d5, …Cf6, …e6 y enroque."
+    }
+  },
+  {
+    title: "Repertorio con blancas: 1.d4 y el sistema Londres", side: "white", level: "Principiante",
+    intro: "Una alternativa sencilla a 1.e4: con 1.d4 y el sistema Londres las blancas colocan sus piezas casi siempre igual (d4, Af4, e3, Cf3, c3, Cbd2, Ad3, h3), con un centro sólido y planes claros: Ce5, ataque en el flanco de rey o la ruptura e4. Es ideal si quieres poca teoría. Entrénalo con 🎯 jugando con blancas.",
+    lines: [
+      "d4 d5 Bf4 Nf6 e3 e6 Nf3 c5 c3 Nc6 Nbd2 Bd6 Bg3 O-O Bd3",
+      "d4 d5 Bf4 Nf6 e3 c5 c3 Nc6 Nd2 Qb6 Qb3 c4 Qc2",
+      "d4 d5 Bf4 c5 e3 Nc6 c3 Nf6 Nd2",
+      "d4 d5 Bf4 Bf5 e3 e6 c4",
+      "d4 Nf6 Bf4 g6 e3 Bg7 Nf3 O-O Be2 d6 h3 c5 c3",
+      "d4 Nf6 Bf4 e6 e3 c5 c3 Nc6 Nd2 d5 Ngf3",
+      "d4 e6 Bf4 d5 e3 Nf6 Nf3",
+      "d4 f5 Bf4 Nf6 e3 e6 Nf3 Be7 h3",
+      "d4 d6 Bf4 Nf6 Nf3 g6 e3 Bg7 h3",
+      "d4 c5 d5 Nf6 Nc3 d6 e4 g6 Nf3 Bg7 Be2 O-O O-O"
+    ],
+    notes: {
+      "d4": "Ocupa el centro con un peón protegido por la dama.",
+      "d4 d5 Bf4": "El alfil sale ANTES de jugar e3, para no quedar encerrado: es la clave del Londres.",
+      "d4 d5 Bf4 Nf6 e3 e6 Nf3 c5 c3": "La «pirámide» c3-d4-e3 sostiene el centro contra …c5.",
+      "d4 d5 Bf4 Nf6 e3 e6 Nf3 c5 c3 Nc6 Nbd2 Bd6 Bg3": "Mantén el alfil: si las negras cambian en g3, hxg3 abre la columna h para tu torre.",
+      "d4 d5 Bf4 Nf6 e3 c5 c3 Nc6 Nd2 Qb6": "Las negras atacan b2. Con Db3 se ofrece el cambio de damas.",
+      "d4 d5 Bf4 Nf6 e3 c5 c3 Nc6 Nd2 Qb6 Qb3 c4": "Las negras ganan espacio; la dama se retira a c2 y las blancas prepararán e4.",
+      "d4 d5 Bf4 Bf5": "Las negras copian la idea. Con c4 las blancas atacan el centro aprovechando que el alfil negro ha salido.",
+      "d4 Nf6 Bf4 g6": "Contra el fianchetto (India de Rey o Grünfeld), el Londres sigue igual, con h3 para que el alfil tenga refugio.",
+      "d4 Nf6 Bf4 g6 e3 Bg7 Nf3 O-O Be2 d6 h3 c5 c3": "Centro sólido; las blancas enrocan y pueden atacar con c4 o en el centro.",
+      "d4 f5": "La Holandesa: el Londres funciona igual. El alfil de f4 vigila la casilla e5.",
+      "d4 c5": "El Benoni: aquí lo más sencillo es avanzar 2.d5 y jugar con el centro en una India de Rey invertida, con mucho espacio."
+    }
   }
 ];
 
