@@ -6,7 +6,8 @@
 const VERSION = "{{VERSION}}";
 const CACHE = "ajedrezbase-app-" + VERSION;
 const ENGINE_CACHE = "ajedrezbase-motor";
-const ENGINES = ["{{SF19_JS}}", "{{SF19_WASM}}", "{{SF10_JS}}"];
+const ENGINES = ["{{SF19_JS}}", "{{SF19_WASM}}", "{{SF19B_JS}}", "{{SF19B_WASM}}", "{{SF10_JS}}"];
+const SF19_WASMS = ["{{SF19_WASM}}", "{{SF19B_WASM}}"];   // el mismo fichero en jsDelivr y en unpkg
 const PRECACHE_ENGINES = ["{{SF19_JS}}", "{{SF19_WASM}}"];   // el 10 sólo se guarda si llega a usarse
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "sf-worker.js",
@@ -22,7 +23,7 @@ self.addEventListener("install", event => {
     for (const url of PRECACHE_ENGINES) {
       try {
         if (!(await engine.match(url))) { const res = await fetch(url, { mode: "cors" }); if (res.ok) await engine.put(url, res); }
-      } catch (e) { /* se reintentará más adelante */ }
+      } catch (e) { /* se reintentará más adelante (o desde unpkg) */ }
     }
     await self.skipWaiting();
   })());
@@ -44,17 +45,24 @@ self.addEventListener("fetch", event => {
   // Stockfish 19 busca su .wasm en la dirección que va tras «#» en la del Worker. Cuando este service
   // worker entrega sf-worker.js, el navegador pierde ese «#…» y Stockfish pide «sf-worker.wasm» a
   // este mismo sitio: se le da el .wasm de Stockfish 19.
-  const engineUrl = ENGINES.includes(url.href) ? url.href
-    : url.origin === self.location.origin && url.pathname.endsWith("/sf-worker.wasm") ? "{{SF19_WASM}}" : null;
+  const wasmHere = url.origin === self.location.origin && url.pathname.endsWith("/sf-worker.wasm");
+  const engineUrl = ENGINES.includes(url.href) ? url.href : wasmHere ? "{{SF19_WASM}}" : null;
   if (engineUrl) {
     event.respondWith((async () => {
       const cache = await caches.open(ENGINE_CACHE);
-      const hit = await cache.match(engineUrl);
-      if (hit) return hit;
-      // Se pide siempre en modo CORS para que la copia sirva tanto a importScripts como a fetch (wasm)
-      const res = await fetch(engineUrl, { mode: "cors", credentials: "omit" });
-      if (res.ok) cache.put(engineUrl, res.clone());
-      return res;
+      // El .wasm de Stockfish 19 es el mismo en jsDelivr y en unpkg: vale la copia de cualquiera
+      const urls = SF19_WASMS.includes(engineUrl) ? [engineUrl, ...SF19_WASMS.filter(u => u !== engineUrl)] : [engineUrl];
+      for (const u of urls) { const hit = await cache.match(u); if (hit) return hit; }
+      let last;
+      for (const u of urls) {
+        try {
+          // Se pide siempre en modo CORS para que la copia sirva tanto a importScripts como a fetch (wasm)
+          const res = await fetch(u, { mode: "cors", credentials: "omit" });
+          if (res.ok) { cache.put(u, res.clone()); return res; }
+          last = res;
+        } catch (e) { last = null; }
+      }
+      return last || Response.error();
     })());
     return;
   }

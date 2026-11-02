@@ -1,12 +1,13 @@
-/* AjedrezBase 1.7.0 · service worker: permite instalar la aplicación y usarla sin conexión.
+/* AjedrezBase 1.8.0 · service worker: permite instalar la aplicación y usarla sin conexión.
    - La página se pide primero a la red (así siempre tienes la última versión) y, si no hay
      conexión, se sirve la copia guardada.
    - Stockfish (19 Lite y, si se usa, 10) se guarda la primera vez y se reutiliza entre versiones.
    - Las consultas a Lichess nunca pasan por aquí: van siempre a la red. */
-const VERSION = "1.7.0";
+const VERSION = "1.8.0";
 const CACHE = "ajedrezbase-app-" + VERSION;
 const ENGINE_CACHE = "ajedrezbase-motor";
-const ENGINES = ["https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js", "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm", "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"];
+const ENGINES = ["https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js", "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm", "https://unpkg.com/stockfish@19.0.1/bin/stockfish-19-lite-single.js", "https://unpkg.com/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm", "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"];
+const SF19_WASMS = ["https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm", "https://unpkg.com/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm"];   // el mismo fichero en jsDelivr y en unpkg
 const PRECACHE_ENGINES = ["https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js", "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm"];   // el 10 sólo se guarda si llega a usarse
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "sf-worker.js",
@@ -22,7 +23,7 @@ self.addEventListener("install", event => {
     for (const url of PRECACHE_ENGINES) {
       try {
         if (!(await engine.match(url))) { const res = await fetch(url, { mode: "cors" }); if (res.ok) await engine.put(url, res); }
-      } catch (e) { /* se reintentará más adelante */ }
+      } catch (e) { /* se reintentará más adelante (o desde unpkg) */ }
     }
     await self.skipWaiting();
   })());
@@ -44,17 +45,24 @@ self.addEventListener("fetch", event => {
   // Stockfish 19 busca su .wasm en la dirección que va tras «#» en la del Worker. Cuando este service
   // worker entrega sf-worker.js, el navegador pierde ese «#…» y Stockfish pide «sf-worker.wasm» a
   // este mismo sitio: se le da el .wasm de Stockfish 19.
-  const engineUrl = ENGINES.includes(url.href) ? url.href
-    : url.origin === self.location.origin && url.pathname.endsWith("/sf-worker.wasm") ? "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm" : null;
+  const wasmHere = url.origin === self.location.origin && url.pathname.endsWith("/sf-worker.wasm");
+  const engineUrl = ENGINES.includes(url.href) ? url.href : wasmHere ? "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm" : null;
   if (engineUrl) {
     event.respondWith((async () => {
       const cache = await caches.open(ENGINE_CACHE);
-      const hit = await cache.match(engineUrl);
-      if (hit) return hit;
-      // Se pide siempre en modo CORS para que la copia sirva tanto a importScripts como a fetch (wasm)
-      const res = await fetch(engineUrl, { mode: "cors", credentials: "omit" });
-      if (res.ok) cache.put(engineUrl, res.clone());
-      return res;
+      // El .wasm de Stockfish 19 es el mismo en jsDelivr y en unpkg: vale la copia de cualquiera
+      const urls = SF19_WASMS.includes(engineUrl) ? [engineUrl, ...SF19_WASMS.filter(u => u !== engineUrl)] : [engineUrl];
+      for (const u of urls) { const hit = await cache.match(u); if (hit) return hit; }
+      let last;
+      for (const u of urls) {
+        try {
+          // Se pide siempre en modo CORS para que la copia sirva tanto a importScripts como a fetch (wasm)
+          const res = await fetch(u, { mode: "cors", credentials: "omit" });
+          if (res.ok) { cache.put(u, res.clone()); return res; }
+          last = res;
+        } catch (e) { last = null; }
+      }
+      return last || Response.error();
     })());
     return;
   }

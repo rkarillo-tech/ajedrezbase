@@ -178,9 +178,17 @@ const viewState = () => (editor.active ? editor.state : game.current.state);
 
 /* ---------- 7. Motor: Stockfish 19 Lite (WASM, NNUE) → Stockfish 10 (asm.js) → motor interno ---------- */
 const STOCKFISH = [
-  { id: "sf19", name: "Stockfish 19", js: "{{SF19_JS}}", wasm: "{{SF19_WASM}}", needsWasm: true, size: "1,9 MB" },
-  { id: "sf10", name: "Stockfish 10", js: "{{SF10_JS}}", size: "1,5 MB" }
+  { id: "sf19", name: "Stockfish 19", host: "jsDelivr", js: "{{SF19_JS}}", wasm: "{{SF19_WASM}}", needsWasm: true, size: "1,9 MB" },
+  { id: "sf19b", name: "Stockfish 19", host: "unpkg", js: "{{SF19B_JS}}", wasm: "{{SF19B_WASM}}", needsWasm: true, size: "1,9 MB" },
+  { id: "sf10", name: "Stockfish 10", host: "cdnjs", js: "{{SF10_JS}}", size: "1,5 MB" }
 ];
+/* Por qué no se ha podido cargar un motor, en palabras claras */
+function engineFailReason(def, slow) {
+  if (navigator.onLine === false) return `${def.name} no se ha podido cargar: no hay conexión a internet`;
+  return slow
+    ? `${def.name} tardó demasiado en descargarse desde ${def.host} (conexión lenta o inestable)`
+    : `no se pudo descargar ${def.name} desde ${def.host}. Hay conexión, así que probablemente lo bloquea un bloqueador de anuncios, el antivirus, un cortafuegos o la red (por ejemplo, la de una empresa o un centro de estudios)`;
+}
 function makeFakeWorker() {
   // Respaldo si el navegador no permite Workers: ejecuta el motor interno en el hilo principal
   const fake = { onmessage: null, terminate() {} };
@@ -194,8 +202,9 @@ const Engine = {
   init() {
     this.shutdown();
     this.note = "";
+    this.fails = [];
     if (settings.engine === "internal") this.startInternal("");
-    else this.startStockfish(settings.engine === "sf10" ? 1 : 0);
+    else this.startStockfish(settings.engine === "sf10" ? STOCKFISH.findIndex(d => d.id === "sf10") : 0);
   },
   shutdown() {
     clearTimeout(this.readyTimer);
@@ -212,7 +221,7 @@ const Engine = {
      suelto, desde un Worker «blob». */
   startStockfish(i = 0, forceBlob = false) {
     const def = STOCKFISH[i];
-    if (!def) { this.startInternal(this.note || "no se pudo cargar Stockfish (¿sin conexión?)"); return; }
+    if (!def) { this.startInternal(this.note || engineFailReason({ name: "Stockfish", host: "internet" })); return; }
     if (def.needsWasm && typeof WebAssembly !== "object") { this.startStockfish(i + 1); return; }
     const sameOrigin = !forceBlob && /^https?:$/.test(location.protocol);
     const hash = def.wasm ? "#" + encodeURIComponent(def.wasm) : "";
@@ -233,7 +242,7 @@ const Engine = {
       const pend = this.pending;
       this.pending = null;
       this.shutdown();
-      if (reason) this.note = reason;
+      if (reason) { this.note = reason; this.fails.push(reason); }
       this.startStockfish(nextI, blob);
       if (pend) this.pending = pend;
     };
@@ -241,9 +250,9 @@ const Engine = {
       if (e && e.preventDefault) e.preventDefault();
       if (this.ready || this.kind !== "stockfish" || this.w !== w) return;
       if (sameOrigin) retry(i, true);
-      else retry(i + 1, false, `${def.name} no está disponible (¿sin conexión?)`);
+      else retry(i + 1, false, engineFailReason(def));
     };
-    this.readyTimer = setTimeout(() => { if (!this.ready && this.kind === "stockfish" && this.w === w) retry(i + 1, false, `${def.name} tardó demasiado en cargar`); }, 30000);
+    this.readyTimer = setTimeout(() => { if (!this.ready && this.kind === "stockfish" && this.w === w) retry(i + 1, false, engineFailReason(def, true)); }, 30000);
     this.send("uci");
   },
   fallback(reason) {
@@ -270,9 +279,10 @@ const Engine = {
       this.ready = true;
       clearTimeout(this.readyTimer);
       this.name = this.kind === "stockfish" ? this.def.name : "Motor interno";
-      if (this.kind === "stockfish" && this.def.id === "sf19") this.note = "";
+      if (this.kind === "stockfish" && this.def.id.startsWith("sf19")) this.note = "";
       if (this.kind === "stockfish") this.send("setoption name Hash value 32");
       setEngineBadge("⚙ " + this.name + (this.note ? " ⚠" : ""), this.note);
+      renderEngineStatus();
       this.pump();
       if (!this.running) requestLive();
       return;
@@ -340,10 +350,21 @@ const Engine = {
     });
   }
 };
+/* Estado del motor en ⚙ Ajustes: qué se está usando y, si no es Stockfish 19, por qué */
+function renderEngineStatus() {
+  const el = $("engineStatus");
+  if (!el) return;
+  const name = Engine.ready ? Engine.name : "cargando…";
+  const fails = (Engine.fails || []).filter((x, i, a) => a.indexOf(x) === i);
+  const sf19 = Engine.ready && Engine.def && Engine.kind === "stockfish" && Engine.def.id.startsWith("sf19");
+  el.innerHTML = `Ahora se usa: <b>${esc(name)}</b>${sf19 && Engine.def.id === "sf19b" ? " (descargado de unpkg, porque jsDelivr no respondía)" : ""}.`
+    + (fails.length && !sf19 ? `<br>⚠ ${fails.map(esc).join("<br>⚠ ")}` : "")
+    + (!sf19 && settings.engine === "auto" ? "<br>Si usas un bloqueador de anuncios, permite <b>cdn.jsdelivr.net</b> y <b>unpkg.com</b> para esta página y pulsa «Reintentar»." : "");
+}
 function resetEngineBadge() { if (Engine.ready) setEngineBadge("⚙ " + Engine.name + (Engine.note ? " ⚠" : ""), ""); }
 function setEngineBadge(text, note) {
   $("engineSourceBadge").textContent = text;
-  $("engineSourceBadge").title = note ? "Aviso: " + note : Engine.note ? "Usando el motor interno: " + Engine.note : "";
+  $("engineSourceBadge").title = (note ? "Aviso: " + note : Engine.note ? "Aviso: " + Engine.note : "") + (note || Engine.note ? " · Pulsa para ver el estado del motor" : "");
   if (note) $("engineMeta").textContent = note;
 }
 
@@ -923,17 +944,81 @@ function renderEngineLines(lines, stateNode, meta) {
     box.append(row);
   });
 }
+/* La valoración en palabras: «ligera ventaja de las blancas», «las negras dan mate en 3»… */
+function evalVerdict(ev) {
+  if (!ev) return "";
+  if (ev.mate != null) {
+    if (ev.mate === 0) return `Mate: ganan las ${ev.winner === 1 ? "blancas" : "negras"}`;
+    return `Las ${ev.mate > 0 ? "blancas" : "negras"} dan mate en ${Math.abs(ev.mate)}`;
+  }
+  const a = Math.abs(ev.cp), side = ev.cp > 0 ? "las blancas" : "las negras";
+  if (a < 30) return "Igualdad";
+  const how = a < 70 ? "Ligera ventaja" : a < 150 ? "Ventaja clara" : a < 400 ? "Ventaja decisiva" : "Ventaja aplastante";
+  const pawns = a < 70 ? "menos de un peón" : a < 150 ? "alrededor de un peón" : a < 400 ? `unos ${Math.round(a / 100)} peones` : "más de una pieza";
+  return `${how} de ${side} (${pawns})`;
+}
+function renderVerdict(ev) {
+  const el = $("engineVerdict");
+  el.hidden = !ev || quiz();
+  if (!el.hidden) el.innerHTML = `<b>${esc(fmtEval(ev))}</b> · ${esc(evalVerdict(ev))}`;
+}
+/* ⚖ La jugada que lleva a la posición actual frente a la que proponía el motor */
+const Compare = { busy: false };
+const COMPARE_LABEL = { "??": "?? Error grave", "?": "? Error", "?!": "?! Imprecisión" };
+function renderCompare(job) {
+  const el = $("moveCompare"), n = cur(), p = n.parent;
+  if (!p || quiz() || editor.active) { el.hidden = true; return; }
+  el.hidden = false;
+  const san = numPrefix(p.state) + dispSan(n);
+  const live = job && job.lines && job.lines[0] ? { cp: job.lines[0].cp, mate: job.lines[0].mate, winner: job.lines[0].winner } : null;
+  const after = terminalEval(n) || n.eval || live;
+  if (Compare.busy) { el.innerHTML = `⚖ ⏳ Comparando <b>${esc(san)}</b> con la jugada del motor…`; return; }
+  if (p.eval && p.eval.best === n.uci) { el.innerHTML = `⚖ ★ <b>${esc(san)}</b> es la jugada que propone el motor (${esc(fmtEval(p.eval))}).`; return; }
+  if (!p.eval || !p.eval.best || !after) {
+    el.innerHTML = `⚖ ¿Qué tal <b>${esc(san)}</b>? <button class="sm-btn" data-cmp="run" ${Engine.ready ? "" : "disabled"}>Compararla con la del motor</button>`;
+    el.querySelector("[data-cmp]").onclick = compareWithEngine;
+    return;
+  }
+  const c = classifyMove(Object.assign({}, n, { eval: after }));
+  const bm = Chess.moveFromUci(p.state, p.eval.best);
+  const bestSan = bm ? numPrefix(p.state) + formatSan(Chess.san(p.state, bm), settings.lang, p.state.t) : p.eval.best;
+  const label = c.book ? "📖 Jugada de teoría: no se compara" : COMPARE_LABEL[c.cls] || (c.loss < 2 ? "✔ Excelente: casi como la del motor" : "✔ Buena jugada");
+  const lost = c.book ? "" : after.mate == null && p.eval.mate == null ? ` · pierdes ${(c.cpl / 100).toFixed(2).replace(".", ",")} peones` : "";
+  el.innerHTML = `⚖ <b>${esc(san)}</b> → ${esc(fmtEval(after))} · la del motor, <b>${esc(bestSan)}</b> → ${esc(fmtEval(p.eval))}${lost}<br><b>${esc(label)}</b>${live && !n.eval ? ` <span class="small">(provisional, el motor sigue calculando)</span>` : ""}
+    <div class="controls"><button class="sm-btn" data-cmp="best" title="Vuelve a la posición anterior y juega la del motor, como variante">↪ Probar la del motor</button></div>`;
+  el.querySelector("[data-cmp=best]").onclick = () => {
+    if (!bm || cur() !== n) return;
+    goTo(p);
+    if (canUserMove()) playMove(bm, "user");
+  };
+}
+async function compareWithEngine() {
+  const n = cur(), p = n.parent;
+  if (!p || Compare.busy || !Engine.ready) return;
+  Compare.busy = true;
+  Engine.cancel("live");
+  renderCompare();
+  const ms = Math.max(800, Math.min(3000, +settings.analysisMs));
+  try {
+    if (!p.eval || !p.eval.best) { const j = await Engine.analyse(p, { purpose: "compare", movetime: ms, multipv: Engine.kind === "stockfish" ? 2 : 1 }); if (j) storeEval(p, j, true); }
+    if (!n.eval && !terminalEval(n)) { const j = await Engine.analyse(n, { purpose: "compare", movetime: ms, multipv: 1 }); if (j) storeEval(n, j, true); }
+  } finally { Compare.busy = false; }
+  if (cur() === n) render();
+}
 function showEngineFor(node, job) {
+  renderCompare(job);
   if (job && job.lines && job.lines.length) {
     const l0 = job.lines[0];
+    renderVerdict({ cp: l0.cp, mate: l0.mate, winner: l0.winner });
     updateEvalBar({ cp: l0.cp, mate: l0.mate, winner: l0.winner });
     renderEngineLines(job.lines, node);
     $("engineMeta").textContent = `prof. ${job.depth || 0}` + (job.nps ? ` · ${Math.round(job.nps / 1000)} kN/s` : "");
     if (l0.pv[0]) { ui.engineArrow = { node, from: Chess.sqIdx(l0.pv[0].slice(0, 2)), to: Chess.sqIdx(l0.pv[0].slice(2, 4)) }; renderShapes(); }
     return;
   }
-  const ev = node.eval;
+  const ev = node.eval || terminalEval(node);
   ui.engineArrow = null;
+  renderVerdict(ev);
   if (ev) {
     updateEvalBar(ev);
     const pseudoLines = ev.lines && ev.lines.length ? ev.lines : [{ cp: ev.cp, mate: ev.mate, winner: ev.winner, pv: ev.pv || (ev.best ? [ev.best] : []) }];
@@ -951,7 +1036,7 @@ function showEngineFor(node, job) {
 }
 const requestLive = debounce(() => {
   const node = cur();
-  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ui.cpu.thinking || !Engine.ready) {
+  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ui.cpu.thinking || Compare.busy || !Engine.ready) {
     Engine.cancel("live");
     return;
   }
@@ -4031,6 +4116,7 @@ function openModal(id) {
     $("setAutosave").checked = settings.autosave;
     $("setAnimate").checked = settings.animate;
     $("setWheel").checked = settings.wheel;
+    renderEngineStatus();
   }
   if (!document.querySelector(".modal-back.open")) ui.modalReturn = document.activeElement;
   $(id).classList.add("open");
@@ -4058,6 +4144,10 @@ document.querySelectorAll(".modal-back").forEach(m => {
   m.addEventListener("click", e => { if (e.target === m || e.target.hasAttribute("data-close")) closeModals(); });
 });
 $("settingsBtn").onclick = () => openModal("settingsModal");
+$("engineSourceBadge").onclick = () => openModal("settingsModal");
+$("engineSourceBadge").onkeydown = e => { if (e.key === "Enter") openModal("settingsModal"); };
+$("engineHelpBtn").onclick = () => { const h = $("engineHelp"); h.hidden = !h.hidden; $("engineHelpBtn").setAttribute("aria-expanded", !h.hidden); };
+$("retryEngineBtn").onclick = () => { if (settings.engine !== "auto") { settings.engine = "auto"; saveSettings(); $("setEngine").value = "auto"; } Engine.init(); renderEngineStatus(); toast("🔄 Cargando Stockfish 19…"); };
 $("versionsBtn").onclick = openVersions;
 $("copyGameBtn").onclick = () => saveToLibrary({ copy: true, force: true });
 $("menuBtn").onclick = () => {

@@ -674,6 +674,35 @@ def prueba_versiones(browser):
     ctx.close()
 
 
+def prueba_motor_ayuda(browser):
+    print("Novedades 1.8: ayuda del motor, comparar tu jugada y estado del motor")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.click("#engineHelpBtn")
+    comprobar(pg.is_visible("#engineHelp") and "punto de vista de las" in pg.inner_text("#engineHelp"), "❔ explica cómo leer los números del motor")
+    pg.click("#engineHelpBtn")
+    pg.fill("#moveInput", "1. e4 e5 2. Nf3 Nc6")
+    pg.click("#importBtn")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.wait_for_function("!document.getElementById('engineVerdict').hidden", timeout=20000)
+    comprobar(any(x in pg.inner_text("#engineVerdict") for x in ("Igualdad", "ventaja", "Ventaja")), "debajo del número se explica la valoración con palabras")
+    casilla(pg, "f3").click(); casilla(pg, "g5").click()
+    pg.wait_for_selector("#moveCompare [data-cmp=run]", timeout=5000)
+    pg.click("#moveCompare [data-cmp=run]")
+    pg.wait_for_function("document.getElementById('moveCompare').textContent.includes('la del motor,') || document.getElementById('moveCompare').textContent.includes('es la jugada que propone')", timeout=30000)
+    txt = pg.inner_text("#moveCompare")
+    comprobar("3.Cg5" in txt and ("Error" in txt or "Imprecisión" in txt or "Buena" in txt or "Excelente" in txt), "⚖ compara tu jugada con la del motor y la califica")
+    if pg.locator("#moveCompare [data-cmp=best]").count():
+        antes = pg.evaluate("cur().parent.children.length")
+        pg.click("#moveCompare [data-cmp=best]")
+        comprobar(pg.evaluate("cur().parent.children.length") == antes + 1 and "propone el motor" in pg.inner_text("#moveCompare"), "«Probar la del motor» la juega como variante")
+    pg.click("#settingsBtn")
+    comprobar("Motor interno" in pg.inner_text("#engineStatus") and "jsDelivr" in pg.inner_text("#engineStatus") and "bloqueador" in pg.inner_text("#engineStatus"), "Ajustes explica por qué no se ha cargado Stockfish 19")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -739,6 +768,19 @@ def prueba_stockfish19(browser):
     comprobar(pg.evaluate("Pgn.mainlineFrom(game.root)[5].nag") == "??", "Stockfish 19 marca 3...Cf6?? como error grave")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
+    # jsDelivr bloqueado (bloqueador de anuncios, antivirus, red…): Stockfish 19 se descarga de unpkg
+    ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
+    ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", servir)
+    ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/*lichess*/**", lambda r: r.abort())
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("document.getElementById('engineSourceBadge').textContent.startsWith('⚙')", timeout=60000)
+    comprobar(pg.inner_text("#engineSourceBadge").strip() == "⚙ Stockfish 19" and pg.evaluate("Engine.def.id") == "sf19b", "si jsDelivr está bloqueado, Stockfish 19 se descarga de unpkg")
+    pg.click("#settingsBtn")
+    comprobar("unpkg" in pg.inner_text("#engineStatus"), "Ajustes explica de dónde se ha cargado el motor")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
     # Publicada (http/https) y con el service worker ya instalado, como en GitHub Pages a partir de la segunda visita
     class Silencioso(http.server.SimpleHTTPRequestHandler):
         def log_message(self, *a):
@@ -758,6 +800,22 @@ def prueba_stockfish19(browser):
             pg.wait_for_function("document.getElementById('engineSourceBadge').textContent.startsWith('⚙')", timeout=45000)
             comprobar(pg.inner_text("#engineSourceBadge").strip() == "⚙ Stockfish 19", f"publicada, en la visita {visita} (con el service worker) también arranca Stockfish 19")
         comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+        ctx.close()
+        # Publicada, con jsDelivr bloqueado: el service worker toma Stockfish 19 (y su .wasm) de unpkg
+        ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
+        ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
+        ctx.route("**/unpkg.com/**", servir)
+        ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+        ctx.route("**/*lichess*/**", lambda r: r.abort())
+        pg, errores = nueva_pagina(ctx, f"http://127.0.0.1:{srv.server_address[1]}/")
+        pg.wait_for_function("navigator.serviceWorker && navigator.serviceWorker.controller", timeout=20000)
+        for visita in (1, 2):
+            if visita == 2:
+                pg.reload()
+                pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+            pg.wait_for_function("document.getElementById('engineSourceBadge').textContent.startsWith('⚙')", timeout=60000)
+            comprobar(pg.inner_text("#engineSourceBadge").strip() == "⚙ Stockfish 19", f"publicada y con jsDelivr bloqueado, en la visita {visita} arranca Stockfish 19 desde unpkg")
+        comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     finally:
         ctx.close()
         srv.shutdown()
@@ -766,7 +824,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:
