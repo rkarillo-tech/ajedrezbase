@@ -156,7 +156,9 @@ function estimateRating(start, sol, themes) {
   if (!process.env.SF) { console.error("Indica Stockfish con SF=…"); process.exit(1); }
   const sf = engine(process.env.SF);
   const bank = fs.existsSync(OUT) ? JSON.parse(fs.readFileSync(OUT, "utf8")) : [];
-  const seen = new Set(bank.map(p => p.fen.split(" ").slice(0, 4).join(" ")));
+  // Posiciones ya usadas (la del problema es la que queda tras la primera jugada, el error del rival)
+  const seen = new Set(bank.map(p => { const s = Chess.parseFen(p.fen); return Chess.toFen(Chess.apply(s, Chess.moveFromUci(s, p.moves[0]))).split(" ").slice(0, 4).join(" "); }));
+  const SHORT_KEEP = +(process.env.CORTOS || 1);   // proporción de problemas de una sola jugada (sin mate) que se conservan
   let nextId = bank.length + 1;   // provisional: tools/depurar_problemas.js pone el identificador definitivo
   const t0 = Date.now();
   for (let g = 0; g < GAMES; g++) {
@@ -230,6 +232,7 @@ function estimateRating(start, sol, themes) {
       seen.add(key);
       // Los de «comerse una pieza colgada» en una jugada son muy fáciles y abundan: se conserva sólo una parte
       if (themes.includes("hangingPiece") && sol.length === 1 && rnd() < 0.8) continue;
+      if (sol.length === 1 && !themes.some(x => x.startsWith("mateIn")) && rnd() > SHORT_KEEP) continue;
       bank.push({ id: "n" + nextId++, fen: fenBefore, moves: [mv.best, ...sol], themes, rating: estimateRating(after, sol, themes) });
       found++;
       fs.writeFileSync(OUT, JSON.stringify(bank));

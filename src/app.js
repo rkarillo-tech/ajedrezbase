@@ -55,7 +55,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new"
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -2124,6 +2124,7 @@ function stopCpu(silent) {
   if (!silent) { toast("Partida contra la CPU terminada."); render(); }
 }
 function cpuGameOver(result, text) {
+  logActivity("cpu");
   const user = -ui.cpu.side;
   ui.cpu.over = true;
   ui.cpu.on = false;
@@ -2392,6 +2393,7 @@ function guessStop() {
 }
 function guessFinish() {
   if (!Guess.active) return;
+  if (Guess.n) logActivity("guess");
   const complete = Guess.i >= Guess.line.length;
   guessStop();
   const pct = x => (Guess.max ? Math.round((x / Guess.max) * 100) : 0);
@@ -2618,6 +2620,7 @@ function visStop(silent) {
 }
 function visFinish() {
   if (!Vis.active) return;
+  if (Vis.n || Vis.ok) logActivity("vis");
   const mode = Vis.mode, secs = Math.round((Date.now() - Vis.t0) / 1000);
   visStop(false);
   let res;
@@ -3513,6 +3516,7 @@ function restoreStash() {
 }
 async function finishCard(perfect) {
   const m = Lib.marks.get(trainer.markId);
+  logActivity("card");
   Cards.done++;
   if (perfect) Cards.ok++;
   let msg = perfect ? "🏆 ¡Correcto a la primera!" : "✔ Tarjeta resuelta.";
@@ -4066,6 +4070,7 @@ function trainerUserMove(move) {
     Sound.play("error");
     const L = Chess.legal(node.state), san = formatSan(Chess.san(node.state, move, L), settings.lang, node.state.t);
     trainFeedback(trainer.card || trainer.puzzle ? `❌ ${esc(san)} no es la jugada buscada. Inténtalo otra vez o pulsa 💡 para una pista.` : `❌ ${esc(san)} no está en tu repertorio. Errores: ${trainer.errors}. Pulsa 💡 si necesitas una pista.`, "bad");
+    if (trainer.puzzle && Puz.exam) { finishPuzzle(false); return; }
     if (trainer.puzzle) { $("trainFeedback").insertAdjacentHTML("beforeend", puzzleButtons()); wirePuzzleButtons(); }
     renderBoard();
     const el = boardEl.querySelector(`.square[data-sq="${move.to}"]`);
@@ -4073,7 +4078,7 @@ function trainerUserMove(move) {
   }
 }
 function trainerHint() {
-  if (!trainer.active || !trainerUserTurn()) return;
+  if (!trainer.active || !trainerUserTurn() || (trainer.puzzle && Puz.exam)) return;
   const target = cur().children[0];
   if (!target) return;
   trainer.hints++;
@@ -4103,6 +4108,7 @@ function finishTraining() {
       s.due = Date.now() + SRS_DAYS[s.box] * 864e5;
       all[key] = s;
       LS.set("ajedrezRepasos", all);
+      logActivity("rep");
       if (perfect) markLessonDone(L.course, l.round); else renderCourses();
       Sound.play(perfect ? "ok" : "end");
       trainFeedback(`${perfect ? "🏆 ¡Línea perfecta!" : `✔ Línea terminada con ${trainer.errors} error${trainer.errors === 1 ? "" : "es"} y ${trainer.hints} pista${trainer.hints === 1 ? "" : "s"}.`} Próximo repaso del repertorio: ${SRS_DAYS[s.box] === 1 ? "mañana" : "en " + SRS_DAYS[s.box] + " días"}.<br><span class="small">Cada vez el rival elige otras respuestas: repite para recorrer todo el árbol.</span><br><button id="repAgainBtn" class="sm-btn primary" style="margin-top:6px">🔁 Otra línea</button> <button id="backToCoursesBtn" class="sm-btn" style="margin-top:6px">📘 Volver a los cursos</button>`, perfect ? "ok" : "");
@@ -4158,13 +4164,41 @@ const PUZZLE_THEMES = {
 };
 const PUZZLE_LEVELS = [[0, 1100, "Fácil"], [1100, 1500, "Medio"], [1500, 1900, "Difícil"], [1900, 9999, "Muy difícil"]];
 const puzzleLevelOf = r => PUZZLE_LEVELS.findIndex(([a, b]) => r >= a && r < b);
-const Puz = { queue: [], cur: null, done: 0, ok: 0, total: 0, delta: 0 };
+const Puz = { queue: [], cur: null, done: 0, ok: 0, total: 0, delta: 0, exam: null };
 const puzSrs = () => LS.get("ajedrezProblemas", {});
 const puzRating = () => LS.get("ajedrezNivelProblemas", { r: 1200, n: 0 });
 function puzzleThemesText(p) { return p.themes.filter(x => PUZZLE_THEMES[x]).map(x => PUZZLE_THEMES[x]).join(", ") || "Táctica"; }
 function puzzlePool() {
-  const th = $("puzzleTheme").value, lv = $("puzzleLevel").value;
-  return PUZZLES.filter(p => (!th || p.themes.includes(th) || (th === "mate" && p.themes.some(x => x.startsWith("mateIn")))) && (lv === "" || puzzleLevelOf(p.rating) === +lv));
+  const th = $("puzzleTheme").value, lv = $("puzzleLevel").value, weak = th === "weak" ? weakThemes().map(x => x.k) : null;
+  return PUZZLES.filter(p => (!th || (weak ? p.themes.some(x => weak.includes(x.startsWith("mateIn") ? "mate" : x)) : p.themes.includes(th) || (th === "mate" && p.themes.some(x => x.startsWith("mateIn"))))) && (lv === "" || puzzleLevelOf(p.rating) === +lv));
+}
+/* Aciertos por tema, a partir de todos los intentos guardados */
+function themeStats() {
+  const s = puzSrs(), byId = new Map(PUZZLES.map(p => [p.id, p])), out = {};
+  for (const [id, st] of Object.entries(s)) {
+    const p = byId.get(id);
+    if (!p) continue;
+    const tries = st.tries || st.reps || 0, fails = st.fails != null ? st.fails : st.ok ? 0 : 1;
+    const keys = [...new Set(p.themes.map(x => (x.startsWith("mateIn") ? "mate" : x)))].filter(k => k === "mate" || (PUZZLE_THEMES[k] && k !== "short"));
+    for (const k of keys.length ? keys : ["other"]) {
+      out[k] = out[k] || { k, tries: 0, fails: 0 };
+      out[k].tries += tries; out[k].fails += fails;
+    }
+  }
+  return Object.values(out).map(x => Object.assign(x, { pct: x.tries ? Math.round(100 * (x.tries - x.fails) / x.tries) : 0, name: x.k === "mate" ? "Mates" : x.k === "other" ? "Otros temas" : PUZZLE_THEMES[x.k] }));
+}
+const weakThemes = () => themeStats().filter(x => x.tries >= 3 && x.pct < 80 && x.k !== "other").sort((a, b) => a.pct - b.pct).slice(0, 3);
+function renderPuzzleStats() {
+  const box = $("puzzleStats");
+  if (!box) return;
+  const st = themeStats().filter(x => x.k !== "short").sort((a, b) => b.tries - a.tries);
+  const weak = weakThemes();
+  const opt = $("puzzleTheme").querySelector('option[value="weak"]');
+  if (weak.length && !opt) $("puzzleTheme").insertAdjacentHTML("afterbegin", `<option value="weak">⚠ Mis temas flojos</option>`);
+  if (opt) opt.textContent = weak.length ? `⚠ Mis temas flojos (${weak.map(x => x.name).join(", ")})` : "⚠ Mis temas flojos";
+  if (!st.length) { box.innerHTML = `<span class="small">Aún no has hecho problemas: aquí verás tu porcentaje de acierto en cada tema.</span>`; return; }
+  box.innerHTML = `<table class="theme-table">${st.map(x => `<tr${weak.includes(x) ? ' class="weak"' : ""}><td>${esc(x.name)}</td><td class="small">${x.tries} intento${x.tries === 1 ? "" : "s"}</td><td><div class="meter"><div style="width:${x.pct}%"></div></div></td><td><b>${x.pct} %</b></td></tr>`).join("")}</table>
+    ${weak.length ? `<div class="small">⚠ Tus temas más flojos: <b>${weak.map(x => esc(x.name)).join(", ")}</b>. Elige «⚠ Mis temas flojos» en el tema para entrenarlos.</div>` : ""}`;
 }
 function initPuzzleFilters() {
   const count = k => PUZZLES.filter(p => k === "mate" ? p.themes.some(x => x.startsWith("mateIn")) : p.themes.includes(k)).length;
@@ -4213,6 +4247,11 @@ function nextPuzzle() {
 }
 function puzzlePrompt() {
   const p = Puz.cur, side = trainer.side === 1 ? "blancas" : "negras";
+  if (Puz.exam) {
+    trainFeedback(`📏 <b>Examen</b> · problema ${Puz.exam.i} de ${EXAM_N} · juegan las <b>${side}</b> · ⏱ <b id="examClock">${Math.max(0, Math.ceil((Puz.exam.deadline - Date.now()) / 1000))}</b> s<br>El rival acaba de jugar ${esc(numPrefix(cur().parent.state) + dispSan(cur()))}: encuentra la mejor jugada. Sin pistas: una jugada equivocada cuenta como fallo.${trainer.correct ? " ¡Bien! Sigue." : ""}<div class="controls"><button class="sm-btn danger" data-pz="end">⏹ Abandonar el examen</button></div>`);
+    wirePuzzleButtons();
+    return;
+  }
   trainFeedback(`🧩 Problema ${Puz.done + 1} de ${Puz.total} · ${PUZZLE_LEVELS[puzzleLevelOf(p.rating)][2]} (${p.rating}) · juegan las <b>${side}</b>.<br>El rival acaba de jugar ${esc(numPrefix(cur().parent.state) + dispSan(cur()))}: encuentra la mejor jugada.${trainer.correct ? " ¡Bien! Sigue." : ""}` + puzzleButtons());
   wirePuzzleButtons();
 }
@@ -4224,7 +4263,10 @@ function wirePuzzleButtons() {
   });
 }
 function finishPuzzle(perfect) {
+  if (Puz.exam) { finishExamPuzzle(perfect); return; }
   const p = Puz.cur, all = puzSrs(), st = all[p.id] || { box: 0, reps: 0 };
+  st.tries = (st.tries || 0) + 1;
+  st.fails = (st.fails || 0) + (perfect ? 0 : 1);
   st.reps++;
   st.box = perfect ? Math.min(SRS_DAYS.length - 1, st.box + 1) : 1;
   st.due = Date.now() + SRS_DAYS[st.box] * 864e5;
@@ -4237,6 +4279,7 @@ function finishPuzzle(perfect) {
   R.r = Math.max(400, R.r + d); R.n++;
   LS.set("ajedrezNivelProblemas", R);
   Puz.done++; if (perfect) Puz.ok++; Puz.delta += d;
+  logActivity("puzzle");
   Sound.play(perfect ? "ok" : "end");
   const left = Puz.queue.length;
   trainFeedback(`${perfect ? "✔ <b>¡Resuelto!</b>" : `Resuelto con ${trainer.errors} error${trainer.errors === 1 ? "" : "es"} y ${trainer.hints} pista${trainer.hints === 1 ? "" : "s"}: volverá mañana.`} Tema: ${esc(puzzleThemesText(p))}.<br>Tu nivel: <b>${Math.round(R.r)}</b> (${d >= 0 ? "+" : ""}${d}).<br>
@@ -4247,8 +4290,10 @@ function finishPuzzle(perfect) {
   trainer.active = false;
   stopTraining(false);
   renderPuzzleInfo();
+  renderPuzzleStats();
 }
 function endPuzzles() {
+  if (Puz.exam) { endExam(true); return; }
   if (trainer.active && trainer.puzzle) stopTraining(true);
   Puz.queue = [];
   const R = puzRating();
@@ -4259,6 +4304,258 @@ function endPuzzles() {
   renderPuzzleInfo();
 }
 
+/* ---------- 26a. 📏 Examen: mide tu nivel con problemas que se adaptan a ti ---------- */
+const EXAM_N = 15, EXAM_SECS = 90;
+const examHistory = () => LS.get("ajedrezExamenes", []);
+function startExam() {
+  if (PUZZLES.length < EXAM_N) { toast("No hay problemas suficientes para el examen."); return; }
+  if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
+  if (!stashBoard()) return;
+  leaveModes();
+  const last = examHistory().slice(-1)[0], R = puzRating();
+  Object.assign(Puz, { queue: [], done: 0, ok: 0, total: EXAM_N, delta: 0, exam: { est: last ? last.r : R.n ? R.r : 1200, i: 0, res: [], used: new Set(), timer: null, deadline: 0 } });
+  nextExamPuzzle();
+}
+function nextExamPuzzle() {
+  const E = Puz.exam;
+  if (!E) return;
+  if (E.i >= EXAM_N) { endExam(false); return; }
+  // El siguiente problema, de dificultad parecida a tu nivel estimado en este momento
+  const cands = PUZZLES.filter(p => !E.used.has(p.id)).map(p => ({ p, d: Math.abs(p.rating - E.est) })).sort((a, b) => a.d - b.d).slice(0, 4);
+  const p = cands[Math.floor(Math.random() * cands.length)].p;
+  E.used.add(p.id);
+  E.i++;
+  Puz.queue = [p];
+  E.deadline = Date.now() + EXAM_SECS * 1000 + 700;   // + la jugada del rival
+  clearInterval(E.timer);
+  E.timer = setInterval(() => {
+    const el = $("examClock"), left = Math.ceil((E.deadline - Date.now()) / 1000);
+    if (el) el.textContent = Math.max(0, left);
+    if (left <= 0 && trainer.active && trainer.puzzle) { toast("⏱ Se acabó el tiempo."); finishPuzzle(false); }
+  }, 250);
+  nextPuzzle();
+}
+function finishExamPuzzle(ok) {
+  const E = Puz.exam, p = Puz.cur;
+  clearInterval(E.timer);
+  const node = cur(), rest = Pgn.mainlineFrom(game.root);
+  // La solución (si se ha fallado), para aprender de ella
+  const sol = rest.find(n => n.parent.state.t === trainer.side && !Pgn.pathTo(node).includes(n));
+  const secs = Math.round((Date.now() - (E.deadline - EXAM_SECS * 1000)) / 1000);
+  // Estimación del nivel: cada respuesta mueve la estimación, menos a medida que avanza el examen
+  const K = Math.max(40, Math.round(220 / (1 + (E.i - 1) / 2))), exp = 1 / (1 + Math.pow(10, (p.rating - E.est) / 400));
+  E.est = Math.max(400, Math.min(2600, E.est + K * ((ok ? 1 : 0) - exp)));
+  E.res.push({ id: p.id, rating: p.rating, ok, themes: p.themes, secs });
+  // Cuenta para tus estadísticas por tema
+  const all = puzSrs(), st = all[p.id] || { box: 0, reps: 0, due: Date.now() };
+  st.tries = (st.tries || 0) + 1; st.fails = (st.fails || 0) + (ok ? 0 : 1);
+  if (!ok) { st.box = 1; st.due = Date.now() + 864e5; }
+  all[p.id] = st;
+  LS.set("ajedrezProblemas", all);
+  Puz.done++; if (ok) Puz.ok++;
+  Sound.play(ok ? "ok" : "error");
+  trainer.active = false;
+  stopTraining(false);
+  if (!ok && sol) { const m = sol.move; if (m) { trainer.hintArrow = null; ui.selected = null; } }
+  trainFeedback(`📏 Examen · ${E.i} de ${EXAM_N}: ${ok ? "✔ <b>¡Correcto!</b>" : `❌ ${sol ? `La buena era <b>${esc(numPrefix(sol.parent.state) + dispSan(sol))}</b>.` : "Fallado."}`} Tema: ${esc(puzzleThemesText(p))}.<br>Nivel estimado ahora: <b>${Math.round(E.est)}</b>
+    <div class="controls"><button id="examNextBtn" class="sm-btn primary">${E.i >= EXAM_N ? "Ver resultado ▶" : "Siguiente ▶"}</button><button id="examStopBtn" class="sm-btn danger">⏹ Abandonar</button></div>`, ok ? "ok" : "bad");
+  $("examNextBtn").onclick = nextExamPuzzle;
+  $("examStopBtn").onclick = () => endExam(true);
+  if (!ok && sol) { goTo(sol); }
+  renderPuzzleStats();
+}
+function endExam(aborted) {
+  const E = Puz.exam;
+  if (!E) return;
+  clearInterval(E.timer);
+  if (trainer.active && trainer.puzzle) stopTraining(true);
+  Puz.exam = null;
+  Puz.queue = [];
+  const n = E.res.length, ok = E.res.filter(x => x.ok).length;
+  if (!n) { trainFeedback("📏 Examen cancelado."); restoreStash(); return; }
+  const hist = examHistory(), prev = hist.slice(-1)[0], r = Math.round(E.est);
+  if (!aborted || n >= 8) { hist.push({ t: Date.now(), r, ok, n }); LS.set("ajedrezExamenes", hist.slice(-30)); }
+  logActivity("exam");
+  // Temas: los que más fallaste en el examen
+  const th = {};
+  E.res.forEach(x => new Set(x.themes.map(k => (k.startsWith("mateIn") ? "mate" : k))).forEach(k => { if (k === "short" || (!PUZZLE_THEMES[k] && k !== "mate")) return; th[k] = th[k] || { ok: 0, n: 0 }; th[k].n++; if (x.ok) th[k].ok++; }));
+  const name = k => (k === "mate" ? "Mates" : PUZZLE_THEMES[k]);
+  const good = Object.entries(th).filter(([, v]) => v.n >= 2 && v.ok === v.n).map(([k]) => name(k));
+  const bad = Object.entries(th).filter(([, v]) => v.ok < v.n).sort((a, b) => a[1].ok / a[1].n - b[1].ok / b[1].n).slice(0, 3).map(([k]) => name(k));
+  const chart = hist.slice(-10).map(h => `<span title="${esc(new Date(h.t).toLocaleDateString("es-ES"))}: ${h.r}" style="display:inline-block;width:14px;margin-right:3px;vertical-align:bottom;background:var(--accent);height:${Math.max(4, Math.round((h.r - 400) / 25))}px"></span>`).join("");
+  trainFeedback(`📏 <b>Resultado del examen</b>${aborted ? " (incompleto)" : ""}: <b>${ok}</b> de ${n} resueltos.<br>
+    Tu nivel estimado en táctica: <b style="font-size:1.15rem">${r}</b>${prev ? ` (${r - prev.r >= 0 ? "+" : ""}${r - prev.r} desde el examen anterior)` : ""}.<br>
+    ${good.length ? `💪 Puntos fuertes: ${esc(good.join(", "))}.<br>` : ""}${bad.length ? `⚠ Para trabajar: ${esc(bad.join(", "))} (los encontrarás en «⚠ Mis temas flojos»).<br>` : ""}
+    <span class="small">Es una estimación con pocos problemas: repite el examen cada semana o dos para ver tu evolución.</span>
+    ${hist.length > 1 ? `<div style="margin-top:6px;height:${Math.max(...hist.slice(-10).map(h => Math.round((h.r - 400) / 25))) + 4}px">${chart}</div><span class="small">Tus últimos exámenes</span>` : ""}
+    <div class="controls"><button id="examBackBtn" class="sm-btn primary">↩ Volver a tu partida</button></div>`, "ok");
+  $("examBackBtn").onclick = () => restoreStash();
+  renderPuzzleInfo(); renderPuzzleStats(); renderExamInfo();
+}
+function renderExamInfo() {
+  const el = $("examInfo");
+  if (!el) return;
+  const h = examHistory(), last = h.slice(-1)[0];
+  el.textContent = last ? `Último examen: ${last.r} (${new Date(last.t).toLocaleDateString("es-ES")})${h.length > 1 ? ` · mejor: ${Math.max(...h.map(x => x.r))}` : ""}` : "Aún no has hecho ningún examen.";
+}
+
+/* ---------- 26c. Tus partidas frente a tu repertorio ---------- */
+function repertoireTrees() {
+  return courseLessons("repertorios").map((l, i) => ({ l, i, g: Pgn.parseGame(l.g, { lang: "en" }).game, side: l.black ? -1 : 1 }));
+}
+function compareWithRepertoire() {
+  const out = $("repCompareOut"), names = myNameList();
+  if (!names.length) { out.innerHTML = `<span class="small">Primero pon tu nombre (tal como sale en tus partidas) en <b>📚 Biblioteca › 📊 Estadísticas</b>.</span>`; return; }
+  const trees = repertoireTrees(), rows = [];
+  for (const rec of Lib.games.values()) {
+    const c = colorOfMe(rec, names);
+    if (!c) continue;
+    let g;
+    try { g = Pgn.parseGame(rec.pgn, { lang: "en" }).game; } catch { continue; }
+    const line = Pgn.mainlineFrom(g.root);
+    if (!line.length || g.headers.SetUp === "1") continue;
+    const tree = trees.find(x => x.side === c && x.g.root.children.some(ch => ch.uci === line[0].uci));
+    if (!tree) continue;
+    let node = tree.g.root, dev = null, depth = 0;
+    for (const n of line) {
+      const ch = node.children.find(x => x.uci === n.uci);
+      if (!ch) { dev = { ply: depth, mine: n.parent.state.t === c, n, rep: node }; break; }
+      node = ch; depth++;
+      if (!node.children.length) break;
+    }
+    rows.push({ rec, c, tree, dev, depth, path: line.slice(0, depth + (dev ? 1 : 0)).map(n => n.uci) });
+  }
+  if (!rows.length) { out.innerHTML = `<span class="small">No hay partidas tuyas que empiecen como tus repertorios (1.e4 con blancas; 1.e4 o 1.d4 con negras).</span>`; return; }
+  const mine = rows.filter(r => r.dev && r.dev.mine), rival = rows.filter(r => r.dev && !r.dev.mine), full = rows.filter(r => !r.dev);
+  const avg = Math.round(rows.reduce((s, r) => s + r.depth, 0) / rows.length / 2 * 10) / 10;
+  // Dónde te sales más a menudo
+  const spots = {};
+  mine.forEach(r => { const k = r.path.slice(0, -1).join(" "); spots[k] = spots[k] || { n: 0, r }; spots[k].n++; });
+  const top = Object.values(spots).sort((a, b) => b.n - a.n)[0];
+  const sanOf = (st, uci) => { const m = Chess.moveFromUci(st, uci); return m ? numPrefix(st) + formatSan(Chess.san(st, m), settings.lang, st.t) : uci; };
+  const item = (r, i) => {
+    const d = r.dev, date = (r.rec.date || "").slice(0, 10).replace(/\?\?/g, "").replace(/\.$/, "");
+    let what;
+    if (!d) what = `✔ Seguiste el repertorio hasta el final (${Math.ceil(r.depth / 2)} jugadas).`;
+    else if (d.mine) what = `❌ Te saliste en <b>${esc(numPrefix(d.n.parent.state) + dispSan(d.n))}</b>; tu repertorio dice <b>${esc(d.rep.children.map(x => sanOf(d.rep.state, x.uci)).join(" o "))}</b>.`;
+    else what = `🆕 El rival se salió en <b>${esc(numPrefix(d.n.parent.state) + dispSan(d.n))}</b>: una línea que tu repertorio no cubre.`;
+    return `<div class="mark-card" style="grid-template-columns:1fr"><div><b>${esc(r.rec.title)}</b> <span class="small">${esc(date)} · con ${r.c === 1 ? "blancas" : "negras"}</span><br>${what}</div>
+      <div class="controls" style="margin-top:4px"><button class="sm-btn" data-open="${i}">📖 Abrir en esa jugada</button>${d && d.mine ? `<button class="sm-btn info-btn" data-rep="${i}">🗂 Repasar esa línea</button>` : ""}</div></div>`;
+  };
+  const list = rows.slice().sort((a, b) => (b.rec.date || "").localeCompare(a.rec.date || "")).slice(0, 40);
+  out.innerHTML = `<div class="note-box">${rows.length} partida${rows.length === 1 ? "" : "s"} tuyas con tus repertorios: de media sigues el repertorio <b>${avg}</b> jugadas.
+      <br>❌ Te saliste tú en <b>${mine.length}</b> · 🆕 se salió el rival en <b>${rival.length}</b> · ✔ completas: <b>${full.length}</b>.
+      ${top && top.n > 1 ? `<br>📍 Donde más te sales (${top.n} veces): tras <b>${esc(lineText(top.r.tree.g.root.state, top.r.path.slice(0, -1), 30))}</b>.` : ""}</div>
+    ${list.map((r, i) => item(r, i)).join("")}`;
+  out.querySelectorAll("[data-open]").forEach(b => b.onclick = () => { const r = list[+b.dataset.open]; if (openLibGame(r.rec.id, r.path)) switchTab("study"); });
+  out.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => {
+    const r = list[+b.dataset.rep];
+    switchTab("courses");
+    if (openLesson("repertorios", r.tree.i)) { goTo(resolvePath(game.root, r.path.slice(0, -1))); toast("🗂 Esta es la posición: mira qué dice tu repertorio y por qué."); }
+  });
+}
+
+/* ---------- 26b. Plan de hoy: objetivos diarios, racha y calendario de actividad ---------- */
+const ACT_KEY = "ajedrezActividad";
+const ACT_LABEL = { puzzle: "problemas", lesson: "lecciones", rep: "líneas de repertorio", card: "tarjetas", drill: "ejercicios", cpu: "partidas contra la CPU", exam: "exámenes", guess: "partidas adivinadas", vis: "ejercicios de visualización" };
+const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const actDays = () => LS.get(ACT_KEY, {});
+const dayTotal = d => (d ? Object.entries(d).filter(([k]) => ACT_LABEL[k]).reduce((s, [, v]) => s + v, 0) : 0);
+function logActivity(kind, n = 1) {
+  const a = actDays(), k = dayKey();
+  a[k] = a[k] || {};
+  a[k][kind] = (a[k][kind] || 0) + n;
+  LS.set(ACT_KEY, a);
+  renderToday();
+}
+function streakInfo() {
+  const a = actDays();
+  let cur = 0, best = 0, run = 0;
+  const d = new Date();
+  if (!dayTotal(a[dayKey(d)])) d.setDate(d.getDate() - 1);   // hoy aún no cuenta: la racha sigue viva si ayer entrenaste
+  for (;;) { if (dayTotal(a[dayKey(d)])) { cur++; d.setDate(d.getDate() - 1); } else break; }
+  const keys = Object.keys(a).filter(k => dayTotal(a[k])).sort();
+  let prev = null;
+  for (const k of keys) {
+    const t = new Date(k + "T12:00:00");
+    run = prev && Math.round((t - prev) / 864e5) === 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = t;
+  }
+  return { cur, best, days: keys.length };
+}
+/* Lo que queda pendiente de repasar (repertorios, problemas, tarjetas y ejercicios de tus partidas) */
+function dueCounts() {
+  const now = Date.now(), srs = repSrs(), ps = puzSrs();
+  const reps = COURSES.flatMap(c => courseLessons(c.id).filter(l => l.repertoire).map(l => ({ c: c.id, l, s: srs[c.id + ":" + l.round] }))).filter(x => x.s && x.s.due <= now);
+  const puzzles = PUZZLES.filter(p => ps[p.id] && ps[p.id].due <= now).length;
+  const cards = Lib.ready ? trainableMarks(false).length : 0;
+  const drills = Lib.ready ? drillPool().filter(x => x.srs && x.srs.due <= now).length : 0;
+  return { reps, puzzles, cards, drills, total: reps.length + puzzles + cards + drills };
+}
+const goalPuzzles = () => Math.max(1, +settings.goalPuzzles || 5);
+function nextLesson() {
+  const done = courseDone();
+  for (const c of COURSES) {
+    const L = courseLessons(c.id), ok = new Set(done[c.id] || []);
+    const i = L.findIndex(l => !l.repertoire && !ok.has(l.round));
+    if (i >= 0) return { course: c, i, l: L[i] };
+  }
+  return null;
+}
+function renderToday() {
+  const box = $("todayBox");
+  if (!box) return;
+  const a = actDays(), today = a[dayKey()] || {}, st = streakInfo(), due = dueCounts();
+  const pz = today.puzzle || 0, ls = today.lesson || 0, gP = goalPuzzles();
+  const goals = [
+    { ok: pz >= gP, txt: `🧩 Problemas: ${Math.min(pz, gP)} de ${gP}`, frac: Math.min(1, pz / gP) },
+    { ok: ls >= 1, txt: `📘 Una lección: ${ls ? "hecha" : "pendiente"}`, frac: Math.min(1, ls) },
+    { ok: !due.total, txt: `📅 Repasos: ${due.total ? `quedan ${due.total}` : "al día"}`, frac: due.total ? 0 : 1 }
+  ];
+  const all = goals.every(g => g.ok);
+  // Calendario de las últimas 16 semanas (de lunes a domingo)
+  const cells = [], end = new Date(), start = new Date(end);
+  start.setDate(start.getDate() - 7 * 15 - ((end.getDay() + 6) % 7));
+  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const k = dayKey(d), n = dayTotal(a[k]);
+    const lvl = !n ? 0 : n < 3 ? 1 : n < 8 ? 2 : n < 15 ? 3 : 4;
+    const det = a[k] ? Object.entries(a[k]).filter(([x]) => ACT_LABEL[x]).map(([x, v]) => `${v} ${ACT_LABEL[x]}`).join(", ") : "sin actividad";
+    cells.push(`<i class="cal-d l${lvl}" title="${esc(d.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }))}: ${esc(det)}"></i>`);
+  }
+  box.innerHTML = `<div class="today-head"><span class="streak" title="Días seguidos entrenando">🔥 <b>${st.cur}</b> día${st.cur === 1 ? "" : "s"} seguido${st.cur === 1 ? "" : "s"}</span><span class="small">Mejor racha: ${st.best} · ${st.days} día${st.days === 1 ? "" : "s"} entrenando</span></div>
+    <div class="goals">${goals.map(g => `<div class="goal${g.ok ? " ok" : ""}"><span>${g.ok ? "✔ " : ""}${esc(g.txt)}</span><div class="meter"><div style="width:${Math.round(g.frac * 100)}%"></div></div></div>`).join("")}</div>
+    <div class="controls"><button id="todayNextBtn" class="primary">${all ? "🏆 Objetivo cumplido · seguir entrenando ▶" : "▶ Siguiente tarea de hoy"}</button>
+      <label class="small">Problemas al día: <select id="goalPuzzlesSel" style="width:auto">${[3, 5, 10, 15, 20].map(n => `<option${n === gP ? " selected" : ""}>${n}</option>`).join("")}</select></label></div>
+    <div class="cal" aria-label="Actividad de las últimas semanas">${cells.join("")}</div>
+    <div class="small cal-legend">Últimas 16 semanas · <i class="cal-d l0"></i> nada <i class="cal-d l1"></i><i class="cal-d l2"></i><i class="cal-d l3"></i><i class="cal-d l4"></i> mucho</div>`;
+  $("todayNextBtn").onclick = nextTask;
+  $("goalPuzzlesSel").onchange = e => { settings.goalPuzzles = +e.target.value; saveSettings(); renderToday(); };
+  const badge = $("streakBadge");
+  if (badge) { badge.textContent = st.cur ? `🔥${st.cur}` : ""; badge.hidden = !st.cur; }
+}
+/* «Siguiente tarea»: primero los repasos que tocan, después el objetivo de problemas y la lección del día */
+function nextTask() {
+  const due = dueCounts(), today = actDays()[dayKey()] || {};
+  if (due.reps.length) {
+    const r = due.reps[0], i = courseLessons(r.c).indexOf(r.l);
+    if (openLesson(r.c, i)) { toast("📅 Toca repasar este repertorio."); lessonAction("practice"); }
+    return;
+  }
+  if (due.puzzles || (today.puzzle || 0) < goalPuzzles()) {
+    $("puzzleTheme").value = ""; $("puzzleLevel").value = "";
+    $("puzzleCount").value = String(due.puzzles ? Math.min(20, Math.max(5, due.puzzles)) : Math.max(5, goalPuzzles() - (today.puzzle || 0)) > 10 ? "20" : Math.max(5, goalPuzzles() - (today.puzzle || 0)) > 5 ? "10" : "5");
+    startPuzzles();
+    return;
+  }
+  if (due.cards) { startCards(false); return; }
+  if (due.drills) { startDrills("due"); return; }
+  const nl = nextLesson();
+  if (nl && !(today.lesson >= 1)) { switchTab("courses"); openLesson(nl.course.id, nl.i); toast(`📘 Lección del día: ${nl.l.title}`); return; }
+  $("puzzleCount").value = "10";
+  startPuzzles();
+}
+
 /* ---------- 27. Pestañas, modales y botones ---------- */
 function switchTab(name) {
   ui.activeTab = name;
@@ -4266,7 +4563,7 @@ function switchTab(name) {
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === "tab-" + name));
   if (name === "explorer") refreshExplorer();
   if (name === "library") { refreshLibraryViews(); if (ui.librarySub === "collection") renderCollection(); if (ui.librarySub === "position") renderPosTarget(); }
-  if (name === "tools") { renderDrillInfo(); renderPuzzleInfo(); }
+  if (name === "tools") { renderDrillInfo(); renderPuzzleInfo(); renderPuzzleStats(); renderExamInfo(); renderToday(); }
   if (name === "courses") renderCourses();
   if (name === "endgames" && pieceCount(cur().state) <= 7) querySyzygy();
 }
@@ -4641,6 +4938,8 @@ $("edFen").onchange = e => {
 $("startTrainBtn").onclick = () => startTraining();
 $("guessStartBtn").onclick = startGuess;
 $("puzzleStartBtn").onclick = startPuzzles;
+$("examStartBtn").onclick = startExam;
+$("repCompareBtn").onclick = compareWithRepertoire;
 ["puzzleTheme", "puzzleLevel"].forEach(id => $(id).onchange = renderPuzzleInfo);
 $("visStartBtn").onclick = startVis;
 $("visMode").onchange = () => { $("visPlies").hidden = $("visMode").value !== "line"; };
@@ -5056,6 +5355,7 @@ function startDrills(mode) {
   startRetry(0, q);
 }
 async function drillRecord(node, ok) {
+  logActivity("drill");
   const d = node.__drill, rec = d && Lib.games.get(d.recId);
   if (!rec) return;
   rec.drills = rec.drills || {};
@@ -5288,7 +5588,7 @@ function renderLesson() {
   const line = lessonLine(), n = cur();
   const onMain = n === game.root || line.includes(n), step = onMain ? line.indexOf(n) + 1 : -1;
   const atEnd = n === (line.length ? line[line.length - 1] : game.root) && line.length > 0;
-  if (atEnd && !L.done) { L.done = true; markLessonDone(L.course, l.round); }
+  if (atEnd && !L.done) { L.done = true; markLessonDone(L.course, l.round); if (!l.repertoire) logActivity("lesson"); }
   const mine = !n.__lesson;
   const text = n === game.root ? game.root.comment : n.comment;
   const where = n === game.root ? "Posición inicial" : `${numPrefix(n.parent.state)}${dispSan(n)}${n.nag || ""}`;
@@ -5650,6 +5950,7 @@ document.addEventListener("keydown", e => {
   $("explorerDbSelect").value = settings.explorerDb;
   buildEditorPalettes();
   initPuzzleFilters();
+  renderToday();
   renderLocalEcoList();
   initEndgamePresets();
   renderCollection();

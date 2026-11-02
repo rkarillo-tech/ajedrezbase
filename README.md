@@ -36,6 +36,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Problemas de táctica** | Banco de problemas generados y comprobados con Stockfish, por temas (mates, horquilla, clavada, descubierta, sacrificio, final…) y dificultad, con repaso espaciado y nivel aproximado tipo Elo |
 | **Adivina la jugada** | Reproduce una partida clásica o tuya acertando las jugadas de un bando: el motor puntúa cada intento de 0 a 5 y comparas tu puntuación con la del jugador |
 | **A ciegas y visualización** | Piezas ocultas (`B`) para jugar a ciegas, «sigue la línea» de memoria (2 a 8 medias jugadas), color de las casillas y encuentra la casilla en 30 s con récord |
+| **Día a día** | 📅 Plan de hoy con objetivos, racha 🔥 y calendario de actividad; 📏 examen adaptativo que estima tu nivel en táctica; acierto por temas y entrenamiento de tus temas flojos; comparación de tus partidas con tu repertorio |
 | **Entrenar** | Repertorio contra tus variantes, **ejercicios con los errores de todas tus partidas** (táctica, mates, defensa, convertir la ventaja, finales…) y **tarjetas** de tus marcadores, con repetición espaciada (1, 3, 7, 16, 35, 75 días) |
 | **Compartir** | Imagen PNG de la posición (también al portapapeles), impresión o PDF de la partida comentada con diagramas, y enlace que abre la partida en una jugada |
 | **Más** | Editor de posición arrastrando piezas, jugar escribiendo la jugada, planilla de dos columnas, rueda del ratón, ficheros `.pgn` de miles de partidas, medidor de memoria |

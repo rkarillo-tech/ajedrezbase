@@ -148,3 +148,74 @@ variante Tartakower: el alfil de c8 saldrá por b7. Es la forma más moderna de
 resolver su problema. } 8. cxd5 Nxd5 { Cambiar piezas alivia la falta de
 espacio. } 9. Bxe7 Qxe7 10. Nxd5 exd5 *
 
+[Event "Repertorios de aperturas"]
+[Site "AjedrezBase"]
+[Date "????.??.??"]
+[Round "4"]
+[White "Rival"]
+[Black "Tu repertorio"]
+[Result "*"]
+[Title "Repertorio con negras contra 1.c4, 1.Cf3 y otras"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "repertorio"]
+[Orientation "black"]
+
+{ Para completar el Gambito de Dama Declinado: contra las aperturas de flanco
+(Inglesa, Réti, Bird, Larsen, fianchetto de rey) las negras juegan …e6, …d5 y
+…Cf6 con la misma estructura. Muchas líneas transponen al Gambito de Dama, así
+que no hay que aprender nada nuevo; contra los sistemas sin d4, las negras
+ocupan el centro con comodidad. Entrénalo con 🎯 jugando con negras. } 1. c4 (1.
+Nf3 d5 { Contra 1.Cf3, …d5 ocupa el centro: si las blancas juegan d4 y c4, es un
+Gambito de Dama. } 2. d4 (2. c4 e6 3. g3 Nf6 4. Bg2 Be7 5. O-O O-O) (2. g3 Nf6
+3. Bg2 e6 4. O-O Be7 5. d3 { El ataque indio de rey: las blancas preparan e4.
+Las negras ganan espacio con …c5 y …Cc6. } 5... O-O 6. Nbd2 c5 7. e4 Nc6) 2...
+Nf6 3. c4 e6) (1. f4 d5 { La apertura Bird: las negras ocupan el centro. } 2.
+Nf3 Nf6 3. e3 g6 { El fianchetto controla la gran diagonal y la casilla e5, que
+las blancas debilitan con f4. } 4. Be2 Bg7 5. O-O O-O) (1. b3 e5 { Contra la
+Larsen, …e5: el alfil de b2 choca contra un centro bien protegido. } 2. Bb2 Nc6
+3. e3 d5) (1. g3 d5 { Contra el fianchetto de rey, centro y desarrollo: …d5,
+…Cf6, …e6 y enroque. } 2. Bg2 Nf6 3. Nf3 e6 4. O-O Be7) 1... e6 { Contra la
+Inglesa, …e6 y …d5: la misma estructura del Gambito de Dama Declinado. } 2. Nc3
+(2. Nf3 d5 3. d4 (3. g3 { La Réti con fianchetto: las negras mantienen el centro
+y desarrollan con naturalidad. } 3... Nf6 4. Bg2 Be7 5. O-O O-O 6. b3 c5 { Con
+…c5 las negras ganan espacio en el centro y liberan el juego. }) 3... Nf6) (2.
+g3 d5 3. Bg2 Nf6 4. Nf3 Be7 5. O-O O-O) 2... d5 3. d4 Nf6 { Transpone al Gambito
+de Dama: sigue con tu repertorio contra 1.d4. } *
+
+[Event "Repertorios de aperturas"]
+[Site "AjedrezBase"]
+[Date "????.??.??"]
+[Round "5"]
+[White "Tu repertorio"]
+[Black "Rival"]
+[Result "*"]
+[Title "Repertorio con blancas: 1.d4 y el sistema Londres"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "repertorio"]
+
+{ Una alternativa sencilla a 1.e4: con 1.d4 y el sistema Londres las blancas
+colocan sus piezas casi siempre igual (d4, Af4, e3, Cf3, c3, Cbd2, Ad3, h3), con
+un centro sólido y planes claros: Ce5, ataque en el flanco de rey o la ruptura
+e4. Es ideal si quieres poca teoría. Entrénalo con 🎯 jugando con blancas. } 1.
+d4 { Ocupa el centro con un peón protegido por la dama. } 1... d5 (1... Nf6 2.
+Bf4 g6 { Contra el fianchetto (India de Rey o Grünfeld), el Londres sigue igual,
+con h3 para que el alfil tenga refugio. } (2... e6 3. e3 c5 4. c3 Nc6 5. Nd2 d5
+6. Ngf3) 3. e3 Bg7 4. Nf3 O-O 5. Be2 d6 6. h3 c5 7. c3 { Centro sólido; las
+blancas enrocan y pueden atacar con c4 o en el centro. }) (1... e6 2. Bf4 d5 3.
+e3 Nf6 4. Nf3) (1... f5 { La Holandesa: el Londres funciona igual. El alfil de
+f4 vigila la casilla e5. } 2. Bf4 Nf6 3. e3 e6 4. Nf3 Be7 5. h3) (1... d6 2. Bf4
+Nf6 3. Nf3 g6 4. e3 Bg7 5. h3) (1... c5 { El Benoni: aquí lo más sencillo es
+avanzar 2.d5 y jugar con el centro en una India de Rey invertida, con mucho
+espacio. } 2. d5 Nf6 3. Nc3 d6 4. e4 g6 5. Nf3 Bg7 6. Be2 O-O 7. O-O) 2. Bf4 {
+El alfil sale ANTES de jugar e3, para no quedar encerrado: es la clave del
+Londres. } 2... Nf6 (2... c5 3. e3 Nc6 4. c3 Nf6 5. Nd2) (2... Bf5 { Las negras
+copian la idea. Con c4 las blancas atacan el centro aprovechando que el alfil
+negro ha salido. } 3. e3 e6 4. c4) 3. e3 e6 (3... c5 4. c3 Nc6 5. Nd2 Qb6 { Las
+negras atacan b2. Con Db3 se ofrece el cambio de damas. } 6. Qb3 c4 { Las negras
+ganan espacio; la dama se retira a c2 y las blancas prepararán e4. } 7. Qc2) 4.
+Nf3 c5 5. c3 { La «pirámide» c3-d4-e3 sostiene el centro contra …c5. } 5... Nc6
+6. Nbd2 Bd6 7. Bg3 { Mantén el alfil: si las negras cambian en g3, hxg3 abre la
+columna h para tu torre. } 7... O-O 8. Bd3 *
+

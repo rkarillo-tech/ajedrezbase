@@ -120,6 +120,26 @@ main {
 .lesson-row.current { border-color: var(--info); background: var(--panel2); }
 .lesson-num { min-width: 1.6em; text-align: center; color: var(--accent); font-weight: 700; }
 .lesson-title { flex: 1; }
+.puzzle-stats { margin-top: 6px; }
+.puzzle-stats summary { cursor: pointer; font-size: .84rem; }
+.theme-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 4px; }
+.theme-table td { padding: 2px 6px; }
+.theme-table td:nth-child(3) { width: 40%; }
+.theme-table tr.weak td:first-child { color: var(--warn); font-weight: 700; }
+.today-box { background: #101520; border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; }
+.today-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.streak { font-size: 1.05rem; }
+.streak-badge { font-size: .72rem; margin-left: 2px; }
+.goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px; }
+.goal { font-size: .82rem; }
+.goal .meter { height: 6px; margin-top: 3px; }
+.goal.ok { color: #c8e6c9; }
+.goal.ok .meter > div { background: var(--accent); }
+.cal { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 11px); grid-auto-columns: 11px; gap: 3px; margin-top: 8px; overflow-x: auto; }
+.cal-d { display: inline-block; width: 11px; height: 11px; border-radius: 2px; background: var(--panel3); vertical-align: middle; }
+.cal-d.l1 { background: #1f4d2b; } .cal-d.l2 { background: #2e7d32; } .cal-d.l3 { background: #43a047; } .cal-d.l4 { background: #81c784; }
+.cal-legend { margin-top: 4px; }
+.cal-legend .cal-d { margin: 0 1px; }
 .version-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: #101520; margin-top: 6px; }
 .version-row .version-what { flex: 1; min-width: 180px; }
 
@@ -813,7 +833,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button class="tab-btn" data-tab="explorer" role="tab">🌍 Aperturas</button>
       <button class="tab-btn" data-tab="library" role="tab">📚 Biblioteca</button>
       <button class="tab-btn" data-tab="endgames" role="tab">👑 Finales</button>
-      <button class="tab-btn" data-tab="tools" role="tab">🎯 Entrenar</button>
+      <button class="tab-btn" data-tab="tools" role="tab">🎯 Entrenar <span id="streakBadge" class="streak-badge" hidden></span></button>
     </div>
 
     <!-- ===== PESTAÑA 1: ESTUDIO ===== -->
@@ -1136,6 +1156,12 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     <!-- ===== PESTAÑA 5: ENTRENADOR + EDITOR ===== -->
     <div id="tab-tools" class="tab-pane" role="tabpanel">
       <h2>
+        <span>📅 Hoy</span>
+      </h2>
+      <div id="todayBox" class="today-box"></div>
+
+      <div class="section">
+      <h2>
         <span>🎯 Entrenador de repertorio (repetición espaciada)</span>
         <span id="trainStatusBadge" class="srs-pill">Inactivo</span>
       </h2>
@@ -1154,6 +1180,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       </div>
       <div class="controls"><button id="trainDueBtn" class="sm-btn warn-btn">📅 Entrenar la siguiente partida pendiente</button><span id="gameDueBadge" class="srs-pill">0 pendientes</span></div>
       <div id="trainFeedback" class="note-box" aria-live="polite" hidden></div>
+      </div>
 
       <div class="section">
         <h2>
@@ -1170,6 +1197,18 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <button id="puzzleStartBtn" class="primary">▶ Empezar</button>
           <span id="puzzleInfo" class="small"></span>
         </div>
+        <details class="puzzle-stats"><summary>📊 Tus temas: acierto en cada tipo de problema</summary><div id="puzzleStats"></div></details>
+        <div class="controls">
+          <button id="examStartBtn" class="sm-btn info-btn" title="15 problemas que se adaptan a ti, con 90 segundos cada uno y sin pistas">📏 Mide tu nivel (examen)</button>
+          <span id="examInfo" class="small"></span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2><span>🗂 Tus partidas frente a tu repertorio</span></h2>
+        <p class="small">Compara tus partidas de la biblioteca con los repertorios de «📘 Cursos»: en qué jugada te saliste tú (algo que repasar) o tu rival (una línea nueva que preparar). Necesita tu nombre en «📊 Estadísticas».</p>
+        <div class="controls"><button id="repCompareBtn" class="sm-btn primary">🔍 Comparar mis partidas</button></div>
+        <div id="repCompareOut" class="mark-list"></div>
       </div>
 
       <div class="section">

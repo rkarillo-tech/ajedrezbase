@@ -131,3 +131,40 @@
 [Result "1-0"]
 
 { [%csl Ga3] En los finales de peones, un peón pasado lejos del resto (aquí el de la columna a) es una ventaja enorme, aunque no pueda coronar solo: obliga al rey rival a irse a frenarlo, y mientras tanto nuestro rey se come los peones del otro flanco. Es el «peón pasado alejado». } 1. Kf3 { Primero se centraliza el rey: en los finales el rey es una pieza de ataque. } 1... Ke6 2. Ke4 Kd6 3. a4 { [%cal Ga4a8] El peón avanza y el rey negro tiene que vigilarlo. } 3... Kc5 4. a5 Kb5 5. Kf5 { [%cal Gf5g6,Gf5f6] ¡Ahora! El rey negro se ha ido a por el peón de a, y el rey blanco va a por los peones del flanco de rey. } 5... Kxa5 6. Ke6 { El peón de a era un «cebo»: el rey negro está ahora muy lejos. } 6... Kb4 7. Kf7 g5 8. Kg7 h5 9. Kg6 g4 10. Kxh5 g3 11. hxg3 { Las blancas se han comido todos los peones negros y su peón de g coronará. Resumen: con un peón pasado alejado, empújalo para desviar al rey rival y lleva tu rey al otro flanco. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "12"]
+[Title "Dama contra peón en séptima: el peón central pierde"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "6K1/8/8/8/8/8/3pk3/7Q w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Rd2,Gd1] El peón negro está a un paso de coronar y el rey blanco está muy lejos. Aun así, con un peón central (o de caballo) la dama gana con un método fijo: 1) con jaques y clavadas, obligar al rey negro a ponerse DELANTE de su peón (en d1); 2) aprovechar ese momento, en el que el peón no puede avanzar, para acercar el rey blanco un paso; 3) repetir hasta que el rey blanco llegue y se pueda capturar el peón o dar mate. } 1. Qh2+ { Primero, jaques que acercan la dama al peón. } 1... Ke1 2. Qe5+ Kf2 3. Qd4+ Ke2 4. Qe4+ Kf2 5. Qd3 { [%cal Gd3d1] La dama se coloca delante del peón y controla d1: el peón ya no puede coronar. } 5... Ke1 6. Qe3+ Kd1 { [%csl Gd1] ¡Objetivo cumplido! El rey negro está delante de su peón: el peón no puede avanzar. } 7. Kf7 { [%cal Gg8f7] Es el momento de acercar el rey: un paso. } 7... Kc2 { El rey negro sale para liberar el peón. } 8. Qe2 { Clava el peón otra vez y vigila d1. } 8... Kc1 9. Qc4+ Kb2 10. Qd3 Kc1 11. Qc3+ Kd1 { Otra vez delante del peón… } 12. Ke6 { …y otro paso del rey blanco. } 12... Ke2 13. Qc2 Ke1 14. Qe4+ Kf2 15. Qd3 Ke1 16. Qe3+ Kd1 17. Kd5 { El mismo ciclo: el rey sigue acercándose. } 17... Kc2 18. Qe2 Kc1 19. Qc4+ Kb1 20. Qd3+ Kc1 21. Qc3+ Kd1 22. Kd4 { ¡Cuidado! El rey blanco sólo se acerca cuando el rey negro tapa a su peón; si se acercara cuando el peón puede coronar con jaque, se perdería la dama y serían tablas. } 22... Ke2 23. Qe3+ Kf1 24. Qxd2 { El peón cae y queda un mate de dama elemental. Recuerda: con un peón de alfil o de torre en séptima, este método NO funciona por un truco de ahogado (mira la lección siguiente). } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "13"]
+[Title "Dama contra peón de alfil: el truco del ahogado"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "6K1/8/8/8/8/8/2pk4/7Q w - - 0 1"]
+[Result "1/2-1/2"]
+[Orientation "black"]
+
+{ [%csl Gc2,Ga1] Con un peón de alfil (columna c o f) en séptima, el defensor tiene un recurso salvador: cuando la dama le obliga a ir delante del peón, el rey no se pone en c1, sino que se va a la esquina (a1). Si la dama captura el peón, es ahogado. Con el rey blanco lejos, son tablas. Lo mismo pasa con el peón de torre, aún más fácil. } 1. Qd5+ Ke2 2. Qc4+ Kd2 3. Qd4+ Ke2 4. Qc3 Kd1 5. Qd3+ Kc1 { El rey negro está delante del peón: las blancas acercan su rey. } 6. Kf7 Kb2 7. Qd2 Kb1 8. Qb4+ Ka2 { [%csl Ga2] ¡Hacia la esquina! } 9. Qc3 Kb1 10. Qb3+ Ka1 { [%csl Ga1,Gc2] ¡El truco! El rey se mete en la esquina y deja el peón sin defensa… } 11. Qxc2 { …y si la dama lo captura, ¡ahogado! El rey negro no está en jaque y no tiene ninguna jugada. Si no lo captura, el peón coronará. Tablas. Conclusión: dama contra peón en séptima gana contra peones centrales y de caballo, pero hace tablas contra peones de alfil y de torre si el rey de la dama está lejos. } 1/2-1/2
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "14"]
+[Title "El peón de torre: tablas aunque el rey vaya delante"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "7k/8/6KP/8/8/8/8/8 w - - 0 1"]
+[Result "1/2-1/2"]
+
+{ [%csl Rh8,Gh6] La regla de la oposición de la lección 4 tiene una excepción importante: con un peón de torre, si el rey defensor llega a la esquina de coronación, son tablas siempre. El rey del bando fuerte no puede «rodear» al defensor por un lado, porque no hay columna al otro lado del peón. } 1. Kf6 { Las blancas intentan echar al rey negro de la esquina… } 1... Kg8 2. Kg6 Kh8 { …pero el rey negro va y vuelve entre g8 y h8. } 3. h7 { Si el peón avanza, es ahogado: el rey negro no está en jaque y no tiene casillas (g8 la ataca el peón y g7 el rey). Tablas. Recuerda: con el peón de torre, el defensor sólo tiene que llegar a la esquina. Y con peón de torre y alfil del color equivocado, igual (lección 5). } 1/2-1/2
