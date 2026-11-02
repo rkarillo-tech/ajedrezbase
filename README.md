@@ -84,6 +84,8 @@ el explorador de tus propias partidas o la enciclopedia ECO, que funcionan sin c
 **¿Qué motor usa?** Stockfish 19 Lite (WebAssembly, con red neuronal NNUE; 1,9 MB). Si el navegador no puede, pasa a
 Stockfish 10 y, sin conexión la primera vez, al motor propio.
 
+**Tengo conexión, pero sale Stockfish 10 (o el motor interno).** Stockfish 19 se descarga de jsDelivr o, si no responde, de unpkg: casi siempre lo impide un bloqueador de anuncios, el antivirus o la red. Permite `cdn.jsdelivr.net` y `unpkg.com` y pulsa **⚙ Ajustes › 🔄 Reintentar Stockfish 19** (ahí verás también el motivo exacto).
+
 **Sale «Motor interno ⚠» en vez de Stockfish.** El navegador no ha dejado arrancar Stockfish (suele pasar al abrir el
 archivo en una vista previa). Usa la versión web o abre el archivo directamente con el navegador.
 
@@ -96,7 +98,7 @@ archivo en una vista previa). Usa la versión web o abre el archivo directamente
 [MIT](LICENSE) © 2026 Rafael Karino Arillo ([rkarillo-tech](https://github.com/rkarillo-tech)).
 Puedes usarlo, copiarlo, modificarlo y distribuirlo libremente, manteniendo el aviso de autoría.
 Componentes y servicios de terceros: ver [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-Stockfish (GPL v3) **no** forma parte de este repositorio: el navegador lo descarga de jsDelivr (o cdnjs) al usarlo.
+Stockfish (GPL v3) **no** forma parte de este repositorio: el navegador lo descarga de jsDelivr (o, si no responde, de unpkg o cdnjs) al usarlo.
 
 ---
 

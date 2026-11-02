@@ -240,6 +240,13 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .sm-btn { padding: 3px 7px; font-size: 0.77rem; }
 .on { background: #26593a; border-color: #43875d; }
 .type-move { margin-top: 6px; }
+.engine-help { padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: .8rem; background: #0f1724; }
+.engine-help ul { margin: 4px 0 0; padding-left: 18px; }
+.engine-help li { margin-bottom: 3px; }
+.engine-verdict { padding: 4px 9px; font-size: .8rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+.engine-verdict b { color: var(--text); }
+.move-compare { padding: 6px 9px; font-size: .82rem; border-bottom: 1px solid var(--border); background: rgba(41,182,246,.06); }
+.move-compare .controls { margin-top: 4px; }
 .threat-info { padding: 5px 9px; border-bottom: 1px solid var(--border); font-size: .8rem; color: #ffcdd2; background: rgba(239,83,80,.08); }
 .retry-box { margin-top: 8px; background: #13261a; border: 1px solid var(--accent); border-radius: 8px; padding: 9px 11px; font-size: .86rem; }
 .retry-box:focus { outline: none; }
@@ -666,7 +673,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     <div class="engine-box" id="engineBox">
       <div class="engine-head">
         <div class="left">
-          <span id="engineSourceBadge" class="engine-badge">⚙ Motor</span>
+          <span id="engineSourceBadge" class="engine-badge" role="button" tabindex="0">⚙ Motor</span>
           <span id="engineMeta" class="engine-meta"></span>
         </div>
         <div class="controls" style="margin:0">
@@ -675,8 +682,22 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <button id="playBestMoveBtn" class="sm-btn" title="Jugar la mejor jugada del motor">⚡ Jugar</button>
           <button id="threatBtn" class="sm-btn" title="Ver qué amenaza el rival: qué jugaría si le tocara mover (tecla X)">👁 Amenaza</button>
           <button id="cloudStockfishBtn" class="sm-btn info-btn" title="Evaluación profunda de Stockfish en la nube de Lichess">☁ Nube</button>
+          <button id="engineHelpBtn" class="sm-btn" title="Cómo leer los números del motor" aria-expanded="false">❔</button>
         </div>
       </div>
+      <div id="engineHelp" class="engine-help" hidden>
+        <b>Cómo leer el motor</b>
+        <ul>
+          <li>El número es la <b>valoración</b>, siempre desde el punto de vista de las <b>blancas</b>: positivo (+) van mejor las blancas; negativo (−), las negras. La unidad es el peón: +1.00 es como tener un peón de más.</li>
+          <li><b>Entre −0.30 y +0.30</b>: igualdad · <b>±0.30 a ±0.70</b>: ligera ventaja · <b>±0.70 a ±1.50</b>: ventaja clara · <b>más de ±1.50</b>: ventaja decisiva. <b>#3</b>: las blancas dan mate en 3; <b>−#2</b>: las negras dan mate en 2.</li>
+          <li>Cada fila es una <b>línea</b>: la jugada que propone el motor y lo que seguiría. La primera es la mejor. Pulsa una fila para hacer su primera jugada.</li>
+          <li><b>prof.</b> es la profundidad (jugadas que ha calculado por delante): cuanto más alta, más fiable. Espera unos segundos a que suba.</li>
+          <li><b>⚖ Tu jugada frente a la del motor</b>: compara la jugada que has hecho con la mejor. Pierdes poco (menos de unos 0,3 peones) → buena; algo más → imprecisión <b>?!</b>; bastante (1 o 2 peones) → error <b>?</b>; mucho más o dejar escapar un mate → error grave <b>??</b>. En posiciones ya ganadas o perdidas se mide por la probabilidad de ganar, así que las cifras pesan menos.</li>
+          <li>Si juegas con negras, para ti es bueno que el número <b>baje</b>.</li>
+        </ul>
+      </div>
+      <div id="engineVerdict" class="engine-verdict" hidden></div>
+      <div id="moveCompare" class="move-compare" hidden></div>
       <div id="threatInfo" class="threat-info" hidden></div>
       <div class="engine-lines" id="engineLines"><div class="pv-empty">Iniciando motor…</div></div>
     </div>
@@ -1264,6 +1285,9 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button id="testTokenBtn" class="sm-btn info-btn">🔌 Probar token</button>
     </div>
     <div id="tokenResult" class="small"></div>
+    <label>Estado del motor</label>
+    <div class="note-box small" id="engineStatus" style="margin-top:2px"></div>
+    <div class="controls"><button id="retryEngineBtn" class="sm-btn info-btn" title="Vuelve a intentar cargar Stockfish 19 (desde jsDelivr y, si no, desde unpkg)">🔄 Reintentar Stockfish 19</button></div>
     <p class="small">Lichess exige ahora un token gratuito para su explorador. Créalo <b>sin marcar ningún permiso</b> en
       <a href="https://lichess.org/account/oauth/token/create?description=AjedrezBase" target="_blank" rel="noopener">lichess.org › API access tokens</a>
       (<a href="#" class="help-link" data-help="help-token">ver pasos</a>). Se guarda sólo en este navegador y sólo se envía a Lichess.</p>
@@ -1373,7 +1397,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     <table class="cb-table lic-table">
       <thead><tr><th>Componente</th><th>Uso</th><th>Licencia</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener noreferrer">Stockfish.js</a> 19 Lite (WebAssembly) de Chess.com / Nathan Rugg, basado en <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">Stockfish</a> (T. Romstad, M. Costalba, J. Kiiski, G. Linscott y colaboradores), con red NNUE de Chris Bao</td><td>Motor de análisis principal. <b>No va incluido</b>: el navegador lo descarga de jsDelivr al usarlo (y, si instalas la aplicación, lo guarda para usarlo sin conexión).</td><td>GPL v3 · <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">código fuente</a></td></tr>
+        <tr><td><a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener noreferrer">Stockfish.js</a> 19 Lite (WebAssembly) de Chess.com / Nathan Rugg, basado en <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">Stockfish</a> (T. Romstad, M. Costalba, J. Kiiski, G. Linscott y colaboradores), con red NNUE de Chris Bao</td><td>Motor de análisis principal. <b>No va incluido</b>: el navegador lo descarga de jsDelivr (o de unpkg) al usarlo (y, si instalas la aplicación, lo guarda para usarlo sin conexión).</td><td>GPL v3 · <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">código fuente</a></td></tr>
         <tr><td><a href="https://github.com/niklasf/stockfish.js" target="_blank" rel="noopener noreferrer">stockfish.js</a> 10.0.2 (versión JavaScript de Niklas Fiekas)</td><td>Motor de respaldo para navegadores sin WebAssembly; se descarga de cdnjs sólo si hace falta</td><td>GPL v3</td></tr>
         <tr><td>Piezas «Clásicas», de <a href="https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces" target="_blank" rel="noopener noreferrer">Colin M. L. Burnett</a> (Wikimedia Commons)</td><td>Dibujo de las piezas y del icono</td><td>Licencia múltiple GPL / BSD / GFDL</td></tr>
         <tr><td>Servicios de <a href="https://lichess.org" target="_blank" rel="noopener noreferrer">Lichess</a>: explorador de aperturas, evaluación en la nube y tablas Syzygy</td><td>Sólo se consultan cuando los usas; el explorador necesita tu token personal</td><td>Servicio gratuito de lichess.org (<a href="https://lichess.org/api" target="_blank" rel="noopener noreferrer">API</a>)</td></tr>

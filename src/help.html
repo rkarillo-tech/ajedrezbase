@@ -79,11 +79,12 @@
           <li><b>Analizar</b> (o tecla <kbd>E</kbd>) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.</li>
           <li><b>Flecha</b> muestra en morado la mejor jugada del motor. <b>⚡ Jugar</b> la ejecuta.</li>
           <li><b>👁 Amenaza</b> (o tecla <kbd>X</kbd>): enseña qué jugaría el rival <i>si le tocara mover</i>, con una flecha roja discontinua y su valoración. Responde al momento a «¿qué está tramando?» y a por qué una jugada pasiva es mala. Pulsa otra vez o cambia de jugada para quitarla.</li>
-          <li><b>Evaluación</b>: <code>+0.80</code> = ventaja blanca de unos 8 décimas de peón; <code>−1.50</code> = ventaja negra de 1,5 peones; <code>#3</code> = mate en 3 para las blancas; <code>−#2</code> = mate en 2 para las negras.</li>
+          <li><b>Evaluación</b>, siempre desde el punto de vista de las blancas: <code>+0.80</code> = ventaja blanca de unas 8 décimas de peón; <code>−1.50</code> = ventaja negra de 1,5 peones; <code>#3</code> = mate en 3 para las blancas; <code>−#2</code> = mate en 2 para las negras. Debajo del panel lo verás también en palabras («Ligera ventaja de las blancas», «Igualdad»…). Entre −0.30 y +0.30 es igualdad; hasta ±0.70, ligera ventaja; hasta ±1.50, ventaja clara; más, ventaja decisiva. El botón <b>❔</b> del panel tiene esta guía a mano.</li>
+          <li><b>⚖ Tu jugada frente a la del motor</b>: en cada jugada el panel compara la que se ha hecho con la que proponía el motor y dice cuánto pierde y si es buena, una imprecisión (?!), un error (?) o un error grave (??). Si aún no se ha analizado, pulsa <b>Compararla con la del motor</b>. Con <b>↪ Probar la del motor</b> vuelves atrás y juegas la del motor como variante, para ver la diferencia en el tablero.</li>
           <li><b>Qué motor está trabajando</b> (etiqueta verde del panel):
             <ul>
               <li><b>⚙ Stockfish 19</b>: el motor fuerte (versión «Lite» con red neuronal NNUE), funcionando en tu navegador. Descarga 1,9 MB la primera vez.</li>
-              <li><b>⚙ Stockfish 10</b>: el de antes, más débil; se usa sólo si el navegador no admite WebAssembly o no se puede descargar el 19.</li>
+              <li><b>⚙ Stockfish 10</b>: el de antes, más débil; se usa sólo si el navegador no admite WebAssembly o no se puede descargar el 19. Stockfish 19 se intenta descargar de jsDelivr y, si no responde, de unpkg; si sale el 10 teniendo conexión, casi siempre es porque un bloqueador de anuncios, el antivirus o la red bloquean esos sitios. Pulsa la etiqueta del motor para ver el motivo exacto y el botón <b>🔄 Reintentar Stockfish 19</b>.</li>
               <li><b>⚙ Motor interno</b>: el de respaldo, mucho más débil, funciona siempre sin conexión. Si aparece <b>⚠</b>, pasa el ratón por encima para ver por qué no se pudo usar Stockfish (normalmente, porque el archivo se abrió en una vista previa en vez de en el navegador).</li>
               <li><b>☁ Stockfish (nube Lichess)</b>: sólo al pulsar <b>☁ Nube</b>. Es un análisis muy profundo ya calculado en Lichess; sólo existe para posiciones conocidas (aperturas, partidas famosas).</li>
             </ul></li>
@@ -404,6 +405,8 @@
       <details id="help-problemas">
         <summary>🩺 26. Problemas frecuentes</summary>
         <dl class="faq">
+          <dt>Tengo conexión, pero sale «Stockfish 10» o «Motor interno» en vez de Stockfish 19</dt>
+          <dd>Stockfish 19 se descarga de jsDelivr o, si no responde, de unpkg. Si ninguno responde teniendo conexión, casi siempre es un bloqueador de anuncios (uBlock, AdBlock…), el antivirus o la red de una empresa o un centro de estudios. Permite <b>cdn.jsdelivr.net</b> y <b>unpkg.com</b> para esta página y, en <b>⚙ Ajustes</b>, pulsa <b>🔄 Reintentar Stockfish 19</b>. En Ajustes (o pulsando la etiqueta del motor) verás el motivo exacto. Una vez cargado, si tienes la aplicación instalada, se guarda y ya no hace falta descargarlo.</dd>
           <dt>«Lichess ha rechazado la consulta: hace falta un token personal»</dt>
           <dd>Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 15. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.</dd>
           <dt>«Lichess pide esperar» o «demasiadas consultas»</dt>

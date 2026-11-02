@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.7.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.8.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -240,6 +240,13 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .sm-btn { padding: 3px 7px; font-size: 0.77rem; }
 .on { background: #26593a; border-color: #43875d; }
 .type-move { margin-top: 6px; }
+.engine-help { padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: .8rem; background: #0f1724; }
+.engine-help ul { margin: 4px 0 0; padding-left: 18px; }
+.engine-help li { margin-bottom: 3px; }
+.engine-verdict { padding: 4px 9px; font-size: .8rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+.engine-verdict b { color: var(--text); }
+.move-compare { padding: 6px 9px; font-size: .82rem; border-bottom: 1px solid var(--border); background: rgba(41,182,246,.06); }
+.move-compare .controls { margin-top: 4px; }
 .threat-info { padding: 5px 9px; border-bottom: 1px solid var(--border); font-size: .8rem; color: #ffcdd2; background: rgba(239,83,80,.08); }
 .retry-box { margin-top: 8px; background: #13261a; border: 1px solid var(--accent); border-radius: 8px; padding: 9px 11px; font-size: .86rem; }
 .retry-box:focus { outline: none; }
@@ -666,7 +673,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     <div class="engine-box" id="engineBox">
       <div class="engine-head">
         <div class="left">
-          <span id="engineSourceBadge" class="engine-badge">⚙ Motor</span>
+          <span id="engineSourceBadge" class="engine-badge" role="button" tabindex="0">⚙ Motor</span>
           <span id="engineMeta" class="engine-meta"></span>
         </div>
         <div class="controls" style="margin:0">
@@ -675,8 +682,22 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <button id="playBestMoveBtn" class="sm-btn" title="Jugar la mejor jugada del motor">⚡ Jugar</button>
           <button id="threatBtn" class="sm-btn" title="Ver qué amenaza el rival: qué jugaría si le tocara mover (tecla X)">👁 Amenaza</button>
           <button id="cloudStockfishBtn" class="sm-btn info-btn" title="Evaluación profunda de Stockfish en la nube de Lichess">☁ Nube</button>
+          <button id="engineHelpBtn" class="sm-btn" title="Cómo leer los números del motor" aria-expanded="false">❔</button>
         </div>
       </div>
+      <div id="engineHelp" class="engine-help" hidden>
+        <b>Cómo leer el motor</b>
+        <ul>
+          <li>El número es la <b>valoración</b>, siempre desde el punto de vista de las <b>blancas</b>: positivo (+) van mejor las blancas; negativo (−), las negras. La unidad es el peón: +1.00 es como tener un peón de más.</li>
+          <li><b>Entre −0.30 y +0.30</b>: igualdad · <b>±0.30 a ±0.70</b>: ligera ventaja · <b>±0.70 a ±1.50</b>: ventaja clara · <b>más de ±1.50</b>: ventaja decisiva. <b>#3</b>: las blancas dan mate en 3; <b>−#2</b>: las negras dan mate en 2.</li>
+          <li>Cada fila es una <b>línea</b>: la jugada que propone el motor y lo que seguiría. La primera es la mejor. Pulsa una fila para hacer su primera jugada.</li>
+          <li><b>prof.</b> es la profundidad (jugadas que ha calculado por delante): cuanto más alta, más fiable. Espera unos segundos a que suba.</li>
+          <li><b>⚖ Tu jugada frente a la del motor</b>: compara la jugada que has hecho con la mejor. Pierdes poco (menos de unos 0,3 peones) → buena; algo más → imprecisión <b>?!</b>; bastante (1 o 2 peones) → error <b>?</b>; mucho más o dejar escapar un mate → error grave <b>??</b>. En posiciones ya ganadas o perdidas se mide por la probabilidad de ganar, así que las cifras pesan menos.</li>
+          <li>Si juegas con negras, para ti es bueno que el número <b>baje</b>.</li>
+        </ul>
+      </div>
+      <div id="engineVerdict" class="engine-verdict" hidden></div>
+      <div id="moveCompare" class="move-compare" hidden></div>
       <div id="threatInfo" class="threat-info" hidden></div>
       <div class="engine-lines" id="engineLines"><div class="pv-empty">Iniciando motor…</div></div>
     </div>
@@ -1238,7 +1259,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.7.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.8.0 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
 </footer>
@@ -1264,6 +1285,9 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button id="testTokenBtn" class="sm-btn info-btn">🔌 Probar token</button>
     </div>
     <div id="tokenResult" class="small"></div>
+    <label>Estado del motor</label>
+    <div class="note-box small" id="engineStatus" style="margin-top:2px"></div>
+    <div class="controls"><button id="retryEngineBtn" class="sm-btn info-btn" title="Vuelve a intentar cargar Stockfish 19 (desde jsDelivr y, si no, desde unpkg)">🔄 Reintentar Stockfish 19</button></div>
     <p class="small">Lichess exige ahora un token gratuito para su explorador. Créalo <b>sin marcar ningún permiso</b> en
       <a href="https://lichess.org/account/oauth/token/create?description=AjedrezBase" target="_blank" rel="noopener">lichess.org › API access tokens</a>
       (<a href="#" class="help-link" data-help="help-token">ver pasos</a>). Se guarda sólo en este navegador y sólo se envía a Lichess.</p>
@@ -1418,11 +1442,12 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li><b>Analizar</b> (o tecla <kbd>E</kbd>) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.</li>
           <li><b>Flecha</b> muestra en morado la mejor jugada del motor. <b>⚡ Jugar</b> la ejecuta.</li>
           <li><b>👁 Amenaza</b> (o tecla <kbd>X</kbd>): enseña qué jugaría el rival <i>si le tocara mover</i>, con una flecha roja discontinua y su valoración. Responde al momento a «¿qué está tramando?» y a por qué una jugada pasiva es mala. Pulsa otra vez o cambia de jugada para quitarla.</li>
-          <li><b>Evaluación</b>: <code>+0.80</code> = ventaja blanca de unos 8 décimas de peón; <code>−1.50</code> = ventaja negra de 1,5 peones; <code>#3</code> = mate en 3 para las blancas; <code>−#2</code> = mate en 2 para las negras.</li>
+          <li><b>Evaluación</b>, siempre desde el punto de vista de las blancas: <code>+0.80</code> = ventaja blanca de unas 8 décimas de peón; <code>−1.50</code> = ventaja negra de 1,5 peones; <code>#3</code> = mate en 3 para las blancas; <code>−#2</code> = mate en 2 para las negras. Debajo del panel lo verás también en palabras («Ligera ventaja de las blancas», «Igualdad»…). Entre −0.30 y +0.30 es igualdad; hasta ±0.70, ligera ventaja; hasta ±1.50, ventaja clara; más, ventaja decisiva. El botón <b>❔</b> del panel tiene esta guía a mano.</li>
+          <li><b>⚖ Tu jugada frente a la del motor</b>: en cada jugada el panel compara la que se ha hecho con la que proponía el motor y dice cuánto pierde y si es buena, una imprecisión (?!), un error (?) o un error grave (??). Si aún no se ha analizado, pulsa <b>Compararla con la del motor</b>. Con <b>↪ Probar la del motor</b> vuelves atrás y juegas la del motor como variante, para ver la diferencia en el tablero.</li>
           <li><b>Qué motor está trabajando</b> (etiqueta verde del panel):
             <ul>
               <li><b>⚙ Stockfish 19</b>: el motor fuerte (versión «Lite» con red neuronal NNUE), funcionando en tu navegador. Descarga 1,9 MB la primera vez.</li>
-              <li><b>⚙ Stockfish 10</b>: el de antes, más débil; se usa sólo si el navegador no admite WebAssembly o no se puede descargar el 19.</li>
+              <li><b>⚙ Stockfish 10</b>: el de antes, más débil; se usa sólo si el navegador no admite WebAssembly o no se puede descargar el 19. Stockfish 19 se intenta descargar de jsDelivr y, si no responde, de unpkg; si sale el 10 teniendo conexión, casi siempre es porque un bloqueador de anuncios, el antivirus o la red bloquean esos sitios. Pulsa la etiqueta del motor para ver el motivo exacto y el botón <b>🔄 Reintentar Stockfish 19</b>.</li>
               <li><b>⚙ Motor interno</b>: el de respaldo, mucho más débil, funciona siempre sin conexión. Si aparece <b>⚠</b>, pasa el ratón por encima para ver por qué no se pudo usar Stockfish (normalmente, porque el archivo se abrió en una vista previa en vez de en el navegador).</li>
               <li><b>☁ Stockfish (nube Lichess)</b>: sólo al pulsar <b>☁ Nube</b>. Es un análisis muy profundo ya calculado en Lichess; sólo existe para posiciones conocidas (aperturas, partidas famosas).</li>
             </ul></li>
@@ -1743,6 +1768,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <details id="help-problemas">
         <summary>🩺 26. Problemas frecuentes</summary>
         <dl class="faq">
+          <dt>Tengo conexión, pero sale «Stockfish 10» o «Motor interno» en vez de Stockfish 19</dt>
+          <dd>Stockfish 19 se descarga de jsDelivr o, si no responde, de unpkg. Si ninguno responde teniendo conexión, casi siempre es un bloqueador de anuncios (uBlock, AdBlock…), el antivirus o la red de una empresa o un centro de estudios. Permite <b>cdn.jsdelivr.net</b> y <b>unpkg.com</b> para esta página y, en <b>⚙ Ajustes</b>, pulsa <b>🔄 Reintentar Stockfish 19</b>. En Ajustes (o pulsando la etiqueta del motor) verás el motivo exacto. Una vez cargado, si tienes la aplicación instalada, se guarda y ya no hace falta descargarlo.</dd>
           <dt>«Lichess ha rechazado la consulta: hace falta un token personal»</dt>
           <dd>Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 15. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.</dd>
           <dt>«Lichess pide esperar» o «demasiadas consultas»</dt>
@@ -1798,7 +1825,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.7.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.8.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -1825,7 +1852,7 @@ SOFTWARE.</pre></details>
     <table class="cb-table lic-table">
       <thead><tr><th>Componente</th><th>Uso</th><th>Licencia</th></tr></thead>
       <tbody>
-        <tr><td><a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener noreferrer">Stockfish.js</a> 19 Lite (WebAssembly) de Chess.com / Nathan Rugg, basado en <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">Stockfish</a> (T. Romstad, M. Costalba, J. Kiiski, G. Linscott y colaboradores), con red NNUE de Chris Bao</td><td>Motor de análisis principal. <b>No va incluido</b>: el navegador lo descarga de jsDelivr al usarlo (y, si instalas la aplicación, lo guarda para usarlo sin conexión).</td><td>GPL v3 · <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">código fuente</a></td></tr>
+        <tr><td><a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener noreferrer">Stockfish.js</a> 19 Lite (WebAssembly) de Chess.com / Nathan Rugg, basado en <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">Stockfish</a> (T. Romstad, M. Costalba, J. Kiiski, G. Linscott y colaboradores), con red NNUE de Chris Bao</td><td>Motor de análisis principal. <b>No va incluido</b>: el navegador lo descarga de jsDelivr (o de unpkg) al usarlo (y, si instalas la aplicación, lo guarda para usarlo sin conexión).</td><td>GPL v3 · <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">código fuente</a></td></tr>
         <tr><td><a href="https://github.com/niklasf/stockfish.js" target="_blank" rel="noopener noreferrer">stockfish.js</a> 10.0.2 (versión JavaScript de Niklas Fiekas)</td><td>Motor de respaldo para navegadores sin WebAssembly; se descarga de cdnjs sólo si hace falta</td><td>GPL v3</td></tr>
         <tr><td>Piezas «Clásicas», de <a href="https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces" target="_blank" rel="noopener noreferrer">Colin M. L. Burnett</a> (Wikimedia Commons)</td><td>Dibujo de las piezas y del icono</td><td>Licencia múltiple GPL / BSD / GFDL</td></tr>
         <tr><td>Servicios de <a href="https://lichess.org" target="_blank" rel="noopener noreferrer">Lichess</a>: explorador de aperturas, evaluación en la nube y tablas Syzygy</td><td>Sólo se consultan cuando los usas; el explorador necesita tu token personal</td><td>Servicio gratuito de lichess.org (<a href="https://lichess.org/api" target="_blank" rel="noopener noreferrer">API</a>)</td></tr>
@@ -3370,9 +3397,17 @@ const viewState = () => (editor.active ? editor.state : game.current.state);
 
 /* ---------- 7. Motor: Stockfish 19 Lite (WASM, NNUE) → Stockfish 10 (asm.js) → motor interno ---------- */
 const STOCKFISH = [
-  { id: "sf19", name: "Stockfish 19", js: "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js", wasm: "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm", needsWasm: true, size: "1,9 MB" },
-  { id: "sf10", name: "Stockfish 10", js: "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js", size: "1,5 MB" }
+  { id: "sf19", name: "Stockfish 19", host: "jsDelivr", js: "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js", wasm: "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm", needsWasm: true, size: "1,9 MB" },
+  { id: "sf19b", name: "Stockfish 19", host: "unpkg", js: "https://unpkg.com/stockfish@19.0.1/bin/stockfish-19-lite-single.js", wasm: "https://unpkg.com/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm", needsWasm: true, size: "1,9 MB" },
+  { id: "sf10", name: "Stockfish 10", host: "cdnjs", js: "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js", size: "1,5 MB" }
 ];
+/* Por qué no se ha podido cargar un motor, en palabras claras */
+function engineFailReason(def, slow) {
+  if (navigator.onLine === false) return `${def.name} no se ha podido cargar: no hay conexión a internet`;
+  return slow
+    ? `${def.name} tardó demasiado en descargarse desde ${def.host} (conexión lenta o inestable)`
+    : `no se pudo descargar ${def.name} desde ${def.host}. Hay conexión, así que probablemente lo bloquea un bloqueador de anuncios, el antivirus, un cortafuegos o la red (por ejemplo, la de una empresa o un centro de estudios)`;
+}
 function makeFakeWorker() {
   // Respaldo si el navegador no permite Workers: ejecuta el motor interno en el hilo principal
   const fake = { onmessage: null, terminate() {} };
@@ -3386,8 +3421,9 @@ const Engine = {
   init() {
     this.shutdown();
     this.note = "";
+    this.fails = [];
     if (settings.engine === "internal") this.startInternal("");
-    else this.startStockfish(settings.engine === "sf10" ? 1 : 0);
+    else this.startStockfish(settings.engine === "sf10" ? STOCKFISH.findIndex(d => d.id === "sf10") : 0);
   },
   shutdown() {
     clearTimeout(this.readyTimer);
@@ -3404,7 +3440,7 @@ const Engine = {
      suelto, desde un Worker «blob». */
   startStockfish(i = 0, forceBlob = false) {
     const def = STOCKFISH[i];
-    if (!def) { this.startInternal(this.note || "no se pudo cargar Stockfish (¿sin conexión?)"); return; }
+    if (!def) { this.startInternal(this.note || engineFailReason({ name: "Stockfish", host: "internet" })); return; }
     if (def.needsWasm && typeof WebAssembly !== "object") { this.startStockfish(i + 1); return; }
     const sameOrigin = !forceBlob && /^https?:$/.test(location.protocol);
     const hash = def.wasm ? "#" + encodeURIComponent(def.wasm) : "";
@@ -3425,7 +3461,7 @@ const Engine = {
       const pend = this.pending;
       this.pending = null;
       this.shutdown();
-      if (reason) this.note = reason;
+      if (reason) { this.note = reason; this.fails.push(reason); }
       this.startStockfish(nextI, blob);
       if (pend) this.pending = pend;
     };
@@ -3433,9 +3469,9 @@ const Engine = {
       if (e && e.preventDefault) e.preventDefault();
       if (this.ready || this.kind !== "stockfish" || this.w !== w) return;
       if (sameOrigin) retry(i, true);
-      else retry(i + 1, false, `${def.name} no está disponible (¿sin conexión?)`);
+      else retry(i + 1, false, engineFailReason(def));
     };
-    this.readyTimer = setTimeout(() => { if (!this.ready && this.kind === "stockfish" && this.w === w) retry(i + 1, false, `${def.name} tardó demasiado en cargar`); }, 30000);
+    this.readyTimer = setTimeout(() => { if (!this.ready && this.kind === "stockfish" && this.w === w) retry(i + 1, false, engineFailReason(def, true)); }, 30000);
     this.send("uci");
   },
   fallback(reason) {
@@ -3462,9 +3498,10 @@ const Engine = {
       this.ready = true;
       clearTimeout(this.readyTimer);
       this.name = this.kind === "stockfish" ? this.def.name : "Motor interno";
-      if (this.kind === "stockfish" && this.def.id === "sf19") this.note = "";
+      if (this.kind === "stockfish" && this.def.id.startsWith("sf19")) this.note = "";
       if (this.kind === "stockfish") this.send("setoption name Hash value 32");
       setEngineBadge("⚙ " + this.name + (this.note ? " ⚠" : ""), this.note);
+      renderEngineStatus();
       this.pump();
       if (!this.running) requestLive();
       return;
@@ -3532,10 +3569,21 @@ const Engine = {
     });
   }
 };
+/* Estado del motor en ⚙ Ajustes: qué se está usando y, si no es Stockfish 19, por qué */
+function renderEngineStatus() {
+  const el = $("engineStatus");
+  if (!el) return;
+  const name = Engine.ready ? Engine.name : "cargando…";
+  const fails = (Engine.fails || []).filter((x, i, a) => a.indexOf(x) === i);
+  const sf19 = Engine.ready && Engine.def && Engine.kind === "stockfish" && Engine.def.id.startsWith("sf19");
+  el.innerHTML = `Ahora se usa: <b>${esc(name)}</b>${sf19 && Engine.def.id === "sf19b" ? " (descargado de unpkg, porque jsDelivr no respondía)" : ""}.`
+    + (fails.length && !sf19 ? `<br>⚠ ${fails.map(esc).join("<br>⚠ ")}` : "")
+    + (!sf19 && settings.engine === "auto" ? "<br>Si usas un bloqueador de anuncios, permite <b>cdn.jsdelivr.net</b> y <b>unpkg.com</b> para esta página y pulsa «Reintentar»." : "");
+}
 function resetEngineBadge() { if (Engine.ready) setEngineBadge("⚙ " + Engine.name + (Engine.note ? " ⚠" : ""), ""); }
 function setEngineBadge(text, note) {
   $("engineSourceBadge").textContent = text;
-  $("engineSourceBadge").title = note ? "Aviso: " + note : Engine.note ? "Usando el motor interno: " + Engine.note : "";
+  $("engineSourceBadge").title = (note ? "Aviso: " + note : Engine.note ? "Aviso: " + Engine.note : "") + (note || Engine.note ? " · Pulsa para ver el estado del motor" : "");
   if (note) $("engineMeta").textContent = note;
 }
 
@@ -4115,17 +4163,81 @@ function renderEngineLines(lines, stateNode, meta) {
     box.append(row);
   });
 }
+/* La valoración en palabras: «ligera ventaja de las blancas», «las negras dan mate en 3»… */
+function evalVerdict(ev) {
+  if (!ev) return "";
+  if (ev.mate != null) {
+    if (ev.mate === 0) return `Mate: ganan las ${ev.winner === 1 ? "blancas" : "negras"}`;
+    return `Las ${ev.mate > 0 ? "blancas" : "negras"} dan mate en ${Math.abs(ev.mate)}`;
+  }
+  const a = Math.abs(ev.cp), side = ev.cp > 0 ? "las blancas" : "las negras";
+  if (a < 30) return "Igualdad";
+  const how = a < 70 ? "Ligera ventaja" : a < 150 ? "Ventaja clara" : a < 400 ? "Ventaja decisiva" : "Ventaja aplastante";
+  const pawns = a < 70 ? "menos de un peón" : a < 150 ? "alrededor de un peón" : a < 400 ? `unos ${Math.round(a / 100)} peones` : "más de una pieza";
+  return `${how} de ${side} (${pawns})`;
+}
+function renderVerdict(ev) {
+  const el = $("engineVerdict");
+  el.hidden = !ev || quiz();
+  if (!el.hidden) el.innerHTML = `<b>${esc(fmtEval(ev))}</b> · ${esc(evalVerdict(ev))}`;
+}
+/* ⚖ La jugada que lleva a la posición actual frente a la que proponía el motor */
+const Compare = { busy: false };
+const COMPARE_LABEL = { "??": "?? Error grave", "?": "? Error", "?!": "?! Imprecisión" };
+function renderCompare(job) {
+  const el = $("moveCompare"), n = cur(), p = n.parent;
+  if (!p || quiz() || editor.active) { el.hidden = true; return; }
+  el.hidden = false;
+  const san = numPrefix(p.state) + dispSan(n);
+  const live = job && job.lines && job.lines[0] ? { cp: job.lines[0].cp, mate: job.lines[0].mate, winner: job.lines[0].winner } : null;
+  const after = terminalEval(n) || n.eval || live;
+  if (Compare.busy) { el.innerHTML = `⚖ ⏳ Comparando <b>${esc(san)}</b> con la jugada del motor…`; return; }
+  if (p.eval && p.eval.best === n.uci) { el.innerHTML = `⚖ ★ <b>${esc(san)}</b> es la jugada que propone el motor (${esc(fmtEval(p.eval))}).`; return; }
+  if (!p.eval || !p.eval.best || !after) {
+    el.innerHTML = `⚖ ¿Qué tal <b>${esc(san)}</b>? <button class="sm-btn" data-cmp="run" ${Engine.ready ? "" : "disabled"}>Compararla con la del motor</button>`;
+    el.querySelector("[data-cmp]").onclick = compareWithEngine;
+    return;
+  }
+  const c = classifyMove(Object.assign({}, n, { eval: after }));
+  const bm = Chess.moveFromUci(p.state, p.eval.best);
+  const bestSan = bm ? numPrefix(p.state) + formatSan(Chess.san(p.state, bm), settings.lang, p.state.t) : p.eval.best;
+  const label = c.book ? "📖 Jugada de teoría: no se compara" : COMPARE_LABEL[c.cls] || (c.loss < 2 ? "✔ Excelente: casi como la del motor" : "✔ Buena jugada");
+  const lost = c.book ? "" : after.mate == null && p.eval.mate == null ? ` · pierdes ${(c.cpl / 100).toFixed(2).replace(".", ",")} peones` : "";
+  el.innerHTML = `⚖ <b>${esc(san)}</b> → ${esc(fmtEval(after))} · la del motor, <b>${esc(bestSan)}</b> → ${esc(fmtEval(p.eval))}${lost}<br><b>${esc(label)}</b>${live && !n.eval ? ` <span class="small">(provisional, el motor sigue calculando)</span>` : ""}
+    <div class="controls"><button class="sm-btn" data-cmp="best" title="Vuelve a la posición anterior y juega la del motor, como variante">↪ Probar la del motor</button></div>`;
+  el.querySelector("[data-cmp=best]").onclick = () => {
+    if (!bm || cur() !== n) return;
+    goTo(p);
+    if (canUserMove()) playMove(bm, "user");
+  };
+}
+async function compareWithEngine() {
+  const n = cur(), p = n.parent;
+  if (!p || Compare.busy || !Engine.ready) return;
+  Compare.busy = true;
+  Engine.cancel("live");
+  renderCompare();
+  const ms = Math.max(800, Math.min(3000, +settings.analysisMs));
+  try {
+    if (!p.eval || !p.eval.best) { const j = await Engine.analyse(p, { purpose: "compare", movetime: ms, multipv: Engine.kind === "stockfish" ? 2 : 1 }); if (j) storeEval(p, j, true); }
+    if (!n.eval && !terminalEval(n)) { const j = await Engine.analyse(n, { purpose: "compare", movetime: ms, multipv: 1 }); if (j) storeEval(n, j, true); }
+  } finally { Compare.busy = false; }
+  if (cur() === n) render();
+}
 function showEngineFor(node, job) {
+  renderCompare(job);
   if (job && job.lines && job.lines.length) {
     const l0 = job.lines[0];
+    renderVerdict({ cp: l0.cp, mate: l0.mate, winner: l0.winner });
     updateEvalBar({ cp: l0.cp, mate: l0.mate, winner: l0.winner });
     renderEngineLines(job.lines, node);
     $("engineMeta").textContent = `prof. ${job.depth || 0}` + (job.nps ? ` · ${Math.round(job.nps / 1000)} kN/s` : "");
     if (l0.pv[0]) { ui.engineArrow = { node, from: Chess.sqIdx(l0.pv[0].slice(0, 2)), to: Chess.sqIdx(l0.pv[0].slice(2, 4)) }; renderShapes(); }
     return;
   }
-  const ev = node.eval;
+  const ev = node.eval || terminalEval(node);
   ui.engineArrow = null;
+  renderVerdict(ev);
   if (ev) {
     updateEvalBar(ev);
     const pseudoLines = ev.lines && ev.lines.length ? ev.lines : [{ cp: ev.cp, mate: ev.mate, winner: ev.winner, pv: ev.pv || (ev.best ? [ev.best] : []) }];
@@ -4143,7 +4255,7 @@ function showEngineFor(node, job) {
 }
 const requestLive = debounce(() => {
   const node = cur();
-  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ui.cpu.thinking || !Engine.ready) {
+  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ui.cpu.thinking || Compare.busy || !Engine.ready) {
     Engine.cancel("live");
     return;
   }
@@ -7223,6 +7335,7 @@ function openModal(id) {
     $("setAutosave").checked = settings.autosave;
     $("setAnimate").checked = settings.animate;
     $("setWheel").checked = settings.wheel;
+    renderEngineStatus();
   }
   if (!document.querySelector(".modal-back.open")) ui.modalReturn = document.activeElement;
   $(id).classList.add("open");
@@ -7250,6 +7363,10 @@ document.querySelectorAll(".modal-back").forEach(m => {
   m.addEventListener("click", e => { if (e.target === m || e.target.hasAttribute("data-close")) closeModals(); });
 });
 $("settingsBtn").onclick = () => openModal("settingsModal");
+$("engineSourceBadge").onclick = () => openModal("settingsModal");
+$("engineSourceBadge").onkeydown = e => { if (e.key === "Enter") openModal("settingsModal"); };
+$("engineHelpBtn").onclick = () => { const h = $("engineHelp"); h.hidden = !h.hidden; $("engineHelpBtn").setAttribute("aria-expanded", !h.hidden); };
+$("retryEngineBtn").onclick = () => { if (settings.engine !== "auto") { settings.engine = "auto"; saveSettings(); $("setEngine").value = "auto"; } Engine.init(); renderEngineStatus(); toast("🔄 Cargando Stockfish 19…"); };
 $("versionsBtn").onclick = openVersions;
 $("copyGameBtn").onclick = () => saveToLibrary({ copy: true, force: true });
 $("menuBtn").onclick = () => {

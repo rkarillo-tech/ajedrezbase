@@ -59,10 +59,11 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - **Analizar** (o tecla `E`) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.
 - **Flecha** muestra en morado la mejor jugada del motor. **⚡ Jugar** la ejecuta.
 - **👁 Amenaza** (o tecla `X`): enseña qué jugaría el rival *si le tocara mover*, con una flecha roja discontinua y su valoración. Responde al momento a «¿qué está tramando?» y a por qué una jugada pasiva es mala. Pulsa otra vez o cambia de jugada para quitarla.
-- **Evaluación**: `+0.80` = ventaja blanca de unos 8 décimas de peón; `−1.50` = ventaja negra de 1,5 peones; `#3` = mate en 3 para las blancas; `−#2` = mate en 2 para las negras.
+- **Evaluación**, siempre desde el punto de vista de las blancas: `+0.80` = ventaja blanca de unas 8 décimas de peón; `−1.50` = ventaja negra de 1,5 peones; `#3` = mate en 3 para las blancas; `−#2` = mate en 2 para las negras. Debajo del panel lo verás también en palabras («Ligera ventaja de las blancas», «Igualdad»…). Entre −0.30 y +0.30 es igualdad; hasta ±0.70, ligera ventaja; hasta ±1.50, ventaja clara; más, ventaja decisiva. El botón **❔** del panel tiene esta guía a mano.
+- **⚖ Tu jugada frente a la del motor**: en cada jugada el panel compara la que se ha hecho con la que proponía el motor y dice cuánto pierde y si es buena, una imprecisión (?!), un error (?) o un error grave (??). Si aún no se ha analizado, pulsa **Compararla con la del motor**. Con **↪ Probar la del motor** vuelves atrás y juegas la del motor como variante, para ver la diferencia en el tablero.
 - **Qué motor está trabajando** (etiqueta verde del panel):
   - **⚙ Stockfish 19**: el motor fuerte (versión «Lite» con red neuronal NNUE), funcionando en tu navegador. Descarga 1,9 MB la primera vez.
-  - **⚙ Stockfish 10**: el de antes, más débil; se usa sólo si el navegador no admite WebAssembly o no se puede descargar el 19.
+  - **⚙ Stockfish 10**: el de antes, más débil; se usa sólo si el navegador no admite WebAssembly o no se puede descargar el 19. Stockfish 19 se intenta descargar de jsDelivr y, si no responde, de unpkg; si sale el 10 teniendo conexión, casi siempre es porque un bloqueador de anuncios, el antivirus o la red bloquean esos sitios. Pulsa la etiqueta del motor para ver el motivo exacto y el botón **🔄 Reintentar Stockfish 19**.
   - **⚙ Motor interno**: el de respaldo, mucho más débil, funciona siempre sin conexión. Si aparece **⚠**, pasa el ratón por encima para ver por qué no se pudo usar Stockfish (normalmente, porque el archivo se abrió en una vista previa en vez de en el navegador).
   - **☁ Stockfish (nube Lichess)**: sólo al pulsar **☁ Nube**. Es un análisis muy profundo ya calculado en Lichess; sólo existe para posiciones conocidas (aperturas, partidas famosas).
 - En **⚙ Ajustes** puedes elegir el motor (automático, Stockfish 10 o sólo el interno), el tiempo por jugada y el número de líneas.
@@ -298,6 +299,10 @@ Los atajos no funcionan mientras escribes en un recuadro de texto.
 - **Archivo suelto**: también puedes descargar `index.html` y abrirlo con doble clic. Funciona igual, pero la biblioteca de esa copia es distinta de la de la versión web.
 
 ## 🩺 26. Problemas frecuentes
+**Tengo conexión, pero sale «Stockfish 10» o «Motor interno» en vez de Stockfish 19**
+
+Stockfish 19 se descarga de jsDelivr o, si no responde, de unpkg. Si ninguno responde teniendo conexión, casi siempre es un bloqueador de anuncios (uBlock, AdBlock…), el antivirus o la red de una empresa o un centro de estudios. Permite **cdn.jsdelivr.net** y **unpkg.com** para esta página y, en **⚙ Ajustes**, pulsa **🔄 Reintentar Stockfish 19**. En Ajustes (o pulsando la etiqueta del motor) verás el motivo exacto. Una vez cargado, si tienes la aplicación instalada, se guarda y ya no hace falta descargarlo.
+
 **«Lichess ha rechazado la consulta: hace falta un token personal»**
 
 Lichess exige ahora un token gratuito para su explorador. Sigue los pasos del apartado 15. Mientras tanto, usa «Mi biblioteca + .pgn abierto» o la enciclopedia ECO.

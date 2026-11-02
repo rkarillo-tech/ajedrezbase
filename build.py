@@ -23,6 +23,8 @@ SRC = ROOT / "src"
 ENGINES = {
     "SF19_JS": "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js",
     "SF19_WASM": "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm",
+    "SF19B_JS": "https://unpkg.com/stockfish@19.0.1/bin/stockfish-19-lite-single.js",
+    "SF19B_WASM": "https://unpkg.com/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm",
     "SF10_JS": "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js",
 }
 
