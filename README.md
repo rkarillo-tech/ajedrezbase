@@ -83,8 +83,9 @@ Créalo **sin marcar ningún permiso** en [lichess.org › API access tokens](ht
 y pégalo en **⚙ Ajustes** (botón «🔌 Probar token»). Se guarda sólo en tu navegador. Mientras tanto puedes usar
 el explorador de tus propias partidas o la enciclopedia ECO, que funcionan sin conexión.
 
-**¿Qué motor usa?** Stockfish 19 Lite (WebAssembly, con red neuronal NNUE; 1,9 MB). Si el navegador no puede, pasa a
-Stockfish 10 y, sin conexión la primera vez, al motor propio.
+**¿Qué motor usa?** Stockfish 19 Lite (WebAssembly, con red neuronal NNUE; 1,9 MB), descargado de jsDelivr o, si no responde, de unpkg.
+Si el navegador no puede, pasa a Stockfish 10 y, sin conexión la primera vez, al motor propio. Una vez cargado, queda guardado
+para usarlo sin conexión (en la versión instalada y también en el archivo descargado).
 
 **Tengo conexión, pero sale Stockfish 10 (o el motor interno).** Stockfish 19 se descarga de jsDelivr o, si no responde, de unpkg: casi siempre lo impide un bloqueador de anuncios, el antivirus o la red. Permite `cdn.jsdelivr.net` y `unpkg.com` y pulsa **⚙ Ajustes › 🔄 Reintentar Stockfish 19** (ahí verás también el motivo exacto).
 
