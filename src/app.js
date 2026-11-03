@@ -197,18 +197,57 @@ function makeFakeWorker() {
   fake.postMessage = d => setTimeout(() => scope.onmessage({ data: d }), 0);
   return fake;
 }
+/* Copia de Stockfish 19 guardada en el navegador (IndexedDB) para el archivo abierto con doble clic:
+   ahí no hay service worker, así que sin esta copia haría falta internet cada vez. */
+const EngineCache = {
+  db: null,
+  open() {
+    if (this.db) return Promise.resolve(this.db);
+    return new Promise(res => {
+      try {
+        const r = indexedDB.open("ajedrezbase-motor", 1);
+        r.onupgradeneeded = () => r.result.createObjectStore("f");
+        r.onsuccess = () => { this.db = r.result; res(this.db); };
+        r.onerror = () => res(null);
+      } catch { res(null); }
+    });
+  },
+  async op(mode, fn) {
+    const db = await this.open();
+    if (!db) return null;
+    return new Promise(res => {
+      try { const tx = db.transaction("f", mode), q = fn(tx.objectStore("f")); tx.oncomplete = () => res(q && q.result !== undefined ? q.result : true); tx.onerror = tx.onabort = () => res(null); }
+      catch { res(null); }
+    });
+  },
+  get(id) { return this.op("readonly", s => s.get(id)); },
+  put(id, v) { return this.op("readwrite", s => s.put(v, id)); },
+  del(id) { return this.op("readwrite", s => s.delete(id)); }
+};
+const servedOverHttp = () => /^https?:$/.test(location.protocol);
+/* Se antepone al código de Stockfish en el Worker: el primer mensaje trae el .wasm y su descarga se sirve desde ahí */
+const WASM_FROM_MESSAGE = '(function(){var r;var p=new Promise(function(x){r=x;});self.addEventListener("message",function(e){if(e.data&&e.data.__wasm){r(e.data.__wasm);e.stopImmediatePropagation();}});var f=self.fetch;self.fetch=function(u,o){return /\\.wasm/.test(String(u))?p.then(function(b){return new Response(b,{headers:{"Content-Type":"application/wasm"}});}):f.call(self,u,o);};})();\n';
 const Engine = {
-  w: null, kind: "", name: "", ready: false, running: null, pending: null, stopping: false, note: "", readyTimer: null,
+  w: null, kind: "", name: "", ready: false, running: null, pending: null, stopping: false, note: "", readyTimer: null, urls: [], cache: null, fromCache: false, skipCache: false,
   init() {
     this.shutdown();
     this.note = "";
     this.fails = [];
-    if (settings.engine === "internal") this.startInternal("");
-    else this.startStockfish(settings.engine === "sf10" ? STOCKFISH.findIndex(d => d.id === "sf10") : 0);
+    this.skipCache = false;
+    if (settings.engine === "internal") { this.startInternal(""); return; }
+    const first = settings.engine === "sf10" ? STOCKFISH.findIndex(d => d.id === "sf10") : 0;
+    if (first === 0 && !servedOverHttp()) {
+      // Como archivo suelto: si ya hay una copia guardada de Stockfish 19, se usa (también sin conexión)
+      setEngineBadge("⏳ Preparando el motor…", "");
+      EngineCache.get("sf19").then(c => { this.cache = c && c.js && c.wasm ? c : null; if (!this.w) this.startStockfish(0); });
+    } else this.startStockfish(first);
   },
+  blobUrl(data, type) { const u = URL.createObjectURL(new Blob(Array.isArray(data) ? data : [data], { type })); this.urls.push(u); return u; },
   shutdown() {
     clearTimeout(this.readyTimer);
     if (this.w) { try { this.w.terminate(); } catch {} }
+    this.urls.forEach(u => { try { URL.revokeObjectURL(u); } catch {} });
+    this.urls = [];
     this.w = null; this.ready = false; this.stopping = false;
     if (this.running) { const r = this.running; this.running = null; r.cancelled = true; r.resolve && r.resolve(null); }
   },
@@ -223,12 +262,19 @@ const Engine = {
     const def = STOCKFISH[i];
     if (!def) { this.startInternal(this.note || engineFailReason({ name: "Stockfish", host: "internet" })); return; }
     if (def.needsWasm && typeof WebAssembly !== "object") { this.startStockfish(i + 1); return; }
-    const sameOrigin = !forceBlob && /^https?:$/.test(location.protocol);
-    const hash = def.wasm ? "#" + encodeURIComponent(def.wasm) : "";
+    const sameOrigin = !forceBlob && servedOverHttp();
+    const useCache = !sameOrigin && def.id.startsWith("sf19") && this.cache && !this.skipCache;
+    const hash = def.wasm ? "#" + encodeURIComponent(useCache ? "stockfish.wasm" : def.wasm) : "";
     let w;
+    this.fromCache = !!useCache;
     try {
       if (sameOrigin) w = new Worker(`sf-worker.js?e=${def.id}${hash}`);
-      else w = new Worker(URL.createObjectURL(new Blob([`importScripts(${JSON.stringify(def.js)});`], { type: "application/javascript" })) + hash);
+      else if (useCache) {
+        // Desde un archivo local el Worker no puede cargar otros «blob», así que el código de Stockfish va
+        // dentro del propio Worker y el .wasm se le pasa por mensaje (se sirve a su fetch desde memoria)
+        w = new Worker(this.blobUrl([WASM_FROM_MESSAGE, this.cache.js], "application/javascript") + hash);
+        w.postMessage({ __wasm: this.cache.wasm.slice(0) });
+      } else w = new Worker(this.blobUrl(`importScripts(${JSON.stringify(def.js)});`, "application/javascript") + hash);
     } catch {
       if (sameOrigin) { this.startStockfish(i, true); return; }
       this.note = "este navegador o esta vista previa no deja ejecutar Stockfish; abre el archivo directamente en Chrome, Edge o Firefox";
@@ -249,6 +295,7 @@ const Engine = {
     w.onerror = e => {
       if (e && e.preventDefault) e.preventDefault();
       if (this.ready || this.kind !== "stockfish" || this.w !== w) return;
+      if (useCache) { this.skipCache = true; EngineCache.del("sf19"); this.cache = null; retry(i, false); return; }   // copia estropeada: se descarga otra vez
       if (sameOrigin) retry(i, true);
       else retry(i + 1, false, engineFailReason(def));
     };
@@ -266,7 +313,7 @@ const Engine = {
     let w;
     try {
       const src = $("coreLib").textContent + "\nChess.workerMain(self);";
-      w = new Worker(URL.createObjectURL(new Blob([src], { type: "application/javascript" })));
+      w = new Worker(this.blobUrl(src, "application/javascript"));
     } catch { w = makeFakeWorker(); }
     this.attach(w, "internal");
     this.note = reason || "";
@@ -279,7 +326,10 @@ const Engine = {
       this.ready = true;
       clearTimeout(this.readyTimer);
       this.name = this.kind === "stockfish" ? this.def.name : "Motor interno";
-      if (this.kind === "stockfish" && this.def.id.startsWith("sf19")) this.note = "";
+      if (this.kind === "stockfish" && this.def.id.startsWith("sf19")) {
+        this.note = "";
+        if (!this.fromCache && !servedOverHttp()) saveEngineCopy(this.def);
+      }
       if (this.kind === "stockfish") this.send("setoption name Hash value 32");
       setEngineBadge("⚙ " + this.name + (this.note ? " ⚠" : ""), this.note);
       renderEngineStatus();
@@ -359,7 +409,20 @@ function renderEngineStatus() {
   const sf19 = Engine.ready && Engine.def && Engine.kind === "stockfish" && Engine.def.id.startsWith("sf19");
   el.innerHTML = `Ahora se usa: <b>${esc(name)}</b>${sf19 && Engine.def.id === "sf19b" ? " (descargado de unpkg, porque jsDelivr no respondía)" : ""}.`
     + (fails.length && !sf19 ? `<br>⚠ ${fails.map(esc).join("<br>⚠ ")}` : "")
-    + (!sf19 && settings.engine === "auto" ? "<br>Si usas un bloqueador de anuncios, permite <b>cdn.jsdelivr.net</b> y <b>unpkg.com</b> para esta página y pulsa «Reintentar»." : "");
+    + (!sf19 && settings.engine === "auto" ? "<br>Si usas un bloqueador de anuncios, permite <b>cdn.jsdelivr.net</b> y <b>unpkg.com</b> para esta página y pulsa «Reintentar»." : "")
+    + (servedOverHttp() ? (sf19 ? "<br>💾 Al tener la aplicación instalada, Stockfish 19 queda guardado para usarlo sin conexión." : "")
+      : Engine.cache ? `<br>💾 Stockfish 19 está guardado en este navegador (${(Engine.cache.wasm.byteLength / 1048576).toFixed(1).replace(".", ",")} MB, desde ${esc(Engine.cache.from || "internet")}, ${esc(new Date(Engine.cache.t).toLocaleDateString("es-ES"))}): funciona aunque abras el archivo sin conexión.${Engine.fromCache ? " Ahora se está usando esa copia." : ""}`
+      : sf19 ? "<br>⏳ Guardando una copia de Stockfish 19 en este navegador para usarlo sin conexión…" : "");
+}
+/* Guarda en el navegador una copia de Stockfish 19 (el mismo fichero que se acaba de cargar) */
+async function saveEngineCopy(def) {
+  try {
+    const [jsRes, wasmRes] = await Promise.all([fetch(def.js, { mode: "cors", credentials: "omit" }), fetch(def.wasm, { mode: "cors", credentials: "omit" })]);
+    if (!jsRes.ok || !wasmRes.ok) return;
+    const rec = { js: await jsRes.text(), wasm: await wasmRes.arrayBuffer(), t: Date.now(), from: def.host };
+    if (rec.wasm.byteLength < 100000 || rec.js.length < 1000) return;
+    if (await EngineCache.put("sf19", rec)) { Engine.cache = rec; renderEngineStatus(); }
+  } catch (e) { console.warn("No se pudo guardar la copia de Stockfish:", e); }
 }
 function resetEngineBadge() { if (Engine.ready) setEngineBadge("⚙ " + Engine.name + (Engine.note ? " ⚠" : ""), ""); }
 function setEngineBadge(text, note) {
@@ -389,6 +452,7 @@ function storeEval(node, job, force) {
 
 /* ---------- 9. Renderizado del tablero ---------- */
 const boardEl = $("board");
+const boardCache = { key: "", els: [], pieces: [] };
 function renderBoard() {
   const s = viewState(), node = cur();
   const last = !editor.active && node.move ? node.move : null;
@@ -396,32 +460,49 @@ function renderBoard() {
   const targets = new Map();
   if (!editor.active && ui.selected != null && settings.showLegal) for (const m of Chess.legal(s)) if (m.from === ui.selected) targets.set(m.to, m.captured !== ".");
   const locked = !editor.active && !canUserMove();
-  const frag = document.createDocumentFragment();
+  // Las 64 casillas se crean una vez (o al girar el tablero, cambiar las piezas o las coordenadas);
+  // después sólo se actualizan las clases y las piezas que cambian
+  const key = `${ui.flipped}|${settings.pieceStyle}|${settings.coords}`;
+  if (boardCache.key !== key || boardEl.children.length !== 64) {
+    const frag = document.createDocumentFragment();
+    boardCache.els = []; boardCache.pieces = [];
+    for (let d = 0; d < 64; d++) {
+      const r = d >> 3, c = d & 7, rr = ui.flipped ? 7 - r : r, cc = ui.flipped ? 7 - c : c;
+      const el = document.createElement("div");
+      el.dataset.sq = rr * 16 + cc;
+      el.setAttribute("role", "gridcell");
+      el.innerHTML = `<div class="piece-holder"></div>`;
+      if (settings.coords) {
+        if (c === 0) el.insertAdjacentHTML("beforeend", `<span class="coord">${8 - rr}</span>`);
+        if (r === 7) el.insertAdjacentHTML("beforeend", `<span class="coord file">${"abcdefgh"[cc]}</span>`);
+      }
+      boardCache.els.push(el);
+      frag.append(el);
+    }
+    boardEl.replaceChildren(frag);
+    boardCache.key = key;
+  }
+  boardEl.querySelectorAll(".sq-badge").forEach(x => x.remove());
   for (let d = 0; d < 64; d++) {
     const r = d >> 3, c = d & 7;
     const rr = ui.flipped ? 7 - r : r, cc = ui.flipped ? 7 - c : c;
-    const i = rr * 16 + cc, p = s.b[i];
-    const el = document.createElement("div");
-    el.className = "square " + ((rr + cc) % 2 === 0 ? "light" : "dark");
-    el.dataset.sq = i;
-    el.setAttribute("role", "gridcell");
-    el.setAttribute("aria-label", Chess.sqName(i) + (p !== "." ? ", " + PIECE_LABEL[p] : ""));
-    if (ui.selected === i) el.classList.add("selected");
-    if (last && (last.from === i || last.to === i)) el.classList.add("last");
-    if (checkSq === i) el.classList.add("in-check");
-    if ((trainer.active && trainer.hintSq === i) || (Retry.active && Retry.hintSq === i) || (Guess.active && Guess.hintSq === i)) el.classList.add("hint-sq");
-    if (Vis.marks.ok === i) el.classList.add("vis-ok");
-    if (Vis.marks.bad === i) el.classList.add("vis-bad");
-    if (targets.has(i)) { el.classList.add("target"); if (targets.get(i)) el.classList.add("occupied"); }
-    if (!locked && !editor.active && p !== "." && Chess.color(p) === s.t) el.classList.add("has-own");
-    el.innerHTML = `<div class="piece-holder">${getPieceHTML(p, settings.pieceStyle)}</div>`;
-    if (settings.coords) {
-      if (c === 0) el.insertAdjacentHTML("beforeend", `<span class="coord">${8 - rr}</span>`);
-      if (r === 7) el.insertAdjacentHTML("beforeend", `<span class="coord file">${"abcdefgh"[cc]}</span>`);
+    const i = rr * 16 + cc, p = s.b[i], el = boardCache.els[d];
+    let cls = "square " + ((rr + cc) % 2 === 0 ? "light" : "dark");
+    if (ui.selected === i) cls += " selected";
+    if (last && (last.from === i || last.to === i)) cls += " last";
+    if (checkSq === i) cls += " in-check";
+    if ((trainer.active && trainer.hintSq === i) || (Retry.active && Retry.hintSq === i) || (Guess.active && Guess.hintSq === i)) cls += " hint-sq";
+    if (Vis.marks.ok === i) cls += " vis-ok";
+    if (Vis.marks.bad === i) cls += " vis-bad";
+    if (targets.has(i)) cls += targets.get(i) ? " target occupied" : " target";
+    if (!locked && !editor.active && p !== "." && Chess.color(p) === s.t) cls += " has-own";
+    if (el.className !== cls) el.className = cls;   // también limpia marcas temporales (arrastre, destello de error)
+    if (boardCache.pieces[d] !== p) {
+      el.firstChild.innerHTML = getPieceHTML(p, settings.pieceStyle);
+      el.setAttribute("aria-label", Chess.sqName(i) + (p !== "." ? ", " + PIECE_LABEL[p] : ""));
+      boardCache.pieces[d] = p;
     }
-    frag.append(el);
   }
-  boardEl.replaceChildren(frag);
   boardEl.classList.toggle("editor-cursor", editor.active);
   boardEl.classList.toggle("locked", locked && !Vis.active);
   boardEl.classList.toggle("blind", !!ui.blind && !ui.peek && !editor.active);
@@ -747,11 +828,39 @@ function renderBars() {
 
 /* ---------- 14. Lista de jugadas con variantes ---------- */
 const NAG_CLASS = { "!!": "nag-brilliant", "!": "nag-good", "!?": "nag-good", "?!": "nag-inacc", "?": "nag-mistake", "??": "nag-blunder" };
+/* Huella del contenido de la lista de jugadas: si no cambia, basta con mover el resaltado */
+function movesSignature(marked) {
+  let s = `${settings.lang}|${settings.moveView}|${quiz() ? "q" + cur().id : ""}|${game.root.comment || ""}|${[...marked].map(([k, m]) => k + m.cat + (m.note || "")).join()}|`;
+  const st = [game.root];
+  while (st.length) {
+    const n = st.pop();
+    s += n.id + (n.nag || "") + (n.posNag || "") + "{" + (n.comment || "") + "}";
+    for (let i = n.children.length - 1; i >= 0; i--) st.push(n.children[i]);
+  }
+  return s;
+}
+function scrollActiveMove() {
+  const box = $("moves"), a = box.querySelector(".mv.active");
+  if (a) {
+    const top = a.offsetTop - box.offsetTop;
+    if (top < box.scrollTop || top > box.scrollTop + box.clientHeight - 30) box.scrollTop = Math.max(0, top - box.clientHeight / 2);
+  } else if (!cur().parent) box.scrollTop = 0;
+}
 function renderMoves() {
   const box = $("moves");
   if (typeof hoverTip !== "undefined") hoverTip.hidden = true;
-  ui.nodeMap = new Map();
   const marked = Lib.ready ? markedNodesOfCurrent() : new Map();
+  const sig = movesSignature(marked);
+  if (sig === ui.movesSig && box.children.length) {
+    const prev = box.querySelector(".mv.active");
+    if (prev) prev.classList.remove("active");
+    const now = box.querySelector(`.mv[data-id="${cur().id}"]`);
+    if (now) now.classList.add("active");
+    scrollActiveMove();
+    return;
+  }
+  ui.movesSig = sig;
+  ui.nodeMap = new Map();
   const frag = document.createDocumentFragment();
   const emit = (parentEl, node, forceNum) => {
     const ps = node.parent.state;
@@ -833,11 +942,7 @@ function renderMoves() {
     } else line(frag, game.root, true);
   }
   box.replaceChildren(frag);
-  const a = box.querySelector(".mv.active");
-  if (a) {
-    const top = a.offsetTop - box.offsetTop;
-    if (top < box.scrollTop || top > box.scrollTop + box.clientHeight - 30) box.scrollTop = Math.max(0, top - box.clientHeight / 2);
-  } else if (!cur().parent) box.scrollTop = 0;
+  scrollActiveMove();
 }
 $("moves").addEventListener("click", e => {
   const el = e.target.closest(".mv");
