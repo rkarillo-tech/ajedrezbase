@@ -97,7 +97,7 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 ## 🤖 7. Jugar contra la CPU: nivel, estilo y reloj
 - Pulsa **🤖 Jugar vs CPU** en la barra superior y elige:
   - **Juegas con**: el bando de abajo del tablero, blancas, negras o al azar.
-  - **Nivel** del 1 al 8.
+  - **Nivel** del 1 al 8, o **🎯 Adaptativo**: la CPU se ajusta a ti. Tiene un nivel interno de 0 a 20 que sube cuando ganas y baja cuando pierdes (con saltos grandes al principio para encontrar tu nivel y más finos después), para que siempre sea un rival a tu medida y ganes más o menos la mitad de las partidas. Si ya tienes nivel en los problemas, empieza desde ahí. En el cuadro verás tu nivel actual, tus últimos resultados y un pequeño gráfico de su evolución: si sube con el tiempo, estás mejorando. Sólo cuentan las partidas terminadas con resultado (no las interrumpidas con ⏹ ni las de menos de tres jugadas).
   - **Estilo**: **⚖ Equilibrado** (la jugada del motor), **⚔ Agresivo** (prefiere jaques, capturas, sacrificios y acercarse a tu rey), **🏰 Posicional** (desarrollo, centro, enroque; evita sacar la dama pronto), **🛡 Defensivo** (cambia piezas, enroca y no adelanta los peones de su rey) o **🎲 Humano** (a veces no ve la mejor jugada).
 El estilo sólo elige entre jugadas casi igual de buenas según el motor, así que nunca regala piezas a propósito; cuanto más bajo es el nivel, más se aparta de la mejor. Necesita Stockfish: con el motor interno la CPU juega siempre «equilibrado».
   - **Reloj**: sin reloj o de 1+0 a 30+0 (minutos + segundos de incremento por jugada). El reloj empieza con la primera jugada; si se te acaba el tiempo pierdes, salvo que el rival no tenga material para dar mate (entonces son tablas). La CPU reparte su tiempo según lo que le queda.
