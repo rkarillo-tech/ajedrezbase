@@ -78,6 +78,7 @@ def nueva_pagina(ctx, url=URL):
 def contexto(browser, **kw):
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000}, **kw)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
     ctx.route("**/*lichess*/**", lambda r: r.abort())
     return ctx
@@ -318,6 +319,7 @@ def prueba_v12(browser):
     print("Novedades 1.2: informe de la partida, comentarios estratégicos, descarga de Lichess")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
     llamadas = []
     def lichess(r):
@@ -479,7 +481,18 @@ def prueba_v14(browser):
     pg.wait_for_function("Pgn.pathTo(cur()).length === 3 && !ui.cpu.thinking", timeout=20000)
     comprobar(True, "la CPU responde a tu jugada")
     comprobar("oculto" in pg.inner_text("#engineLines") and pg.is_disabled("#backBtn"), "durante la partida se oculta el motor y no se puede navegar")
-    comprobar(pg.evaluate("Clock.started && Clock.turn === 1 && Clock.ms[-1] > 180000"), "el reloj corre y suma el incremento al mover")
+    # El incremento se comprueba pulsando el reloj sin esperar (no depende de lo que tarde la máquina)
+    inc = pg.evaluate("""() => {
+      const saved = { ms: Object.assign({}, Clock.ms), turn: Clock.turn, last: Clock.last };
+      const mover = Clock.turn, before = Clock.ms[mover];
+      Clock.last = Date.now();
+      clockPress(mover);
+      const d = Clock.ms[mover] - before;
+      Object.assign(Clock, { ms: saved.ms, turn: saved.turn, last: saved.last });
+      renderClocks();
+      return d;
+    }""")
+    comprobar(pg.evaluate("Clock.started && Clock.turn === 1") and 1900 <= inc <= 2000, "el reloj corre y suma el incremento al mover")
     comprobar("Deshacer" not in pg.inner_text("#cpuBox"), "con reloj no se puede deshacer")
     pg.locator("#cpuBox [data-c=draw]").click()
     comprobar("rechaza" in pg.inner_text("#toast") and pg.evaluate("ui.cpu.on"), "la CPU rechaza unas tablas prematuras")
@@ -820,10 +833,46 @@ def prueba_dia_a_dia(browser):
     ctx.close()
 
 
+def prueba_cpu_adaptativa(browser):
+    print("Novedades 1.12: CPU adaptativa")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuLevel", "a")
+    comprobar(pg.is_visible("#cpuAdaptiveInfo") and "Empezará en el nivel 5" in pg.inner_text("#cpuAdaptiveInfo"), "el nivel adaptativo explica desde dónde empieza")
+    pg.select_option("#cpuClock", "")
+    pg.select_option("#cpuColor", "1")
+    pg.select_option("#cpuFrom", "new")
+    pg.click("#cpuStartBtn")
+    comprobar(pg.evaluate("ui.cpu.adaptive && ui.cpu.level === 5") and "adaptativo" in pg.evaluate("game.headers.Black"), "la CPU adaptativa juega en su nivel actual")
+    pg.locator("#cpuBox [data-c=resign]").click()
+    comprobar("demasiado corta" in pg.inner_text("#cpuBox") and pg.evaluate("LS.get('ajedrezCpuAdaptativa', null)") is None, "una partida demasiado corta no cambia el nivel")
+    pg.click('.tab-btn[data-tab="study"]')
+    pg.fill("#moveInput", "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. d3 Nf6")
+    pg.click("#importBtn")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuFrom", "here")
+    pg.click("#cpuStartBtn")
+    pg.wait_for_function("ui.cpu.on && !ui.cpu.thinking", timeout=20000)
+    pg.evaluate("ui.cpu.startNode = game.root")
+    pg.locator("#cpuBox [data-c=resign]").click()
+    comprobar("Nivel adaptativo: 5 → 2" in pg.inner_text("#cpuBox") and pg.evaluate("LS.get('ajedrezCpuAdaptativa').a") == 2, "al perder, el nivel adaptativo baja")
+    pg.click("#playCpuToggle")
+    comprobar("Nivel actual: 2" in pg.inner_text("#cpuAdaptiveInfo") and "1 partida" in pg.inner_text("#cpuAdaptiveInfo"), "el cuadro muestra tu nivel adaptativo y su evolución")
+    pg.select_option("#cpuFrom", "new")
+    pg.click("#cpuStartBtn")
+    comprobar(pg.evaluate("ui.cpu.level") == 2, "la siguiente partida se juega en el nuevo nivel")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
     llamadas = []
     def lichess(r):
@@ -873,6 +922,7 @@ def prueba_stockfish19(browser):
         r.fulfill(body=f.read_bytes(), content_type="application/wasm" if f.suffix == ".wasm" else "application/javascript", headers={"Access-Control-Allow-Origin": "*"})
     ctx.route("**/cdn.jsdelivr.net/**", servir)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/*lichess*/**", lambda r: r.abort())
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("document.getElementById('engineSourceBadge').textContent.includes('Stockfish 19')", timeout=60000)
@@ -889,6 +939,7 @@ def prueba_stockfish19(browser):
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
     ctx.route("**/cdn.jsdelivr.net/**", servir)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/*lichess*/**", lambda r: r.abort())
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("document.getElementById('engineSourceBadge').textContent.includes('Stockfish 19')", timeout=60000)
@@ -929,6 +980,7 @@ def prueba_stockfish19(browser):
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
     ctx.route("**/cdn.jsdelivr.net/**", servir)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/*lichess*/**", lambda r: r.abort())
     try:
         pg, errores = nueva_pagina(ctx, f"http://127.0.0.1:{srv.server_address[1]}/")
@@ -963,7 +1015,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

@@ -1378,6 +1378,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </select></div>
       <div><label for="cpuLevel">Nivel</label>
         <select id="cpuLevel">
+          <option value="a">🎯 Adaptativo: se ajusta a ti</option>
           <option value="1">Nivel 1</option><option value="3">Nivel 2</option><option value="5">Nivel 3</option><option value="8">Nivel 4</option>
           <option value="11">Nivel 5</option><option value="14">Nivel 6</option><option value="17">Nivel 7</option><option value="20">Nivel 8 (máx.)</option>
         </select></div>
@@ -1409,6 +1410,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </select></div>
       <div><label>&nbsp;</label><label class="switch"><input type="checkbox" id="cpuBlind"> 🙈 A ciegas (piezas ocultas)</label></div>
     </div>
+    <div class="note-box small" id="cpuAdaptiveInfo" hidden></div>
     <p class="small" id="cpuNote">Mientras juegas, el motor y la evaluación se ocultan. Con reloj no se pueden deshacer jugadas, y si se te acaba el tiempo pierdes (salvo que el rival no tenga material para dar mate).</p>
     <div class="controls">
       <button id="cpuStartBtn" class="primary">▶ Empezar a jugar</button>

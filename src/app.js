@@ -2133,7 +2133,41 @@ function cpuPick(s, lines, style, level, rnd = Math.random) {
   }
   return pick.uci;
 }
-function cpuLevelName(level) { const opts = [...$("cpuLevel").options], i = opts.findIndex(o => +o.value === +level); return "nivel " + (i >= 0 ? i + 1 : level); }
+function cpuLevelName(level) {
+  if (ui.cpu.adaptive) return `nivel adaptativo ${fmtAdaptive(level)}`;
+  const opts = [...$("cpuLevel").options], i = opts.findIndex(o => +o.value === +level);
+  return "nivel " + (i >= 0 ? i : level);
+}
+/* 🎯 CPU adaptativa: un nivel interno (0-20) que sube cuando ganas y baja cuando pierdes, para que siempre sea un rival a tu medida */
+const ADAPT_KEY = "ajedrezCpuAdaptativa";
+const fmtAdaptive = x => (Math.round(x * 10) / 10).toString().replace(".", ",");
+function adaptiveState() {
+  const st = LS.get(ADAPT_KEY, null);
+  if (st) return st;
+  // Primera vez: se parte del nivel en los problemas, si lo hay; si no, de un nivel intermedio-bajo
+  const R = puzRating();
+  return { a: R.n >= 5 ? Math.max(1, Math.min(14, (R.r - 700) / 70)) : 5, games: [] };
+}
+function adaptiveUpdate(score) {
+  const st = adaptiveState(), n = st.games.length;
+  // Saltos grandes al principio para encontrar tu nivel y más finos después
+  const step = Math.max(0.6, 3 / Math.sqrt(1 + n / 2));
+  const before = st.a;
+  st.a = Math.max(0, Math.min(20, st.a + step * (score - 0.5) * 2));
+  st.games.push({ t: Date.now(), a: Math.round(before * 10) / 10, s: score, b: Math.round(st.a * 10) / 10 });
+  st.games = st.games.slice(-100);
+  LS.set(ADAPT_KEY, st);
+  return { before, after: st.a };
+}
+function adaptiveSummary() {
+  const st = adaptiveState(), g = st.games;
+  if (!g.length) return `Empezará en el nivel ${fmtAdaptive(st.a)} de 20${puzRating().n >= 5 ? " (según tu nivel en los problemas)" : ""} y se ajustará tras cada partida.`;
+  const last = g.slice(-10), pts = last.reduce((s, x) => s + x.s, 0);
+  const trend = g.length >= 4 ? g[g.length - 1].b - g[Math.max(0, g.length - 6)].a : 0;
+  const bars = g.slice(-20).map(x => `<span title="${esc(new Date(x.t).toLocaleDateString("es-ES"))}: ${x.s === 1 ? "victoria" : x.s === 0 ? "derrota" : "tablas"} → nivel ${fmtAdaptive(x.b)}" style="display:inline-block;width:7px;margin-right:2px;vertical-align:bottom;height:${Math.max(3, Math.round(x.b * 2))}px;background:${x.s === 1 ? "var(--accent)" : x.s === 0 ? "var(--danger)" : "var(--muted)"}"></span>`).join("");
+  return `Nivel actual: <b>${fmtAdaptive(st.a)}</b> de 20 · ${g.length} partida${g.length === 1 ? "" : "s"} · en las últimas ${last.length}: ${String(pts).replace(".", ",")} puntos${g.length >= 4 ? ` · tendencia ${trend > 0.4 ? "↑ subiendo: estás mejorando" : trend < -0.4 ? "↓ bajando" : "→ estable"}` : ""}
+    <div style="margin-top:4px;height:42px;display:flex;align-items:flex-end" aria-label="Evolución del nivel">${bars}</div>`;
+}
 function cpuName() { return `CPU ${cpuLevelName(ui.cpu.level)} (${CPU_STYLES[ui.cpu.style].replace(/^\S+ /, "").toLowerCase()})`; }
 function cpuThinkMs() {
   const level = ui.cpu.level, base = 250 + level * 70;
@@ -2171,6 +2205,7 @@ function openCpuDialog(blind) {
   if (ui.cpu.on) { stopCpu(false); return; }
   $("cpuLevel").value = String(settings.cpuLevel);
   if ($("cpuLevel").selectedIndex < 0) $("cpuLevel").value = "8";
+  renderAdaptiveInfo();
   $("cpuStyle").value = settings.cpuStyle in CPU_STYLES ? settings.cpuStyle : "balanced";
   $("cpuClock").value = settings.cpuClock;
   if ($("cpuClock").selectedIndex < 0) $("cpuClock").value = "";
@@ -2182,7 +2217,7 @@ function openCpuDialog(blind) {
 }
 function startCpuGame(opts = {}) {
   if (Batch.running) { toast("El motor está analizando tus partidas de la biblioteca: espera a que termine o detenlo en «📊 Estadísticas»."); return false; }
-  Object.assign(settings, { cpuLevel: +$("cpuLevel").value, cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value });
+  Object.assign(settings, { cpuLevel: $("cpuLevel").value === "a" ? "a" : +$("cpuLevel").value, cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value });
   saveSettings();
   if (editor.active && settings.cpuFrom === "here" && !applyEditor()) return false;
   if (settings.cpuFrom === "new") {
@@ -2196,7 +2231,8 @@ function startCpuGame(opts = {}) {
   const user = opts.color || (c === "r" ? (Math.random() < 0.5 ? 1 : -1) : c === "board" ? (ui.flipped ? -1 : 1) : +c);
   ui.flipped = user === -1;
   const tc = parseTc(settings.cpuClock);
-  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, level: settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
+  const adaptive = settings.cpuLevel === "a";
+  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, adaptive, level: adaptive ? Math.round(adaptiveState().a) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
   settings.live = false;
   if (!game.root.children.length && game.headers.Event === "Estudio") {
     const d = new Date();
@@ -2231,6 +2267,14 @@ function stopCpu(silent) {
 function cpuGameOver(result, text) {
   logActivity("cpu");
   const user = -ui.cpu.side;
+  if (ui.cpu.adaptive) {
+    const plies = Pgn.pathTo(cur()).length - Pgn.pathTo(ui.cpu.startNode).length, sc = scoreOf(result, user);
+    if (sc != null && plies >= 6) {
+      const { before, after } = adaptiveUpdate(sc);
+      const d = Math.round((after - before) * 10) / 10;
+      text += ` 🎯 Nivel adaptativo: ${fmtAdaptive(before)} → ${fmtAdaptive(after)}${d > 0 ? " (sube: la próxima será más difícil)" : d < 0 ? " (baja: la próxima será más asequible)" : ""}.`;
+    } else if (sc != null) text += " 🎯 Partida demasiado corta: no cambia el nivel adaptativo.";
+  }
   ui.cpu.over = true;
   ui.cpu.on = false;
   ui.cpu.thinking = false;
@@ -2324,7 +2368,7 @@ function cpuAction(a) {
   else if (a === "close") { $("cpuBox").hidden = true; Clock.shown = false; renderClocks(); }
   else if (a === "rematch") {
     const prev = -ui.cpu.side;
-    $("cpuLevel").value = String(ui.cpu.level); $("cpuStyle").value = ui.cpu.style; $("cpuClock").value = ui.cpu.tc || ""; $("cpuFrom").value = "new"; $("cpuBlind").checked = ui.cpu.blind;
+    $("cpuLevel").value = ui.cpu.adaptive ? "a" : String(ui.cpu.level); $("cpuStyle").value = ui.cpu.style; $("cpuClock").value = ui.cpu.tc || ""; $("cpuFrom").value = "new"; $("cpuBlind").checked = ui.cpu.blind;
     startCpuGame({ color: -prev });
   }
 }
@@ -4742,7 +4786,12 @@ $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; sa
 $("displayLang").onchange = e => { settings.lang = e.target.value; saveSettings(); render(); renderLocalEcoList(); };
 $("themeSelect").onchange = e => { settings.theme = e.target.value; saveSettings(); document.body.dataset.theme = settings.theme; };
 $("soundToggle").onclick = () => { settings.sound = !settings.sound; saveSettings(); $("soundToggle").textContent = settings.sound ? "🔊" : "🔇"; if (settings.sound) Sound.play("move"); };
-$("cpuLevel").onchange = e => { settings.cpuLevel = +e.target.value; saveSettings(); };
+$("cpuLevel").onchange = e => { settings.cpuLevel = e.target.value === "a" ? "a" : +e.target.value; saveSettings(); renderAdaptiveInfo(); };
+function renderAdaptiveInfo() {
+  const el = $("cpuAdaptiveInfo");
+  el.hidden = $("cpuLevel").value !== "a";
+  if (!el.hidden) el.innerHTML = "🎯 " + adaptiveSummary();
+}
 $("playCpuToggle").onclick = () => openCpuDialog();
 $("cpuStartBtn").onclick = () => startCpuGame();
 $("newGame").onclick = () => {
