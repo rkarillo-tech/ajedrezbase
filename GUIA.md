@@ -94,7 +94,7 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 
 > **Ejemplo:** tras importar tu partida del torneo, pulsa «Analizar y comentar» → mira en el gráfico dónde cae la curva → pulsa ese punto → lee el comentario de la jugada marcada con ?? → prueba en el tablero la alternativa que propone.
 
-## 🤖 7. Jugar contra la CPU: nivel, estilo y reloj
+## 🤖 7. Jugar contra la CPU: nivel (también adaptativo), estilo y reloj
 - Pulsa **🤖 Jugar vs CPU** en la barra superior y elige:
   - **Juegas con**: el bando de abajo del tablero, blancas, negras o al azar.
   - **Nivel** del 1 al 8, o **🎯 Adaptativo**: la CPU se ajusta a ti. Tiene un nivel interno de 0 a 20 que sube cuando ganas y baja cuando pierdes (con saltos grandes al principio para encontrar tu nivel y más finos después), para que siempre sea un rival a tu medida y ganes más o menos la mitad de las partidas. Si ya tienes nivel en los problemas, empieza desde ahí. En el cuadro verás tu nivel actual, tus últimos resultados y un pequeño gráfico de su evolución: si sube con el tiempo, estás mejorando. Sólo cuentan las partidas terminadas con resultado (no las interrumpidas con ⏹ ni las de menos de tres jugadas).
@@ -230,7 +230,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 
 > **Ejemplo de repertorio:** crea una partida con 1.e4 c5 2.Cf3 d6 3.d4 y añade como variantes las respuestas que preparas contra 2…Cc6 y 2…e6 → guárdala con la etiqueta «repertorio» → entrénala con blancas cada vez que te lo pida.
 
-## 📘 18. Cursos: aperturas, táctica, estrategia, finales y partidas magistrales
+## 📘 18. Cursos: aperturas, repertorios, táctica, estrategia, finales y partidas magistrales
 - En la pestaña **📘 Cursos** tienes seis cursos con más de cincuenta lecciones comentadas paso a paso: **Aperturas** (principios, errores típicos, Italiana, Española, Gambito de Dama, Siciliana, Francesa, Caro-Kann, India de Rey y Londres), **Táctica** (horquilla, clavada, enfilada, descubierta, sobrecarga, mates típicos y ejercicios 🧩), **Estrategia** (planes, estructuras de peones, alfil bueno y malo, columnas, casillas fuertes, peón aislado, peón pasado) **Finales** (mates básicos, oposición, regla del cuadrado, Lucena, Philidor, peón pasado alejado, dama contra peón, peón de torre…), **Repertorios para entrenar** y **Partidas magistrales** (Morphy, Anderssen, Fischer, Karpov y Kaspárov comentados jugada a jugada, señalando también sus errores).
 - Pulsa una lección y se abre en el tablero. Su explicación aparece junto al tablero, arriba a la derecha (en el móvil, debajo del tablero), y no se mueve al desplazar la página: avanza con **▶ Siguiente** (o `→`) y en cada jugada leerás el porqué, con flechas y casillas marcadas en el tablero. Las alternativas y los errores típicos están como variantes en la lista de jugadas: pulsa en ellas para verlas y **↩ Línea principal** para volver.
 - **Prueba tus propias jugadas**: mueve las piezas en cualquier momento. Tus jugadas se añaden como variantes, marcadas como «🧪 tu prueba», sin estropear la lección. Activa «Analizar» (`E`) para que el motor las valore. **↩ Línea principal** te devuelve a la lección y **↺ Reiniciar** la deja como al principio. Tus pruebas no se guardan (y no se te pregunta nada al pasar de lección) salvo que pulses 💾: entonces se guarda en tu biblioteca una copia de la lección con tus variantes, y el curso queda intacto.
@@ -270,7 +270,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 
 ## 🛠 22. Ajustes y personalización
 - **Barra superior**: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.
-- **⚙ Ajustes**: motor (automático o sólo interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, coordenadas, mostrar jugadas legales y recordar la partida al recargar.
+- **⚙ Ajustes**: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, **estado del motor** (qué motor se usa, por qué y si hay una copia guardada, con el botón **🔄 Reintentar Stockfish 19**), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón y recordar la partida al recargar.
 - **🔊** activa o silencia los sonidos.
 - Todos los ajustes se recuerdan en este navegador.
 
@@ -304,7 +304,7 @@ Los atajos no funcionan mientras escribes en un recuadro de texto.
 - **Instalarla**: en la versión web aparece el botón **⬇ Instalar** arriba (o el icono de instalar en la barra de direcciones de Chrome y Edge). En el móvil: Android con Chrome → menú ⋮ → «Instalar aplicación»; iPhone/iPad con Safari → Compartir → «Añadir a pantalla de inicio».
 - **Sin conexión**: una vez abierta con internet, la aplicación (incluido Stockfish) queda guardada y funciona sin conexión. Sólo necesitan internet el explorador de Lichess, la nube y las tablas Syzygy.
 - **Actualizaciones**: con conexión siempre se carga la última versión; no hay que hacer nada.
-- **Archivo suelto**: también puedes descargar `index.html` y abrirlo con doble clic. Funciona igual, pero la biblioteca de esa copia es distinta de la de la versión web.
+- **Archivo suelto**: también puedes descargar `index.html` y abrirlo con doble clic. Funciona igual, pero la biblioteca de esa copia es distinta de la de la versión web. La primera vez que Stockfish 19 cargue con conexión se guarda una copia en el navegador, y a partir de ahí también funciona sin internet.
 
 ## 🩺 26. Problemas frecuentes
 **Tengo conexión, pero sale «Stockfish 10» o «Motor interno» en vez de Stockfish 19**
