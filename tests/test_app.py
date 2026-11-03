@@ -78,6 +78,7 @@ def nueva_pagina(ctx, url=URL):
 def contexto(browser, **kw):
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000}, **kw)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
     ctx.route("**/*lichess*/**", lambda r: r.abort())
     return ctx
@@ -318,6 +319,7 @@ def prueba_v12(browser):
     print("Novedades 1.2: informe de la partida, comentarios estratégicos, descarga de Lichess")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
     llamadas = []
     def lichess(r):
@@ -479,7 +481,18 @@ def prueba_v14(browser):
     pg.wait_for_function("Pgn.pathTo(cur()).length === 3 && !ui.cpu.thinking", timeout=20000)
     comprobar(True, "la CPU responde a tu jugada")
     comprobar("oculto" in pg.inner_text("#engineLines") and pg.is_disabled("#backBtn"), "durante la partida se oculta el motor y no se puede navegar")
-    comprobar(pg.evaluate("Clock.started && Clock.turn === 1 && Clock.ms[-1] > 180000"), "el reloj corre y suma el incremento al mover")
+    # El incremento se comprueba pulsando el reloj sin esperar (no depende de lo que tarde la máquina)
+    inc = pg.evaluate("""() => {
+      const saved = { ms: Object.assign({}, Clock.ms), turn: Clock.turn, last: Clock.last };
+      const mover = Clock.turn, before = Clock.ms[mover];
+      Clock.last = Date.now();
+      clockPress(mover);
+      const d = Clock.ms[mover] - before;
+      Object.assign(Clock, { ms: saved.ms, turn: saved.turn, last: saved.last });
+      renderClocks();
+      return d;
+    }""")
+    comprobar(pg.evaluate("Clock.started && Clock.turn === 1") and 1900 <= inc <= 2000, "el reloj corre y suma el incremento al mover")
     comprobar("Deshacer" not in pg.inner_text("#cpuBox"), "con reloj no se puede deshacer")
     pg.locator("#cpuBox [data-c=draw]").click()
     comprobar("rechaza" in pg.inner_text("#toast") and pg.evaluate("ui.cpu.on"), "la CPU rechaza unas tablas prematuras")
@@ -859,6 +872,7 @@ def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
     llamadas = []
     def lichess(r):
@@ -908,6 +922,7 @@ def prueba_stockfish19(browser):
         r.fulfill(body=f.read_bytes(), content_type="application/wasm" if f.suffix == ".wasm" else "application/javascript", headers={"Access-Control-Allow-Origin": "*"})
     ctx.route("**/cdn.jsdelivr.net/**", servir)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/*lichess*/**", lambda r: r.abort())
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("document.getElementById('engineSourceBadge').textContent.includes('Stockfish 19')", timeout=60000)
@@ -924,6 +939,7 @@ def prueba_stockfish19(browser):
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
     ctx.route("**/cdn.jsdelivr.net/**", servir)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/*lichess*/**", lambda r: r.abort())
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("document.getElementById('engineSourceBadge').textContent.includes('Stockfish 19')", timeout=60000)
@@ -964,6 +980,7 @@ def prueba_stockfish19(browser):
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
     ctx.route("**/cdn.jsdelivr.net/**", servir)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/*lichess*/**", lambda r: r.abort())
     try:
         pg, errores = nueva_pagina(ctx, f"http://127.0.0.1:{srv.server_address[1]}/")
