@@ -75,7 +75,7 @@ En **📚 Biblioteca** tienes un medidor de lo que ocupa todo.
 poner tu nombre tal como sale en las partidas). La precisión y los errores salen de las analizadas: las que traen el análisis
 de Lichess cuentan directamente, y el resto se analiza con el botón **🤖 Analizarlas ahora**.
 
-**¿Necesito internet?** Instalada desde la versión web, no: la aplicación y Stockfish quedan guardados.
+**¿Necesito internet?** Instalada desde la versión web, no: la aplicación y Stockfish quedan guardados. Con el archivo descargado, tampoco a partir de la primera vez que Stockfish 19 cargue con conexión: se guarda una copia en el navegador.
 Sólo necesitan conexión el explorador de Lichess, la evaluación en la nube y las tablas Syzygy.
 
 **El explorador de aperturas dice que falta un token.** Lichess exige ahora un token personal gratuito.
