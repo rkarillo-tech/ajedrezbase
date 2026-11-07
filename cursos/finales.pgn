@@ -168,3 +168,51 @@
 [Result "1/2-1/2"]
 
 { [%csl Rh8,Gh6] La regla de la oposición de la lección 4 tiene una excepción importante: con un peón de torre, si el rey defensor llega a la esquina de coronación, son tablas siempre. El rey del bando fuerte no puede «rodear» al defensor por un lado, porque no hay columna al otro lado del peón. } 1. Kf6 { Las blancas intentan echar al rey negro de la esquina… } 1... Kg8 2. Kg6 Kh8 { …pero el rey negro va y vuelve entre g8 y h8. } 3. h7 { Si el peón avanza, es ahogado: el rey negro no está en jaque y no tiene casillas (g8 la ataca el peón y g7 el rey). Tablas. Recuerda: con el peón de torre, el defensor sólo tiene que llegar a la esquina. Y con peón de torre y alfil del color equivocado, igual (lección 5). } 1/2-1/2
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "15"]
+[Title "Peones bloqueados: el rodeo del rey y el zugzwang"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/2k5/2p5/2P5/3K4/8/8/8 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gc6,Rb5,Rd5] [%cal Gd4e5,Ge5f6,Gf6e7] Peones bloqueados en c5 y c6: quien se coma el peón contrario gana. El rey blanco quiere llegar a b6 o a d6 para comerse c6, pero el rey negro, en c7, vigila esas dos casillas. Y por b5 y d5 no puede pasar, porque las ataca el peón de c6. La solución es dar un rodeo por el otro lado (e5, f6, e7) y aprovechar el zugzwang: la situación en la que el rival está obligado a mover y cualquier jugada empeora su posición. } 1. Ke5 { El rey blanco se va hacia la columna e para rodear al rey negro. } (1. Kc4? { Por aquí no se progresa: el rey blanco no puede pasar ni por b5 ni por d5 y las negras se limitan a esperar. Tablas. }) 1... Kd7 { El rey negro sigue al blanco para cerrarle el paso por d6. } 2. Kf6 { ¡El rodeo! Ahora amenaza entrar por e7. } 2... Kd8 3. Ke6 { El rey blanco amenaza ir a d6, la casilla clave junto al peón de c6. } 3... Kc7 { El rey negro vuelve a vigilar d6 y b6. } 4. Ke7 { [%cal Ge7d6] ¡Por detrás! El rey blanco se mete en la retaguardia del negro, que ya no puede vigilarlo todo. } 4... Kc8 5. Kd6 { [%csl Gc6] Ya está en d6, al lado del peón de c6. } 5... Kb7 { La única manera de seguir defendiendo c6. } 6. Kd7 { [%csl Rb7] ¡Zugzwang! Las negras tienen que mover el rey y abandonar la defensa de c6. No puede ir a b6, porque la ataca el peón de c5, y si va a b8, a7 o a6, el peón cae. } 6... Ka7 7. Kxc6 { El peón negro cae y el de c5 queda libre. } 7... Kb8 8. Kd7 { El rey blanco controla c7 y c8, las casillas por las que pasará el peón. } 8... Kb7 9. c6+ Kb6 10. c7 { [%csl Gc8] Y el peón corona en la jugada siguiente. Resumen: con los peones bloqueados, el rey busca otro camino para atacar el peón contrario y el zugzwang obliga al rey defensor a apartarse. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "16"]
+[Title "Carrera de peones: coronar con jaque"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/8/8/7P/3k4/p7/5K2/8 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gh8,Ra1,Rd4] [%cal Gh8a1] Carrera de peones: las blancas necesitan tres jugadas para coronar (h6, h7 y h8) y las negras sólo dos (a2 y a1). ¡Las negras coronan antes! Pero no basta con contar quién llega primero: hay que mirar dónde aparece cada dama. La dama blanca nacerá en h8, en la misma diagonal que el rey negro (d4) y que la casilla de coronación negra (a1). } 1. h6 { Además, el rey negro ya no puede alcanzar el peón: no entra en su cuadrado (h6-h8-f8-f6), como en la lección 3. } (1. Kf3?? { Perder un tiempo es fatal: 1...a2 y las negras coronan mucho antes. }) 1... a2 { Las negras también corren. } (1... Kd3 { Si el rey va a ayudar a su peón, 2.h7 y 3.h8=D, y la dama blanca llega a tiempo de parar el peón de a. }) 2. h7 a1=Q 3. h8=Q+ { [%cal Gh8d4,Gd4a1] ¡Coronación con jaque! La nueva dama ataca al rey negro y, detrás de él, en la misma diagonal, a la dama de a1. Es una enfilada, como en el curso de táctica. } 3... Kd3 4. Qxa1 { La dama negra cae y las blancas ganan con dama contra rey (lección 1). Moraleja: en una carrera de peones cuenta las jugadas, pero mira también si alguna coronación da jaque o ataca a la dama rival. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "17"]
+[Title "Dos peones unidos se defienden solos"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/8/8/3PP3/8/5k2/8/K7 b - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gd5,Ge5,Rf3] Dos peones unidos (en columnas vecinas) y avanzados pueden defenderse sin ayuda de su rey: si el rey rival se come uno, el otro corona. Aquí el rey blanco está muy lejos, en a1, y juegan las negras. ¿Puede el rey negro comerse los peones? } 1... Ke4 { El rey ataca los dos peones a la vez… } (1... Kf4 2. d6 { El mismo truco con el otro peón. } 2... Kxe5 3. d7 { y el peón corona. }) 2. e6 { …pero uno de ellos avanza. También gana 2.d6. } (2. Kb2?? { Perder el tiempo permite 2...Rxd5 y después 3...Rxe5: tablas. }) 2... Kxd5 3. e7 { [%csl Gd7,Gd8,Ge7,Ge8] El rey negro está en d5, fuera del cuadrado del peón (e7-e8-d8-d7): no puede alcanzarlo. } 3... Kd6 4. e8=Q { Corona. Por eso dos peones unidos y avanzados suelen ganar aunque su rey esté lejos: mientras el rey rival intenta comérselos, ellos avanzan y su rey tiene tiempo de acercarse. } 1-0
+
+[Event "Curso de finales"]
+[Site "AjedrezBase"]
+[Round "18"]
+[Title "El peón pasado protegido"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "8/8/2k5/1pP5/1P6/8/5K2/8 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gc5,Gb4,Rb5] [%cal Gb4c5] Las blancas tienen un peón pasado protegido en c5: lo defiende el peón de b4, así que el rey negro no puede comérselo. Y tampoco puede alejarse mucho, porque tiene que poder parar el peón si avanza. Mientras tanto, el rey blanco tiene libertad para ir a por el peón de b5. Un peón pasado protegido inmoviliza al rey rival: vale casi como una pieza de más. } 1. Ke3 Kd5 { El intento negro: ir a por el peón de b4, que no está protegido. } 2. Kd3 { [%csl Gc4] El rey blanco vigila c4 y le cierra el paso. } 2... Kc6 3. Kd4 Kc7 4. Kd5 Kd7 5. c6+ { El peón avanza con jaque; ahora lo protege el rey. } 5... Kc7 6. Kc5 { [%cal Gc5b5] ¡La buena! El rey protege el peón y ataca b5 a la vez. } (6. Ke5? Kxc6 { y el rey negro se come el peón: tablas. }) 6... Kc8 7. Kxb5 { Cae el peón de b5. Con dos peones, las blancas ganan con facilidad: el rey negro no puede parar el peón de c y vigilar a la vez el de b. } 1-0

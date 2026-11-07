@@ -5709,7 +5709,8 @@ function openLesson(id, i) {
   return true;
 }
 /* En el ordenador el panel de la lección va en la columna derecha, junto al tablero; en el móvil, debajo del tablero */
-const wideLayout = matchMedia("(min-width: 981px)");
+/* (en horizontal con poca altura se usa la disposición de móvil aunque haya ancho: ver el CSS) */
+const wideLayout = matchMedia("(min-width: 981px) and (min-height: 541px), (min-width: 981px) and (orientation: portrait)");
 function placeLessonBox() {
   const box = $("lessonBox"), side = wideLayout.matches;
   if (side && box.parentElement !== $("toolsPanel")) $("toolsPanel").prepend(box);
