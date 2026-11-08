@@ -179,6 +179,19 @@ main {
 #drawToggle[aria-pressed="true"] { background: var(--btn-warn); border-color: var(--warn); }
 @media (pointer: coarse) { .draw-bar { display: flex; } }
 .board-wrap.drawing .square { cursor: crosshair; }
+.think-box { background: var(--deep-blue2); border-color: var(--info); }
+.think-box h3 { font-size: .9rem; margin: 10px 0 4px; }
+.think-box ol { margin: 4px 0; padding-left: 22px; }
+.think-box li { margin: 3px 0; line-height: 1.45; }
+.think-box .think-who { font-weight: 700; }
+.think-box .think-mine { color: var(--accent); }
+.think-box .think-their { color: var(--warn); }
+.exp-eval { white-space: nowrap; font-family: ui-monospace, monospace; font-size: .8rem; }
+.exp-eval.good { color: var(--accent); font-weight: 700; }
+.exp-eval.bad { color: var(--danger); }
+.exp-eval .src { color: var(--muted); font-size: .7rem; margin-left: 2px; }
+#rivalSection .filter-row > * { min-width: 0; max-width: 100%; }
+.rival-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
 .rep-review h3 { font-size: .92rem; margin: 12px 0 4px; }
 .rep-review .version-row { margin-top: 4px; }
 
@@ -591,6 +604,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #varControls { order: 5; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
+  #thinkBox { order: 7; }
   #evalChartWrap { order: 8; }
   #chartLegend { order: 9; }
   #exportControls { order: 10; }
@@ -642,6 +656,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #varControls { order: 5; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
+  #thinkBox { order: 7; }
   #evalChartWrap { order: 8; }
   #chartLegend { order: 9; }
   #exportControls { order: 10; }
@@ -743,6 +758,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <label class="switch" title="Análisis continuo de la posición (tecla E)"><input type="checkbox" id="liveToggle"> Analizar</label>
           <label class="switch" title="Flecha con la mejor jugada"><input type="checkbox" id="arrowToggle"> Flecha</label>
           <button id="playBestMoveBtn" class="sm-btn" title="Jugar la mejor jugada del motor">⚡ Jugar</button>
+          <button id="thinkBtn" class="sm-btn primary" title="El motor explica su razonamiento: la situación, la mejor jugada y por qué, qué responderá el rival, las alternativas y las trampas (tecla T)">🧠 Piensa conmigo</button>
           <button id="threatBtn" class="sm-btn" title="Ver qué amenaza el rival: qué jugaría si le tocara mover (tecla X)">👁 Amenaza</button>
           <button id="cloudStockfishBtn" class="sm-btn info-btn" title="Evaluación profunda de Stockfish en la nube de Lichess">☁ Nube</button>
           <button id="engineHelpBtn" class="sm-btn" title="Cómo leer los números del motor" aria-expanded="false">❔</button>
@@ -765,6 +781,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <div class="engine-lines" id="engineLines"><div class="pv-empty">Iniciando motor…</div></div>
     </div>
 
+    <div id="thinkBox" class="retry-box think-box" hidden aria-live="polite"></div>
     <div class="eval-chart-wrap" id="evalChartWrap" title="Probabilidad de ganar a lo largo de la línea principal: arriba ventaja blanca, abajo negra. Clic para saltar a esa jugada.">
       <svg id="evalChartSvg" viewBox="0 0 600 64" preserveAspectRatio="none"></svg>
       <div id="chartMsg" class="chart-msg" hidden></div>
@@ -1007,8 +1024,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <div id="explorerOpening" class="small" style="color:var(--info); font-weight:600"></div>
       <div class="cb-table-wrap">
         <table class="cb-table">
-          <thead><tr><th>Jugada</th><th class="num">Partidas</th><th>Blancas / Tablas / Negras</th><th class="num hide-sm">Elo medio</th></tr></thead>
-          <tbody id="explorerMovesBody"><tr><td colspan="4" class="small">Abre esta pestaña para consultar la posición.</td></tr></tbody>
+          <thead><tr><th>Jugada</th><th class="num">Partidas</th><th>Blancas / Tablas / Negras</th><th class="num" title="Valoración de cada jugada: ☁ nube de Lichess (Stockfish profundo) o ⚙ el motor de la aplicación">Motor</th><th class="num hide-sm">Elo medio</th></tr></thead>
+          <tbody id="explorerMovesBody"><tr><td colspan="5" class="small">Abre esta pestaña para consultar la posición.</td></tr></tbody>
         </table>
       </div>
       <div class="section">
@@ -1016,6 +1033,17 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <p class="small">Para la posición del tablero, Stockfish y las partidas de la base elegida buscan <b>sorpresas</b> (jugadas buenas que casi nadie juega), <b>errores frecuentes</b> (jugadas muy jugadas que pierden) y <b>trampas</b> (jugadas tras las que la respuesta más habitual del rival es un error).</p>
         <div class="controls"><button id="surpriseBtn" class="sm-btn primary">🔎 Buscar en esta posición</button></div>
         <div id="surpriseOut" class="rep-review"></div>
+      </div>
+      <div class="section" id="rivalSection">
+        <h2><span>🎯 Preparar un rival (Lichess)</span></h2>
+        <p class="small">Escribe el usuario de Lichess de tu próximo rival: se descargan sus últimas partidas públicas (no hace falta token) y verás qué aperturas juega con cada color y cómo le va con ellas, cómo suelen acabar sus partidas, en qué fase falla más y qué líneas suyas no tienes en tu repertorio, para prepararlas.</p>
+        <div class="filter-row">
+          <input id="rivalUser" type="text" placeholder="Usuario de Lichess del rival" aria-label="Usuario de Lichess del rival" autocomplete="off">
+          <select id="rivalMax" aria-label="Número de partidas"><option value="50">50 partidas</option><option value="100" selected>100 partidas</option><option value="200">200 partidas</option></select>
+          <select id="rivalPerf" aria-label="Ritmo"><option value="blitz,rapid,classical">Blitz, rápidas y clásicas</option><option value="bullet,blitz,rapid,classical">Todas (con bala)</option><option value="blitz">Sólo blitz</option><option value="rapid,classical">Rápidas y clásicas</option></select>
+          <button id="rivalBtn" class="primary">🔎 Preparar</button>
+        </div>
+        <div id="rivalOut" class="rep-review"></div>
       </div>
       <div class="section">
         <h2>Partidas en esta posición</h2>

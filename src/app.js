@@ -1155,7 +1155,7 @@ function showEngineFor(node, job) {
 }
 const requestLive = debounce(() => {
   const node = cur();
-  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ui.cpu.thinking || Compare.busy || !Engine.ready) {
+  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ExpEval.busy || ui.cpu.thinking || Compare.busy || !Engine.ready) {
     Engine.cancel("live");
     return;
   }
@@ -1203,6 +1203,7 @@ function updateButtons() {
   $("playCpuToggle").className = ui.cpu.on ? "on" : "info-btn";
 }
 function render() {
+  if (Think.node && Think.node !== cur() && !Think.busy) { $("thinkBox").hidden = true; Think.node = null; }
   renderBoard();
   renderBars();
   renderStatus();
@@ -1755,6 +1756,169 @@ async function showThreat() {
   const capt = m && m.captured !== "." ? `, capturando ${PIECE_ART[m.captured.toLowerCase()]} de ${Chess.sqName(m.to)}` : "";
   $("threatInfo").innerHTML = `👁 <b>Amenaza:</b> si les tocara, ${who} jugarían <b>${esc(san)}</b>${esc(capt)}${ev ? ` (${esc(fmtEval(ev))})` : ""}. <span class="small">${l && l.pv.length > 1 ? "Línea: " + esc(lineText(t, l.pv, 5)) : ""}</span>`;
   render();
+}
+
+/* ---------- 19b2. «🧠 Piensa conmigo»: el razonamiento detrás de la mejor jugada ----------
+   Con Stockfish (varias líneas), la amenaza del rival y la descripción de cada jugada, explica en palabras:
+   la situación, la mejor jugada y su idea, la línea esperada paso a paso, las alternativas y la jugada tentadora que falla. */
+const Think = { busy: false, node: null };
+function attackedTargets(st, sq, mover) {
+  const out = [];
+  for (let i = 0; i < 128; i++) {
+    if (i & 0x88) { i += 7; continue; }
+    const x = st.b[i];
+    if (x === "." || Chess.color(x) !== -mover || x.toLowerCase() === "k") continue;
+    if (Chess.attackers(st.b, i, mover).includes(sq)) out.push(i);
+  }
+  return out.sort((a, b) => Chess.VAL[st.b[b].toLowerCase()] - Chess.VAL[st.b[a].toLowerCase()]);
+}
+/* Qué hace una jugada, en palabras (para la línea del razonamiento) */
+function thinkStepText(c, nextUci) {
+  const m = c.move, mover = c.parent.state.t, pc = m.piece.toLowerCase();
+  const parts = [];
+  const motif = describeMotif(c);
+  if (motif) parts.push(motif);
+  // Piezas que ataca la pieza movida (las que no están bien defendidas o valen más), salvo si el rival la captura en seguida
+  const recaptured = nextUci && nextUci.slice(2, 4) === Chess.sqName(m.to);
+  if (recaptured && m.captured !== ".") parts.push("Es un cambio: el rival recupera en esa casilla.");
+  else if (!Chess.inCheck(c.state) || Chess.legal(c.state).length) {
+    const tg = attackedTargets(c.state, m.to, mover).filter(i => {
+      const v = Chess.VAL[c.state.b[i].toLowerCase()];
+      return !Chess.attackers(c.state.b, i, -mover).length || v > Chess.VAL[pc];
+    });
+    if (tg.length) {
+      const names = tg.slice(0, 2).map(i => `${PIECE_ART[c.state.b[i].toLowerCase()]} de ${Chess.sqName(i)}`);
+      parts.push(tg.length > 1 ? `Ataca a la vez ${names.join(" y ")}.` : `Ataca ${names[0]}.`);
+    }
+  }
+  if (!parts.length) parts.push(pc === "p" ? `Avanza el peón a ${Chess.sqName(m.to)}.` : `Mejora ${PIECE_ART[pc]}, que pasa de ${Chess.sqName(m.from)} a ${Chess.sqName(m.to)}.`);
+  return parts.join(" ");
+}
+async function thinkWithMe() {
+  ExpEval.token++;
+  const node = cur(), s = node.state, me = s.t, box = $("thinkBox");
+  if (Think.busy) return;
+  if (Think.node === node && !box.hidden) { box.hidden = true; Think.node = null; return; }
+  if (quiz() || editor.active) { toast("Termina antes el ejercicio o la partida."); return; }
+  if (!Engine.ready) { toast("El motor aún se está cargando."); return; }
+  if (gameStatus(node).over) { toast("La partida ha terminado en esta posición."); return; }
+  Think.busy = true; Think.node = node;
+  $("thinkBtn").disabled = true;
+  box.hidden = false;
+  const say = t => { box.innerHTML = `<div class="retry-head">🧠 Piensa conmigo</div><div class="small">⏳ ${esc(t)}</div>`; };
+  ui.analysing = true;
+  Engine.cancel("live");
+  const strong = Engine.kind === "stockfish";
+  const sanOf = (st, u) => { const m = Chess.moveFromUci(st, u); return m ? formatSan(Chess.san(st, m), settings.lang, st.t) : u; };
+  const moveTxt = (st, u) => numPrefix(st) + sanOf(st, u);
+  const mine = (w, l) => (me === 1 ? winPct(l) : 100 - winPct(l));
+  const evTxt = l => { const ev = { cp: l.cp, mate: l.mate, winner: l.winner }; return `${fmtEval(ev)} (${evalVerdict(ev).toLowerCase()})`; };
+  try {
+    say("Mirando la posición: qué amenaza el rival y qué jugadas tengo…");
+    const top = await evalState(s, strong ? 3000 : 3500, strong ? 3 : 1);
+    if (!top || !top.lines || !top.lines[0] || cur() !== node) { box.hidden = true; return; }
+    const lines = top.lines.filter(l => l && l.pv && l.pv.length);
+    const best = lines[0], bestM = Chess.moveFromUci(s, best.pv[0]);
+    // La amenaza del rival: qué jugaría si le tocara mover
+    let threat = null;
+    if (!Chess.inCheck(s)) {
+      const t = Chess.clone(s); t.t = -me; t.ep = -1;
+      if (Chess.legal(t).length) {
+        const j = await evalState(t, strong ? 1200 : 1500, 1);
+        const l = j && j.lines && j.lines[0], u = l && l.pv[0], m = u && Chess.moveFromUci(t, u);
+        if (m) {
+          const gainMate = l.mate != null && l.mate !== 0 && Math.sign(l.mate) === -me;
+          const capt = m.captured !== "." ? Chess.VAL[m.captured.toLowerCase()] : 0;
+          const swing = (winPct(l) - winPct(best)) * -me;   // cuánto ganaría el rival si pudiera jugar ya
+          if (gainMate || (capt >= 3 && swing > 8) || swing > 20) threat = { t, u, m, l, gainMate, capt };
+        }
+      }
+    }
+    if (cur() !== node) { box.hidden = true; return; }
+    // La línea esperada, jugada a jugada
+    say("Calculando la línea y buscando las trampas…");
+    const g = Pgn.newGame(Chess.toFen(s));
+    let n = g.root;
+    const steps = [];
+    for (let k = 0; k < Math.min(7, best.pv.length); k++) {
+      const u = best.pv[k], m = Chess.moveFromUci(n.state, u);
+      if (!m) break;
+      const c = Pgn.addMove(n, m);
+      steps.push({ mine: n.state.t === me, txt: `${numPrefix(n.state)}${formatSan(c.san, settings.lang, n.state.t)}`, why: thinkStepText(c, best.pv[k + 1]) });
+      n = c;
+    }
+    const endState = playUcis(s, best.pv, 10);
+    const matDiff = Math.round((materialBalance(endState) - materialBalance(s)) * me);
+    // La idea principal
+    const ideas = [];
+    const mating = best.mate != null && best.mate !== 0 && Math.sign(best.mate) === me;
+    if (mating) ideas.push(`Hay <b>mate en ${Math.abs(best.mate)}</b>: la línea de abajo lo fuerza.`);
+    if (threat && bestM && !mating) {
+      if (bestM.to === threat.m.from) ideas.push("Elimina la pieza con la que el rival te amenazaba.");
+      else if (bestM.from === threat.m.to) ideas.push("Aparta la pieza que estaba amenazada.");
+      else if (threat.gainMate) ideas.push("Cubre la amenaza de mate.");
+    }
+    if (matDiff >= 2 && !(best.mate != null)) ideas.push(`Al final de la línea <b>ganas material</b> (unos ${matDiff} puntos).`);
+    else if (matDiff <= -2 && mine(0, best) >= 45) ideas.push(`<b>Entregas material</b> (unos ${-matDiff} puntos), pero a cambio consigues ${mine(0, best) >= 60 ? "una posición ganadora" : "compensación suficiente"}: es un sacrificio.`);
+    if (!ideas.length) ideas.push(steps[0] ? steps[0].why : "");
+    // Alternativas: por qué no las otras candidatas
+    const alts = [];
+    for (const l of lines.slice(1, 3)) {
+      const loss = mine(0, best) - mine(0, l);
+      const u = l.pv[0];
+      if (loss < 4) { alts.push(`<b>${esc(moveTxt(s, u))}</b> también es buena: casi igual que la mejor (${esc(fmtEval({ cp: l.cp, mate: l.mate, winner: l.winner }))}).`); continue; }
+      const s1 = playUcis(s, [u], 1), r = l.pv[1];
+      alts.push(`<b>${esc(moveTxt(s, u))}</b> es peor: ${r ? `el rival respondería <b>${esc(moveTxt(s1, r))}</b> y ` : ""}la valoración baja a ${esc(fmtEval({ cp: l.cp, mate: l.mate, winner: l.winner }))}.`);
+    }
+    // La jugada tentadora: la captura (o el jaque) más llamativa que no está entre las buenas, y por qué falla
+    let trap = null;
+    const L = Chess.legal(s), goodU = new Set(lines.map(l => l.pv[0]));
+    const tempting = L.filter(m => !goodU.has(Chess.uci(m)) && (m.captured !== "." || Chess.inCheck(Chess.apply(s, m))))
+      .sort((a, b) => (b.captured !== "." ? Chess.VAL[b.captured.toLowerCase()] : 0.5) - (a.captured !== "." ? Chess.VAL[a.captured.toLowerCase()] : 0.5))[0];
+    if (tempting && cur() === node) {
+      const after = Chess.apply(s, tempting);
+      const j = await evalState(after, strong ? 1200 : 1500, 1);
+      const l = j && j.lines && j.lines[0];
+      if (l) {
+        const loss = mine(0, best) - mine(0, l);
+        if (loss >= 10) {
+          const r = l.pv[0];
+          const lost = Math.round((materialBalance(s) - materialBalance(playUcis(after, l.pv, 8))) * me);
+          trap = `<b>${esc(moveTxt(s, Chess.uci(tempting)))}</b> parece atractiva, pero ${r ? `tras <b>${esc(moveTxt(after, r))}</b> ` : ""}${l.mate != null && Math.sign(l.mate) === -me ? "te dan mate" : lost >= 2 ? `pierdes material (unos ${lost} puntos)` : `la valoración cae a ${esc(fmtEval({ cp: l.cp, mate: l.mate, winner: l.winner }))}`}.`;
+        }
+      }
+    }
+    if (cur() !== node) { box.hidden = true; return; }
+    const mat = Math.round(materialBalance(s) * me);
+    const situation = [`Valoración: <b>${esc(evTxt(best))}</b>.`, mat ? `Material: ${mat > 0 ? `tienes ${mat} punto${mat === 1 ? "" : "s"} de ventaja` : `tienes ${-mat} punto${mat === -1 ? "" : "s"} menos`}.` : "Material igualado."];
+    if (Chess.inCheck(s)) situation.push("<b>Estás en jaque</b>: lo primero es salir de él.");
+    else if (threat) situation.push(`<b>Amenaza del rival:</b> si le tocara, jugaría <b>${esc(formatSan(Chess.san(threat.t, threat.m), settings.lang, threat.t.t))}</b>${threat.gainMate ? ", con mate" : threat.capt ? `, ganando ${PIECE_ART[threat.m.captured.toLowerCase()]} de ${Chess.sqName(threat.m.to)}` : ""}. Hay que tenerlo en cuenta.`);
+    else situation.push("El rival no tiene ninguna amenaza inmediata: puedes pensar en tus planes.");
+    box.innerHTML = `<div class="retry-head">🧠 Piensa conmigo · juegan las ${me === 1 ? "blancas" : "negras"}</div>
+      <h3>1. La situación</h3><div>${situation.join(" ")}</div>
+      <h3>2. La mejor jugada: ${esc(moveTxt(s, best.pv[0]))}</h3><div>${ideas.join(" ")}</div>
+      <h3>3. Lo que va a pasar (si los dos jugáis lo mejor)</h3>
+      <ol>${steps.map(x => `<li><span class="think-who ${x.mine ? "think-mine" : "think-their"}">${x.mine ? "Tú" : "Rival"}: ${esc(x.txt)}</span> — ${esc(x.why)}</li>`).join("")}</ol>
+      ${alts.length ? `<h3>4. ¿Y las otras jugadas?</h3><div>${alts.map(a => `<div>• ${a}</div>`).join("")}</div>` : ""}
+      ${trap ? `<h3>${alts.length ? 5 : 4}. ⚠ Cuidado con la jugada tentadora</h3><div>${trap}</div>` : ""}
+      <div class="controls"><button class="sm-btn primary" data-t="play">▶ Jugar ${esc(sanOf(s, best.pv[0]))}</button><button class="sm-btn" data-t="line" title="Añade la línea como variante para recorrerla en el tablero">➕ Ver la línea en el tablero</button><button class="sm-btn" data-t="close">Cerrar</button></div>
+      <div class="small">Es el razonamiento del motor puesto en palabras: úsalo para entender la idea, no como verdad absoluta.</div>`;
+    box.querySelector("[data-t=play]").onclick = () => { if (cur() !== node || !canUserMove() || !bestM) return; box.hidden = true; Think.node = null; playMove(bestM, "user"); };
+    box.querySelector("[data-t=line]").onclick = () => {
+      if (cur() !== node) { toast("La posición ha cambiado: vuelve a pulsar «Piensa conmigo»."); return; }
+      let x = node;
+      for (const u of best.pv.slice(0, 8)) { const m = Chess.moveFromUci(x.state, u); if (!m) break; x = Pgn.addMove(x, m); }
+      markDirty();
+      goTo(node.children.find(c => c.uci === best.pv[0]) || node);
+      toast("➕ Línea añadida como variante: recórrela con ▶.");
+    };
+    box.querySelector("[data-t=close]").onclick = () => { box.hidden = true; Think.node = null; };
+  } finally {
+    ui.analysing = false;
+    Think.busy = false;
+    $("thinkBtn").disabled = false;
+    requestLive();
+  }
 }
 
 /* ---------- 19c. «Aprende de tus errores»: rehacer los ? y ?? de la partida ---------- */
@@ -2972,20 +3136,74 @@ function wdlBar(w, d, b) {
   const wp = Math.round(w / total * 100), dp = Math.round(d / total * 100), bp = 100 - wp - dp;
   return `<div class="wdl-bar" title="Blancas ${wp}% · Tablas ${dp}% · Negras ${bp}%"><div class="wdl-w" style="width:${wp}%">${wp > 14 ? wp + "%" : ""}</div><div class="wdl-d" style="width:${dp}%">${dp > 14 ? dp + "%" : ""}</div><div class="wdl-b" style="width:${bp}%">${bp > 14 ? bp + "%" : ""}</div></div>`;
 }
+/* 📊 Valoración de cada jugada del explorador: primero la nube de Lichess (una consulta con las 5 mejores) y,
+   para las demás, una evaluación rápida con el motor de la aplicación */
+const ExpEval = { cache: new Map(), token: 0, busy: false };
+async function fillExplorerEvals(node, rows) {
+  const my = ++ExpEval.token, s = node.state, fen = Chess.toFen(s);
+  const cells = () => [...$("explorerMovesBody").querySelectorAll(".exp-eval")];
+  const still = () => my === ExpEval.token && cur() === node && ui.activeTab === "explorer";
+  const keyOf = u => fen + "|" + u;
+  const uciOf = san => { try { return Chess.uci(Chess.parseMove(s, san, "en").move); } catch { return null; } };
+  const show = () => {
+    const vals = rows.map(r => ExpEval.cache.get(keyOf(uciOf(r.san)))).filter(Boolean);
+    const best = vals.length ? Math.max(...vals.map(v => winPct(v) * s.t + (s.t === -1 ? 100 : 0))) : null;
+    for (const td of cells()) {
+      const v = ExpEval.cache.get(keyOf(uciOf(td.dataset.san)));
+      if (!v) continue;
+      const w = winPct(v) * s.t + (s.t === -1 ? 100 : 0), loss = best == null ? 0 : best - w;
+      td.className = "num exp-eval" + (loss <= 2 ? " good" : loss >= 10 ? " bad" : "");
+      td.innerHTML = `${esc(fmtEval(v))}<span class="src">${v.src === "nube" ? "☁" : "⚙"}</span>`;
+      td.title = `${evalVerdict(v)} · ${v.src === "nube" ? "nube de Lichess, profundidad " + v.depth : "motor de la aplicación (evaluación rápida)"}`;
+    }
+  };
+  if (!rows.length) return;
+  show();
+  // 1) Nube de Lichess: las 5 mejores jugadas de la posición
+  if (!rows.every(r => ExpEval.cache.has(keyOf(uciOf(r.san))))) {
+    try {
+      const res = await Lichess.fetch(`https://lichess.org/api/cloud-eval?fen=${encodeURIComponent(fen)}&multiPv=5`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        for (const pv of data.pvs || []) { const u = pv.moves.split(" ")[0]; const k = keyOf(u); if (!ExpEval.cache.has(k) || ExpEval.cache.get(k).src !== "nube") ExpEval.cache.set(k, { cp: pv.cp, mate: pv.mate, depth: data.depth, src: "nube" }); }
+      }
+    } catch {}
+    if (!still()) return;
+    show();
+  }
+  // 2) Las que faltan: evaluación rápida con el motor de la aplicación (sin molestar a otras tareas del motor)
+  for (const r of rows.slice(0, 10)) {
+    const u = uciOf(r.san);
+    if (!u || ExpEval.cache.has(keyOf(u))) continue;
+    if (!still() || !Engine.ready || ui.analysing || ui.cpu.on || Batch.running || Think.busy || RepReview.busy || Surprise.busy) break;
+    const after = Chess.apply(s, Chess.moveFromUci(s, u));
+    ExpEval.busy = true;
+    Engine.cancel("live");
+    let j = null;
+    try { j = await evalState(after, Engine.kind === "stockfish" ? 350 : 500, 1); } finally { ExpEval.busy = false; }
+    const l = j && j.lines && j.lines[0];
+    if (l) ExpEval.cache.set(keyOf(u), { cp: l.cp, mate: l.mate, winner: l.winner, depth: l.depth, src: "motor" });
+    if (!still()) break;
+    show();
+  }
+  if (cells().some(td => td.textContent === "…")) cells().filter(td => td.textContent === "…").forEach(td => { td.textContent = "—"; td.title = "Sin valoración (la nube no tiene esta jugada y el motor estaba ocupado)"; });
+  if (my === ExpEval.token) requestLive();
+}
 function explorerMoveRows(node, rows) {
   const tbody = $("explorerMovesBody");
   tbody.innerHTML = "";
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="4" class="small">No hay partidas registradas en esta posición.</td></tr>`; return; }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="5" class="small">No hay partidas registradas en esta posición.</td></tr>`; return; }
   for (const m of rows) {
     const tr = document.createElement("tr");
     const total = m.white + m.draws + m.black;
-    tr.innerHTML = `<td><b>${esc(formatSan(m.san, settings.lang, node.state.t))}</b></td><td class="num">${total.toLocaleString("es-ES")}</td><td>${wdlBar(m.white, m.draws, m.black)}</td><td class="num hide-sm">${m.averageRating || "—"}</td>`;
+    tr.innerHTML = `<td><b>${esc(formatSan(m.san, settings.lang, node.state.t))}</b></td><td class="num">${total.toLocaleString("es-ES")}</td><td>${wdlBar(m.white, m.draws, m.black)}</td><td class="num exp-eval" data-san="${esc(m.san)}">…</td><td class="num hide-sm">${m.averageRating || "—"}</td>`;
     tr.onclick = () => {
       if (cur() !== node || !canUserMove()) return;
       try { playMove(Chess.parseMove(node.state, m.san, "en").move, "user"); } catch {}
     };
     tbody.append(tr);
   }
+  fillExplorerEvals(node, rows);
 }
 const explorerUrl = (db, fen) => db === "masters"
   ? `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(fen)}&moves=12&topGames=8`
@@ -3000,7 +3218,7 @@ async function fetchExplorer() {
   if (!settings.token) {
     $("explorerHint").textContent = "Lichess pide ahora un token personal gratuito para consultar su explorador.";
     $("explorerOpening").textContent = "";
-    tbody.innerHTML = `<tr><td colspan="4"><div class="token-help"><b>🔑 Falta tu token de Lichess</b> (gratis, se hace una sola vez):
+    tbody.innerHTML = `<tr><td colspan="5"><div class="token-help"><b>🔑 Falta tu token de Lichess</b> (gratis, se hace una sola vez):
       <ol>
         <li>Entra en lichess.org con tu cuenta y abre <a href="https://lichess.org/account/oauth/token/create?description=AjedrezBase" target="_blank" rel="noopener">la página para crear tokens</a>.</li>
         <li><b>No marques ningún permiso</b> y pulsa el botón de crear del final.</li>
@@ -3016,25 +3234,25 @@ async function fetchExplorer() {
   $("explorerHint").textContent = "Estadísticas reales de Lichess para la posición del tablero. Pulsa una jugada para hacerla.";
   let data = explorerCache.get(url);
   if (!data) {
-    tbody.innerHTML = `<tr><td colspan="4" class="small">Consultando Lichess…</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="small">Consultando Lichess…</td></tr>`;
     if (ui.explorerAbort) ui.explorerAbort.abort();
     const ctrl = ui.explorerAbort = new AbortController();
     try {
       const res = await Lichess.fetch(url, { headers: authHeaders(), signal: ctrl.signal });
       if (res.status === 401 || res.status === 403) {
-        tbody.innerHTML = `<tr><td colspan="4" class="small msg-err">Lichess ha rechazado el token: no es válido, se ha borrado o está mal copiado. Crea otro y pégalo en ⚙ Ajustes (pulsa «🔌 Probar token»).</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="small msg-err">Lichess ha rechazado el token: no es válido, se ha borrado o está mal copiado. Crea otro y pégalo en ⚙ Ajustes (pulsa «🔌 Probar token»).</td></tr>`;
         gbody.innerHTML = `<tr><td colspan="5" class="small">—</td></tr>`;
         return;
       }
-      if (res.status === 429) { tbody.innerHTML = `<tr><td colspan="4" class="small msg-err">Lichess pide una pausa por demasiadas consultas: se reanudará en ${Lichess.waitSeconds()} s (vuelve a mover o cambia de pestaña).</td></tr>`; return; }
+      if (res.status === 429) { tbody.innerHTML = `<tr><td colspan="5" class="small msg-err">Lichess pide una pausa por demasiadas consultas: se reanudará en ${Lichess.waitSeconds()} s (vuelve a mover o cambia de pestaña).</td></tr>`; return; }
       if (!res.ok) throw Error(res.status);
       data = await res.json();
       explorerCache.set(url, data);
     } catch (e) {
       if (e && e.name === "AbortError") return;
-      if (e && e.status === 429) { if (cur() === node) tbody.innerHTML = `<tr><td colspan="4" class="small msg-err">${esc(e.message)}</td></tr>`; return; }
+      if (e && e.status === 429) { if (cur() === node) tbody.innerHTML = `<tr><td colspan="5" class="small msg-err">${esc(e.message)}</td></tr>`; return; }
       if (cur() === node) {
-        tbody.innerHTML = `<tr><td colspan="4" class="small">No se pudo conectar con Lichess (¿sin conexión?). Puedes usar «Mi biblioteca + .pgn abierto» o la enciclopedia ECO de abajo. En ⚙ Ajustes, «🔌 Probar token» ayuda a ver qué falla.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="small">No se pudo conectar con Lichess (¿sin conexión?). Puedes usar «Mi biblioteca + .pgn abierto» o la enciclopedia ECO de abajo. En ⚙ Ajustes, «🔌 Probar token» ayuda a ver qué falla.</td></tr>`;
         gbody.innerHTML = `<tr><td colspan="5" class="small">—</td></tr>`;
       }
       return;
@@ -4029,7 +4247,7 @@ async function buildLocalIndex() {
       n = c;
     }
     if (k % 25 === 24) {
-      $("explorerMovesBody").innerHTML = `<tr><td colspan="4" class="small">Indexando: ${k + 1} / ${sources.length} partidas…</td></tr>`;
+      $("explorerMovesBody").innerHTML = `<tr><td colspan="5" class="small">Indexando: ${k + 1} / ${sources.length} partidas…</td></tr>`;
       await new Promise(r2 => setTimeout(r2, 0));
     }
   }
@@ -4041,7 +4259,7 @@ async function renderLocalExplorer(node) {
   $("explorerHint").textContent = "Estadísticas de las partidas de tu biblioteca y del .pgn que tengas abierto. Funciona sin conexión.";
   $("explorerOpening").textContent = "";
   if (!Lib.games.size && !Coll.games.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="small">Tu biblioteca está vacía y no hay ningún .pgn abierto (pestaña «📚 Biblioteca»).</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="small">Tu biblioteca está vacía y no hay ningún .pgn abierto (pestaña «📚 Biblioteca»).</td></tr>`;
     gbody.innerHTML = `<tr><td colspan="5" class="small">—</td></tr>`;
     return;
   }
@@ -4951,6 +5169,7 @@ function evalState(state, ms, multipv = 1) {
 /* Sorpresas y trampas de la posición del tablero */
 const Surprise = { busy: false };
 async function findSurprises() {
+  ExpEval.token++;
   const out = $("surpriseOut"), node = cur(), st = node.state, me = st.t;
   if (Surprise.busy) return;
   if (!Engine.ready) { out.innerHTML = `<div class="note-box small">El motor aún no está listo.</div>`; return; }
@@ -5046,12 +5265,130 @@ async function findSurprises() {
   }
 }
 
+/* 🎯 Preparar un rival: sus partidas públicas de Lichess → aperturas, resultados, finales de partida, errores
+   y las líneas suyas que se salen de tu repertorio */
+const Rival = { busy: false };
+async function prepareRival() {
+  const user = $("rivalUser").value.trim(), out = $("rivalOut");
+  if (!/^[A-Za-z0-9_-]{2,30}$/.test(user)) { toast("Escribe un nombre de usuario de Lichess válido."); $("rivalUser").focus(); return; }
+  if (Rival.busy) return;
+  Rival.busy = true;
+  $("rivalBtn").disabled = true;
+  out.innerHTML = `<div class="note-box small">⏳ Descargando las partidas de ${esc(user)} de Lichess…</div>`;
+  try {
+    const q = new URLSearchParams({ max: $("rivalMax").value, perfType: $("rivalPerf").value, opening: "true", clocks: "false", evals: "true", sort: "dateDesc" });
+    let text;
+    try {
+      const res = await Lichess.fetch(`https://lichess.org/api/games/user/${encodeURIComponent(user)}?${q}`, { headers: Object.assign({ Accept: "application/x-chess-pgn" }, authHeaders()) });
+      if (res.status === 404) throw Error(`no existe el usuario «${user}» en Lichess`);
+      if (res.status === 429) throw Error(`Lichess pide una pausa: inténtalo en ${Lichess.waitSeconds()} s`);
+      if (!res.ok) throw Error("Lichess respondió con un error " + res.status);
+      text = await res.text();
+    } catch (e) { out.innerHTML = `<div class="note-box small msg-err">No se pudieron descargar: ${esc(e.message && !/fetch/i.test(e.message) ? e.message : "sin conexión con Lichess")}.</div>`; return; }
+    out.innerHTML = `<div class="note-box small">⏳ Estudiando sus partidas…</div>`;
+    await new Promise(r => setTimeout(r, 0));
+    const me = norm(user), games = [];
+    for (const part of Pgn.splitGames(text)) {
+      if (!part.movetext.trim()) continue;
+      let r;
+      try { r = Pgn.parseGame(part, { lang: "en" }); } catch { continue; }
+      if (r.error) continue;
+      const h = r.game.headers, c = norm(h.White) === me ? 1 : norm(h.Black) === me ? -1 : 0;
+      if (!c || h.SetUp === "1") continue;
+      const line = Pgn.mainlineFrom(r.game.root);
+      if (line.length < 2) continue;
+      const res = (h.Result || "*").trim(), sc = scoreOf(res, c);
+      const eco = ECO.detect(line[Math.min(line.length, 24) - 1]);
+      games.push({ g: r.game, h, c, line, sc, res, opening: eco ? eco.entry.name.split(" · ")[0] : (h.Opening || "Otras").split(":")[0] });
+    }
+    if (!games.length) { out.innerHTML = `<div class="note-box small">${esc(user)} no tiene partidas que coincidan con esos filtros.</div>`; return; }
+    const pct = (a, b) => (b ? Math.round(a / b * 100) : 0) + " %";
+    const scoreTxt = list => { const v = list.filter(x => x.sc != null); return v.length ? pct(v.reduce((a, x) => a + x.sc, 0), v.length) : "—"; };
+    const byColor = c => games.filter(x => x.c === c);
+    const W = byColor(1), B = byColor(-1);
+    // Aperturas por color
+    const openingRows = list => {
+      const m = new Map();
+      list.forEach(x => { const e = m.get(x.opening) || { name: x.opening, n: 0, pts: 0, k: 0 }; e.n++; if (x.sc != null) { e.pts += x.sc; e.k++; } m.set(x.opening, e); });
+      return [...m.values()].sort((a, b) => b.n - a.n).slice(0, 7).map(e => {
+        const s = e.k ? e.pts / e.k : null, tag = e.n >= 3 && s != null ? (s <= 0.4 ? ` <span class="srs-pill due">floja para él</span>` : s >= 0.65 ? ` <span class="srs-pill ok">su fuerte</span>` : "") : "";
+        return `<div class="version-row"><span class="version-what">${esc(e.name)}${tag}</span><span class="small">${e.n} partida${e.n === 1 ? "" : "s"} · ${s == null ? "—" : Math.round(s * 100) + " %"}</span></div>`;
+      }).join("") || `<div class="small">Sin partidas.</div>`;
+    };
+    // Primeras jugadas
+    const firstMoves = (list, ply, filter) => {
+      const m = new Map();
+      list.filter(filter || (() => true)).forEach(x => { const n = x.line[ply]; if (!n) return; const k = n.san; const e = m.get(k) || { san: k, st: n.parent.state, n: 0 }; e.n++; m.set(k, e); });
+      const tot = [...m.values()].reduce((a, e) => a + e.n, 0);
+      return [...m.values()].sort((a, b) => b.n - a.n).slice(0, 4).map(e => `${numPrefix(e.st)}${formatSan(e.san, settings.lang, e.st.t)} (${pct(e.n, tot)})`).join(", ");
+    };
+    // Cómo acaban sus partidas
+    const lost = games.filter(x => x.sc === 0), timeLoss = lost.filter(x => /time/i.test(x.h.Termination || "")).length;
+    const avgLen = Math.round(games.reduce((a, x) => a + x.line.length, 0) / games.length / 2);
+    // Errores por fase (sólo partidas analizadas en Lichess, con [%eval])
+    const phase = { apertura: 0, "medio juego": 0, final: 0 }, analysed = [];
+    for (const x of games) {
+      if (x.line.filter(n => n.eval).length < x.line.length * 0.7) continue;
+      analysed.push(x);
+      if (!x.g.root.eval) x.g.root.eval = { cp: 20, depth: 0, source: "pgn" };
+      for (const n of x.line) {
+        if (n.parent.state.t !== x.c) continue;
+        const info = classifyMove(n);
+        if (!info || (info.cls !== "??" && info.cls !== "?")) continue;
+        const ply = Pgn.pathTo(n).length - 1;
+        phase[ply <= 24 ? "apertura" : Chess.nonPawnCount(n.parent.state) <= 6 ? "final" : "medio juego"]++;
+      }
+    }
+    const errTot = Object.values(phase).reduce((a, b) => a + b, 0);
+    const worst = Object.entries(phase).sort((a, b) => b[1] - a[1])[0];
+    // Sus líneas frente a tu repertorio
+    const trees = repertoireTrees(), devs = new Map(), followed = [];
+    for (const x of games) {
+      const mySide = -x.c;
+      const fits = trees.filter(t => t.side === mySide && t.g.root.children.some(ch => ch.uci === x.line[0].uci));
+      const pool = fits.some(t => t.lib) ? fits.filter(t => t.lib) : fits;
+      let best = null;
+      for (const t of pool) { const m = matchGameToTree(x.line, t, mySide); if (!best || m.depth > best.depth) best = Object.assign({ tree: t }, m); }
+      if (!best) continue;
+      if (!best.dev) { followed.push(best); continue; }
+      if (best.dev.mine) continue;   // se salió su rival, no él: no dice nada de lo que juega
+      const k = (best.tree.lib || "c" + best.tree.i) + "|" + best.path.join(" ");
+      const e = devs.get(k) || { n: 0, tree: best.tree, path: best.path, node: best.dev.n };
+      e.n++; devs.set(k, e);
+    }
+    const topDevs = [...devs.values()].sort((a, b) => b.n - a.n).slice(0, 6);
+    Rival.devs = topDevs;
+    Rival.text = text; Rival.user = user;
+    const lineOfPath = (tree, path) => lineText(tree.g.root.state, path, 40);
+    out.innerHTML = `<div class="note-box"><b>🎯 ${esc(user)}</b>: ${games.length} partida${games.length === 1 ? "" : "s"} (${W.length} con blancas, ${B.length} con negras) · puntuación ${scoreTxt(games)} · con blancas ${scoreTxt(W)} · con negras ${scoreTxt(B)}.</div>
+      <div class="rival-grid">
+        <div><h3>⚪ Con blancas</h3><div class="small">Empieza con: ${esc(firstMoves(W, 0) || "—")}</div>${openingRows(W)}</div>
+        <div><h3>⚫ Con negras</h3><div class="small">Contra 1.e4: ${esc(firstMoves(B, 1, x => x.line[0].san === "e4") || "—")}<br>Contra 1.d4: ${esc(firstMoves(B, 1, x => x.line[0].san === "d4") || "—")}</div>${openingRows(B)}</div>
+      </div>
+      <h3>⏱ Cómo acaban sus partidas</h3>
+      <div class="small">Duran unas ${avgLen} jugadas de media. ${lost.length ? `De sus ${lost.length} derrotas, ${timeLoss} fueron por tiempo${timeLoss / lost.length >= 0.3 ? ": <b>se apura con el reloj</b>, así que conviene llevarle a posiciones complicadas y no tener prisa" : ""}.` : "No tiene derrotas en estas partidas."}</div>
+      <h3>⚠ Dónde falla</h3>
+      <div class="small">${analysed.length ? `En ${analysed.length === 1 ? "su única partida analizada" : `sus ${analysed.length} partidas analizadas`} en Lichess cometió ${errTot} error${errTot === 1 ? "" : "es"} (? y ??), ${String(Math.round(errTot / analysed.length * 10) / 10).replace(".", ",")} por partida${errTot ? `; la mayoría en <b>${{ apertura: "la apertura", "medio juego": "el medio juego", final: "el final" }[worst[0]]}</b> (${pct(worst[1], errTot)})` : ""}.` : "Ninguna de estas partidas está analizada en Lichess, así que no se pueden contar sus errores."}</div>
+      <h3>🗂 Sus líneas frente a tu repertorio</h3>
+      ${topDevs.length ? `<p class="small">Líneas suyas que se salen de tu repertorio (para prepararlas):</p>` + topDevs.map((d, i) => `<div class="version-row"><span class="version-what">${d.tree.lib ? "🗂" : "📘"} ${esc(d.tree.title)}: <b>${esc(lineOfPath(d.tree, d.path))}</b> <span class="small">(${d.n} partida${d.n === 1 ? "" : "s"})</span></span>${d.tree.lib ? `<button class="sm-btn primary" data-rv="${i}">➕ Prepararla</button>` : `<button class="sm-btn" data-rvc="${i}" title="Es un repertorio del curso: cópialo a «Mis repertorios» para poder añadirla">📖 Ver</button>`}</div>`).join("") : `<div class="small">${followed.length ? "" : "Sus partidas no se cruzan con tus repertorios."}</div>`}
+      ${followed.length ? `<div class="small">✔ En ${followed.length} partida${followed.length === 1 ? "" : "s"} jugó dentro de tu repertorio hasta el final de tu preparación.</div>` : ""}
+      <div class="controls"><button class="sm-btn" id="rivalOpenBtn" title="Abre sus partidas como .pgn: podrás recorrerlas y, en el explorador «Mi biblioteca + .pgn», ver su árbol de aperturas">🗂 Abrir sus partidas</button></div>`;
+    out.querySelectorAll("[data-rv]").forEach(b => b.onclick = () => { const d = Rival.devs[+b.dataset.rv]; prepareRivalMove(d.tree, d.path.slice(0, -1), d.path[d.path.length - 1]); });
+    out.querySelectorAll("[data-rvc]").forEach(b => b.onclick = () => { const d = Rival.devs[+b.dataset.rvc]; openRepertoireAt(d.tree, d.path.slice(0, -1)); });
+    $("rivalOpenBtn").onclick = () => { const n = setCollection(Rival.text, false, `Lichess: ${Rival.user}`); switchTab("library"); switchSub("collection"); toast(`🗂 ${n} partidas de ${Rival.user} abiertas (sin guardar).`); };
+  } finally {
+    Rival.busy = false;
+    $("rivalBtn").disabled = false;
+  }
+}
+
 /* Revisión de un repertorio: líneas sin terminar, huecos (respuestas frecuentes del rival que no tienes),
    jugadas dudosas según el motor y cómo te va con él en tus partidas */
 const RepReview = { busy: false, cancel: false };
 const winnerCp = l => (!l ? null : l.mate != null ? (l.mate > 0 || (l.mate === 0 && l.winner === 1) ? 3000 : -3000) : l.cp);
 const fmtPawns = v => (Math.abs(v) >= 2000 ? (v > 0 ? "mate" : "mate en contra") : (v > 0 ? "+" : "") + (v / 100).toFixed(2).replace(".", ","));
 async function reviewRepertoire(tree) {
+  ExpEval.token++;
   const out = $("repReviewOut");
   if (RepReview.busy) { toast("Ya hay una revisión en marcha."); return; }
   RepReview.busy = true; RepReview.cancel = false;
@@ -5429,6 +5766,7 @@ $("playBestMoveBtn").onclick = () => {
   const m = Chess.moveFromUci(node.state, uci);
   if (m && canUserMove()) playMove(m, "user");
 };
+$("thinkBtn").onclick = () => thinkWithMe();
 $("cloudStockfishBtn").onclick = async () => {
   const node = cur();
   $("engineSourceBadge").textContent = "☁ Consultando la nube…";
@@ -5577,6 +5915,8 @@ document.querySelectorAll(".posnag-btn").forEach(btn => btn.onclick = () => {
 });
 
 $("surpriseBtn").onclick = () => findSurprises();
+$("rivalBtn").onclick = () => prepareRival();
+$("rivalUser").addEventListener("keydown", e => { if (e.key === "Enter") prepareRival(); });
 $("explorerDbSelect").onchange = e => { settings.explorerDb = e.target.value; saveSettings(); fetchExplorer(); };
 $("ecoSearchInput").oninput = debounce(renderLocalEcoList, 120);
 
@@ -6271,7 +6611,7 @@ function renderPosTarget() {
 const COURSE_PGN = /*__COURSES__*/{};
 const COURSES = [
   { id: "aperturas", icon: "📖", name: "Aperturas", desc: "Los principios, los errores típicos y las aperturas principales con blancas y con negras, explicando el porqué de cada jugada." },
-  { id: "planes", icon: "💡", name: "Planes de apertura", desc: "Posiciones típicas que salen de las aperturas: ¿cuál es el plan? Encuentra tú las jugadas clave (ataque de minorías, cadenas de peones, rupturas, casillas fuertes…) y entiende por qué se juegan." },
+  { id: "planes", icon: "💡", name: "Planes de apertura", desc: "Posiciones típicas que salen de las aperturas: ¿cuál es el plan? Encuentra tú las jugadas clave (ataque de minorías, cadenas de peones, rupturas, casillas fuertes, enroques opuestos, peones doblados, la pareja de alfiles…) y entiende por qué se juegan." },
   { id: "repertorios", icon: "🗂", name: "Repertorios para entrenar", desc: "Repertorios completos con blancas (1.e4) y con negras (Caro-Kann y Gambito de Dama), con el porqué de cada jugada. Entrénalos con 🎯: los repasos se espacian solos." },
   { id: "tactica", icon: "⚔", name: "Táctica", desc: "Horquillas, clavadas, enfiladas, descubiertas, sobrecarga y mates típicos, con ejercicios para resolver." },
   { id: "estrategia", icon: "🧭", name: "Estrategia", desc: "Cómo hacer un plan: estructuras de peones, piezas buenas y malas, columnas, casillas fuertes y peones pasados." },
@@ -6702,7 +7042,7 @@ document.addEventListener("keydown", e => {
   if (document.querySelector(".modal-back.open")) return;
   const k = e.key;
   if (editor.active && !["f", "F", "?"].includes(k)) return;
-  if (quiz() && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", " ", "x", "X"].includes(k)) return;
+  if (quiz() && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", " ", "x", "X", "t", "T"].includes(k)) return;
   if (k === "ArrowLeft") { stopAutoplay(); goBack(); }
   else if (k === "ArrowRight") { stopAutoplay(); goForward(); }
   else if (k === "ArrowUp") goSibling(-1);
@@ -6715,6 +7055,7 @@ document.addEventListener("keydown", e => {
   else if (k === "?") openHelp();
   else if (k === "m" || k === "M") openMarkDialog();
   else if (k === "x" || k === "X") showThreat();
+  else if (k === "t" || k === "T") thinkWithMe();
   else if (k === "b" || k === "B") setBlind(!ui.blind);
   else return;
   e.preventDefault();

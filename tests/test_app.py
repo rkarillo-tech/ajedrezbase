@@ -611,7 +611,7 @@ def prueba_cursos(browser):
     ctx = contexto(browser)
     pg, errores = nueva_pagina(ctx)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar(pg.locator("#courseList details.course").count() == 7 and "0 de 71" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los siete cursos y el progreso")
+    comprobar(pg.locator("#courseList details.course").count() == 7 and "0 de 74" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los siete cursos y el progreso")
     pg.locator('details[data-course="finales"] summary').click()
     pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").click()
     comprobar(pg.is_visible("#lessonBox") and "construir el puente" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("1K1k4/1P6"), "abrir una lección la pone en el tablero con su explicación")
@@ -650,7 +650,7 @@ def prueba_cursos(browser):
     pg.reload()
     pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar("2 de 71" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
+    comprobar("2 de 74" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
     pg.locator('details[data-course="aperturas"] summary').click()
     pg.locator('details[data-course="aperturas"] [data-coll]').click()
     comprobar(pg.inner_text("#collCount") == "12" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")
@@ -1086,6 +1086,68 @@ def prueba_rival_humano(browser):
     ctx.close()
 
 
+def prueba_rival_explorador_y_piensa(browser):
+    print("Novedades 1.17: preparar un rival, valoración en el explorador y «Piensa conmigo»")
+    ctx = contexto(browser)
+    partidas = []
+    for i in range(3):
+        partidas.append(f'[Event "Rated blitz game"]\n[White "Alguien{i}"]\n[Black "RivalX"]\n[Result "1-0"]\n[Termination "Time forfeit"]\n\n1. e4 d5 2. exd5 Qxd5 3. Nc3 Qa5 1-0')
+    for i in range(2):
+        partidas.append(f'[Event "Rated blitz game"]\n[White "RivalX"]\n[Black "Otro{i}"]\n[Result "1-0"]\n[Termination "Normal"]\n\n1. d4 d5 2. c4 e6 3. Nc3 Nf6 1-0')
+    partidas.append('[Event "Rated blitz game"]\n[White "Otro9"]\n[Black "RivalX"]\n[Result "1-0"]\n[Termination "Normal"]\n\n1. e4 { [%eval 0.3] } e5 { [%eval 0.3] } 2. Nf3 { [%eval 0.3] } f6 { [%eval 2.5] } 3. Nxe5 { [%eval 2.4] } fxe5 { [%eval 4.0] } 4. Qh5+ { [%eval 4.1] } 1-0')
+    pgn_rival = "\n\n".join(partidas) + "\n"
+    def lichess_api(r):
+        url = r.request.url
+        if "/api/games/user/RivalX" in url:
+            r.fulfill(status=200, content_type="application/x-chess-pgn", body=pgn_rival, headers={"Access-Control-Allow-Origin": "*"})
+        elif "/api/cloud-eval" in url:
+            fen = urllib.parse.parse_qs(urllib.parse.urlparse(url).query).get("fen", [""])[0]
+            if fen.startswith("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w"):
+                r.fulfill(status=200, content_type="application/json", body=json.dumps({"depth": 45, "knodes": 9000, "pvs": [{"moves": "e2e4 e7e5", "cp": 31}, {"moves": "d2d4 d7d5", "cp": 24}]}), headers={"Access-Control-Allow-Origin": "*"})
+            else:
+                r.fulfill(status=404, body="{}", headers={"Access-Control-Allow-Origin": "*"})
+        else:
+            r.abort()
+    ctx.route("**/lichess.org/api/**", lichess_api)
+    def explorador(r):
+        datos = {"white": 500, "draws": 300, "black": 200, "moves": [{"san": s, "uci": "", "white": n // 2, "draws": n // 4, "black": n - n // 2 - n // 4, "averageRating": 2400} for s, n in [("e4", 500), ("d4", 350), ("Nf3", 150)]], "topGames": []}
+        r.fulfill(status=200, content_type="application/json", body=json.dumps(datos), headers={"Access-Control-Allow-Origin": "*"})
+    ctx.route("**/explorer.lichess.ovh/**", explorador)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.evaluate("settings.token = 'lip_prueba'; settings.explorerDb = 'masters'; saveSettings()")
+    # Valoración en el explorador
+    pg.evaluate("setGame(Pgn.newGame(), { noConfirm: true })")
+    pg.click('.tab-btn[data-tab="explorer"]')
+    pg.wait_for_function("[...document.querySelectorAll('#explorerMovesBody .exp-eval')].length === 3 && [...document.querySelectorAll('#explorerMovesBody .exp-eval')].every(td => td.textContent !== '…')", timeout=60000)
+    celdas = pg.evaluate("[...document.querySelectorAll('#explorerMovesBody .exp-eval')].map(td => td.textContent)")
+    comprobar(celdas[0] == "+0.31☁" and celdas[1] == "+0.24☁" and celdas[2].endswith("⚙"), f"el explorador muestra la valoración de cada jugada (nube de Lichess ☁ y, si falta, el motor ⚙): {celdas}")
+    # Preparar un rival: crea antes un repertorio propio con 1.e4 e5
+    pg.evaluate("""(async () => { const g = Pgn.parseGame('1. e4 e5 2. Nf3 Nc6 *', { lang: 'en' }).game; setGame(g, { name: 'Mi 1.e4', tags: ['repertorio'], noConfirm: true }); await saveToLibrary({ silent: true, force: true }); })()""")
+    pg.wait_for_function("[...Lib.games.values()].some(r => r.title === 'Mi 1.e4')")
+    pg.click('.tab-btn[data-tab="explorer"]')
+    pg.fill("#rivalUser", "RivalX")
+    pg.click("#rivalBtn")
+    pg.wait_for_function("!Rival.busy && document.getElementById('rivalOut').textContent.includes('Sus líneas')", timeout=60000)
+    txt = pg.inner_text("#rivalOut")
+    comprobar("6 partidas (2 con blancas, 4 con negras)" in txt and "Contra 1.e4: 1...d5 (75 %)" in txt, "el informe del rival resume sus partidas y sus primeras jugadas con cada color")
+    comprobar("3 fueron por tiempo" in txt and "se apura con el reloj" in txt, "detecta que pierde a menudo por tiempo")
+    comprobar("En su única partida analizada en Lichess cometió 2 errores" in txt and "la mayoría en la apertura" in txt, "cuenta sus errores en las partidas analizadas y dice en qué fase falla")
+    comprobar("Mi 1.e4" in txt and "1.e4 d5" in txt and "(3 partidas)" in txt, "encuentra las líneas del rival que se salen de tu repertorio")
+    pg.locator("#rivalOut [data-rv]").first.click()
+    comprobar(pg.evaluate("cur().san === 'd5' && Lib.games.get(ui.libId).title === 'Mi 1.e4'"), "«➕ Prepararla» abre tu repertorio con la jugada del rival")
+    # Piensa conmigo
+    pg.evaluate("setGame(Pgn.newGame('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4'), { noConfirm: true })")
+    pg.click("#thinkBtn")
+    pg.wait_for_function("!Think.busy && document.getElementById('thinkBox').textContent.includes('La situación')", timeout=60000)
+    piensa = pg.inner_text("#thinkBox")
+    comprobar("Dxf7#" in piensa and "mate en 1" in piensa and "Lo que va a pasar" in piensa, "«Piensa conmigo» encuentra la mejor jugada y explica el razonamiento")
+    pg.locator("#thinkBox [data-t=play]").click()
+    comprobar(pg.evaluate("cur().san") == "Qxf7#" and pg.is_hidden("#thinkBox"), "desde «Piensa conmigo» se puede jugar la jugada propuesta")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1233,7 +1295,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

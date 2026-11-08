@@ -64,3 +64,43 @@
 [Result "*"]
 
 { [%csl Gd5] Siciliana Najdorf con ...e5 (1.e4 c5 2.Cf3 d6 3.d4 cxd4 4.Cxd4 Cf6 5.Cc3 a6 6.Ae2 e5…). Las negras han ganado espacio, pero el avance ...e5 ha dejado un agujero en d5: ningún peón negro puede ya controlar esa casilla. Toda la posición gira alrededor de d5. El plan de las blancas: controlarla con las piezas, impedir ...b5 (que liberaría el juego negro y echaría al caballo de c3, que defiende d5) y, en el momento justo, ocuparla con un caballo. ¿Por dónde empiezas? } 10. Qd2 { Conecta las torres y prepara Tfd1, con más presión sobre d5 y d6. } 10... Nbd7 11. a4 { [%csl Gb5] Impide ...b5: sin ese avance, las negras no tienen juego en el flanco de dama. } 11... Rc8 12. a5 { Fija el peón de b7 y gana espacio. Las blancas pueden seguir con Tfd1, Af3 y Cd5 en el momento justo. Resumen: las piezas controlan d5, el peón de a impide ...b5 y las negras se quedan sin juego activo. } *
+
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "Dragón, ataque yugoslavo: enroques opuestos y avalancha"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r1bq1rk1/pp2ppbp/2np1np1/8/3NP3/2N1BP2/PPPQ2PP/R3KB1R w KQ - 3 9"]
+[Result "*"]
+
+{ [%cal Gh2h5,Gc4f7] Siciliana Dragón con el ataque yugoslavo (1.e4 c5 2.Cf3 d6 3.d4 cxd4 4.Cxd4 Cf6 5.Cc3 g6 6.Ae3 Ag7 7.f3 O-O 8.Dd2 Cc6). Los reyes van a estar en flancos opuestos: las blancas enrocarán largo y atacarán el enroque negro con los peones (h4 y h5) para abrir la columna h; las negras atacarán por la columna c. Es una carrera: gana quien llega antes. Ideas blancas: el alfil a c4 y b3 (vigila d5 y apunta a f7), el avance del peón h y, a menudo, Ah6 para cambiar el alfil de g7, el gran defensor del rey negro. ¿Por dónde empiezas? } 9. Bc4 { [%cal Gc4d5,Gc4f7] El alfil controla d5 (frena la ruptura ...d5, que liberaría a las negras) y apunta a f7. } 9... Nxd4 10. Bxd4 Bd7 11. h4 { ¡Empieza la avalancha! El peón h avanza para abrir la columna h. } 11... Rc8 { Las negras preparan su contraataque por la columna c. } 12. Bb3 { El alfil se aparta antes de que ...Cxc4 o ...Txc4 lo cambien. } 12... h5 { Las negras frenan el peón h: es la defensa más sólida en esta variante. } 13. O-O-O { Enroque largo: el rey se va al flanco de dama y la torre llega a d1. A partir de aquí, el plan blanco es g4 para romper con el peón de h5 y abrir líneas hacia el rey negro y, cuando convenga, Ah6 para cambiar el alfil de g7. Las negras atacarán con ...b5 y la torre por la columna c. } *
+
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "7"]
+[Title "Nimzoindia Sämisch: atacar los peones doblados"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "rnbqk2r/pppp1ppp/4pn2/8/2PP4/P1P5/4PPPP/R1BQKBNR b KQkq - 0 5"]
+[Result "*"]
+
+{ [%csl Rc4,Rc3] Nimzoindia, variante Sämisch (1.d4 Cf6 2.c4 e6 3.Cc3 Ab4 4.a3 Axc3+ 5.bxc3). Las negras han cambiado su alfil por el caballo: las blancas tienen la pareja de alfiles, pero a cambio les han quedado peones doblados en la columna c. El peón de c4 es débil, porque ningún otro peón puede defenderlo. El plan negro: atacar c4 con todo (...Cc6 y ...Ca5, ...b6 y ...Aa6, y más adelante ...Tc8) y mantener la posición cerrada para que los alfiles blancos no tengan diagonales. ¿Qué pieza empieza el ataque? } 5... Nc6 { [%cal Gc6a5] El caballo se dirige a a5, desde donde atacará c4. } 6. e3 Na5 { [%cal Ga5c4] Primer ataque contra c4. } 7. Bd3 { El alfil defiende el peón. } 7... b6 { Prepara ...Aa6: otra pieza contra c4. } 8. e4 Ba6 { [%cal Ga6c4,Ga5c4] Ya son dos piezas negras contra c4, que sólo defiende el alfil de d3. Las blancas tendrán que defenderlo con la dama (De2) o buscar juego en el centro con e5 y f4. El plan negro sigue con más presión (...d6, ...Tc8, ...Dc7). Si cae el peón de c4, o las blancas tienen que avanzarlo a c5, sus alfiles se quedan sin juego. } *
+
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "8"]
+[Title "Eslava: perseguir el alfil de f5 y quedarse con la pareja de alfiles"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "rn1qkb1r/pp3ppp/2p1pn2/3p1b2/2PP4/2N1PN2/PP3PPP/R1BQKB1R w KQkq - 0 6"]
+[Result "*"]
+
+{ [%csl Gf5] Eslava (1.d4 d5 2.c4 c6 3.Cf3 Cf6 4.e3 Af5 5.Cc3 e6). Las negras han sacado su alfil de casillas blancas antes de cerrarlo con ...e6: es su pieza buena. Una idea muy práctica para las blancas es perseguirlo con el caballo para cambiarlo y quedarse con la pareja de alfiles, una ventaja duradera. A cambio, el caballo va un momento al borde. ¿Cómo lo haces? } 6. Nh4 { [%cal Gh4f5] El caballo ataca el alfil de f5. } 6... Bg6 { El alfil se retira, pero sigue al alcance del caballo. } 7. Nxg6 { ¡Cambio! Las blancas se quedan con la pareja de alfiles, que vale más cuanto más se abra la posición. } 7... hxg6 { Las negras recapturan con el peón h y abren la columna h para su torre. } 8. Bd3 { [%cal Gd3g6] El alfil se desarrolla apuntando a g6. El plan blanco: enrocar, Dc2 y abrir el centro con cxd5 y e4 en el momento justo, para que los dos alfiles tengan diagonales. Las negras buscarán ...Cbd7, ...Ad6 y las rupturas ...c5 o ...e5. } *

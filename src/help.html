@@ -75,10 +75,11 @@
       </details>
 
       <details id="help-motor">
-        <summary>⚙ 5. El motor: análisis en vivo, nube y etiquetas</summary>
+        <summary>⚙ 5. El motor: análisis en vivo, «Piensa conmigo», nube y etiquetas</summary>
         <ul>
           <li><b>Analizar</b> (o tecla <kbd>E</kbd>) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.</li>
           <li><b>Flecha</b> muestra en morado la mejor jugada del motor. <b>⚡ Jugar</b> la ejecuta.</li>
+          <li><b>🧠 Piensa conmigo</b> (o tecla <kbd>T</kbd>): el motor explica su razonamiento en palabras, como lo haría un entrenador: <b>la situación</b> (valoración, material y la amenaza del rival), <b>la mejor jugada y su idea</b> (gana material, cubre una amenaza, lleva al mate…), <b>lo que va a pasar</b> jugada a jugada (tu jugada, la mejor respuesta del rival, la tuya… con qué hace cada una), <b>por qué no las otras</b> candidatas y <b>la jugada tentadora</b> que parece buena pero falla, con su refutación. Desde ahí puedes jugar la jugada o añadir la línea como variante. Tarda unos segundos.</li>
           <li><b>👁 Amenaza</b> (o tecla <kbd>X</kbd>): enseña qué jugaría el rival <i>si le tocara mover</i>, con una flecha roja discontinua y su valoración. Responde al momento a «¿qué está tramando?» y a por qué una jugada pasiva es mala. Pulsa otra vez o cambia de jugada para quitarla.</li>
           <li><b>Evaluación</b>, siempre desde el punto de vista de las blancas: <code>+0.80</code> = ventaja blanca de unas 8 décimas de peón; <code>−1.50</code> = ventaja negra de 1,5 peones; <code>#3</code> = mate en 3 para las blancas; <code>−#2</code> = mate en 2 para las negras. Debajo del panel lo verás también en palabras («Ligera ventaja de las blancas», «Igualdad»…). Entre −0.30 y +0.30 es igualdad; hasta ±0.70, ligera ventaja; hasta ±1.50, ventaja clara; más, ventaja decisiva. El botón <b>❔</b> del panel tiene esta guía a mano.</li>
           <li><b>⚖ Tu jugada frente a la del motor</b>: en cada jugada el panel compara la que se ha hecho con la que proponía el motor y dice cuánto pierde y si es buena, una imprecisión (?!), un error (?) o un error grave (??). Si aún no se ha analizado, pulsa <b>Compararla con la del motor</b>. Con <b>↪ Probar la del motor</b> vuelves atrás y juegas la del motor como variante, para ver la diferencia en el tablero.</li>
@@ -258,7 +259,7 @@
       </details>
 
       <details id="help-aperturas">
-        <summary>🌍 15. Aperturas: explorador, sorpresas y trampas, enciclopedia (y el token de Lichess)</summary>
+        <summary>🌍 15. Aperturas: explorador con valoración, sorpresas y trampas, preparar un rival, enciclopedia (y el token de Lichess)</summary>
         <ul>
           <li>La pestaña <b>🌍 Aperturas</b> muestra, para la posición del tablero, qué jugadas se han hecho, cuántas veces y con qué resultado (barra blanco / tablas / negro), y partidas de ejemplo que puedes cargar.</li>
           <li>Tres fuentes:
@@ -267,6 +268,8 @@
               <li><b>Lichess</b>: millones de partidas online de 1800 a 2500 (necesita token).</li>
               <li><b>Mi biblioteca + .pgn abierto</b>: tus propias partidas; funciona sin conexión y sin token.</li>
             </ul></li>
+          <li>La columna <b>Motor</b> da la valoración de cada jugada (como el resto de la aplicación: + ventaja blanca, − negra), en verde la mejor o casi y en rojo las que pierden claramente. Sale de la <b>nube de Lichess</b> (☁, Stockfish muy profundo) y, para las jugadas que la nube no tiene, de una evaluación rápida del motor de la aplicación (⚙). Así ves de un vistazo qué jugadas populares son buenas y cuáles no.</li>
+          <li><b>🎯 Preparar un rival</b> (más abajo): escribe el usuario de Lichess de tu próximo rival y se descargan sus últimas partidas públicas (no hace falta token). Verás qué aperturas juega con cada color y cómo le va con cada una (marcadas «su fuerte» o «floja para él»), con qué responde a 1.e4 y a 1.d4, cuántas de sus derrotas son por tiempo, en qué fase comete más errores (si sus partidas están analizadas en Lichess) y <b>qué líneas suyas se salen de tu repertorio</b>, con <b>➕ Prepararla</b> para añadir tu respuesta. <b>🗂 Abrir sus partidas</b> las abre como .pgn: con el explorador en «Mi biblioteca + .pgn» ves su árbol de aperturas.</li>
           <li><b>🔎 Sorpresas y trampas</b> (debajo de la tabla): para la posición del tablero, Stockfish y la base elegida buscan <b>sorpresas</b> (jugadas casi tan buenas como la mejor que casi nadie juega), <b>errores frecuentes</b> (jugadas que se juegan mucho y pierden) y <b>trampas</b> (jugadas tras las que la respuesta más habitual del rival es un error, con lo que habría que jugar). <b>▶ Jugarla</b> o <b>▶ Verla</b> las hace en el tablero para que las analices o las añadas a tu repertorio. Tarda unos segundos; con Maestros o Lichess necesita el token.</li>
           <li>La <b>enciclopedia ECO local</b> (abajo) tiene más de 170 aperturas con nombre en español; busca «Najdorf», «Londres» o «C60» y pulsa para cargarla. Funciona sin conexión.</li>
           <li>El nombre de la apertura aparece arriba junto al título y reconoce transposiciones.</li>
@@ -321,7 +324,7 @@
       <details id="help-cursos">
         <summary>📘 18. Cursos: aperturas, planes de apertura, repertorios, táctica, estrategia, finales y partidas magistrales</summary>
         <ul>
-          <li>En la pestaña <b>📘 Cursos</b> tienes siete cursos con más de setenta lecciones comentadas paso a paso: <b>Aperturas</b> (principios, errores típicos, Italiana, Española, Gambito de Dama, Siciliana, Francesa, Caro-Kann, India de Rey, Londres y <b>cómo estudiar aperturas</b>), <b>💡 Planes de apertura</b> (posiciones típicas en las que tú buscas el plan: ataque de minorías, atacar la base de la cadena, el ataque con ...f5 en la India de Rey, la maniobra del caballo en la Italiana y la casilla d5 en la Najdorf), <b>Táctica</b> (horquilla, clavada, enfilada, descubierta, sobrecarga, mates típicos y ejercicios 🧩), <b>Estrategia</b> (planes, estructuras de peones, alfil bueno y malo, columnas, casillas fuertes, peón aislado, peón pasado), <b>Finales</b> (mates básicos, oposición, regla del cuadrado, Lucena, Philidor, peón pasado alejado y protegido, dama contra peón, peón de torre, zugzwang, carreras de peones, peones unidos…), <b>Repertorios para entrenar</b> y <b>Partidas magistrales</b> (Morphy, Anderssen, Fischer, Karpov y Kaspárov comentados jugada a jugada, señalando también sus errores).</li>
+          <li>En la pestaña <b>📘 Cursos</b> tienes siete cursos con más de setenta lecciones comentadas paso a paso: <b>Aperturas</b> (principios, errores típicos, Italiana, Española, Gambito de Dama, Siciliana, Francesa, Caro-Kann, India de Rey, Londres y <b>cómo estudiar aperturas</b>), <b>💡 Planes de apertura</b> (posiciones típicas en las que tú buscas el plan: ataque de minorías, atacar la base de la cadena, el ataque con ...f5 en la India de Rey, la maniobra del caballo en la Italiana, la casilla d5 en la Najdorf, el ataque yugoslavo en el Dragón, los peones doblados de la Nimzoindia y la caza del alfil de f5 en la Eslava), <b>Táctica</b> (horquilla, clavada, enfilada, descubierta, sobrecarga, mates típicos y ejercicios 🧩), <b>Estrategia</b> (planes, estructuras de peones, alfil bueno y malo, columnas, casillas fuertes, peón aislado, peón pasado), <b>Finales</b> (mates básicos, oposición, regla del cuadrado, Lucena, Philidor, peón pasado alejado y protegido, dama contra peón, peón de torre, zugzwang, carreras de peones, peones unidos…), <b>Repertorios para entrenar</b> y <b>Partidas magistrales</b> (Morphy, Anderssen, Fischer, Karpov y Kaspárov comentados jugada a jugada, señalando también sus errores).</li>
           <li>Pulsa una lección y se abre en el tablero. Su explicación aparece junto al tablero, arriba a la derecha (en el móvil, debajo del tablero), y no se mueve al desplazar la página: avanza con <b>▶ Siguiente</b> (o <kbd>→</kbd>) y en cada jugada leerás el porqué, con flechas y casillas marcadas en el tablero. Las alternativas y los errores típicos están como variantes en la lista de jugadas: pulsa en ellas para verlas y <b>↩ Línea principal</b> para volver.</li>
           <li><b>Prueba tus propias jugadas</b>: mueve las piezas en cualquier momento. Tus jugadas se añaden como variantes, marcadas como «🧪 tu prueba», sin estropear la lección. Activa «Analizar» (<kbd>E</kbd>) para que el motor las valore. <b>↩ Línea principal</b> te devuelve a la lección y <b>↺ Reiniciar</b> la deja como al principio. Tus pruebas no se guardan (y no se te pregunta nada al pasar de lección) salvo que pulses 💾: entonces se guarda en tu biblioteca una copia de la lección con tus variantes, y el curso queda intacto.
           <li><b>🗂 Repertorios para entrenar</b>: cinco repertorios completos, con el porqué de cada jugada: con blancas, 1.e4 (Italiana, Alapin, avance contra Francesa y Caro-Kann…) o 1.d4 con el sistema Londres; con negras contra 1.e4, la Caro-Kann; con negras contra 1.d4, el Gambito de Dama Declinado (con respuestas al Londres y al Colle); y con negras contra 1.c4, 1.Cf3 y otras primeras jugadas. Pulsa <b>🎯 Entrenar repertorio</b>: tú juegas tu bando y el rival elige al azar entre sus respuestas, así que cada vez recorres una línea distinta. Al terminar se programa el próximo repaso (mañana si fallaste; 3, 7, 16… días si lo hiciste perfecto) y la lista de cursos te avisa con 📅 cuando toca.</li>
@@ -392,6 +395,7 @@
           <tr><td><kbd>E</kbd></td><td>Activar / pausar el análisis continuo</td></tr>
           <tr><td><kbd>M</kbd></td><td>Marcar la posición</td></tr>
           <tr><td><kbd>X</kbd></td><td>Ver la amenaza del rival</td></tr>
+          <tr><td><kbd>T</kbd></td><td>🧠 Piensa conmigo: el razonamiento del motor en palabras</td></tr>
           <tr><td><kbd>B</kbd></td><td>Ocultar / mostrar las piezas (a ciegas)</td></tr>
           <tr><td>Rueda del ratón</td><td>Avanzar / retroceder (con el puntero sobre el tablero)</td></tr>
           <tr><td><kbd>?</kbd></td><td>Abrir esta ayuda</td></tr>
@@ -448,6 +452,75 @@
           <dd>Revisa esa jugada en el texto (a veces el PGN tiene erratas o mezcla notaciones). Prueba a fijar la «Notación de entrada» en vez de «Automática». Lo importado hasta ese punto se conserva.</dd>
           <dt>La nube dice que la posición no está</dt>
           <dd>La nube de Lichess sólo guarda posiciones que alguien analizó a fondo. Usa el motor local.</dd>
+        </dl>
+      </details>
+
+      <details id="help-glosario">
+        <summary>📚 27. Glosario: los términos de ajedrez que usa la aplicación</summary>
+        <p class="small">Las palabras que salen en los cursos, los comentarios del motor y «🧠 Piensa conmigo», explicadas en una frase. Usa el buscador de arriba para encontrar una.</p>
+        <dl class="faq">
+          <dt>Ahogado</dt>
+          <dd>El bando que mueve no está en jaque y no tiene ninguna jugada legal: tablas. Ojo al ganar con mucha ventaja (curso de finales, lección 1).</dd>
+          <dt>Alfil bueno / alfil malo</dt>
+          <dd>El alfil malo está tapado por sus propios peones, que ocupan casillas de su mismo color; el bueno tiene diagonales libres (curso de estrategia).</dd>
+          <dt>Ataque de minorías</dt>
+          <dd>Avanzar dos peones contra tres en un flanco para crear una debilidad en los peones rivales (planes de apertura, lección 1).</dd>
+          <dt>Ataque doble</dt>
+          <dd>Una jugada que amenaza dos cosas a la vez; el rival sólo puede atender una (curso de táctica).</dd>
+          <dt>Cadena de peones</dt>
+          <dd>Peones en diagonal que se protegen unos a otros. Se ataca por su base (planes de apertura, lección 2).</dd>
+          <dt>Casilla fuerte (puesto avanzado)</dt>
+          <dd>Casilla en el campo rival que ningún peón contrario puede atacar, ideal para un caballo apoyado por un peón.</dd>
+          <dt>Clavada</dt>
+          <dd>Una pieza no puede moverse sin dejar expuesta otra más valiosa detrás (absoluta si detrás está el rey).</dd>
+          <dt>Columna abierta / semiabierta</dt>
+          <dd>Abierta: sin peones. Semiabierta: sin peones propios, pero con alguno del rival. Son las autopistas de las torres.</dd>
+          <dt>Compensación</dt>
+          <dd>Ventajas (iniciativa, desarrollo, ataque) que equilibran el material entregado.</dd>
+          <dt>Desarrollo</dt>
+          <dd>Sacar las piezas menores y la dama de sus casillas iniciales a casillas activas; el primer objetivo de la apertura.</dd>
+          <dt>Descubierta</dt>
+          <dd>Una pieza se mueve y deja libre la línea de otra que estaba detrás, que pasa a atacar. Si ambas dan jaque, es un jaque doble.</dd>
+          <dt>Enfilada (rayos X)</dt>
+          <dd>Como una clavada al revés: se ataca una pieza valiosa que, al apartarse, deja expuesta otra detrás.</dd>
+          <dt>Enroques opuestos</dt>
+          <dd>Cada rey en un flanco: suele haber carrera de ataques con los peones contra el rey rival (planes de apertura, lección 6).</dd>
+          <dt>Fianchetto</dt>
+          <dd>Desarrollar el alfil en b2/g2 (o b7/g7) tras avanzar el peón de caballo una casilla.</dd>
+          <dt>Horquilla</dt>
+          <dd>Ataque doble con una pieza, típico del caballo o del peón.</dd>
+          <dt>Iniciativa</dt>
+          <dd>Poder hacer amenazas que obligan al rival a responder, marcando el ritmo de la partida.</dd>
+          <dt>Jaque perpetuo</dt>
+          <dd>Una serie de jaques que el rival no puede evitar: tablas por repetición.</dd>
+          <dt>Mayoría de peones</dt>
+          <dd>Más peones que el rival en un flanco: puede crear un peón pasado.</dd>
+          <dt>Oposición</dt>
+          <dd>Los reyes enfrentados con una casilla entre ellos; quien no tiene que mover la «tiene». Clave en los finales de peones.</dd>
+          <dt>Pareja de alfiles</dt>
+          <dd>Tener los dos alfiles contra alfil y caballo o dos caballos: una ventaja en posiciones abiertas.</dd>
+          <dt>Peón aislado</dt>
+          <dd>Sin peones propios en las columnas vecinas: no puede ser defendido por otro peón. El de la columna d se llama «peón aislado de dama».</dd>
+          <dt>Peón pasado</dt>
+          <dd>Ningún peón rival puede detenerlo en su camino a coronar. Si otro peón lo defiende, es un peón pasado protegido.</dd>
+          <dt>Peones colgantes</dt>
+          <dd>Dos peones unidos en c y d (o d y e) sin peones vecinos: dan espacio, pero pueden ser un blanco.</dd>
+          <dt>Peones doblados</dt>
+          <dd>Dos peones del mismo color en la misma columna: suelen ser una debilidad.</dd>
+          <dt>Profilaxis</dt>
+          <dd>Jugada que evita los planes del rival antes de que sucedan.</dd>
+          <dt>Ruptura</dt>
+          <dd>Avance de peón que abre la posición o ataca la estructura rival (…c5, …f5, e4…).</dd>
+          <dt>Sacrificio</dt>
+          <dd>Entregar material a propósito a cambio de ataque, de una ventaja posicional o de un mate.</dd>
+          <dt>Sobrecarga</dt>
+          <dd>Una pieza tiene dos tareas defensivas a la vez y no puede cumplir las dos.</dd>
+          <dt>Teoría</dt>
+          <dd>Las jugadas de apertura analizadas y conocidas. Mejor entender sus ideas que memorizarlas (aperturas, lección 12).</dd>
+          <dt>Triangulación</dt>
+          <dd>Maniobra del rey en tres casillas para perder un tiempo y ceder el turno al rival.</dd>
+          <dt>Zugzwang</dt>
+          <dd>Estar obligado a mover cuando cualquier jugada empeora la posición (curso de finales, lección 15).</dd>
         </dl>
       </details>
     </div>
