@@ -24,14 +24,14 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Análisis** | Analiza la partida (o una variante): marca `??` `?` `?!` `!`, redacta comentarios en español (también estratégicos: peones pasados o aislados, casillas fuertes, pareja de alfiles…), calcula la precisión y dibuja el gráfico |
 | **Informe** | Resumen de cómo fue la partida, momentos clave por impacto, precisión por fases y qué practicar |
 | **Aprende de tus errores** | Tras el análisis, repasa cada `?` y `??` buscando tú la jugada buena; acepta alternativas casi igual de buenas y guarda los que quieras como tarjetas |
-| **Aperturas** | Explorador de Lichess (maestros y online), explorador de **tus propias partidas** sin conexión y 170 aperturas ECO en español |
+| **Aperturas** | Explorador de Lichess (maestros y online), explorador de **tus propias partidas** sin conexión, **sorpresas y trampas** de cada posición (con Stockfish) y 170 aperturas ECO en español |
 | **Finales** | Tablas Syzygy de 7 piezas con práctica contra la defensa perfecta, y finales fundamentales (Lucena, Philidor, Saavedra…) |
 | **Lichess** | Descarga tus últimas partidas públicas por nombre de usuario (sin token), con sus análisis si los tienen |
 | **Estadísticas** | Con tus partidas guardadas: puntuación y precisión por color, ritmo y fase, tus errores más frecuentes, cómo te va con cada apertura, evolución por meses y conclusiones; analiza de golpe las pendientes |
 | **Buscar posición** | Encuentra en tu biblioteca o en un `.pgn` las partidas con la posición del tablero, su estructura de peones o su material, y ábrelas en ese momento |
 | **Biblioteca** | Guardas sólo lo que te interesa: ⭐ favoritas, etiquetas, buscador, borrado individual, exportar y copias de seguridad; 🕘 versiones de cada partida (el original nunca se pierde) y guardar como copia |
 | **Marcadores** | 📌 Marca posiciones como idea, táctica, error típico, plan… con nota; búscalas y vuelve a ellas con un clic |
-| **Cursos** | Más de 50 lecciones en español comentadas paso a paso: aperturas, repertorios para entrenar (con repasos espaciados), táctica (con ejercicios), estrategia, finales y partidas magistrales, con flechas, variantes y práctica; también se pueden descargar en PGN |
+| **Cursos** | Más de 70 lecciones en español comentadas paso a paso: aperturas (y cómo estudiarlas), planes de apertura (encuentra tú el plan), repertorios para entrenar (con repasos espaciados), táctica (con ejercicios), estrategia, finales y partidas magistrales, con flechas, variantes y práctica; también se pueden descargar en PGN |
 | **Jugar contra la CPU** | 8 niveles más uno 🎯 adaptativo que se ajusta a tus resultados, y 5 estilos (equilibrado, ⚔ agresivo, 🏰 posicional, 🛡 defensivo, 🎲 humano), reloj de 1+0 a 30+0 con incremento, rendirse, tablas, deshacer sin reloj y revancha; también a ciegas. Al acabar, 📋 informe del entrenador con tus errores más caros para practicarlos |
 | **Problemas de táctica** | Banco de problemas generados y comprobados con Stockfish, por temas (mates, horquilla, clavada, descubierta, sacrificio, final…) y dificultad, con repaso espaciado y nivel aproximado tipo Elo |
 | **Adivina la jugada** | Reproduce una partida clásica o tuya acertando las jugadas de un bando: el motor puntúa cada intento de 0 a 5 y comparas tu puntuación con la del jugador |

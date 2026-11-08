@@ -1,0 +1,66 @@
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "Gambito de Dama (cambio): el ataque de minorías"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r1bqrnk1/pp2bppp/2p2n2/3p2B1/3P4/2NBPN2/PPQ2PPP/R4RK1 w - - 8 11"]
+[Result "*"]
+
+{ [%csl Ga2,Gb2,Ra7,Rb7,Rc6] Variante del cambio del Gambito de Dama (1.d4 d5 2.c4 e6 3.Cc3 Cf6 4.cxd5 exd5…). Es la estructura Carlsbad: en el flanco de dama las blancas tienen dos peones (a2 y b2) contra tres de las negras (a7, b7 y c6). Parece raro atacar con menos peones, pero ése es el plan: el «ataque de minorías». Avanzando b4 y b5, las blancas obligan a cambiar peones en c6 y dejan a las negras un peón débil (c6 retrasado o d5 aislado), que después atacan con las piezas. ¿Cómo empiezas? Pista: primero, la torre detrás del peón que va a avanzar. } 11. Rab1 { [%cal Gb1b5] La torre apoya el avance del peón b. } 11... Ng6 { Las negras buscan su juego en el flanco de rey: es su contraplan habitual (...Cg6, ...Ce4, ...f5). } 12. b4 { ¡En marcha! } 12... a6 { Las negras frenan b5: ahora el avance necesita la ayuda del peón a. } 13. a4 { Para jugar b5 de todos modos. } 13... Ne4 { Las negras cambian piezas para aliviar la presión. } 14. Bxe7 Qxe7 15. b5 { [%cal Gb5c6] Objetivo cumplido. Si las negras cambian en b5 o dejan que las blancas cambien en c6, les queda un peón débil en c6 o en d5, que las blancas atacarán con las torres por la columna c y con el caballo. Resumen del plan: torre a b1, b4, a4 si hace falta y b5. } *
+
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "Francesa del avance: atacar la base de la cadena"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "rnbqkbnr/ppp2ppp/4p3/3pP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3"]
+[Result "*"]
+
+{ [%csl Rd4,Re5] Francesa, variante del avance (1.e4 e6 2.d4 d5 3.e5). La cadena de peones blanca d4-e5 apunta al flanco de rey y quita espacio a las negras. Regla: una cadena de peones se ataca por su base. La base es d4: si cae o se debilita, el peón de e5 se queda sin apoyo. ¿Con qué peón atacas d4? } 3... c5 { [%cal Gc5d4] ¡Contra la base de la cadena! } 4. c3 { Las blancas la defienden con otro peón. } 4... Nc6 { Segunda pieza contra d4. } 5. Nf3 Qb6 { [%cal Gb6d4,Gc6d4,Gc5d4] Tercera: la dama ataca d4 y también b2. Ahora d4 está atacado tres veces. } 6. a3 { Las blancas preparan b4 para ganar espacio y quitar presión. } 6... Bd7 { Desarrolla y prepara la llegada de la torre a c8. } 7. b4 cxd4 8. cxd4 Rc8 { La torre ocupa la columna c, abierta tras el cambio. } 9. Bb2 Na5 { [%cal Ga5c4] El caballo va hacia c4, una casilla magnífica: ningún peón blanco puede echarlo de allí. } 10. Nbd2 Nc4 { [%csl Gc4] El caballo en c4 molesta mucho: ataca b2 y presiona el flanco de dama. Resumen: con la cadena bloqueada, las negras atacan su base (d4) con ...c5, ...Cc6 y ...Db6, y juegan por la columna c y el flanco de dama. Más adelante, ...f6 ataca también la cabeza de la cadena (e5). } *
+
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "India de Rey: con el centro cerrado, el ataque con ...f5"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "r1bq1rk1/ppp2pbp/2np1np1/3Pp3/2P1P3/2N2N2/PP2BPPP/R1BQ1RK1 b - - 0 8"]
+[Result "*"]
+
+{ [%cal Ge5d6,Gd5e4] India de Rey clásica (1.d4 Cf6 2.c4 g6 3.Cc3 Ag7 4.e4 d6 5.Cf3 O-O 6.Ae2 e5 7.O-O Cc6 8.d5). El centro está cerrado: peones blancos en d5 y e4, negros en d6 y e5. Con el centro cerrado, cada bando ataca en el flanco hacia el que apuntan sus peones: la cadena negra apunta al flanco de rey, así que las negras atacan allí con ...f5, y las blancas, en el flanco de dama, con c5. Para empezar, el caballo de c6 tiene que irse. ¿Adónde? } 8... Ne7 { [%cal Ge7g6,Ge7f5] Se aparta del ataque del peón y se dirige al flanco de rey (g6 o f5). } 9. Ne1 { Las blancas preparan f3 y el avance c5 con Cd3. } 9... Nd7 { [%cal Gf7f5] ¡Deja libre el peón f! Desde d7, además, vigila c5. } 10. Be3 f5 { La ruptura: ataca el peón de e4. } 11. f3 f4 { Las negras ganan espacio en el flanco de rey y quitan al alfil de e3 su mejor casilla. } 12. Bf2 g5 { [%cal Gg5g4,Gh7h5] Y ahora llega la avalancha de peones: ...h5 y ...g4 para abrir líneas hacia el rey blanco, con las piezas detrás (...Cg6, ...Tf7, ...Af8). Mientras, las blancas atacan en el flanco de dama con c5. Gana quien llegue antes: por eso en la India de Rey cada tiempo cuenta. } *
+
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "Italiana lenta: el viaje del caballo y la paciencia"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r1bq1rk1/bpp2ppp/p1np1n2/4p3/4P3/1BPP1N2/PP3PPP/RNBQR1K1 w - - 4 9"]
+[Result "*"]
+
+{ [%cal Gb1d2,Gd2f1,Gf1g3] Italiana lenta (1.e4 e5 2.Cf3 Cc6 3.Ac4 Ac5 4.c3 Cf6 5.d3 d6…): las blancas han jugado c3 y d3 y todavía no hay contacto entre los peones. En estas posiciones tranquilas el plan es mejorar las piezas sin prisa. El caballo de b1 no tiene buen sitio en c3 (lo ocupa el peón), así que hace un largo viaje: d2, f1 y g3 (o e3), desde donde apunta a f5. Después llegarán h3 y, cuando todo esté listo, d4. ¿Cómo empiezas la maniobra? } 9. Nbd2 h6 { Las negras evitan Ag5 y Cg5. } 10. Nf1 Re8 11. Ng3 { [%cal Gg3f5] El caballo llega a g3: vigila f5 y ha dejado libre la diagonal del alfil de c1. } 11... Be6 12. Bc2 { El alfil se aparta del cambio en b3 y sigue apuntando al flanco de rey. Las blancas seguirán con h3 y d4 cuando todo esté preparado; las negras, con el mismo método, buscan ...d5. Así se juegan las posiciones lentas: primero, todas las piezas en su mejor casilla; después, la ruptura. } *
+
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "Siciliana Najdorf con ...e5: la lucha por d5"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "rn1q1rk1/1p2bppp/p2pbn2/4p3/4P3/1NN1B3/PPP1BPPP/R2Q1RK1 w - - 6 10"]
+[Result "*"]
+
+{ [%csl Gd5] Siciliana Najdorf con ...e5 (1.e4 c5 2.Cf3 d6 3.d4 cxd4 4.Cxd4 Cf6 5.Cc3 a6 6.Ae2 e5…). Las negras han ganado espacio, pero el avance ...e5 ha dejado un agujero en d5: ningún peón negro puede ya controlar esa casilla. Toda la posición gira alrededor de d5. El plan de las blancas: controlarla con las piezas, impedir ...b5 (que liberaría el juego negro y echaría al caballo de c3, que defiende d5) y, en el momento justo, ocuparla con un caballo. ¿Por dónde empiezas? } 10. Qd2 { Conecta las torres y prepara Tfd1, con más presión sobre d5 y d6. } 10... Nbd7 11. a4 { [%csl Gb5] Impide ...b5: sin ese avance, las negras no tienen juego en el flanco de dama. } 11... Rc8 12. a5 { Fija el peón de b7 y gana espacio. Las blancas pueden seguir con Tfd1, Af3 y Cd5 en el momento justo. Resumen: las piezas controlan d5, el peón de a impide ...b5 y las negras se quedan sin juego activo. } *

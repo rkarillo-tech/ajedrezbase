@@ -967,6 +967,12 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </table>
       </div>
       <div class="section">
+        <h2><span>🔎 Sorpresas y trampas</span></h2>
+        <p class="small">Para la posición del tablero, Stockfish y las partidas de la base elegida buscan <b>sorpresas</b> (jugadas buenas que casi nadie juega), <b>errores frecuentes</b> (jugadas muy jugadas que pierden) y <b>trampas</b> (jugadas tras las que la respuesta más habitual del rival es un error).</p>
+        <div class="controls"><button id="surpriseBtn" class="sm-btn primary">🔎 Buscar en esta posición</button></div>
+        <div id="surpriseOut" class="rep-review"></div>
+      </div>
+      <div class="section">
         <h2>Partidas en esta posición</h2>
         <div class="cb-table-wrap" style="max-height:170px">
           <table class="cb-table">

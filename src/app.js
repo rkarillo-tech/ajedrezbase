@@ -4219,7 +4219,8 @@ function trainerUserMove(move) {
     trainer.errors++;
     Sound.play("error");
     const L = Chess.legal(node.state), san = formatSan(Chess.san(node.state, move, L), settings.lang, node.state.t);
-    trainFeedback(trainer.card || trainer.puzzle ? `❌ ${esc(san)} no es la jugada buscada. Inténtalo otra vez o pulsa 💡 para una pista.` : `❌ ${esc(san)} no está en tu repertorio. Errores: ${trainer.errors}. Pulsa 💡 si necesitas una pista.`, "bad");
+    const inLesson = ui.lesson && ui.lesson.game === game && !courseLessons(ui.lesson.course)[ui.lesson.i].repertoire;
+    trainFeedback(trainer.card || trainer.puzzle || inLesson ? `❌ ${esc(san)} no es la jugada buscada. Inténtalo otra vez o pulsa 💡 para una pista.` : `❌ ${esc(san)} no está en tu repertorio. Errores: ${trainer.errors}. Pulsa 💡 si necesitas una pista.`, "bad");
     if (trainer.puzzle && Puz.exam) { finishPuzzle(false); return; }
     if (trainer.puzzle) { $("trainFeedback").insertAdjacentHTML("beforeend", puzzleButtons()); wirePuzzleButtons(); }
     renderBoard();
@@ -4753,6 +4754,145 @@ async function createMyRep(fromCourse) {
   toast(fromCourse != null && fromCourse !== "" ? `🗂 «${title}» copiado a tus repertorios: cámbialo como quieras (añade o borra variantes); se guarda solo.` : `🗂 «${title}» creado. Juega en el tablero las jugadas de tu repertorio; para añadir otra respuesta del rival, vuelve atrás y juega otra jugada. Se guarda solo.`, 6500);
 }
 
+/* Estadísticas de una posición en la base elegida: Lichess (maestros o partidas online, con token) o tus partidas.
+   Devuelve { total, moves: [{ san, n, white, draws, black }] } o { error } */
+let LocalMoves = null, LocalMovesSig = "";
+function localMoveIndex() {
+  const sig = Lib.games.size + ":" + Coll.games.length + ":" + Math.max(0, ...[...Lib.games.values()].map(r => r.updated || 0));
+  if (LocalMoves && LocalMovesSig === sig) return LocalMoves;
+  const idx = new Map();
+  const add = (g, res) => { let n = g.root; while (n.children.length) { const c = n.children[0]; const e = idx.get(n.key) || new Map(); const m = e.get(c.san) || { san: c.san, n: 0, white: 0, draws: 0, black: 0 }; m.n++; if (res === "1-0") m.white++; else if (res === "0-1") m.black++; else m.draws++; e.set(c.san, m); idx.set(n.key, e); n = c; } };
+  for (const rec of Lib.games.values()) if (!isRepRec(rec)) { try { add(Pgn.parseGame(rec.pgn, { lang: "en" }).game, rec.result); } catch {} }
+  Coll.games.forEach(t => { try { const g = Pgn.parseGame(t, { lang: "auto" }).game; add(g, (g.headers.Result || "").trim()); } catch {} });
+  LocalMoves = idx; LocalMovesSig = sig;
+  return idx;
+}
+async function explorerData(db, state) {
+  if (db === "local") {
+    const e = localMoveIndex().get(Chess.posKey(state));
+    const moves = e ? [...e.values()].sort((a, b) => b.n - a.n) : [];
+    return { total: moves.reduce((a, m) => a + m.n, 0), moves };
+  }
+  if (!settings.token) return { error: "token" };
+  const url = explorerUrl(db, Chess.toFen(state));
+  let data = explorerCache.get(url);
+  if (!data) {
+    try {
+      const res = await Lichess.fetch(url, { headers: authHeaders() });
+      if (res.status === 429) return { error: "pausa" };
+      if (res.status === 401 || res.status === 403) return { error: "token-malo" };
+      if (!res.ok) return { error: "red" };
+      data = await res.json();
+      explorerCache.set(url, data);
+    } catch { return { error: "red" }; }
+  }
+  return { total: data.white + data.draws + data.black, moves: (data.moves || []).map(m => ({ san: m.san, n: m.white + m.draws + m.black, white: m.white, draws: m.draws, black: m.black })) };
+}
+const EXPLORER_ERR = { token: "Falta tu token de Lichess (⚙ Ajustes); mientras tanto, elige «Mi biblioteca».", pausa: "Lichess ha pedido una pausa: vuelve a intentarlo en un minuto.", "token-malo": "Lichess ha rechazado tu token: revísalo en ⚙ Ajustes.", red: "No se ha podido consultar Lichess (¿sin conexión?)." };
+/* Evalúa una posición suelta con el motor; devuelve las líneas con la puntuación desde las blancas */
+function evalState(state, ms, multipv = 1) {
+  if (!Chess.legal(state).length) return Promise.resolve({ lines: [{ cp: Chess.inCheck(state) ? -3000 * state.t : 0, pv: [] }] });
+  return new Promise(resolve => Engine.start({ purpose: "batch", fen: Chess.toFen(state), moves: [], stm: state.t, movetime: ms, multipv, resolve }));
+}
+
+/* Sorpresas y trampas de la posición del tablero */
+const Surprise = { busy: false };
+async function findSurprises() {
+  const out = $("surpriseOut"), node = cur(), st = node.state, me = st.t;
+  if (Surprise.busy) return;
+  if (!Engine.ready) { out.innerHTML = `<div class="note-box small">El motor aún no está listo.</div>`; return; }
+  if (!Chess.legal(st).length) { out.innerHTML = `<div class="note-box small">La partida ha terminado en esta posición.</div>`; return; }
+  const db = $("explorerDbSelect").value;
+  Surprise.busy = true;
+  $("surpriseBtn").disabled = true;
+  const say = t => { out.innerHTML = `<div class="note-box small">⏳ ${esc(t)}</div>`; };
+  ui.analysing = true;
+  Engine.cancel("live");
+  const fast = Engine.kind === "stockfish";
+  const ms = fast ? 900 : 1500;
+  const clean = x => String(x || "").replace(/[+#!?]/g, "");
+  const sanTxt = (s, san) => numPrefix(s) + formatSan(san, settings.lang, s.t);
+  const mv = (s, san) => { try { return Chess.parseMove(s, san, "en").move; } catch { return null; } };
+  const sanOfUci = (s, u) => { const m = u && Chess.moveFromUci(s, u); return m ? Chess.san(s, m) : u; };
+  try {
+    say("Consultando las partidas…");
+    const data = await explorerData(db, st);
+    if (data.error) { out.innerHTML = `<div class="note-box small">${esc(EXPLORER_ERR[data.error])}</div>`; return; }
+    if (!data.total) { out.innerHTML = `<div class="note-box small">No hay partidas en esta posición en la base elegida.</div>`; return; }
+    say("Stockfish analiza la posición…");
+    const top = await evalState(st, fast ? 2500 : 3000, fast ? 5 : 1);
+    if (!top || !top.lines[0]) { out.innerHTML = `<div class="note-box small">El motor no ha podido analizar la posición.</div>`; return; }
+    const evals = new Map();   // san -> cp desde el bando que mueve
+    top.lines.filter(Boolean).forEach(l => { const san = sanOfUci(st, l.pv[0]); if (san && !evals.has(clean(san))) evals.set(clean(san), winnerCp(l) * me); });
+    const best = Math.max(...evals.values());
+    const bestSan = sanOfUci(st, top.lines[0].pv[0]);
+    const popular = data.moves.filter(m => m.n / data.total >= 0.05).slice(0, 6);
+    for (let i = 0; i < popular.length; i++) {
+      const m = popular[i];
+      if (evals.has(clean(m.san))) continue;
+      const x = mv(st, m.san);
+      if (!x) continue;
+      say(`Stockfish revisa las jugadas más jugadas (${i + 1} de ${popular.length})…`);
+      const j = await evalState(Chess.apply(st, x), ms);
+      if (j && j.lines[0]) evals.set(clean(m.san), winnerCp(j.lines[0]) * me);
+    }
+    const shareOf = san => { const m = data.moves.find(x => clean(x.san) === clean(san)); return m ? m.n / data.total : 0; };
+    // Sorpresas: casi tan buenas como la mejor, pero poco jugadas
+    const surprises = [...evals].filter(([san, v]) => best - v <= 20 && shareOf(san) < 0.05 && data.total >= (db === "local" ? 5 : 50)).map(([san, v]) => ({ san, v, share: shareOf(san) }));
+    // Errores frecuentes: muy jugadas y claramente peores que la mejor
+    const errors = popular.filter(m => evals.has(clean(m.san)) && best - evals.get(clean(m.san)) >= 100 && m.n / data.total >= 0.08).map(m => ({ san: m.san, share: m.n / data.total, loss: best - evals.get(clean(m.san)) }));
+    // Trampas: tras una jugada buena, la respuesta más habitual del rival es un error
+    const traps = [];
+    const cands = popular.filter(m => evals.has(clean(m.san)) && best - evals.get(clean(m.san)) <= 60).slice(0, 4);
+    for (let i = 0; i < cands.length; i++) {
+      const x = mv(st, cands[i].san);
+      if (!x) continue;
+      const s2 = Chess.apply(st, x);
+      say(`Buscando trampas tras ${sanTxt(st, cands[i].san)} (${i + 1} de ${cands.length})…`);
+      const d2 = await explorerData(db, s2);
+      if (d2.error || !d2.total || d2.total < (db === "local" ? 3 : 30)) continue;
+      const replies = d2.moves.filter(r => r.n / d2.total >= 0.12).slice(0, 3);
+      if (!replies.length) continue;
+      const b2 = await evalState(s2, ms, 1);
+      if (!b2 || !b2.lines[0]) continue;
+      const bestReply = winnerCp(b2.lines[0]) * -me, bestReplySan = sanOfUci(s2, b2.lines[0].pv[0]);
+      for (const r of replies) {
+        if (clean(r.san) === clean(bestReplySan)) continue;
+        const y = mv(s2, r.san);
+        if (!y) continue;
+        const j = await evalState(Chess.apply(s2, y), ms);
+        if (!j || !j.lines[0]) continue;
+        const loss = bestReply - winnerCp(j.lines[0]) * -me;
+        if (loss >= 150) traps.push({ first: cands[i].san, reply: r.san, share: r.n / d2.total, loss, bestReply: bestReplySan, s2, after: winnerCp(j.lines[0]) * me });
+      }
+    }
+    const pct = x => Math.round(x * 100) + " %";
+    const turnTxt = me === 1 ? "las blancas" : "las negras";
+    const src = db === "masters" ? "las partidas de maestros" : db === "lichess" ? "las partidas de Lichess" : "tus partidas";
+    out.innerHTML = `<div class="small">Según Stockfish y ${src} (${data.total.toLocaleString("es-ES")} partida${data.total === 1 ? "" : "s"} en esta posición). Juegan ${turnTxt}; lo mejor según el motor: <b>${esc(sanTxt(st, bestSan))}</b>.</div>
+      <h3>💡 Sorpresas: buenas y poco jugadas</h3>
+      ${surprises.length ? surprises.map(x => `<div class="version-row"><span class="version-what"><b>${esc(sanTxt(st, x.san))}</b> <span class="small">(${x.share ? "sólo el " + pct(x.share) + " de las partidas" : "casi nadie la juega"}; ${best - x.v > 5 ? `según el motor, casi tan buena como la mejor: a ${(Math.max(0, best - x.v) / 100).toFixed(2).replace(".", ",")} peones` : "según el motor, tan buena como la mejor"})</span></span><button class="sm-btn" data-sp="${esc(x.san)}">▶ Jugarla</button></div>`).join("") : `<div class="small">No hay jugadas poco conocidas que sean tan buenas como las habituales.</div>`}
+      <h3>⚠ Errores frecuentes en esta posición</h3>
+      ${errors.length ? errors.map(x => `<div class="version-row"><span class="version-what"><b>${esc(sanTxt(st, x.san))}</b> se juega en el ${pct(x.share)} de las partidas, pero pierde ${(x.loss / 100).toFixed(2).replace(".", ",")} peones respecto a ${esc(sanTxt(st, bestSan))}.</span></div>`).join("") : `<div class="small">Ninguna de las jugadas habituales es un error claro.</div>`}
+      <h3>🪤 Trampas: la respuesta habitual es un error</h3>
+      ${traps.length ? traps.sort((a, b) => b.share * b.loss - a.share * a.loss).map(x => `<div class="version-row"><span class="version-what">Tras <b>${esc(sanTxt(st, x.first))}</b>, el ${pct(x.share)} responde <b>${esc(sanTxt(x.s2, x.reply))}</b>, que pierde ${(x.loss / 100).toFixed(2).replace(".", ",")} peones (lo correcto es ${esc(sanTxt(x.s2, x.bestReply))}).</span><button class="sm-btn" data-sp="${esc(x.first)}" data-sp2="${esc(x.reply)}">▶ Verla</button></div>`).join("") : `<div class="small">No se han encontrado trampas claras a partir de esta posición.</div>`}
+      <p class="small">Prepara las sorpresas y las trampas en <b>🗂 Mis repertorios</b>. Es una revisión rápida: compruébalo con el análisis antes de jugarlo en una partida.</p>`;
+    out.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => {
+      if (cur() !== node) { toast("La posición del tablero ha cambiado: vuelve a buscar."); return; }
+      if (!canUserMove()) return;
+      const a = mv(node.state, b.dataset.sp);
+      if (!a) return;
+      playMove(a, "user");
+      if (b.dataset.sp2) { const c = mv(cur().state, b.dataset.sp2); if (c) setTimeout(() => playMove(c, "user"), 350); }
+    });
+  } finally {
+    ui.analysing = false;
+    Surprise.busy = false;
+    $("surpriseBtn").disabled = false;
+    requestLive();
+  }
+}
+
 /* Revisión de un repertorio: líneas sin terminar, huecos (respuestas frecuentes del rival que no tienes),
    jugadas dudosas según el motor y cómo te va con él en tus partidas */
 const RepReview = { busy: false, cancel: false };
@@ -5252,6 +5392,7 @@ document.querySelectorAll(".posnag-btn").forEach(btn => btn.onclick = () => {
   render();
 });
 
+$("surpriseBtn").onclick = () => findSurprises();
 $("explorerDbSelect").onchange = e => { settings.explorerDb = e.target.value; saveSettings(); fetchExplorer(); };
 $("ecoSearchInput").oninput = debounce(renderLocalEcoList, 120);
 
@@ -5946,6 +6087,7 @@ function renderPosTarget() {
 const COURSE_PGN = /*__COURSES__*/{};
 const COURSES = [
   { id: "aperturas", icon: "📖", name: "Aperturas", desc: "Los principios, los errores típicos y las aperturas principales con blancas y con negras, explicando el porqué de cada jugada." },
+  { id: "planes", icon: "💡", name: "Planes de apertura", desc: "Posiciones típicas que salen de las aperturas: ¿cuál es el plan? Encuentra tú las jugadas clave (ataque de minorías, cadenas de peones, rupturas, casillas fuertes…) y entiende por qué se juegan." },
   { id: "repertorios", icon: "🗂", name: "Repertorios para entrenar", desc: "Repertorios completos con blancas (1.e4) y con negras (Caro-Kann y Gambito de Dama), con el porqué de cada jugada. Entrénalos con 🎯: los repasos se espacian solos." },
   { id: "tactica", icon: "⚔", name: "Táctica", desc: "Horquillas, clavadas, enfiladas, descubiertas, sobrecarga y mates típicos, con ejercicios para resolver." },
   { id: "estrategia", icon: "🧭", name: "Estrategia", desc: "Cómo hacer un plan: estructuras de peones, piezas buenas y malas, columnas, casillas fuertes y peones pasados." },
