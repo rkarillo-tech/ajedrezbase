@@ -1004,6 +1004,54 @@ def prueba_sorpresas_y_planes(browser):
     ctx.close()
 
 
+def prueba_tactil_y_tema(browser):
+    print("Novedades 1.16: dibujar flechas con el dedo y tema claro")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    comprobar(not pg.is_visible("#drawToggle"), "en el ordenador (con ratón) no aparece el botón de dibujar: se dibuja con el clic derecho")
+    pg.click("#settingsBtn")
+    pg.select_option("#setUiTheme", "light")
+    fondo = pg.evaluate("getComputedStyle(document.body).backgroundColor")
+    comprobar(pg.evaluate("document.documentElement.dataset.ui") == "light" and fondo == "rgb(242, 244, 247)", "en Ajustes se puede elegir el tema claro")
+    pg.reload()
+    pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+    comprobar(pg.evaluate("document.documentElement.dataset.ui") == "light" and pg.evaluate("document.getElementById('setUiTheme').value") == "light", "el tema claro se recuerda al volver a abrir")
+    pg.click("#settingsBtn")
+    pg.select_option("#setUiTheme", "dark")
+    comprobar(pg.evaluate("document.documentElement.dataset.ui") is None, "y se puede volver al tema oscuro")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+    # Automático: sigue el modo del sistema
+    ctx = contexto(browser, color_scheme="light")
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("settings.uiTheme = 'auto'; saveSettings(); applyUiTheme()")
+    comprobar(pg.evaluate("document.documentElement.dataset.ui") == "light", "«Automático» usa el tema claro si el sistema está en modo claro")
+    ctx.close()
+    # Tableta táctil: modo dibujo
+    ctx = browser.new_context(viewport={"width": 962, "height": 601}, has_touch=True, is_mobile=True)
+    for patron in ("**/cdnjs.cloudflare.com/**", "**/unpkg.com/**", "**/cdn.jsdelivr.net/**", "**/*lichess*/**"):
+        ctx.route(patron, lambda r: r.abort())
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("setGame(Pgn.newGame(), { noConfirm: true })")
+    comprobar(pg.is_visible("#drawToggle") and not pg.is_visible("#drawTools"), "en una pantalla táctil aparece «✏ Dibujar flechas»")
+    pg.click("#drawToggle")
+    centro = lambda n: (lambda b: (b["x"] + b["width"] / 2, b["y"] + b["height"] / 2))(casilla(pg, n).bounding_box())
+    (x1, y1), (x2, y2) = centro("e2"), centro("e4")
+    pg.mouse.move(x1, y1); pg.mouse.down(); pg.mouse.move(x2, y2, steps=5); pg.mouse.up()
+    comprobar(pg.evaluate("JSON.stringify(cur().shapes)") == '[{"color":"green","from":"e2","to":"e4"}]' and not pg.evaluate("game.root.children.length"), "con el modo dibujo, arrastrar el dedo dibuja una flecha y no mueve la pieza")
+    pg.locator('.draw-color[data-color="red"]').click()
+    x, y = centro("d5")
+    pg.mouse.click(x, y)
+    comprobar(pg.evaluate("cur().shapes.some(s => s.from === 'd5' && s.to === 'd5' && s.color === 'red')") and pg.locator("#drawingLayer circle").count() == 1, "tocar una casilla la rodea con el color elegido")
+    pg.click("#drawClear")
+    comprobar(pg.evaluate("cur().shapes.length") == 0, "🧽 borra las flechas de la posición")
+    pg.click("#drawToggle")
+    pg.mouse.move(x1, y1); pg.mouse.down(); pg.mouse.move(x2, y2, steps=5); pg.mouse.up()
+    comprobar(pg.evaluate("cur().san") == "e4", "al salir del modo dibujo, el dedo vuelve a mover las piezas")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1151,7 +1199,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

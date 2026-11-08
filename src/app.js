@@ -55,7 +55,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark"
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -608,6 +608,13 @@ boardEl.addEventListener("pointerdown", e => {
     return;
   }
   if (e.button !== 0) return;
+  // Modo dibujo (pantallas táctiles): arrastrar dibuja una flecha y tocar una casilla la rodea
+  if (ui.drawMode && !editor.active) {
+    ui.drawStart = { sq: i, color: ui.drawColor || "green", touch: true };
+    sqEl.classList.add("hint-sq");
+    e.preventDefault();
+    return;
+  }
   if (editor.active) {
     const p = editor.state.b[i];
     ui.drag = { editor: true, from: i, piece: p !== "." ? p : null, x0: e.clientX, y0: e.clientY, ghost: null, moved: false };
@@ -658,6 +665,13 @@ window.addEventListener("pointermove", e => {
   }
 });
 window.addEventListener("pointerup", e => {
+  if (ui.drawStart && ui.drawStart.touch) {
+    const to = sqFromPoint(e.clientX, e.clientY), d = ui.drawStart;
+    ui.drawStart = null;
+    boardEl.querySelectorAll(".hint-sq").forEach(x => x.classList.remove("hint-sq"));
+    if (to != null) toggleShape(d.sq, to, d.color);
+    return;
+  }
   if (e.button === 2 && ui.drawStart) {
     const to = sqFromPoint(e.clientX, e.clientY);
     if (to != null) toggleShape(ui.drawStart.sq, to, ui.drawStart.color);
@@ -685,7 +699,7 @@ window.addEventListener("pointerup", e => {
     renderBoard();
   } else if (d.wasSelected) { ui.selected = null; renderBoard(); }
 });
-window.addEventListener("pointercancel", () => { if (ui.drag && ui.drag.ghost) ui.drag.ghost.remove(); ui.drag = null; renderBoard(); });
+window.addEventListener("pointercancel", () => { if (ui.drag && ui.drag.ghost) ui.drag.ghost.remove(); ui.drag = null; if (ui.drawStart && ui.drawStart.touch) ui.drawStart = null; renderBoard(); });
 
 function askPromotion(color) {
   return new Promise(resolve => {
@@ -5231,6 +5245,19 @@ $("setBoardSize").oninput = e => { settings.boardSize = +e.target.value; applyBo
 $("setBoardSize").onchange = () => saveSettings();
 $("boardSizeReset").onclick = () => { settings.boardSize = 100; applyBoardSize(); saveSettings(); };
 applyBoardSize();
+/* Aspecto de la aplicación: oscuro, claro o automático (según el modo del sistema) */
+const lightQuery = window.matchMedia ? matchMedia("(prefers-color-scheme: light)") : null;
+function applyUiTheme() {
+  const want = settings.uiTheme || "dark";
+  const light = want === "light" || (want === "auto" && lightQuery && lightQuery.matches);
+  if (light) document.documentElement.setAttribute("data-ui", "light"); else document.documentElement.removeAttribute("data-ui");
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = light ? "#f2f4f7" : "#0b0e14";
+  $("setUiTheme").value = want;
+}
+$("setUiTheme").onchange = e => { settings.uiTheme = e.target.value; saveSettings(); applyUiTheme(); };
+if (lightQuery) (lightQuery.addEventListener ? lightQuery.addEventListener("change", applyUiTheme) : lightQuery.addListener(applyUiTheme));
+applyUiTheme();
 $("setAutosave").onchange = e => { settings.autosave = e.target.checked; saveSettings(); if (!settings.autosave) { try { localStorage.removeItem("ajedrezStudioCurrent"); } catch {} } };
 
 $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; saveSettings(); buildEditorPalettes(); render(); };
@@ -5305,6 +5332,22 @@ $("undoBtn").onclick = () => {
 $("promoteVarBtn").onclick = () => { Pgn.promote(cur()); markDirty(); render(); };
 $("mainVarBtn").onclick = () => { Pgn.makeMain(cur()); markDirty(); render(); };
 $("clearShapesBtn").onclick = () => { cur().shapes = []; markDirty(); render(); };
+/* Modo dibujo para pantallas táctiles */
+function setDrawMode(on) {
+  ui.drawMode = !!on;
+  $("drawToggle").setAttribute("aria-pressed", String(ui.drawMode));
+  $("drawToggle").textContent = ui.drawMode ? "✏ Dibujando: toca para volver a mover" : "✏ Dibujar flechas";
+  $("drawTools").hidden = !ui.drawMode;
+  $("boardWrap").classList.toggle("drawing", ui.drawMode);
+  if (ui.drawMode) { ui.selected = null; renderBoard(); }
+}
+ui.drawColor = "green";
+$("drawToggle").onclick = () => setDrawMode(!ui.drawMode);
+document.querySelectorAll(".draw-color").forEach(b => b.onclick = () => {
+  ui.drawColor = b.dataset.color;
+  document.querySelectorAll(".draw-color").forEach(x => x.classList.toggle("on", x === b));
+});
+$("drawClear").onclick = () => { cur().shapes = []; markDirty(); render(); };
 
 $("autoAnnotateBtn").onclick = () => analyseGame();
 $("analyseVarBtn").onclick = () => analyseGame({ variation: true });
