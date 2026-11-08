@@ -1155,7 +1155,7 @@ function showEngineFor(node, job) {
 }
 const requestLive = debounce(() => {
   const node = cur();
-  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ui.cpu.thinking || Compare.busy || !Engine.ready) {
+  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ExpEval.busy || ui.cpu.thinking || Compare.busy || !Engine.ready) {
     Engine.cancel("live");
     return;
   }
@@ -1795,6 +1795,7 @@ function thinkStepText(c, nextUci) {
   return parts.join(" ");
 }
 async function thinkWithMe() {
+  ExpEval.token++;
   const node = cur(), s = node.state, me = s.t, box = $("thinkBox");
   if (Think.busy) return;
   if (Think.node === node && !box.hidden) { box.hidden = true; Think.node = null; return; }
@@ -3137,7 +3138,7 @@ function wdlBar(w, d, b) {
 }
 /* 📊 Valoración de cada jugada del explorador: primero la nube de Lichess (una consulta con las 5 mejores) y,
    para las demás, una evaluación rápida con el motor de la aplicación */
-const ExpEval = { cache: new Map(), token: 0 };
+const ExpEval = { cache: new Map(), token: 0, busy: false };
 async function fillExplorerEvals(node, rows) {
   const my = ++ExpEval.token, s = node.state, fen = Chess.toFen(s);
   const cells = () => [...$("explorerMovesBody").querySelectorAll(".exp-eval")];
@@ -3176,17 +3177,17 @@ async function fillExplorerEvals(node, rows) {
     if (!u || ExpEval.cache.has(keyOf(u))) continue;
     if (!still() || !Engine.ready || ui.analysing || ui.cpu.on || Batch.running || Think.busy || RepReview.busy || Surprise.busy) break;
     const after = Chess.apply(s, Chess.moveFromUci(s, u));
-    ui.analysing = true;
+    ExpEval.busy = true;
     Engine.cancel("live");
     let j = null;
-    try { j = await evalState(after, Engine.kind === "stockfish" ? 350 : 500, 1); } finally { ui.analysing = false; }
+    try { j = await evalState(after, Engine.kind === "stockfish" ? 350 : 500, 1); } finally { ExpEval.busy = false; }
     const l = j && j.lines && j.lines[0];
     if (l) ExpEval.cache.set(keyOf(u), { cp: l.cp, mate: l.mate, winner: l.winner, depth: l.depth, src: "motor" });
     if (!still()) break;
     show();
   }
   if (cells().some(td => td.textContent === "…")) cells().filter(td => td.textContent === "…").forEach(td => { td.textContent = "—"; td.title = "Sin valoración (la nube no tiene esta jugada y el motor estaba ocupado)"; });
-  requestLive();
+  if (my === ExpEval.token) requestLive();
 }
 function explorerMoveRows(node, rows) {
   const tbody = $("explorerMovesBody");
@@ -5168,6 +5169,7 @@ function evalState(state, ms, multipv = 1) {
 /* Sorpresas y trampas de la posición del tablero */
 const Surprise = { busy: false };
 async function findSurprises() {
+  ExpEval.token++;
   const out = $("surpriseOut"), node = cur(), st = node.state, me = st.t;
   if (Surprise.busy) return;
   if (!Engine.ready) { out.innerHTML = `<div class="note-box small">El motor aún no está listo.</div>`; return; }
@@ -5386,6 +5388,7 @@ const RepReview = { busy: false, cancel: false };
 const winnerCp = l => (!l ? null : l.mate != null ? (l.mate > 0 || (l.mate === 0 && l.winner === 1) ? 3000 : -3000) : l.cp);
 const fmtPawns = v => (Math.abs(v) >= 2000 ? (v > 0 ? "mate" : "mate en contra") : (v > 0 ? "+" : "") + (v / 100).toFixed(2).replace(".", ","));
 async function reviewRepertoire(tree) {
+  ExpEval.token++;
   const out = $("repReviewOut");
   if (RepReview.busy) { toast("Ya hay una revisión en marcha."); return; }
   RepReview.busy = true; RepReview.cancel = false;
@@ -6608,7 +6611,7 @@ function renderPosTarget() {
 const COURSE_PGN = /*__COURSES__*/{};
 const COURSES = [
   { id: "aperturas", icon: "📖", name: "Aperturas", desc: "Los principios, los errores típicos y las aperturas principales con blancas y con negras, explicando el porqué de cada jugada." },
-  { id: "planes", icon: "💡", name: "Planes de apertura", desc: "Posiciones típicas que salen de las aperturas: ¿cuál es el plan? Encuentra tú las jugadas clave (ataque de minorías, cadenas de peones, rupturas, casillas fuertes…) y entiende por qué se juegan." },
+  { id: "planes", icon: "💡", name: "Planes de apertura", desc: "Posiciones típicas que salen de las aperturas: ¿cuál es el plan? Encuentra tú las jugadas clave (ataque de minorías, cadenas de peones, rupturas, casillas fuertes, enroques opuestos, peones doblados, la pareja de alfiles…) y entiende por qué se juegan." },
   { id: "repertorios", icon: "🗂", name: "Repertorios para entrenar", desc: "Repertorios completos con blancas (1.e4) y con negras (Caro-Kann y Gambito de Dama), con el porqué de cada jugada. Entrénalos con 🎯: los repasos se espacian solos." },
   { id: "tactica", icon: "⚔", name: "Táctica", desc: "Horquillas, clavadas, enfiladas, descubiertas, sobrecarga y mates típicos, con ejercicios para resolver." },
   { id: "estrategia", icon: "🧭", name: "Estrategia", desc: "Cómo hacer un plan: estructuras de peones, piezas buenas y malas, columnas, casillas fuertes y peones pasados." },
