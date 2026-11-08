@@ -55,7 +55,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark"
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -608,6 +608,13 @@ boardEl.addEventListener("pointerdown", e => {
     return;
   }
   if (e.button !== 0) return;
+  // Modo dibujo (pantallas táctiles): arrastrar dibuja una flecha y tocar una casilla la rodea
+  if (ui.drawMode && !editor.active) {
+    ui.drawStart = { sq: i, color: ui.drawColor || "green", touch: true };
+    sqEl.classList.add("hint-sq");
+    e.preventDefault();
+    return;
+  }
   if (editor.active) {
     const p = editor.state.b[i];
     ui.drag = { editor: true, from: i, piece: p !== "." ? p : null, x0: e.clientX, y0: e.clientY, ghost: null, moved: false };
@@ -658,6 +665,13 @@ window.addEventListener("pointermove", e => {
   }
 });
 window.addEventListener("pointerup", e => {
+  if (ui.drawStart && ui.drawStart.touch) {
+    const to = sqFromPoint(e.clientX, e.clientY), d = ui.drawStart;
+    ui.drawStart = null;
+    boardEl.querySelectorAll(".hint-sq").forEach(x => x.classList.remove("hint-sq"));
+    if (to != null) toggleShape(d.sq, to, d.color);
+    return;
+  }
   if (e.button === 2 && ui.drawStart) {
     const to = sqFromPoint(e.clientX, e.clientY);
     if (to != null) toggleShape(ui.drawStart.sq, to, ui.drawStart.color);
@@ -685,7 +699,7 @@ window.addEventListener("pointerup", e => {
     renderBoard();
   } else if (d.wasSelected) { ui.selected = null; renderBoard(); }
 });
-window.addEventListener("pointercancel", () => { if (ui.drag && ui.drag.ghost) ui.drag.ghost.remove(); ui.drag = null; renderBoard(); });
+window.addEventListener("pointercancel", () => { if (ui.drag && ui.drag.ghost) ui.drag.ghost.remove(); ui.drag = null; if (ui.drawStart && ui.drawStart.touch) ui.drawStart = null; renderBoard(); });
 
 function askPromotion(color) {
   return new Promise(resolve => {
@@ -2133,7 +2147,144 @@ function cpuPick(s, lines, style, level, rnd = Math.random) {
   }
   return pick.uci;
 }
+const parseCpuLevel = v => (v === "a" ? "a" : /^h\d+$/.test(v) ? v : +v || 8);
+const humanElo = v => (/^h(\d+)$/.test(String(v)) ? +String(v).slice(1) : 0);
+/* ---------- 👤 Rival humano: juega como una persona de un Elo dado ----------
+   Apertura: las jugadas que se hacen a ese nivel (explorador de Lichess por Elo, con token; si no, libro ECO y tus partidas).
+   Después: Stockfish da varias candidatas y se elige como lo haría una persona: casi siempre una jugada buena y natural,
+   a veces una peor y, de vez en cuando (más con poco tiempo o en posiciones con mucha táctica), un error claro. */
+const HUMAN_BANDS = [0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500];
+function humanParams(elo) {
+  const t = Math.max(0, Math.min(1, (elo - 800) / 1400));   // 0 = 800, 1 = 2200
+  return {
+    temp: 9 - 7.6 * t,                    // tolerancia (en % de probabilidad de ganar) al elegir entre candidatas
+    blunder: 0.13 - 0.12 * t,             // probabilidad base de un error claro
+    bookPlies: Math.round(6 + 14 * t),    // hasta dónde sigue «la teoría» de su nivel
+    seeMate: 0.55 + 0.45 * t              // probabilidad de ver un mate que tiene
+  };
+}
+/* Lo natural que le parece una jugada a una persona (multiplica su probabilidad) */
+function humanNatural(s, m, prev) {
+  const pc = m.piece.toLowerCase(), cap = m.captured && m.captured !== "." ? m.captured.toLowerCase() : "";
+  const after = Chess.apply(s, m);
+  let w = 1;
+  if (cap) w *= 1.5;
+  if (prev && prev.move && cap && m.to === prev.move.to) w *= 1.8;             // recapturar
+  if (Chess.inCheck(after)) w *= 1.3;
+  if (m.flag === "castle") w *= 1.6;
+  const backRank = (m.from >> 4) === (s.t === 1 ? 7 : 0);
+  if (s.full <= 12 && backRank && (pc === "n" || pc === "b")) w *= 1.5;        // desarrollar
+  const fwd = s.t === 1 ? (m.from >> 4) - (m.to >> 4) : (m.to >> 4) - (m.from >> 4);
+  if (fwd < 0 && !cap) w *= 0.75;                                                // las retiradas se ven menos
+  if (pc === "k" && m.flag !== "castle" && Chess.nonPawnCount(s) > 6) w *= 0.4;
+  if (pc === "p" && [0, 7].includes(m.from & 7) && s.full <= 15) w *= 0.6;       // peones de torre al principio
+  return w;
+}
+function humanBookMoves(node, P) {
+  const path = Pgn.pathTo(node).slice(1);
+  if (path.length >= P.bookPlies || Chess.toFen(game.root.state) !== Chess.START_FEN) return [];
+  const ucis = path.map(n => n.uci), next = new Map();
+  for (const e of ECO_BOOK) {
+    if (!e.ucis || e.ucis.length <= ucis.length) continue;
+    let ok = true;
+    for (let i = 0; i < ucis.length; i++) if (e.ucis[i] !== ucis[i]) { ok = false; break; }
+    if (ok) next.set(e.ucis[ucis.length], (next.get(e.ucis[ucis.length]) || 0) + 1);
+  }
+  return [...next].map(([uci, n]) => ({ uci, n }));
+}
+async function humanOpeningMove(node, elo, P) {
+  const path = Pgn.pathTo(node).slice(1);
+  if (path.length >= P.bookPlies) return null;
+  const s = node.state;
+  let moves = [];
+  if (settings.token) {
+    const band = HUMAN_BANDS.filter(b => b <= elo).pop() || 0;
+    const url = `https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=${band}&fen=${encodeURIComponent(Chess.toFen(s))}&moves=12&topGames=0&recentGames=0`;
+    let data = explorerCache.get(url);
+    if (!data) {
+      try {
+        const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 3000);
+        const res = await Lichess.fetch(url, { headers: authHeaders(), signal: ctrl.signal });
+        clearTimeout(timer);
+        if (res.ok) { data = await res.json(); explorerCache.set(url, data); }
+      } catch {}
+    }
+    if (data && data.moves) {
+      const tot = data.white + data.draws + data.black;
+      if (tot >= 15) moves = data.moves.map(m => { const x = (() => { try { return Chess.parseMove(s, m.san, "en").move; } catch { return null; } })(); return x ? { uci: Chess.uci(x), n: m.white + m.draws + m.black } : null; }).filter(m => m && m.n / tot >= 0.03);
+    }
+  }
+  if (!moves.length) {
+    const local = localMoveIndex().get(Chess.posKey(s));
+    if (local) { const arr = [...local.values()], tot = arr.reduce((a, m) => a + m.n, 0); if (tot >= 3) moves = arr.map(m => { try { return { uci: Chess.uci(Chess.parseMove(s, m.san, "en").move), n: m.n }; } catch { return null; } }).filter(Boolean); }
+  }
+  if (!moves.length) moves = humanBookMoves(node, P);
+  if (!moves.length) return null;
+  const tot = moves.reduce((a, m) => a + m.n, 0);
+  let r = Math.random() * tot;
+  for (const m of moves) { r -= m.n; if (r <= 0) return m.uci; }
+  return moves[0].uci;
+}
+function humanPick(node, lines, elo, rnd = Math.random) {
+  const s = node.state, P = humanParams(elo), L = Chess.legal(s), me = s.t;
+  const cands = [];
+  for (const l of lines || []) {
+    const u = l && l.pv && l.pv[0];
+    if (!u || cands.some(c => c.uci === u)) continue;
+    const m = Chess.moveFromUci(s, u, L);
+    if (m) cands.push({ uci: u, m, w: me === 1 ? winPct(l) : 100 - winPct(l), mate: l.mate });
+  }
+  if (!cands.length) return null;
+  const best = cands.reduce((a, b) => (b.w > a.w ? b : a));
+  if (best.mate != null && best.w >= 100 && rnd() < P.seeMate) return best.uci;
+  // Más errores con poco tiempo en el reloj y en posiciones con muchas capturas posibles
+  let blunder = P.blunder;
+  if (Clock.running && Clock.base) { const left = clockLeft(me); if (left < Math.max(15000, Clock.base * 0.1)) blunder *= 2; }
+  if (L.filter(m => m.captured && m.captured !== ".").length >= 4) blunder *= 1.4;
+  if (rnd() < blunder) {
+    // Un error «humano»: una jugada natural que no está entre las buenas del motor
+    const others = L.filter(m => !cands.some(c => c.uci === Chess.uci(m)));
+    if (others.length) {
+      const ws = others.map(m => humanNatural(s, m, node)), tot = ws.reduce((a, b) => a + b, 0);
+      let r = rnd() * tot;
+      for (let i = 0; i < others.length; i++) { r -= ws[i]; if (r <= 0) return Chess.uci(others[i]); }
+    }
+  }
+  const ws = cands.map(c => Math.exp(-(best.w - c.w) / P.temp) * humanNatural(s, c.m, node));
+  const tot = ws.reduce((a, b) => a + b, 0);
+  let r = rnd() * tot;
+  for (let i = 0; i < cands.length; i++) { r -= ws[i]; if (r <= 0) return cands[i].uci; }
+  return best.uci;
+}
+/* Cuánto «piensa» el rival humano: algo de tiempo siempre y, con reloj, como una persona que administra su tiempo */
+function humanThinkMs() {
+  if (!Clock.running) return 500 + Math.random() * 900;
+  const left = clockLeft(ui.cpu.side);
+  return Math.max(250, Math.min(8000, (left / 35 + Clock.inc * 0.6) * (0.5 + Math.random())));
+}
+async function humanCpuMove(node) {
+  const elo = ui.cpu.human, P = humanParams(elo), t0 = Date.now(), wait = humanThinkMs();
+  const done = u => {
+    const play = () => {
+      ui.cpu.thinking = false;
+      if (cur() !== node || !ui.cpu.on || ui.cpu.over) { render(); return; }
+      const m = u && Chess.moveFromUci(node.state, u);
+      if (m) playMove(m, "cpu"); else render();
+    };
+    setTimeout(play, Math.max(0, wait - (Date.now() - t0)));
+  };
+  let u = null;
+  try { u = await humanOpeningMove(node, elo, P); } catch {}
+  if (u) { done(u); return; }
+  if (cur() !== node || !ui.cpu.on || ui.cpu.over) { ui.cpu.thinking = false; render(); return; }
+  const strong = Engine.kind === "stockfish";
+  const job = await Engine.analyse(node, { purpose: "cpu", movetime: Math.min(900, Math.max(200, wait * 0.6)), multipv: strong ? 5 : 1, skill: strong ? 20 : ui.cpu.level });
+  if (!job || !job.best) { ui.cpu.thinking = false; render(); return; }
+  if (job.lines[0]) ui.cpu.lastEval = job.lines[0];
+  done(strong ? humanPick(node, job.lines, elo) || job.best : job.best);
+}
 function cpuLevelName(level) {
+  if (ui.cpu.human) return `humano ~${ui.cpu.human}`;
   if (ui.cpu.adaptive) return `nivel adaptativo ${fmtAdaptive(level)}`;
   const opts = [...$("cpuLevel").options], i = opts.findIndex(o => +o.value === +level);
   return "nivel " + (i >= 0 ? i : level);
@@ -2168,7 +2319,8 @@ function adaptiveSummary() {
   return `Nivel actual: <b>${fmtAdaptive(st.a)}</b> de 20 · ${g.length} partida${g.length === 1 ? "" : "s"} · en las últimas ${last.length}: ${String(pts).replace(".", ",")} puntos${g.length >= 4 ? ` · tendencia ${trend > 0.4 ? "↑ subiendo: estás mejorando" : trend < -0.4 ? "↓ bajando" : "→ estable"}` : ""}
     <div style="margin-top:4px;height:42px;display:flex;align-items:flex-end" aria-label="Evolución del nivel">${bars}</div>`;
 }
-function cpuName() { return `CPU ${cpuLevelName(ui.cpu.level)} (${CPU_STYLES[ui.cpu.style].replace(/^\S+ /, "").toLowerCase()})`; }
+function cpuName() { return ui.cpu.human ? `Rival humano ~${ui.cpu.human}` : `CPU ${cpuLevelName(ui.cpu.level)} (${CPU_STYLES[ui.cpu.style].replace(/^\S+ /, "").toLowerCase()})`; }
+const cpuStyleText = () => (ui.cpu.human ? "👤 juega como una persona" : CPU_STYLES[ui.cpu.style]);
 function cpuThinkMs() {
   const level = ui.cpu.level, base = 250 + level * 70;
   if (!Clock.running) return base;
@@ -2183,6 +2335,7 @@ function maybeCpuMove() {
   Engine.cancel("live");
   renderStatus(); renderBoard();
   const { level, style } = ui.cpu;
+  if (ui.cpu.human) { humanCpuMove(node); return; }
   const styled = style !== "balanced" && Engine.kind === "stockfish";
   Engine.analyse(node, { purpose: "cpu", movetime: cpuThinkMs(), multipv: styled ? 4 : 1, skill: styled ? 20 : level }).then(job => {
     ui.cpu.thinking = false;
@@ -2217,7 +2370,7 @@ function openCpuDialog(blind) {
 }
 function startCpuGame(opts = {}) {
   if (Batch.running) { toast("El motor está analizando tus partidas de la biblioteca: espera a que termine o detenlo en «📊 Estadísticas»."); return false; }
-  Object.assign(settings, { cpuLevel: $("cpuLevel").value === "a" ? "a" : +$("cpuLevel").value, cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value });
+  Object.assign(settings, { cpuLevel: parseCpuLevel($("cpuLevel").value), cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value });
   saveSettings();
   if (editor.active && settings.cpuFrom === "here" && !applyEditor()) return false;
   if (settings.cpuFrom === "new") {
@@ -2231,8 +2384,8 @@ function startCpuGame(opts = {}) {
   const user = opts.color || (c === "r" ? (Math.random() < 0.5 ? 1 : -1) : c === "board" ? (ui.flipped ? -1 : 1) : +c);
   ui.flipped = user === -1;
   const tc = parseTc(settings.cpuClock);
-  const adaptive = settings.cpuLevel === "a";
-  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, adaptive, level: adaptive ? Math.round(adaptiveState().a) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
+  const adaptive = settings.cpuLevel === "a", human = humanElo(settings.cpuLevel);
+  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, adaptive, human, level: adaptive ? Math.round(adaptiveState().a) : human ? Math.max(0, Math.min(20, Math.round((human - 700) / 75))) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
   settings.live = false;
   if (!game.root.children.length && game.headers.Event === "Estudio") {
     const d = new Date();
@@ -2245,7 +2398,7 @@ function startCpuGame(opts = {}) {
   }
   if (ui.cpu.blind !== !!ui.blind) setBlind(ui.cpu.blind);
   if (tc) clockStart(tc); else { clockStop(); Clock.shown = false; renderClocks(); }
-  toast(`Juegas con ${user === 1 ? "blancas" : "negras"} contra la CPU (${cpuLevelName(ui.cpu.level)}, ${CPU_STYLES[ui.cpu.style]}${tc ? `, ${settings.cpuClock}` : ""}).`, 3500);
+  toast(`Juegas con ${user === 1 ? "blancas" : "negras"} contra ${ui.cpu.human ? `un rival humano de unos ${ui.cpu.human} de Elo` : `la CPU (${cpuLevelName(ui.cpu.level)}, ${CPU_STYLES[ui.cpu.style]}`}${tc ? `, ${settings.cpuClock}` : ""}${ui.cpu.human ? "" : ")"}.`, 3500);
   render();
   cpuPanel();
   maybeCpuMove();
@@ -2292,7 +2445,7 @@ function cpuGameOver(result, text) {
 }
 /* 📋 Informe del entrenador: tras la partida contra la CPU, tus errores más caros y un ejercicio con cada uno */
 async function coachReport() {
-  const box = $("cpuBox"), user = -ui.cpu.side, desc = `${cpuLevelName(ui.cpu.level)} · ${CPU_STYLES[ui.cpu.style]}`;
+  const box = $("cpuBox"), user = -ui.cpu.side, desc = `${cpuLevelName(ui.cpu.level)} · ${cpuStyleText()}`;
   if (Pgn.mainlineFrom(game.root).filter(n => n.parent.state.t === user).length < 3) { toast("La partida es demasiado corta para hacer un informe."); return; }
   box.innerHTML = `<div class="retry-head">📋 Informe del entrenador</div><div class="small">⏳ El motor está analizando la partida (verás el avance en «📖 Estudio»)…</div>`;
   await analyseGame();
@@ -2346,7 +2499,7 @@ function cpuOfferDraw() {
 }
 function cpuPanel(head, text) {
   const box = $("cpuBox");
-  const desc = `${cpuLevelName(ui.cpu.level)} · ${CPU_STYLES[ui.cpu.style]}${ui.cpu.tc ? ` · ⏱ ${ui.cpu.tc}` : ""}${ui.cpu.blind ? " · 🙈 a ciegas" : ""}`;
+  const desc = `${cpuLevelName(ui.cpu.level)} · ${cpuStyleText()}${ui.cpu.tc ? ` · ⏱ ${ui.cpu.tc}` : ""}${ui.cpu.blind ? " · 🙈 a ciegas" : ""}`;
   box.hidden = false;
   if (ui.cpu.over || head) {
     box.innerHTML = `<div class="retry-head">🏁 ${esc(head || "Partida terminada")}</div><div>${esc(text || "")} <span class="small">(CPU ${esc(desc)})</span></div>
@@ -2368,7 +2521,7 @@ function cpuAction(a) {
   else if (a === "close") { $("cpuBox").hidden = true; Clock.shown = false; renderClocks(); }
   else if (a === "rematch") {
     const prev = -ui.cpu.side;
-    $("cpuLevel").value = ui.cpu.adaptive ? "a" : String(ui.cpu.level); $("cpuStyle").value = ui.cpu.style; $("cpuClock").value = ui.cpu.tc || ""; $("cpuFrom").value = "new"; $("cpuBlind").checked = ui.cpu.blind;
+    $("cpuLevel").value = ui.cpu.adaptive ? "a" : ui.cpu.human ? "h" + ui.cpu.human : String(ui.cpu.level); $("cpuStyle").value = ui.cpu.style; $("cpuClock").value = ui.cpu.tc || ""; $("cpuFrom").value = "new"; $("cpuBlind").checked = ui.cpu.blind;
     startCpuGame({ color: -prev });
   }
 }
@@ -5231,17 +5384,32 @@ $("setBoardSize").oninput = e => { settings.boardSize = +e.target.value; applyBo
 $("setBoardSize").onchange = () => saveSettings();
 $("boardSizeReset").onclick = () => { settings.boardSize = 100; applyBoardSize(); saveSettings(); };
 applyBoardSize();
+/* Aspecto de la aplicación: oscuro, claro o automático (según el modo del sistema) */
+const lightQuery = window.matchMedia ? matchMedia("(prefers-color-scheme: light)") : null;
+function applyUiTheme() {
+  const want = settings.uiTheme || "dark";
+  const light = want === "light" || (want === "auto" && lightQuery && lightQuery.matches);
+  if (light) document.documentElement.setAttribute("data-ui", "light"); else document.documentElement.removeAttribute("data-ui");
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = light ? "#f2f4f7" : "#0b0e14";
+  $("setUiTheme").value = want;
+}
+$("setUiTheme").onchange = e => { settings.uiTheme = e.target.value; saveSettings(); applyUiTheme(); };
+if (lightQuery) (lightQuery.addEventListener ? lightQuery.addEventListener("change", applyUiTheme) : lightQuery.addListener(applyUiTheme));
+applyUiTheme();
 $("setAutosave").onchange = e => { settings.autosave = e.target.checked; saveSettings(); if (!settings.autosave) { try { localStorage.removeItem("ajedrezStudioCurrent"); } catch {} } };
 
 $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; saveSettings(); buildEditorPalettes(); render(); };
 $("displayLang").onchange = e => { settings.lang = e.target.value; saveSettings(); render(); renderLocalEcoList(); };
 $("themeSelect").onchange = e => { settings.theme = e.target.value; saveSettings(); document.body.dataset.theme = settings.theme; };
 $("soundToggle").onclick = () => { settings.sound = !settings.sound; saveSettings(); $("soundToggle").textContent = settings.sound ? "🔊" : "🔇"; if (settings.sound) Sound.play("move"); };
-$("cpuLevel").onchange = e => { settings.cpuLevel = e.target.value === "a" ? "a" : +e.target.value; saveSettings(); renderAdaptiveInfo(); };
+$("cpuLevel").onchange = e => { settings.cpuLevel = parseCpuLevel(e.target.value); saveSettings(); renderAdaptiveInfo(); };
 function renderAdaptiveInfo() {
-  const el = $("cpuAdaptiveInfo");
-  el.hidden = $("cpuLevel").value !== "a";
-  if (!el.hidden) el.innerHTML = "🎯 " + adaptiveSummary();
+  const el = $("cpuAdaptiveInfo"), v = $("cpuLevel").value, elo = humanElo(v);
+  el.hidden = v !== "a" && !elo;
+  $("cpuStyle").disabled = !!elo;
+  if (v === "a") el.innerHTML = "🎯 " + adaptiveSummary();
+  else if (elo) el.innerHTML = `👤 <b>Juega como una persona de unos ${elo} de Elo</b> (el estilo no se usa). En la apertura elige lo que se juega a ese nivel: con tu token de Lichess, las jugadas reales de partidas de jugadores de ese Elo; sin él, las del libro de aperturas y tus partidas. Después piensa como una persona de su nivel: casi nunca ve las jugadas «de máquina», prefiere las naturales (capturas, recapturas, jaques, desarrollo) y comete los errores típicos de ese nivel${elo <= 1400 ? ", incluido dejarse alguna pieza" : ""}, más aún con poco tiempo en el reloj y en posiciones complicadas.`;
 }
 $("playCpuToggle").onclick = () => openCpuDialog();
 $("cpuStartBtn").onclick = () => startCpuGame();
@@ -5305,6 +5473,22 @@ $("undoBtn").onclick = () => {
 $("promoteVarBtn").onclick = () => { Pgn.promote(cur()); markDirty(); render(); };
 $("mainVarBtn").onclick = () => { Pgn.makeMain(cur()); markDirty(); render(); };
 $("clearShapesBtn").onclick = () => { cur().shapes = []; markDirty(); render(); };
+/* Modo dibujo para pantallas táctiles */
+function setDrawMode(on) {
+  ui.drawMode = !!on;
+  $("drawToggle").setAttribute("aria-pressed", String(ui.drawMode));
+  $("drawToggle").textContent = ui.drawMode ? "✏ Dibujando: toca para volver a mover" : "✏ Dibujar flechas";
+  $("drawTools").hidden = !ui.drawMode;
+  $("boardWrap").classList.toggle("drawing", ui.drawMode);
+  if (ui.drawMode) { ui.selected = null; renderBoard(); }
+}
+ui.drawColor = "green";
+$("drawToggle").onclick = () => setDrawMode(!ui.drawMode);
+document.querySelectorAll(".draw-color").forEach(b => b.onclick = () => {
+  ui.drawColor = b.dataset.color;
+  document.querySelectorAll(".draw-color").forEach(x => x.classList.toggle("on", x === b));
+});
+$("drawClear").onclick = () => { cur().shapes = []; markDirty(); render(); };
 
 $("autoAnnotateBtn").onclick = () => analyseGame();
 $("analyseVarBtn").onclick = () => analyseGame({ variation: true });

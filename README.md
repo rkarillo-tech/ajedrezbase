@@ -17,7 +17,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 
 | | |
 | --- | --- |
-| **Tablero** | Arrastrar o clic-clic, coronación a elegir, flechas y círculos de colores (clic derecho), 4 estilos de piezas y 5 temas |
+| **Tablero** | Arrastrar o clic-clic, coronación a elegir, flechas y círculos de colores (clic derecho, o ✏ con el dedo en móvil y tableta), 4 estilos de piezas, 5 colores de tablero, tamaño ajustable y aspecto oscuro, claro o automático |
 | **Variantes** | Árbol completo: variantes anidadas, promover, hacer principal, cortar; comentarios y símbolos `!` `?` `±`… en cada jugada |
 | **PGN** | Importa notación española (`Cf3`), inglesa, figurines, coordenadas y PGN completos de Lichess, Chess.com o ChessBase; exporta PGN estándar |
 | **Motor** | Stockfish 19 (NNUE) en el navegador: hasta 3 líneas, flecha, barra de evaluación y **👁 Ver amenaza** (`X`); nube de Lichess y motor propio de respaldo sin conexión |
@@ -32,7 +32,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Biblioteca** | Guardas sólo lo que te interesa: ⭐ favoritas, etiquetas, buscador, borrado individual, exportar y copias de seguridad; 🕘 versiones de cada partida (el original nunca se pierde) y guardar como copia |
 | **Marcadores** | 📌 Marca posiciones como idea, táctica, error típico, plan… con nota; búscalas y vuelve a ellas con un clic |
 | **Cursos** | Más de 70 lecciones en español comentadas paso a paso: aperturas (y cómo estudiarlas), planes de apertura (encuentra tú el plan), repertorios para entrenar (con repasos espaciados), táctica (con ejercicios), estrategia, finales y partidas magistrales, con flechas, variantes y práctica; también se pueden descargar en PGN |
-| **Jugar contra la CPU** | 8 niveles más uno 🎯 adaptativo que se ajusta a tus resultados, y 5 estilos (equilibrado, ⚔ agresivo, 🏰 posicional, 🛡 defensivo, 🎲 humano), reloj de 1+0 a 30+0 con incremento, rendirse, tablas, deshacer sin reloj y revancha; también a ciegas. Al acabar, 📋 informe del entrenador con tus errores más caros para practicarlos |
+| **Jugar contra la CPU** | 8 niveles más uno 🎯 adaptativo que se ajusta a tus resultados, 👤 **rival humano** de ~800 a ~2200 de Elo (juega como una persona: aperturas de su nivel y errores humanos), 5 estilos (equilibrado, ⚔ agresivo, 🏰 posicional, 🛡 defensivo, 🎲 humano), reloj de 1+0 a 30+0 con incremento, rendirse, tablas, deshacer sin reloj y revancha; también a ciegas. Al acabar, 📋 informe del entrenador con tus errores más caros para practicarlos |
 | **Problemas de táctica** | Banco de problemas generados y comprobados con Stockfish, por temas (mates, horquilla, clavada, descubierta, sacrificio, final…) y dificultad, con repaso espaciado y nivel aproximado tipo Elo |
 | **Adivina la jugada** | Reproduce una partida clásica o tuya acertando las jugadas de un bando: el motor puntúa cada intento de 0 a 5 y comparas tu puntuación con la del jugador |
 | **A ciegas y visualización** | Piezas ocultas (`B`) para jugar a ciegas, «sigue la línea» de memoria (2 a 8 medias jugadas), color de las casillas y encuentra la casilla en 30 s con récord |

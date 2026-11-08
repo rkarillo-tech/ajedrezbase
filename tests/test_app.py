@@ -220,7 +220,7 @@ def prueba_ayuda_y_movil(browser):
     pg, errores = nueva_pagina(ctx)
     pg.keyboard.press("?")
     comprobar(pg.is_visible("#helpModal") and pg.locator("#helpBody > details").count() >= 20, "la guía se abre con «?» y tiene todos los apartados")
-    pg.fill("#helpSearch", "token")
+    pg.fill("#helpSearch", "probar token")
     pg.wait_for_timeout(300)
     comprobar(pg.evaluate("!document.getElementById('help-aperturas').hidden && document.getElementById('help-cpu').hidden"), "el buscador de la ayuda filtra apartados")
     pg.keyboard.press("Escape")
@@ -1004,6 +1004,88 @@ def prueba_sorpresas_y_planes(browser):
     ctx.close()
 
 
+def prueba_tactil_y_tema(browser):
+    print("Novedades 1.16: dibujar flechas con el dedo y tema claro")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    comprobar(not pg.is_visible("#drawToggle"), "en el ordenador (con ratón) no aparece el botón de dibujar: se dibuja con el clic derecho")
+    pg.click("#settingsBtn")
+    pg.select_option("#setUiTheme", "light")
+    fondo = pg.evaluate("getComputedStyle(document.body).backgroundColor")
+    comprobar(pg.evaluate("document.documentElement.dataset.ui") == "light" and fondo == "rgb(242, 244, 247)", "en Ajustes se puede elegir el tema claro")
+    pg.reload()
+    pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+    comprobar(pg.evaluate("document.documentElement.dataset.ui") == "light" and pg.evaluate("document.getElementById('setUiTheme').value") == "light", "el tema claro se recuerda al volver a abrir")
+    pg.click("#settingsBtn")
+    pg.select_option("#setUiTheme", "dark")
+    comprobar(pg.evaluate("document.documentElement.dataset.ui") is None, "y se puede volver al tema oscuro")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+    # Automático: sigue el modo del sistema
+    ctx = contexto(browser, color_scheme="light")
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("settings.uiTheme = 'auto'; saveSettings(); applyUiTheme()")
+    comprobar(pg.evaluate("document.documentElement.dataset.ui") == "light", "«Automático» usa el tema claro si el sistema está en modo claro")
+    ctx.close()
+    # Tableta táctil: modo dibujo
+    ctx = browser.new_context(viewport={"width": 962, "height": 601}, has_touch=True, is_mobile=True)
+    for patron in ("**/cdnjs.cloudflare.com/**", "**/unpkg.com/**", "**/cdn.jsdelivr.net/**", "**/*lichess*/**"):
+        ctx.route(patron, lambda r: r.abort())
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("setGame(Pgn.newGame(), { noConfirm: true })")
+    comprobar(pg.is_visible("#drawToggle") and not pg.is_visible("#drawTools"), "en una pantalla táctil aparece «✏ Dibujar flechas»")
+    pg.click("#drawToggle")
+    centro = lambda n: (lambda b: (b["x"] + b["width"] / 2, b["y"] + b["height"] / 2))(casilla(pg, n).bounding_box())
+    (x1, y1), (x2, y2) = centro("e2"), centro("e4")
+    pg.mouse.move(x1, y1); pg.mouse.down(); pg.mouse.move(x2, y2, steps=5); pg.mouse.up()
+    comprobar(pg.evaluate("JSON.stringify(cur().shapes)") == '[{"color":"green","from":"e2","to":"e4"}]' and not pg.evaluate("game.root.children.length"), "con el modo dibujo, arrastrar el dedo dibuja una flecha y no mueve la pieza")
+    pg.locator('.draw-color[data-color="red"]').click()
+    x, y = centro("d5")
+    pg.mouse.click(x, y)
+    comprobar(pg.evaluate("cur().shapes.some(s => s.from === 'd5' && s.to === 'd5' && s.color === 'red')") and pg.locator("#drawingLayer circle").count() == 1, "tocar una casilla la rodea con el color elegido")
+    pg.click("#drawClear")
+    comprobar(pg.evaluate("cur().shapes.length") == 0, "🧽 borra las flechas de la posición")
+    pg.click("#drawToggle")
+    pg.mouse.move(x1, y1); pg.mouse.down(); pg.mouse.move(x2, y2, steps=5); pg.mouse.up()
+    comprobar(pg.evaluate("cur().san") == "e4", "al salir del modo dibujo, el dedo vuelve a mover las piezas")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_rival_humano(browser):
+    print("Novedades 1.16: rival humano por Elo")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    reparto = """(elo => { const g = Pgn.parseGame('1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 *', {lang:'en'}).game; const n = Pgn.mainlineFrom(g.root).pop();
+      const lines = ['d2d3','b1c3','e1g1','d2d4','f3g5'].map((u, i) => ({ cp: [100, 60, 20, -50, -150][i], pv: [u] })); let best = 0;
+      for (let i = 0; i < 2000; i++) if (humanPick(n, lines, elo) === 'd2d3') best++; return best / 2000; })"""
+    fuerte, flojo = pg.evaluate(f"({reparto})(2200)"), pg.evaluate(f"({reparto})(800)")
+    comprobar(fuerte > 0.7 and flojo < 0.45, f"el rival humano fuerte casi siempre elige la mejor ({fuerte:.0%}) y el flojo se equivoca mucho más ({flojo:.0%})")
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuLevel", "h1000")
+    comprobar(pg.is_visible("#cpuAdaptiveInfo") and "unos 1000 de Elo" in pg.inner_text("#cpuAdaptiveInfo") and pg.is_disabled("#cpuStyle"), "al elegir un rival humano se explica cómo juega (y el estilo no se usa)")
+    pg.select_option("#cpuColor", "-1")
+    pg.select_option("#cpuClock", "")
+    pg.select_option("#cpuFrom", "new")
+    pg.click("#cpuStartBtn")
+    pg.wait_for_function("ui.cpu.on && !ui.cpu.thinking && cur().state.t === -1", timeout=20000)
+    primera = pg.evaluate("cur().uci")
+    comprobar(pg.evaluate("ui.cpu.human") == 1000 and pg.evaluate("game.headers.White") == "Rival humano ~1000" and primera in pg.evaluate("ECO_BOOK.filter(e => e.ucis).map(e => e.ucis[0])"), "el rival humano empieza con una apertura del libro y aparece como «Rival humano ~1000»")
+    pg.evaluate("playMove(Chess.legal(cur().state)[0], 'user')")
+    pg.wait_for_function("ui.cpu.on && !ui.cpu.thinking && cur().state.t === -1", timeout=20000)
+    comprobar("humano ~1000" in pg.inner_text("#cpuBox"), "el panel de la partida muestra el rival humano")
+    pg.locator("#cpuBox [data-c=resign]").click()
+    pg.locator("#cpuBox [data-c=rematch]").click()
+    comprobar(pg.evaluate("ui.cpu.on && ui.cpu.human === 1000 && ui.cpu.side === -1"), "la revancha es contra el mismo rival humano, con los colores cambiados")
+    pg.locator("#cpuBox [data-c=stop]").click()
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuLevel", "8")
+    comprobar(not pg.is_disabled("#cpuStyle") and pg.is_hidden("#cpuAdaptiveInfo"), "los niveles normales siguen como antes (con su estilo)")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1151,7 +1233,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:
