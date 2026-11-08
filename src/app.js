@@ -55,7 +55,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -2834,15 +2834,15 @@ function explorerMoveRows(node, rows) {
     tbody.append(tr);
   }
 }
+const explorerUrl = (db, fen) => db === "masters"
+  ? `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(fen)}&moves=12&topGames=8`
+  : `https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=1800,2000,2200,2500&fen=${encodeURIComponent(fen)}&moves=12&topGames=8&recentGames=0`;
 async function fetchExplorer() {
   if (ui.activeTab !== "explorer") return;
   const node = cur();
   const db = $("explorerDbSelect").value;
   if (db === "local") { renderLocalExplorer(node); return; }
-  const fen = Chess.toFen(node.state);
-  const url = db === "masters"
-    ? `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(fen)}&moves=12&topGames=8`
-    : `https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=1800,2000,2200,2500&fen=${encodeURIComponent(fen)}&moves=12&topGames=8&recentGames=0`;
+  const url = explorerUrl(db, Chess.toFen(node.state));
   const tbody = $("explorerMovesBody"), gbody = $("explorerGamesBody");
   if (!settings.token) {
     $("explorerHint").textContent = "Lichess pide ahora un token personal gratuito para consultar su explorador.";
@@ -3838,6 +3838,7 @@ function refreshLibraryViews() {
   const gDue = [...Lib.games.values()].filter(r => r.srs && r.srs.due <= now).length;
   $("gameDueBadge").textContent = `${gDue} pendiente${gDue === 1 ? "" : "s"}`;
   $("gameDueBadge").className = "srs-pill" + (gDue ? " due" : "");
+  renderMyReps();
   const cDue = trainableMarks(false).length;
   $("cardDueBadge").textContent = `${cDue} pendiente${cDue === 1 ? "" : "s"}`;
   $("cardDueBadge").className = "srs-pill" + (cDue ? " due" : "");
@@ -4283,6 +4284,7 @@ function finishTraining() {
     DB.put("games", it).catch(() => {});
     refreshLibraryViews();
     srsMsg = `<br>Próximo repaso de «${esc(it.title)}»: ${SRS_DAYS[it.srs.box] === 1 ? "mañana" : "en " + SRS_DAYS[it.srs.box] + " días"}.`;
+    if (isRepRec(it)) logActivity("rep");
   } else srsMsg = `<br><span class="small">Guarda la partida en tu biblioteca para que se programen los repasos.</span>`;
   Sound.play(perfect ? "ok" : "end");
   trainFeedback(`${perfect ? "🏆 ¡Línea perfecta!" : "Fin de la línea."} Aciertos: ${trainer.correct} · errores: ${trainer.errors} · pistas: ${trainer.hints}.${srsMsg}<br><span class="small">Pulsa «Empezar» para repetir (el rival puede elegir otras variantes).</span>`, perfect ? "ok" : "");
@@ -4549,32 +4551,70 @@ function renderExamInfo() {
 }
 
 /* ---------- 26c. Tus partidas frente a tu repertorio ---------- */
+/* Repertorios: los tuyos (partidas de la biblioteca con la etiqueta «repertorio») primero y después los del curso */
+const isRepRec = r => (r.tags || []).some(t => norm(t) === "repertorio");
+const repSideOf = r => (/\[Orientation "black"\]/i.test(r.pgn || "") ? -1 : 1);
+const myRepRecs = () => (Lib.ready ? [...Lib.games.values()].filter(isRepRec).sort((a, b) => (a.title || "").localeCompare(b.title || "", "es")) : []);
 function repertoireTrees() {
-  return courseLessons("repertorios").map((l, i) => ({ l, i, g: Pgn.parseGame(l.g, { lang: "en" }).game, side: l.black ? -1 : 1 }));
+  const mine = myRepRecs().map(rec => { try { return { lib: rec.id, title: rec.title, g: Pgn.parseGame(rec.pgn, { lang: "en" }).game, side: repSideOf(rec) }; } catch { return null; } }).filter(Boolean);
+  return mine.concat(courseLessons("repertorios").map((l, i) => ({ l, i, title: l.title, g: Pgn.parseGame(l.g, { lang: "en" }).game, side: l.black ? -1 : 1 })));
 }
-function compareWithRepertoire() {
-  const out = $("repCompareOut"), names = myNameList();
-  if (!names.length) { out.innerHTML = `<span class="small">Primero pon tu nombre (tal como sale en tus partidas) en <b>📚 Biblioteca › 📊 Estadísticas</b>.</span>`; return; }
-  const trees = repertoireTrees(), rows = [];
+/* Abre la línea de un repertorio (tuyo o del curso) en una posición */
+function openRepertoireAt(tree, path) {
+  if (tree.lib) {
+    if (!openLibGame(tree.lib, path)) return false;
+    ui.flipped = tree.side === -1;
+    switchTab("study");
+    render();
+    return true;
+  }
+  switchTab("courses");
+  if (!openLesson("repertorios", tree.i)) return false;
+  goTo(resolvePath(game.root, path));
+  return true;
+}
+/* Compara tus partidas con un árbol de repertorio: hasta dónde lo sigues y quién se sale primero */
+function matchGameToTree(line, tree, c) {
+  let node = tree.g.root, dev = null, depth = 0;
+  for (const n of line) {
+    const ch = node.children.find(x => x.uci === n.uci);
+    if (!ch) { dev = { ply: depth, mine: n.parent.state.t === c, n, rep: node }; break; }
+    node = ch; depth++;
+    if (!node.children.length) break;
+  }
+  return { dev, depth, path: line.slice(0, depth + (dev ? 1 : 0)).map(n => n.uci) };
+}
+function myGameLines(names) {
+  const out = [];
   for (const rec of Lib.games.values()) {
+    if (isRepRec(rec)) continue;
     const c = colorOfMe(rec, names);
     if (!c) continue;
     let g;
     try { g = Pgn.parseGame(rec.pgn, { lang: "en" }).game; } catch { continue; }
     const line = Pgn.mainlineFrom(g.root);
     if (!line.length || g.headers.SetUp === "1") continue;
-    const tree = trees.find(x => x.side === c && x.g.root.children.some(ch => ch.uci === line[0].uci));
-    if (!tree) continue;
-    let node = tree.g.root, dev = null, depth = 0;
-    for (const n of line) {
-      const ch = node.children.find(x => x.uci === n.uci);
-      if (!ch) { dev = { ply: depth, mine: n.parent.state.t === c, n, rep: node }; break; }
-      node = ch; depth++;
-      if (!node.children.length) break;
-    }
-    rows.push({ rec, c, tree, dev, depth, path: line.slice(0, depth + (dev ? 1 : 0)).map(n => n.uci) });
+    out.push({ rec, c, line });
   }
-  if (!rows.length) { out.innerHTML = `<span class="small">No hay partidas tuyas que empiecen como tus repertorios (1.e4 con blancas; 1.e4 o 1.d4 con negras).</span>`; return; }
+  return out;
+}
+function compareWithRepertoire() {
+  const out = $("repCompareOut"), names = myNameList();
+  if (!names.length) { out.innerHTML = `<span class="small">Primero pon tu nombre (tal como sale en tus partidas) en <b>📚 Biblioteca › 📊 Estadísticas</b>.</span>`; return; }
+  const trees = repertoireTrees(), rows = [];
+  for (const { rec, c, line } of myGameLines(names)) {
+    // Tus repertorios mandan: si alguno empieza como la partida, se compara sólo con los tuyos; si no, con los del curso.
+    // Entre varios, el que más jugadas sigue.
+    const fits = trees.filter(tree => tree.side === c && tree.g.root.children.some(ch => ch.uci === line[0].uci));
+    const pool = fits.some(t => t.lib) ? fits.filter(t => t.lib) : fits;
+    let best = null;
+    for (const tree of pool) {
+      const m = matchGameToTree(line, tree, c);
+      if (!best || m.depth > best.depth) best = Object.assign({ tree }, m);
+    }
+    if (best) rows.push(Object.assign({ rec, c }, best));
+  }
+  if (!rows.length) { out.innerHTML = `<span class="small">No hay partidas tuyas que empiecen como tus repertorios (los tuyos de «🗂 Mis repertorios» o los del curso: 1.e4 con blancas; 1.e4 o 1.d4 con negras).</span>`; return; }
   const mine = rows.filter(r => r.dev && r.dev.mine), rival = rows.filter(r => r.dev && !r.dev.mine), full = rows.filter(r => !r.dev);
   const avg = Math.round(rows.reduce((s, r) => s + r.depth, 0) / rows.length / 2 * 10) / 10;
   // Dónde te sales más a menudo
@@ -4588,8 +4628,8 @@ function compareWithRepertoire() {
     if (!d) what = `✔ Seguiste el repertorio hasta el final (${Math.ceil(r.depth / 2)} jugadas).`;
     else if (d.mine) what = `❌ Te saliste en <b>${esc(numPrefix(d.n.parent.state) + dispSan(d.n))}</b>; tu repertorio dice <b>${esc(d.rep.children.map(x => sanOf(d.rep.state, x.uci)).join(" o "))}</b>.`;
     else what = `🆕 El rival se salió en <b>${esc(numPrefix(d.n.parent.state) + dispSan(d.n))}</b>: una línea que tu repertorio no cubre.`;
-    return `<div class="mark-card" style="grid-template-columns:1fr"><div><b>${esc(r.rec.title)}</b> <span class="small">${esc(date)} · con ${r.c === 1 ? "blancas" : "negras"}</span><br>${what}</div>
-      <div class="controls" style="margin-top:4px"><button class="sm-btn" data-open="${i}">📖 Abrir en esa jugada</button>${d && d.mine ? `<button class="sm-btn info-btn" data-rep="${i}">🗂 Repasar esa línea</button>` : ""}</div></div>`;
+    return `<div class="mark-card" style="grid-template-columns:1fr"><div><b>${esc(r.rec.title)}</b> <span class="small">${esc(date)} · con ${r.c === 1 ? "blancas" : "negras"} · ${r.tree.lib ? "🗂" : "📘"} ${esc(r.tree.title)}</span><br>${what}</div>
+      <div class="controls" style="margin-top:4px"><button class="sm-btn" data-open="${i}">📖 Abrir en esa jugada</button>${d && d.mine ? `<button class="sm-btn info-btn" data-rep="${i}">🗂 Repasar esa línea</button>` : ""}${d && !d.mine && r.tree.lib ? `<button class="sm-btn primary" data-add="${i}" title="Abre tu repertorio en esa posición con la jugada del rival: sólo te falta añadir tu respuesta">➕ Prepararla en tu repertorio</button>` : ""}</div></div>`;
   };
   const list = rows.slice().sort((a, b) => (b.rec.date || "").localeCompare(a.rec.date || "")).slice(0, 40);
   out.innerHTML = `<div class="note-box">${rows.length} partida${rows.length === 1 ? "" : "s"} tuyas con tus repertorios: de media sigues el repertorio <b>${avg}</b> jugadas.
@@ -4599,9 +4639,267 @@ function compareWithRepertoire() {
   out.querySelectorAll("[data-open]").forEach(b => b.onclick = () => { const r = list[+b.dataset.open]; if (openLibGame(r.rec.id, r.path)) switchTab("study"); });
   out.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => {
     const r = list[+b.dataset.rep];
-    switchTab("courses");
-    if (openLesson("repertorios", r.tree.i)) { goTo(resolvePath(game.root, r.path.slice(0, -1))); toast("🗂 Esta es la posición: mira qué dice tu repertorio y por qué."); }
+    if (openRepertoireAt(r.tree, r.path.slice(0, -1))) toast("🗂 Esta es la posición: mira qué dice tu repertorio y por qué.");
   });
+  out.querySelectorAll("[data-add]").forEach(b => b.onclick = () => { const r = list[+b.dataset.add]; prepareRivalMove(r.tree, r.path.slice(0, -1), r.dev.n.uci); });
+}
+/* Abre tu repertorio en una posición y hace la jugada del rival que falta: sólo queda añadir tu respuesta */
+function prepareRivalMove(tree, path, uci) {
+  if (!openRepertoireAt(tree, path)) return;
+  const node = cur(), m = Chess.moveFromUci(node.state, uci);
+  if (!m || resolvePath(game.root, path, true) !== node) { toast("No se ha encontrado esa posición en tu repertorio."); return; }
+  playMove(m, "user");
+  toast(`➕ Añadida la jugada del rival (${numPrefix(node.state)}${formatSan(Chess.san(node.state, m), settings.lang, node.state.t)}). Ahora juega tu respuesta: se guarda sola en tu repertorio.`, 5500);
+}
+
+/* ---------- 25c. Mis repertorios: crearlos, entrenarlos con repaso espaciado y revisarlos ---------- */
+function repLeaves(root) { const out = []; const walk = n => { if (!n.children.length) { if (n !== root) out.push(n); return; } n.children.forEach(walk); }; walk(root); return out; }
+function repSrsLabel(rec) {
+  if (!rec.srs) return `<span class="srs-pill">sin entrenar</span>`;
+  const days = Math.ceil((rec.srs.due - Date.now()) / 864e5);
+  return days <= 0 ? `<span class="srs-pill due">📅 toca repasar</span>` : `<span class="srs-pill ok">próximo repaso: ${days === 1 ? "mañana" : "en " + days + " días"}</span>`;
+}
+function renderMyReps() {
+  const box = $("myRepList");
+  if (!box) return;
+  if ($("repFromCourse").options.length < 2) courseLessons("repertorios").forEach((l, i) => {
+    $("repFromCourse").insertAdjacentHTML("beforeend", `<option value="${i}">${esc(l.title)}</option>`);
+    $("repReviewCourse").insertAdjacentHTML("beforeend", `<option value="${i}">${esc(l.title)}</option>`);
+  });
+  if (!Lib.ready) { box.innerHTML = `<span class="small">Cargando la biblioteca…</span>`; return; }
+  const recs = myRepRecs(), now = Date.now();
+  const due = recs.filter(r => r.srs && r.srs.due <= now).length;
+  $("myRepBadge").textContent = recs.length ? (due ? `${due} pendiente${due === 1 ? "" : "s"}` : `${recs.length} repertorio${recs.length === 1 ? "" : "s"}`) : "";
+  $("myRepBadge").className = "srs-pill" + (due ? " due" : "");
+  if (!recs.length) { box.innerHTML = `<div class="note-box small">Aún no tienes repertorios propios. Crea uno vacío y juega tus líneas en el tablero, o copia uno de los del curso y adáptalo a tu gusto. También vale cualquier partida de tu biblioteca con la etiqueta <b>repertorio</b>.</div>`; return; }
+  box.innerHTML = recs.map(rec => {
+    let lines = 0, pos = 0, first = "";
+    try {
+      const g = Pgn.parseGame(rec.pgn, { lang: "en" }).game;
+      lines = repLeaves(g.root).length;
+      const walk = n => { pos++; n.children.forEach(walk); }; walk(g.root); pos--;
+      first = g.root.children.map(c => numPrefix(g.root.state) + formatSan(c.san, settings.lang, g.root.state.t)).join(", ");
+    } catch {}
+    const side = repSideOf(rec);
+    return `<div class="mark-card" style="grid-template-columns:1fr"><div><b>${side === 1 ? "⚪" : "⚫"} ${esc(rec.title)}</b> ${repSrsLabel(rec)}<br>
+      <span class="small">Con ${side === 1 ? "blancas" : "negras"} · ${lines} línea${lines === 1 ? "" : "s"} · ${pos} jugada${pos === 1 ? "" : "s"}${first ? ` · empieza por ${esc(first)}` : " · vacío"}</span></div>
+      <div class="controls" style="margin-top:4px">
+        <button class="sm-btn" data-rep-edit="${rec.id}" title="Ábrelo en el tablero: juega jugadas para añadir líneas y variantes; se guarda solo">✏ Editar</button>
+        <button class="sm-btn primary" data-rep-train="${rec.id}" ${pos ? "" : "disabled"}>▶ Entrenar</button>
+        <button class="sm-btn info-btn" data-rep-review="${rec.id}" ${pos ? "" : "disabled"} title="Busca huecos, jugadas dudosas y cómo te va en tus partidas">🩺 Revisar</button>
+        <button class="sm-btn" data-rep-side="${rec.id}" title="Cambia el bando con el que juegas este repertorio">${side === 1 ? "⚪→⚫" : "⚫→⚪"}</button>
+      </div></div>`;
+  }).join("");
+  box.querySelectorAll("[data-rep-edit]").forEach(b => b.onclick = () => editMyRep(+b.dataset.repEdit || b.dataset.repEdit));
+  box.querySelectorAll("[data-rep-train]").forEach(b => b.onclick = () => trainMyRep(+b.dataset.repTrain || b.dataset.repTrain));
+  box.querySelectorAll("[data-rep-review]").forEach(b => b.onclick = () => { const rec = Lib.games.get(+b.dataset.repReview || b.dataset.repReview); if (rec) reviewRepertoire({ lib: rec.id, title: rec.title, g: Pgn.parseGame(rec.pgn, { lang: "en" }).game, side: repSideOf(rec) }); });
+  box.querySelectorAll("[data-rep-side]").forEach(b => b.onclick = () => toggleRepSide(+b.dataset.repSide || b.dataset.repSide));
+}
+function editMyRep(id) {
+  const rec = Lib.games.get(id);
+  if (!rec || !openLibGame(id, [])) return;
+  ui.flipped = repSideOf(rec) === -1;
+  switchTab("study");
+  render();
+  toast("✏ Juega las jugadas de tu repertorio. Para preparar otra respuesta del rival, vuelve atrás y juega otra jugada: se añade como variante. Se guarda solo.", 6000);
+}
+function trainMyRep(id) {
+  const rec = Lib.games.get(id);
+  if (!rec) return;
+  if (openLibGame(id, [])) startTraining({ side: repSideOf(rec) });
+}
+async function toggleRepSide(id) {
+  const rec = Lib.games.get(id);
+  if (!rec) return;
+  const black = repSideOf(rec) === 1;
+  if (ui.libId === id) {
+    if (black) game.headers.Orientation = "black"; else delete game.headers.Orientation;
+    ui.flipped = black;
+    markDirty();
+    await saveToLibrary({ silent: true });
+    render();
+  } else {
+    const upd = Object.assign({}, rec, { pgn: black ? `[Orientation "black"]\n` + rec.pgn : rec.pgn.replace(/\[Orientation "black"\]\s*\n?/i, ""), updated: Date.now() });
+    upd.size = upd.pgn.length;
+    try { await DB.put("games", upd); Lib.games.set(id, upd); } catch (e) { toast("❌ No se pudo cambiar: " + (e.message || e)); return; }
+  }
+  toast(`Ahora «${rec.title}» es un repertorio con ${black ? "negras" : "blancas"}.`);
+  refreshLibraryViews();
+}
+/* Crea un repertorio vacío, o una copia de uno del curso, en tu biblioteca y lo abre para editarlo */
+async function createMyRep(fromCourse) {
+  if (!Lib.ready) { toast("La biblioteca aún se está cargando…"); return; }
+  let g, side, title;
+  if (fromCourse != null && fromCourse !== "") {
+    const l = courseLessons("repertorios")[+fromCourse];
+    if (!l) return;
+    g = Pgn.parseGame(collRaw(l.g), { lang: "en" }).game;
+    side = l.black ? -1 : 1;
+    title = "Mi " + l.title.charAt(0).toLowerCase() + l.title.slice(1);
+  } else {
+    side = +$("repNewSide").value || 1;
+    title = $("repNewName").value.trim() || `Mi repertorio con ${side === 1 ? "blancas" : "negras"}`;
+    g = Pgn.newGame();
+    g.headers.Event = "Repertorio";
+  }
+  if (side === -1) g.headers.Orientation = "black"; else delete g.headers.Orientation;
+  if (!setGame(g, { name: title, tags: ["repertorio"] })) return;
+  ui.flipped = side === -1;
+  const rec = await saveToLibrary({ silent: true, force: true });
+  if (!rec) return;
+  $("repNewName").value = "";
+  switchTab("study");
+  render();
+  toast(fromCourse != null && fromCourse !== "" ? `🗂 «${title}» copiado a tus repertorios: cámbialo como quieras (añade o borra variantes); se guarda solo.` : `🗂 «${title}» creado. Juega en el tablero las jugadas de tu repertorio; para añadir otra respuesta del rival, vuelve atrás y juega otra jugada. Se guarda solo.`, 6500);
+}
+
+/* Revisión de un repertorio: líneas sin terminar, huecos (respuestas frecuentes del rival que no tienes),
+   jugadas dudosas según el motor y cómo te va con él en tus partidas */
+const RepReview = { busy: false, cancel: false };
+const winnerCp = l => (!l ? null : l.mate != null ? (l.mate > 0 || (l.mate === 0 && l.winner === 1) ? 3000 : -3000) : l.cp);
+const fmtPawns = v => (Math.abs(v) >= 2000 ? (v > 0 ? "mate" : "mate en contra") : (v > 0 ? "+" : "") + (v / 100).toFixed(2).replace(".", ","));
+async function reviewRepertoire(tree) {
+  const out = $("repReviewOut");
+  if (RepReview.busy) { toast("Ya hay una revisión en marcha."); return; }
+  RepReview.busy = true; RepReview.cancel = false;
+  const side = tree.side, root = tree.g.root, MAXPLY = 20;
+  const pathOf = n => Pgn.pathTo(n).slice(1).map(x => x.uci);
+  const lineOf = n => lineText(root.state, pathOf(n), 40);
+  const nodes = [];
+  (function walk(n, d) { nodes.push(n); if (d < MAXPLY) n.children.forEach(c => walk(c, d + 1)); })(root, 0);
+  const depthOf = n => Pgn.pathTo(n).length - 1;
+  const status = txt => { out.innerHTML = `<div class="note-box">🩺 Revisando «${esc(tree.title)}»… ${txt} <button class="sm-btn danger" id="repReviewStop">⏹ Parar</button></div>`; $("repReviewStop").onclick = () => { RepReview.cancel = true; }; };
+  out.scrollIntoView({ block: "nearest" });
+  // 1) Estructura: líneas que acaban con una jugada del rival (te falta tu respuesta)
+  const leaves = repLeaves(root);
+  const open = leaves.filter(n => n.state.t === side && Chess.legal(n.state).length);
+  // 2) Huecos: respuestas del rival frecuentes que tu repertorio no tiene
+  const gaps = [];
+  let source = "", gapNote = "";
+  const rivalNodes = nodes.filter(n => n.state.t === -side && n.children.length && depthOf(n) <= 14 && Chess.legal(n.state).length);
+  const db = settings.explorerDb === "local" ? "local" : settings.token ? (settings.explorerDb === "masters" ? "masters" : "lichess") : "local";
+  const stats = new Map();   // node -> { total, moves: [{san, n}] }
+  if (db === "local") {
+    source = "tus partidas de la biblioteca y el .pgn abierto";
+    const idx = new Map();
+    const add = g => { let n = g.root; while (n.children.length) { const c = n.children[0]; const e = idx.get(n.key) || new Map(); e.set(c.san, (e.get(c.san) || 0) + 1); idx.set(n.key, e); n = c; } };
+    for (const rec of Lib.games.values()) if (!isRepRec(rec)) { try { add(Pgn.parseGame(rec.pgn, { lang: "en" }).game); } catch {} }
+    Coll.games.forEach(t => { try { add(Pgn.parseGame(t, { lang: "auto" }).game); } catch {} });
+    for (const n of rivalNodes) { const e = idx.get(n.key); if (e) { const moves = [...e].map(([san, k]) => ({ san, n: k })); stats.set(n, { total: moves.reduce((a, m) => a + m.n, 0), moves }); } }
+    if (!settings.token) gapNote = "Con tu token de Lichess (⚙ Ajustes) los huecos se buscan en millones de partidas, no sólo en las tuyas.";
+  } else {
+    source = db === "masters" ? "las partidas de maestros de Lichess" : "las partidas de Lichess (1800-2500)";
+    const todo = rivalNodes.slice().sort((a, b) => depthOf(a) - depthOf(b)).slice(0, 30);
+    for (let i = 0; i < todo.length && !RepReview.cancel; i++) {
+      status(`Consultando a Lichess las respuestas del rival (${i + 1} de ${todo.length})…`);
+      const url = explorerUrl(db, Chess.toFen(todo[i].state));
+      let data = explorerCache.get(url);
+      if (!data) {
+        try {
+          const res = await Lichess.fetch(url, { headers: authHeaders() });
+          if (res.status === 429) { gapNote = `Lichess ha pedido una pausa: se han revisado ${i} posiciones. Vuelve a pulsar «Revisar» en un minuto para completar.`; break; }
+          if (res.status === 401 || res.status === 403) { gapNote = "Lichess ha rechazado tu token: revísalo en ⚙ Ajustes."; break; }
+          if (!res.ok) throw Error(res.status);
+          data = await res.json();
+          explorerCache.set(url, data);
+        } catch (e) { gapNote = "No se ha podido consultar Lichess (¿sin conexión?): los huecos están incompletos."; break; }
+      }
+      const moves = (data.moves || []).map(m => ({ san: m.san, n: m.white + m.draws + m.black }));
+      stats.set(todo[i], { total: data.white + data.draws + data.black, moves });
+    }
+  }
+  const clean = x => String(x || "").replace(/[+#!?]/g, "");
+  // Probabilidad de llegar a cada posición: el producto de lo que se juega cada jugada del rival en el camino
+  const reach = n => { let p = 1; for (let x = n; x.parent; x = x.parent) { const st = stats.get(x.parent); if (x.parent.state.t === -side && st && st.total) { const m = st.moves.find(mm => clean(mm.san) === clean(x.san)); p *= m ? m.n / st.total : 0.05; } } return p; };
+  for (const [n, st] of stats) {
+    if (!st.total || st.total < (db === "local" ? 2 : 10)) continue;
+    for (const m of st.moves) {
+      const share = m.n / st.total;
+      if (share < (db === "local" ? 0.2 : 0.08) || n.children.some(c => clean(c.san) === clean(m.san))) continue;
+      const mv = (() => { try { return Chess.parseMove(n.state, m.san, "en").move; } catch { return null; } })();
+      if (!mv) continue;
+      gaps.push({ n, san: m.san, uci: Chess.uci(mv), share, games: m.n, weight: reach(n) * share });
+    }
+  }
+  gaps.sort((a, b) => b.weight - a.weight);
+  // 3) Motor: tus jugadas que pierden mucho y líneas que terminan peor para ti
+  const dubious = [], badEnds = [];
+  let engineNote = "";
+  if (!Engine.ready) engineNote = "El motor no está listo: no se han revisado las jugadas.";
+  else {
+    ui.analysing = true;
+    Engine.cancel("live");
+    const ms = Engine.kind === "stockfish" ? 350 : 600;
+    const mineNodes = nodes.filter(n => n.state.t === side && n.children.length && Chess.legal(n.state).length).slice(0, 50);
+    const ends = leaves.filter(n => Chess.legal(n.state).length).slice(0, 30);
+    const total = mineNodes.length + ends.length;
+    const evalOf = async n => { let j = await Engine.analyse(n, { purpose: "batch", movetime: ms, multipv: 1 }); if (!j && !RepReview.cancel) j = await Engine.analyse(n, { purpose: "batch", movetime: ms, multipv: 1 }); return j && j.lines[0] ? j : null; };
+    const cache = new Map();
+    const ev = async n => { if (cache.has(n)) return cache.get(n); const t = terminalEval(n); const v = t ? { cp: winnerCp(t), best: null } : await (async () => { const j = await evalOf(n); return j ? { cp: winnerCp(j.lines[0]), best: j.lines[0].pv[0] || j.best } : null; })(); cache.set(n, v); return v; };
+    let k = 0;
+    try {
+      for (const n of mineNodes) {
+        if (RepReview.cancel) break;
+        status(`Stockfish revisa tus jugadas (${++k} de ${total})…`);
+        const before = await ev(n);
+        if (!before) continue;
+        for (const c of n.children) {
+          if (RepReview.cancel || c.uci === before.best) continue;
+          const after = await ev(c);
+          if (!after) continue;
+          const drop = (before.cp - after.cp) * side, mineAfter = after.cp * side;
+          if (drop >= 80 && !(mineAfter > 400)) dubious.push({ n: c, drop, best: before.best, after: mineAfter });
+        }
+      }
+      for (const n of ends) {
+        if (RepReview.cancel) break;
+        status(`Stockfish revisa cómo acaban tus líneas (${++k} de ${total})…`);
+        const v = await ev(n);
+        if (v && v.cp * side <= -70) badEnds.push({ n, v: v.cp * side });
+      }
+    } finally { ui.analysing = false; }
+    if (RepReview.cancel) engineNote = "Revisión con el motor interrumpida: los resultados están incompletos.";
+  }
+  // 4) Tus partidas con este repertorio
+  const names = myNameList();
+  let gamesHtml = "";
+  if (!names.length) gamesHtml = `<span class="small">Pon tu nombre en «📚 Biblioteca › 📊 Estadísticas» para ver cómo te va con este repertorio en tus partidas.</span>`;
+  else {
+    const rows = myGameLines(names).filter(x => x.c === side && root.children.some(ch => ch.uci === x.line[0].uci)).map(x => Object.assign(x, matchGameToTree(x.line, tree, side)));
+    if (!rows.length) gamesHtml = `<span class="small">Ninguna partida tuya de la biblioteca empieza como este repertorio.</span>`;
+    else {
+      const mine = rows.filter(r => r.dev && r.dev.mine), rival = rows.filter(r => r.dev && !r.dev.mine);
+      const pts = rows.map(r => scoreOf(r.rec.result, side)).filter(x => x != null);
+      const avg = Math.round(rows.reduce((a, r) => a + r.depth, 0) / rows.length / 2 * 10) / 10;
+      const newLines = {};
+      rival.forEach(r => { const k = r.path.join(" "); newLines[k] = newLines[k] || { n: 0, r }; newLines[k].n++; });
+      const topNew = Object.values(newLines).sort((a, b) => b.n - a.n).slice(0, 5);
+      gamesHtml = `<div class="small">${rows.length} partida${rows.length === 1 ? "" : "s"} · sigues el repertorio ${String(avg).replace(".", ",")} jugadas de media · ❌ te saliste tú en ${mine.length} · 🆕 se salió el rival en ${rival.length}${pts.length ? ` · puntuación: ${Math.round(pts.reduce((a, b) => a + b, 0) / pts.length * 100)} %` : ""}</div>`
+        + topNew.map((x, i) => `<div class="version-row"><span class="version-what">🆕 ${esc(lineText(root.state, x.r.path, 40))} <span class="small">(${x.n} partida${x.n === 1 ? "" : "s"})</span></span>${tree.lib ? `<button class="sm-btn primary" data-new="${i}">➕ Prepararla</button>` : ""}</div>`).join("");
+      RepReview.newLines = topNew;
+    }
+  }
+  RepReview.busy = false;
+  const btnGo = (kind, i, label = "📖 Ver") => `<button class="sm-btn" data-go="${kind}:${i}">${label}</button>`;
+  const shownGaps = gaps.slice(0, 12);
+  const sanTxt = (st, san) => numPrefix(st) + formatSan(san, settings.lang, st.t);
+  out.innerHTML = `<div class="note-box"><b>🩺 Revisión de «${esc(tree.title)}»</b> (con ${side === 1 ? "blancas" : "negras"}): ${leaves.length} línea${leaves.length === 1 ? "" : "s"}.
+      ${!tree.lib ? `<br><span class="small">Es un repertorio del curso: para cambiarlo, cópialo a «Mis repertorios».</span>` : ""}</div>
+    <h3>🕳 Huecos: respuestas del rival que no tienes preparadas</h3>
+    <p class="small">Según ${esc(source)}, ordenadas por lo probable que es encontrártelas.${gapNote ? " " + esc(gapNote) : ""}</p>
+    ${shownGaps.length ? shownGaps.map((x, i) => `<div class="version-row"><span class="version-what">Tras <b>${esc(lineOf(x.n) || "la posición inicial")}</b>: falta <b>${esc(sanTxt(x.n.state, x.san))}</b> <span class="small">(${Math.round(x.share * 100)} % · ${x.games.toLocaleString("es-ES")} partida${x.games === 1 ? "" : "s"})</span></span>${tree.lib ? `<button class="sm-btn primary" data-gap="${i}">➕ Prepararla</button>` : btnGo("gap", i)}</div>`).join("") : `<div class="small">✔ No se han encontrado huecos importantes${stats.size ? "" : " (no hay datos de partidas para estas posiciones)"}.</div>`}
+    <h3>✂ Líneas sin tu respuesta</h3>
+    ${open.length ? `<p class="small">Acaban con una jugada del rival: falta decidir qué juegas tú.</p>` + open.slice(0, 10).map((n, i) => `<div class="version-row"><span class="version-what">${esc(lineOf(n))}</span>${btnGo("open", i, tree.lib ? "✏ Completar" : "📖 Ver")}</div>`).join("") : `<div class="small">✔ Todas tus líneas terminan con una jugada tuya.</div>`}
+    <h3>⚠ Jugadas dudosas según Stockfish</h3>
+    ${engineNote ? `<p class="small">${esc(engineNote)}</p>` : ""}
+    ${dubious.length ? dubious.sort((a, b) => b.drop - a.drop).slice(0, 10).map((x, i) => { const p = x.n.parent, bm = x.best && Chess.moveFromUci(p.state, x.best); return `<div class="version-row"><span class="version-what"><b>${esc(lineOf(x.n))}</b>: pierde ${fmtPawns(x.drop).replace("+", "")} peones${bm ? `; el motor prefiere <b>${esc(sanTxt(p.state, Chess.san(p.state, bm)))}</b>` : ""}</span>${btnGo("dub", i)}</div>`; }).join("") : Engine.ready && !RepReview.cancel ? `<div class="small">✔ Ninguna de tus jugadas pierde claramente según el motor (revisión rápida).</div>` : ""}
+    ${badEnds.length ? `<p class="small">Líneas que terminan en una posición peor para ti:</p>` + badEnds.sort((a, b) => a.v - b.v).slice(0, 8).map((x, i) => `<div class="version-row"><span class="version-what">${esc(lineOf(x.n))} <span class="small">(${fmtPawns(x.v)} para ti)</span></span>${btnGo("end", i)}</div>`).join("") : ""}
+    <h3>📚 En tus partidas</h3>
+    ${gamesHtml}`;
+  const lists = { gap: shownGaps.map(x => x.n), open, dub: dubious.map(x => x.n), end: badEnds.map(x => x.n) };
+  out.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { const [kind, i] = b.dataset.go.split(":"); const n = lists[kind][+i]; if (n) openRepertoireAt(tree, pathOf(n)); });
+  out.querySelectorAll("[data-gap]").forEach(b => b.onclick = () => { const x = shownGaps[+b.dataset.gap]; prepareRivalMove(tree, pathOf(x.n), x.uci); });
+  out.querySelectorAll("[data-new]").forEach(b => b.onclick = () => { const x = RepReview.newLines[+b.dataset.new]; prepareRivalMove(tree, x.r.path.slice(0, -1), x.r.path[x.r.path.length - 1]); });
 }
 
 /* ---------- 26b. Plan de hoy: objetivos diarios, racha y calendario de actividad ---------- */
@@ -4640,7 +4938,8 @@ function dueCounts() {
   const puzzles = PUZZLES.filter(p => ps[p.id] && ps[p.id].due <= now).length;
   const cards = Lib.ready ? trainableMarks(false).length : 0;
   const drills = Lib.ready ? drillPool().filter(x => x.srs && x.srs.due <= now).length : 0;
-  return { reps, puzzles, cards, drills, total: reps.length + puzzles + cards + drills };
+  const mine = myRepRecs().filter(r => r.srs && r.srs.due <= now).sort((a, b) => a.srs.due - b.srs.due);
+  return { reps, mine, puzzles, cards, drills, total: reps.length + mine.length + puzzles + cards + drills };
 }
 const goalPuzzles = () => Math.max(1, +settings.goalPuzzles || 5);
 function nextLesson() {
@@ -4691,6 +4990,7 @@ function nextTask() {
     if (openLesson(r.c, i)) { toast("📅 Toca repasar este repertorio."); lessonAction("practice"); }
     return;
   }
+  if (due.mine.length) { toast(`📅 Toca repasar tu repertorio «${due.mine[0].title}».`); trainMyRep(due.mine[0].id); return; }
   if (due.puzzles || (today.puzzle || 0) < goalPuzzles()) {
     $("puzzleTheme").value = ""; $("puzzleLevel").value = "";
     $("puzzleCount").value = String(due.puzzles ? Math.min(20, Math.max(5, due.puzzles)) : Math.max(5, goalPuzzles() - (today.puzzle || 0)) > 10 ? "20" : Math.max(5, goalPuzzles() - (today.puzzle || 0)) > 5 ? "10" : "5");
@@ -4712,7 +5012,7 @@ function switchTab(name) {
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === "tab-" + name));
   if (name === "explorer") refreshExplorer();
   if (name === "library") { refreshLibraryViews(); if (ui.librarySub === "collection") renderCollection(); if (ui.librarySub === "position") renderPosTarget(); }
-  if (name === "tools") { renderDrillInfo(); renderPuzzleInfo(); renderPuzzleStats(); renderExamInfo(); renderToday(); }
+  if (name === "tools") { renderDrillInfo(); renderPuzzleInfo(); renderPuzzleStats(); renderExamInfo(); renderToday(); renderMyReps(); }
   if (name === "courses") renderCourses();
   if (name === "endgames" && pieceCount(cur().state) <= 7) querySyzygy();
 }
@@ -4780,6 +5080,17 @@ $("setCoords").onchange = e => { settings.coords = e.target.checked; saveSetting
 $("setLegal").onchange = e => { settings.showLegal = e.target.checked; saveSettings(); renderBoard(); };
 $("setAnimate").onchange = e => { settings.animate = e.target.checked; saveSettings(); };
 $("setWheel").onchange = e => { settings.wheel = e.target.checked; saveSettings(); };
+/* Tamaño del tablero: porcentaje del tamaño automático (el más grande que cabe), de 60 a 130 */
+function applyBoardSize() {
+  const v = Math.max(60, Math.min(130, +settings.boardSize || 100));
+  document.documentElement.style.setProperty("--bs", String(v / 100));
+  $("setBoardSize").value = v;
+  $("boardSizeVal").textContent = v === 100 ? "automático (100 %)" : v + " %";
+}
+$("setBoardSize").oninput = e => { settings.boardSize = +e.target.value; applyBoardSize(); };
+$("setBoardSize").onchange = () => saveSettings();
+$("boardSizeReset").onclick = () => { settings.boardSize = 100; applyBoardSize(); saveSettings(); };
+applyBoardSize();
 $("setAutosave").onchange = e => { settings.autosave = e.target.checked; saveSettings(); if (!settings.autosave) { try { localStorage.removeItem("ajedrezStudioCurrent"); } catch {} } };
 
 $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; saveSettings(); buildEditorPalettes(); render(); };
@@ -5102,6 +5413,15 @@ $("peekBtn").onclick = peekPieces;
 $("blindCpuBtn").onclick = () => openCpuDialog(true);
 $("stopTrainBtn").onclick = () => { stopTraining(false); trainFeedback("Entrenamiento detenido."); };
 $("hintTrainBtn").onclick = trainerHint;
+$("repNewBtn").onclick = () => createMyRep(null);
+$("repNewName").onkeydown = e => { if (e.key === "Enter") createMyRep(null); };
+$("repFromCourse").onchange = e => { const v = e.target.value; e.target.value = ""; if (v !== "") createMyRep(v); };
+$("repReviewCourse").onchange = e => {
+  const v = e.target.value; e.target.value = "";
+  if (v === "") return;
+  const l = courseLessons("repertorios")[+v];
+  reviewRepertoire({ l, i: +v, title: l.title, g: Pgn.parseGame(l.g, { lang: "en" }).game, side: l.black ? -1 : 1 });
+};
 $("trainDueBtn").onclick = () => {
   const due = [...Lib.games.values()].filter(r => r.srs && r.srs.due <= Date.now()).sort((x, y) => x.srs.due - y.srs.due);
   if (!due.length) { toast("¡No tienes partidas pendientes de repaso hoy! 🎉 (Entrena una partida guardada para programarla.)", 4000); return; }

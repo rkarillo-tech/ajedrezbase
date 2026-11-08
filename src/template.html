@@ -74,7 +74,10 @@ h1 { font-size: 1.12rem; margin: 0; white-space: nowrap; }
 main {
   max-width: 1600px; margin: auto; padding: 12px;
   display: grid; grid-template-columns: minmax(320px, min(620px, calc(100vh - 140px))) minmax(380px, 1fr); gap: 14px; align-items: start;
+  /* Tamaño del tablero elegido en Ajustes (--bs: 0,6 a 1,3; 1 = automático). Por encima de 1 sólo crece hasta la altura disponible */
+  grid-template-columns: minmax(calc(320px * min(var(--bs), 1)), min(calc(620px * var(--bs)), calc((100vh - 140px) * min(var(--bs), 1)))) minmax(380px, 1fr);
 }
+:root { --bs: 1; }
 .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 11px; padding: 12px; min-width: 0; }
 
 /* Barras de jugador */
@@ -142,6 +145,9 @@ main {
 .cal-legend .cal-d { margin: 0 1px; }
 .version-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: #101520; margin-top: 6px; }
 .version-row .version-what { flex: 1; min-width: 180px; }
+#myRepSection .filter-row > * { min-width: 0; max-width: 100%; }
+.rep-review h3 { font-size: .92rem; margin: 12px 0 4px; }
+.rep-review .version-row { margin-top: 4px; }
 
 /* Barra de evaluación + tablero */
 .board-stage { display: grid; grid-template-columns: 24px 1fr; gap: 7px; align-items: stretch; }
@@ -508,6 +514,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 @media (max-width: 980px) {
   header { position: static; }
   main { grid-template-columns: 1fr; }
+  .board-main { width: calc(100% * min(var(--bs), 1)); margin-inline: auto; }
   .mode-tabs { grid-template-columns: repeat(3, 1fr); }
   .meter-row { grid-template-columns: 1fr; gap: 2px; }
   .meter-txt { text-align: left; }
@@ -582,7 +589,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   main { grid-template-columns: 1fr; padding: 4px 6px; gap: 8px; }
   .panel { padding: 6px; }
   .board-panel { display: flex; gap: 10px; align-items: flex-start; height: calc(100vh - 52px); height: calc(100dvh - 52px); }
-  .board-main { flex: none; width: min(calc(100vh - 100px), 62vw); width: min(calc(100dvh - 100px), 62vw); }
+  .board-main { flex: none; margin-inline: 0; width: min(calc(100vh - 100px), 62vw); width: min(calc(100dvh - 100px), 62vw); width: calc(min(100dvh - 100px, 62vw) * min(var(--bs), 1)); }
   .board-stage { grid-template-columns: 12px 1fr; gap: 4px; }
   .eval-score-text { display: none; }
   .player-bar { padding: 1px 8px; min-height: 22px; margin-bottom: 3px; font-size: .78rem; }
@@ -1205,9 +1212,25 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </div>
       </div>
 
+      <div class="section" id="myRepSection">
+        <h2><span>🗂 Mis repertorios</span><span id="myRepBadge" class="srs-pill"></span></h2>
+        <p class="small">Crea tus propios repertorios: juega tus líneas en el tablero (cada respuesta del rival que prepares es una variante) y entrénalos con repaso espaciado. <b>🩺 Revisar</b> busca huecos (respuestas frecuentes del rival que no tienes), líneas sin terminar y jugadas dudosas según Stockfish, y te dice cómo te va con él en tus partidas. Se guardan en tu biblioteca con la etiqueta «repertorio».</p>
+        <div class="filter-row">
+          <input id="repNewName" type="text" placeholder="Nombre (p. ej. Contra 1.d4)" aria-label="Nombre del repertorio nuevo">
+          <select id="repNewSide" aria-label="Bando"><option value="1">Con blancas</option><option value="-1">Con negras</option></select>
+          <button id="repNewBtn" class="primary">➕ Crear</button>
+        </div>
+        <div class="filter-row">
+          <select id="repFromCourse" aria-label="Copiar un repertorio del curso"><option value="">📘 Copiar uno del curso como punto de partida…</option></select>
+          <select id="repReviewCourse" aria-label="Revisar un repertorio del curso"><option value="">🩺 Revisar uno del curso…</option></select>
+        </div>
+        <div id="myRepList" class="mark-list"></div>
+        <div id="repReviewOut" class="rep-review"></div>
+      </div>
+
       <div class="section">
         <h2><span>🗂 Tus partidas frente a tu repertorio</span></h2>
-        <p class="small">Compara tus partidas de la biblioteca con los repertorios de «📘 Cursos»: en qué jugada te saliste tú (algo que repasar) o tu rival (una línea nueva que preparar). Necesita tu nombre en «📊 Estadísticas».</p>
+        <p class="small">Compara tus partidas de la biblioteca con tus repertorios (los tuyos de «Mis repertorios» y los de «📘 Cursos»): en qué jugada te saliste tú (algo que repasar) o tu rival (una línea nueva que preparar). Necesita tu nombre en «📊 Estadísticas».</p>
         <div class="controls"><button id="repCompareBtn" class="sm-btn primary">🔍 Comparar mis partidas</button></div>
         <div id="repCompareOut" class="mark-list"></div>
       </div>
@@ -1355,6 +1378,12 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <label><input type="checkbox" id="setAnimate"> Animar las piezas</label>
       <label><input type="checkbox" id="setWheel"> Rueda del ratón para avanzar/retroceder</label>
     </div>
+    <label for="setBoardSize">Tamaño del tablero: <b id="boardSizeVal">automático</b></label>
+    <div class="gc-row">
+      <input id="setBoardSize" type="range" min="60" max="130" step="5" style="flex:1">
+      <button id="boardSizeReset" class="sm-btn" title="Vuelve al tamaño automático: el más grande que cabe">Automático</button>
+    </div>
+    <p class="small" style="margin-top:2px">El tamaño automático (100 %) es el más grande que cabe en la pantalla. Puedes hacerlo más pequeño para dejar más sitio a las jugadas y la lección; por encima del 100 % sólo crece en pantallas grandes del ordenador, hasta la altura disponible. Se guarda en cada dispositivo.</p>
   </div>
 </div>
 
