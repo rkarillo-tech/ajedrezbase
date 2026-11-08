@@ -611,7 +611,7 @@ def prueba_cursos(browser):
     ctx = contexto(browser)
     pg, errores = nueva_pagina(ctx)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar(pg.locator("#courseList details.course").count() == 6 and "0 de 65" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los seis cursos y el progreso")
+    comprobar(pg.locator("#courseList details.course").count() == 7 and "0 de 71" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los siete cursos y el progreso")
     pg.locator('details[data-course="finales"] summary').click()
     pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").click()
     comprobar(pg.is_visible("#lessonBox") and "construir el puente" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("1K1k4/1P6"), "abrir una lección la pone en el tablero con su explicación")
@@ -650,10 +650,10 @@ def prueba_cursos(browser):
     pg.reload()
     pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar("2 de 65" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
+    comprobar("2 de 71" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
     pg.locator('details[data-course="aperturas"] summary').click()
     pg.locator('details[data-course="aperturas"] [data-coll]').click()
-    comprobar(pg.inner_text("#collCount") == "11" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")
+    comprobar(pg.inner_text("#collCount") == "12" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -953,6 +953,57 @@ def prueba_mis_repertorios(browser):
     ctx.close()
 
 
+def prueba_sorpresas_y_planes(browser):
+    print("Novedades 1.15: sorpresas y trampas, planes de apertura y cómo estudiar aperturas")
+    ctx = contexto(browser)
+    tras = {
+        "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w": [("Nf3", 700), ("Bc4", 150), ("Nc3", 100), ("f4", 50)],
+        "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b": [("Nc6", 550), ("d6", 200), ("Ba3", 180), ("Nf6", 70)],
+        "rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR b": [("Nf6", 600), ("Nc6", 300), ("Bc5", 100)],
+        "rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR b": [("Nf6", 600), ("Nc6", 300), ("Bc5", 100)],
+    }
+    def explorador(r):
+        fen = urllib.parse.parse_qs(urllib.parse.urlparse(r.request.url).query).get("fen", [""])[0]
+        jug = next((v for k, v in tras.items() if fen.startswith(k)), [])
+        tot = sum(n for _, n in jug)
+        datos = {"white": tot // 2, "draws": tot // 4, "black": tot - tot // 2 - tot // 4, "moves": [{"san": s, "uci": "", "white": n // 2, "draws": n // 4, "black": n - n // 2 - n // 4} for s, n in jug]}
+        r.fulfill(status=200, content_type="application/json", body=json.dumps(datos), headers={"Access-Control-Allow-Origin": "*"})
+    ctx.route("**/explorer.lichess.ovh/**", explorador)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.evaluate("settings.token = 'lip_prueba'; saveSettings()")
+    pg.fill("#moveInput", "1. e4 e5")
+    pg.click("#importBtn")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.click('.tab-btn[data-tab="explorer"]')
+    pg.select_option("#explorerDbSelect", "lichess")
+    pg.click("#surpriseBtn")
+    pg.wait_for_function("!Surprise.busy && document.getElementById('surpriseOut').textContent.includes('Trampas')", timeout=120000)
+    txt = pg.inner_text("#surpriseOut")
+    comprobar("Tras 2.Cf3, el 18 % responde 2...Aa3" in txt, "«Sorpresas y trampas» encuentra la trampa: tras 2.Cf3, una respuesta frecuente que pierde")
+    comprobar("Sorpresas" in txt and "Errores frecuentes" in txt and "lo mejor según el motor" in txt, "también muestra las sorpresas, los errores frecuentes y la mejor jugada")
+    pg.locator("#surpriseOut [data-sp2]").first.click()
+    pg.wait_for_timeout(600)
+    comprobar(pg.evaluate("cur().san === 'Ba3' && cur().parent.san === 'Nf3'"), "«▶ Verla» juega la trampa en el tablero")
+    # Planes de apertura y cómo estudiar aperturas
+    pg.click('.tab-btn[data-tab="courses"]')
+    comprobar(pg.locator('details[data-course="planes"]').count() == 1, "hay un curso de planes de apertura")
+    pg.locator('details[data-course="planes"] summary').click()
+    pg.locator('details[data-course="planes"] .lesson-row', has_text="minorías").click()
+    comprobar("ataque de minorías" in pg.inner_text("#lessonBox") and pg.locator("#lessonBox [data-l=practice]").count() == 1, "la lección de planes plantea la pregunta y ofrece resolverla")
+    pg.locator("#lessonBox [data-l=practice]").click()
+    pg.evaluate("trainerUserMove(Chess.moveFromUci(cur().state, 'h2h3'))")
+    comprobar("no es la jugada buscada" in pg.inner_text("#trainFeedback"), "en una lección, una jugada distinta se explica como «no es la jugada buscada»")
+    pg.evaluate("trainerUserMove(Chess.moveFromUci(cur().state, 'a1b1'))")
+    comprobar("Correcto" in pg.inner_text("#trainFeedback"), "la jugada del plan (Tab1) se da por buena")
+    pg.evaluate("stopTraining(true)")
+    pg.click('.tab-btn[data-tab="courses"]')
+    pg.locator('details[data-course="aperturas"] summary').click()
+    comprobar(pg.locator('details[data-course="aperturas"] .lesson-row', has_text="Cómo estudiar aperturas").count() == 1, "el curso de aperturas incluye «Cómo estudiar aperturas»")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1100,7 +1151,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:
