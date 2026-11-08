@@ -15,10 +15,12 @@ además el Stockfish 19 real sirviéndolo desde esa carpeta (así lo hace la int
 import functools
 import http.server
 import os
+import json
 import pathlib
 import sys
 import threading
 import traceback
+import urllib.parse
 
 from playwright.sync_api import sync_playwright
 
@@ -228,6 +230,9 @@ def prueba_ayuda_y_movil(browser):
     pg.set_viewport_size({"width": 390, "height": 844})
     pg.wait_for_timeout(300)
     comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "sin desplazamiento horizontal en el móvil")
+    pg.click('.tab-btn[data-tab="tools"]')
+    comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "sin desplazamiento horizontal en el móvil en la pestaña Entrenar")
+    pg.click('.tab-btn[data-tab="study"]')
     comprobar(not pg.is_visible("#pieceStyleSelect") and pg.is_visible("#menuBtn"), "en el móvil la cabecera es compacta (piezas, notación y colores en ☰)")
     pg.click("#menuBtn")
     comprobar(pg.is_visible("#pieceStyleSelect") and pg.is_visible("#themeSelect"), "☰ muestra las opciones de la cabecera")
@@ -875,6 +880,79 @@ def prueba_cpu_adaptativa(browser):
     ctx.close()
 
 
+def prueba_mis_repertorios(browser):
+    print("Novedades 1.14: mis repertorios, su revisión y el tamaño del tablero")
+    ctx = contexto(browser)
+    e4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b"
+    def explorador(r):
+        fen = urllib.parse.parse_qs(urllib.parse.urlparse(r.request.url).query).get("fen", [""])[0]
+        datos = {"white": 0, "draws": 0, "black": 0, "moves": []}
+        if fen.startswith(e4):
+            jug = [("c5", 400), ("e5", 350), ("e6", 150), ("c6", 100)]
+            datos = {"white": 400, "draws": 200, "black": 400, "moves": [{"san": s, "uci": "", "white": n // 2, "draws": n // 4, "black": n - n // 2 - n // 4} for s, n in jug]}
+        r.fulfill(status=200, content_type="application/json", body=json.dumps(datos), headers={"Access-Control-Allow-Origin": "*"})
+    ctx.route("**/explorer.lichess.ovh/**", explorador)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.evaluate("settings.token = 'lip_prueba'; settings.explorerDb = 'lichess'; settings.myNames = 'Yo Mismo'; saveSettings()")
+    pg.click('.tab-btn[data-tab="tools"]')
+    comprobar("Aún no tienes repertorios propios" in pg.inner_text("#myRepList"), "Mis repertorios explica cómo empezar cuando no hay ninguno")
+    pg.fill("#repNewName", "Blancas: 1.e4")
+    pg.click("#repNewBtn")
+    pg.wait_for_function("ui.libId && ui.activeTab === 'study'")
+    comprobar(pg.evaluate("ui.tags.includes('repertorio') && Lib.games.get(ui.libId).title === 'Blancas: 1.e4'"), "crear un repertorio lo guarda en la biblioteca con la etiqueta «repertorio» y lo abre")
+    jugar = lambda camino, ucis: pg.evaluate(f"""(() => {{ goTo(resolvePath(game.root, {json.dumps(camino)})); for (const u of {json.dumps(ucis)}) playMove(Chess.moveFromUci(cur().state, u), 'user'); }})()""")
+    jugar([], ["e2e4", "e7e5", "g1f3", "b8c6", "f1b5"])
+    jugar(["e2e4"], ["c7c5", "g1f3"])
+    jugar(["e2e4"], ["e7e6", "f1a6"])
+    pg.wait_for_function("!ui.dirty", timeout=5000)
+    comprobar("(1... c5" in pg.evaluate("Lib.games.get(ui.libId).pgn"), "las líneas jugadas en el tablero se guardan solas en el repertorio")
+    pg.click('.tab-btn[data-tab="tools"]')
+    comprobar("3 líneas" in pg.inner_text("#myRepList") and "con blancas" in pg.inner_text("#myRepList").lower(), "la lista muestra el bando y cuántas líneas tiene")
+    pg.locator("[data-rep-review]").first.click()
+    pg.wait_for_function("!RepReview.busy", timeout=180000)
+    rev = pg.inner_text("#repReviewOut")
+    comprobar("falta 1...c6" in rev and "falta 1...c5" not in rev and "falta 1...e5" not in rev, "la revisión encuentra los huecos (respuestas frecuentes del rival que faltan) con el explorador de Lichess")
+    comprobar("Jugadas dudosas" in rev and "2.Aa6" in rev, "la revisión señala con el motor las jugadas tuyas que pierden material")
+    comprobar("Líneas sin tu respuesta" in rev and "Pon tu nombre" not in rev, "la revisión comprueba también las líneas sin terminar y tus partidas")
+    pg.locator("#repReviewOut [data-gap]").first.click()
+    comprobar(pg.evaluate("ui.activeTab === 'study' && cur().san === 'c6' && cur().parent.san === 'e4'"), "«➕ Prepararla» abre el repertorio en esa posición con la jugada del rival ya hecha")
+    jugar(["e2e4", "c7c6"], ["d2d4"])
+    pg.wait_for_function("!ui.dirty", timeout=5000)
+    comprobar("(1... c6 2. d4)" in pg.evaluate("Lib.games.get(ui.libId).pgn"), "tu respuesta al hueco queda guardada en el repertorio")
+    # Una partida tuya en la que el rival se sale del repertorio
+    pg.evaluate("""(async () => { const g = Pgn.parseGame('[White "Yo Mismo"]\\n[Black "Rival"]\\n[Result "1-0"]\\n\\n1. e4 d5 2. exd5 Qxd5 3. Nc3 1-0', { lang: 'en' }).game; setGame(g, { name: 'Partida de prueba', noConfirm: true }); await saveToLibrary({ silent: true, force: true }); })()""")
+    pg.wait_for_function("[...Lib.games.values()].some(r => r.title === 'Partida de prueba')")
+    pg.click('.tab-btn[data-tab="tools"]')
+    pg.click("#repCompareBtn")
+    cmp_txt = pg.inner_text("#repCompareOut")
+    comprobar("El rival se salió en 1...d5" in cmp_txt and "Blancas: 1.e4" in cmp_txt and pg.locator("#repCompareOut [data-add]").count() == 1, "la comparación usa tus repertorios y ofrece preparar la línea nueva del rival")
+    pg.locator("#repCompareOut [data-add]").first.click()
+    comprobar(pg.evaluate("cur().san === 'd5' && cur().parent.san === 'e4' && Lib.games.get(ui.libId).title === 'Blancas: 1.e4'"), "preparar la línea nueva abre tu repertorio con la jugada del rival")
+    pg.click('.tab-btn[data-tab="tools"]')
+    pg.locator("[data-rep-train]").first.click()
+    comprobar(pg.evaluate("trainer.active && trainer.side === 1 && trainer.libId === ui.libId"), "▶ Entrenar empieza el entrenamiento del repertorio con su bando")
+    pg.click("#stopTrainBtn")
+    pg.locator("[data-rep-side]").first.click()
+    pg.wait_for_timeout(400)
+    comprobar('[Orientation "black"]' in pg.evaluate("[...Lib.games.values()].find(r => r.title === 'Blancas: 1.e4').pgn"), "se puede cambiar el bando de un repertorio")
+    pg.select_option("#repFromCourse", "1")
+    pg.wait_for_function("ui.libId && Lib.games.get(ui.libId).title.startsWith('Mi repertorio con negras')")
+    comprobar(pg.evaluate("ui.flipped && Lib.games.get(ui.libId).tags.includes('repertorio')"), "un repertorio del curso se puede copiar a tus repertorios para cambiarlo")
+    pg.evaluate("(() => { const r = [...Lib.games.values()].find(x => x.title === 'Blancas: 1.e4'); r.srs = { box: 1, due: Date.now() - 1000, reps: 1 }; })()")
+    comprobar(pg.evaluate("dueCounts().mine.length") == 1, "los repertorios propios pendientes cuentan en el plan de hoy")
+    # Tamaño del tablero
+    ancho = lambda: pg.evaluate("document.getElementById('board').getBoundingClientRect().width")
+    antes = ancho()
+    pg.click("#settingsBtn")
+    pg.locator("#setBoardSize").fill("70")
+    comprobar(abs(ancho() - antes * 0.7) < antes * 0.06 and "70 %" in pg.inner_text("#boardSizeVal"), "en Ajustes se puede hacer el tablero más pequeño")
+    pg.click("#boardSizeReset")
+    comprobar(abs(ancho() - antes) < 2 and pg.evaluate("settings.boardSize") == 100, "«Automático» devuelve el tablero a su tamaño")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1022,7 +1100,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:
