@@ -192,7 +192,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 
 > **Ejemplo:** abres el .pgn de un torneo, juegas en el tablero tu línea de la Defensa Francesa hasta la jugada 6 y buscas «La misma posición»: ves las partidas que la siguieron y cuántas ganaron las blancas.
 
-## 🌍 15. Aperturas: explorador y enciclopedia (y el token de Lichess)
+## 🌍 15. Aperturas: explorador, sorpresas y trampas, enciclopedia (y el token de Lichess)
 - La pestaña **🌍 Aperturas** muestra, para la posición del tablero, qué jugadas se han hecho, cuántas veces y con qué resultado (barra blanco / tablas / negro), y partidas de ejemplo que puedes cargar.
 - Tres fuentes:
   - **Maestros**: partidas reales de jugadores de +2200 (necesita token de Lichess).
@@ -237,7 +237,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 
 > **Ejemplo de repertorio:** crea una partida con 1.e4 c5 2.Cf3 d6 3.d4 y añade como variantes las respuestas que preparas contra 2…Cc6 y 2…e6 → guárdala con la etiqueta «repertorio» → entrénala con blancas cada vez que te lo pida.
 
-## 📘 18. Cursos: aperturas, repertorios, táctica, estrategia, finales y partidas magistrales
+## 📘 18. Cursos: aperturas, planes de apertura, repertorios, táctica, estrategia, finales y partidas magistrales
 - En la pestaña **📘 Cursos** tienes siete cursos con más de setenta lecciones comentadas paso a paso: **Aperturas** (principios, errores típicos, Italiana, Española, Gambito de Dama, Siciliana, Francesa, Caro-Kann, India de Rey, Londres y **cómo estudiar aperturas**), **💡 Planes de apertura** (posiciones típicas en las que tú buscas el plan: ataque de minorías, atacar la base de la cadena, el ataque con ...f5 en la India de Rey, la maniobra del caballo en la Italiana y la casilla d5 en la Najdorf), **Táctica** (horquilla, clavada, enfilada, descubierta, sobrecarga, mates típicos y ejercicios 🧩), **Estrategia** (planes, estructuras de peones, alfil bueno y malo, columnas, casillas fuertes, peón aislado, peón pasado), **Finales** (mates básicos, oposición, regla del cuadrado, Lucena, Philidor, peón pasado alejado y protegido, dama contra peón, peón de torre, zugzwang, carreras de peones, peones unidos…), **Repertorios para entrenar** y **Partidas magistrales** (Morphy, Anderssen, Fischer, Karpov y Kaspárov comentados jugada a jugada, señalando también sus errores).
 - Pulsa una lección y se abre en el tablero. Su explicación aparece junto al tablero, arriba a la derecha (en el móvil, debajo del tablero), y no se mueve al desplazar la página: avanza con **▶ Siguiente** (o `→`) y en cada jugada leerás el porqué, con flechas y casillas marcadas en el tablero. Las alternativas y los errores típicos están como variantes en la lista de jugadas: pulsa en ellas para verlas y **↩ Línea principal** para volver.
 - **Prueba tus propias jugadas**: mueve las piezas en cualquier momento. Tus jugadas se añaden como variantes, marcadas como «🧪 tu prueba», sin estropear la lección. Activa «Analizar» (`E`) para que el motor las valore. **↩ Línea principal** te devuelve a la lección y **↺ Reiniciar** la deja como al principio. Tus pruebas no se guardan (y no se te pregunta nada al pasar de lección) salvo que pulses 💾: entonces se guarda en tu biblioteca una copia de la lección con tus variantes, y el curso queda intacto.
