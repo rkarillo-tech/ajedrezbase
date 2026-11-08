@@ -567,8 +567,9 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   .tab-btn { flex: 1 0 auto; padding: 8px 9px; white-space: nowrap; }
 }
 
-/* ---------- Móvil en horizontal: tablero a la izquierda y jugadas a la derecha ---------- */
-@media (orientation: landscape) and (max-height: 540px) {
+/* ---------- Móvil y tableta en horizontal: tablero a la izquierda y jugadas a la derecha ----------
+   También en tabletas (p. ej. 960 × 600): sin esto, por debajo de 981 px de ancho el tablero ocupaba todo el ancho y se cortaba por abajo */
+@media (orientation: landscape) and (max-height: 540px), (orientation: landscape) and (max-width: 980px) {
   header { position: static; padding: 4px 10px; flex-wrap: nowrap; }
   .brand-title { flex: 0 1 auto; min-width: 0; }
   h1 { font-size: .95rem; }
@@ -581,7 +582,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   main { grid-template-columns: 1fr; padding: 4px 6px; gap: 8px; }
   .panel { padding: 6px; }
   .board-panel { display: flex; gap: 10px; align-items: flex-start; height: calc(100vh - 52px); height: calc(100dvh - 52px); }
-  .board-main { flex: none; width: calc(100vh - 100px); width: calc(100dvh - 100px); }
+  .board-main { flex: none; width: min(calc(100vh - 100px), 62vw); width: min(calc(100dvh - 100px), 62vw); }
   .board-stage { grid-template-columns: 12px 1fr; gap: 4px; }
   .eval-score-text { display: none; }
   .player-bar { padding: 1px 8px; min-height: 22px; margin-bottom: 3px; font-size: .78rem; }

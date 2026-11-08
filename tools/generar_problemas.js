@@ -7,6 +7,8 @@
    4) se clasifican por temas y se estima su dificultad.
 
    SF=ruta/stockfish-19-lite-single.js node tools/generar_problemas.js [número de partidas] [semilla]
+   Para buscar problemas más difíciles: NIVEL_MIN y NIVEL_MAX (nivel de Stockfish en las partidas, 0-20; por defecto 0-8:
+   a más nivel, errores más sutiles) y DIFICULTAD_MIN (sólo guarda los problemas de esa dificultad estimada o más).
    Se puede ejecutar varias veces: añade problemas nuevos a los que ya hay (sin repetir posiciones). */
 "use strict";
 const fs = require("fs");
@@ -18,6 +20,9 @@ const { Chess, Pgn, ECO_BOOK } = new Function(src + ";return { Chess, Pgn, ECO_B
 const OUT = path.join(ROOT, "cursos", "problemas.json");
 const GAMES = +process.argv[2] || 50;
 let seed = +process.argv[3] || Date.now() % 100000;
+const SKILL_MIN = Math.max(0, Math.min(20, +process.env.NIVEL_MIN || 0));
+const SKILL_MAX = Math.max(SKILL_MIN, Math.min(20, process.env.NIVEL_MAX ? +process.env.NIVEL_MAX : 8));
+const MIN_RATING = +process.env.DIFICULTAD_MIN || 0;
 const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 
 /* ---------- Motor ---------- */
@@ -169,7 +174,7 @@ function estimateRating(start, sol, themes) {
       const r = Pgn.parseGame(line.moves, { lang: "en" });
       for (const n of Pgn.mainlineFrom(r.game.root)) s = n.state;
     } catch { continue; }
-    const skill = Math.floor(rnd() * 9);          // niveles 0-8: cometen errores de todo tipo
+    const skill = SKILL_MIN + Math.floor(rnd() * (SKILL_MAX - SKILL_MIN + 1));   // por defecto 0-8: cometen errores de todo tipo
     let prevEval = null, found = 0;
     for (let ply = 0; ply < 120; ply++) {
       if (!Chess.legal(s).length || Chess.insufficient(s) || s.half >= 80) break;
@@ -233,7 +238,9 @@ function estimateRating(start, sol, themes) {
       // Los de «comerse una pieza colgada» en una jugada son muy fáciles y abundan: se conserva sólo una parte
       if (themes.includes("hangingPiece") && sol.length === 1 && rnd() < 0.8) continue;
       if (sol.length === 1 && !themes.some(x => x.startsWith("mateIn")) && rnd() > SHORT_KEEP) continue;
-      bank.push({ id: "n" + nextId++, fen: fenBefore, moves: [mv.best, ...sol], themes, rating: estimateRating(after, sol, themes) });
+      const rating = estimateRating(after, sol, themes);
+      if (rating < MIN_RATING) continue;
+      bank.push({ id: "n" + nextId++, fen: fenBefore, moves: [mv.best, ...sol], themes, rating });
       found++;
       fs.writeFileSync(OUT, JSON.stringify(bank));
     }

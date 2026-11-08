@@ -240,6 +240,13 @@ def prueba_ayuda_y_movil(browser):
     caja = pg.evaluate("""() => { const b = document.getElementById('bottomBar').getBoundingClientRect(), m = document.getElementById('moves').getBoundingClientRect();
       return { abajo: b.bottom, derecha: b.right, jugadasIzq: m.left, ancho: document.documentElement.scrollWidth }; }""")
     comprobar(caja["abajo"] <= 390 and caja["jugadasIzq"] > caja["derecha"] and caja["ancho"] <= 844, "en horizontal el tablero cabe entero y las jugadas van a su lado")
+    # Tabletas en horizontal (p. ej. Huawei MatePad T3 10 con la aplicación instalada: unos 960 × 576)
+    for w, h in [(960, 576), (962, 601), (800, 780), (1100, 540)]:
+        pg.set_viewport_size({"width": w, "height": h})
+        pg.wait_for_timeout(250)
+        caja = pg.evaluate("""() => { const b = document.getElementById('bottomBar').getBoundingClientRect(), m = document.getElementById('moves').getBoundingClientRect();
+          return { abajo: b.bottom, derecha: b.right, jugadasIzq: m.left, ancho: document.documentElement.scrollWidth }; }""")
+        comprobar(caja["abajo"] <= h and caja["jugadasIzq"] > caja["derecha"] and caja["ancho"] <= w, f"tableta en horizontal ({w}×{h}): el tablero cabe entero y las jugadas van a su lado")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -599,7 +606,7 @@ def prueba_cursos(browser):
     ctx = contexto(browser)
     pg, errores = nueva_pagina(ctx)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar(pg.locator("#courseList details.course").count() == 6 and "0 de 61" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los seis cursos y el progreso")
+    comprobar(pg.locator("#courseList details.course").count() == 6 and "0 de 65" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los seis cursos y el progreso")
     pg.locator('details[data-course="finales"] summary').click()
     pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").click()
     comprobar(pg.is_visible("#lessonBox") and "construir el puente" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("1K1k4/1P6"), "abrir una lección la pone en el tablero con su explicación")
@@ -638,7 +645,7 @@ def prueba_cursos(browser):
     pg.reload()
     pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar("2 de 61" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
+    comprobar("2 de 65" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
     pg.locator('details[data-course="aperturas"] summary').click()
     pg.locator('details[data-course="aperturas"] [data-coll]').click()
     comprobar(pg.inner_text("#collCount") == "11" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")

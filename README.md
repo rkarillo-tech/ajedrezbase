@@ -157,6 +157,7 @@ El banco de problemas (`cursos/problemas.json`) se genera y se depura con Stockf
 
 ```bash
 SF=/tmp/sf/package/bin/stockfish-19-lite-single.js node tools/generar_problemas.js 300   # partidas de Stockfish contra sí mismo
+NIVEL_MIN=6 NIVEL_MAX=14 DIFICULTAD_MIN=1300 SF=/tmp/sf/package/bin/stockfish-19-lite-single.js node tools/generar_problemas.js 200   # sólo los más difíciles
 SF=/tmp/sf/package/bin/stockfish-19-lite-single.js node tools/depurar_problemas.js       # revisión más profunda y equilibrio
 ```
 
