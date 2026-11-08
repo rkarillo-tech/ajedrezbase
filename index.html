@@ -1468,6 +1468,11 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <option value="a">🎯 Adaptativo: se ajusta a ti</option>
           <option value="1">Nivel 1</option><option value="3">Nivel 2</option><option value="5">Nivel 3</option><option value="8">Nivel 4</option>
           <option value="11">Nivel 5</option><option value="14">Nivel 6</option><option value="17">Nivel 7</option><option value="20">Nivel 8 (máx.)</option>
+          <optgroup label="👤 Rival humano: juega como una persona">
+            <option value="h800">👤 Humano ~800 (empieza a jugar)</option><option value="h1000">👤 Humano ~1000</option><option value="h1200">👤 Humano ~1200</option>
+            <option value="h1400">👤 Humano ~1400 (aficionado)</option><option value="h1600">👤 Humano ~1600</option><option value="h1800">👤 Humano ~1800 (club)</option>
+            <option value="h2000">👤 Humano ~2000</option><option value="h2200">👤 Humano ~2200 (experto)</option>
+          </optgroup>
         </select></div>
       <div><label for="cpuStyle">Estilo</label>
         <select id="cpuStyle">
@@ -1637,12 +1642,13 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       </details>
 
       <details id="help-cpu">
-        <summary>🤖 7. Jugar contra la CPU: nivel (también adaptativo), estilo y reloj</summary>
+        <summary>🤖 7. Jugar contra la CPU: nivel (también adaptativo), rival humano, estilo y reloj</summary>
         <ul>
           <li>Pulsa <b>🤖 Jugar vs CPU</b> en la barra superior y elige:
             <ul>
               <li><b>Juegas con</b>: el bando de abajo del tablero, blancas, negras o al azar.</li>
               <li><b>Nivel</b> del 1 al 8, o <b>🎯 Adaptativo</b>: la CPU se ajusta a ti. Tiene un nivel interno de 0 a 20 que sube cuando ganas y baja cuando pierdes (con saltos grandes al principio para encontrar tu nivel y más finos después), para que siempre sea un rival a tu medida y ganes más o menos la mitad de las partidas. Si ya tienes nivel en los problemas, empieza desde ahí. En el cuadro verás tu nivel actual, tus últimos resultados y un pequeño gráfico de su evolución: si sube con el tiempo, estás mejorando. Sólo cuentan las partidas terminadas con resultado (no las interrumpidas con ⏹ ni las de menos de tres jugadas).</li>
+              <li><b>👤 Rival humano</b> (al final de la lista de niveles, de ~800 a ~2200 de Elo): juega <b>como una persona</b> de ese nivel, no como una máquina rebajada. En la apertura elige lo que se juega de verdad a ese nivel (con tu token de Lichess, las jugadas de partidas de jugadores de ese Elo; sin él, el libro de aperturas y tus partidas) y la deja antes cuanto más bajo es el nivel. Después, Stockfish le da varias candidatas y elige como lo haría una persona: casi siempre una jugada buena y natural (capturas, recapturas, jaques, desarrollo, enroque), a veces una peor y, de vez en cuando, un error claro, sobre todo con poco tiempo en el reloj o con mucha táctica en el tablero. También se toma su tiempo para pensar. Con él, el estilo no se usa. Es otra opción más: los niveles 1 a 8 y el adaptativo siguen igual.</li>
               <li><b>Estilo</b>: <b>⚖ Equilibrado</b> (la jugada del motor), <b>⚔ Agresivo</b> (prefiere jaques, capturas, sacrificios y acercarse a tu rey), <b>🏰 Posicional</b> (desarrollo, centro, enroque; evita sacar la dama pronto), <b>🛡 Defensivo</b> (cambia piezas, enroca y no adelanta los peones de su rey) o <b>🎲 Humano</b> (a veces no ve la mejor jugada).
                 El estilo sólo elige entre jugadas casi igual de buenas según el motor, así que nunca regala piezas a propósito; cuanto más bajo es el nivel, más se aparta de la mejor. Necesita Stockfish: con el motor interno la CPU juega siempre «equilibrado».</li>
               <li><b>Reloj</b>: sin reloj o de 1+0 a 30+0 (minutos + segundos de incremento por jugada). El reloj empieza con la primera jugada; si se te acaba el tiempo pierdes, salvo que el rival no tenga material para dar mate (entonces son tablas). La CPU reparte su tiempo según lo que le queda.</li>
@@ -5529,7 +5535,144 @@ function cpuPick(s, lines, style, level, rnd = Math.random) {
   }
   return pick.uci;
 }
+const parseCpuLevel = v => (v === "a" ? "a" : /^h\d+$/.test(v) ? v : +v || 8);
+const humanElo = v => (/^h(\d+)$/.test(String(v)) ? +String(v).slice(1) : 0);
+/* ---------- 👤 Rival humano: juega como una persona de un Elo dado ----------
+   Apertura: las jugadas que se hacen a ese nivel (explorador de Lichess por Elo, con token; si no, libro ECO y tus partidas).
+   Después: Stockfish da varias candidatas y se elige como lo haría una persona: casi siempre una jugada buena y natural,
+   a veces una peor y, de vez en cuando (más con poco tiempo o en posiciones con mucha táctica), un error claro. */
+const HUMAN_BANDS = [0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500];
+function humanParams(elo) {
+  const t = Math.max(0, Math.min(1, (elo - 800) / 1400));   // 0 = 800, 1 = 2200
+  return {
+    temp: 9 - 7.6 * t,                    // tolerancia (en % de probabilidad de ganar) al elegir entre candidatas
+    blunder: 0.13 - 0.12 * t,             // probabilidad base de un error claro
+    bookPlies: Math.round(6 + 14 * t),    // hasta dónde sigue «la teoría» de su nivel
+    seeMate: 0.55 + 0.45 * t              // probabilidad de ver un mate que tiene
+  };
+}
+/* Lo natural que le parece una jugada a una persona (multiplica su probabilidad) */
+function humanNatural(s, m, prev) {
+  const pc = m.piece.toLowerCase(), cap = m.captured && m.captured !== "." ? m.captured.toLowerCase() : "";
+  const after = Chess.apply(s, m);
+  let w = 1;
+  if (cap) w *= 1.5;
+  if (prev && prev.move && cap && m.to === prev.move.to) w *= 1.8;             // recapturar
+  if (Chess.inCheck(after)) w *= 1.3;
+  if (m.flag === "castle") w *= 1.6;
+  const backRank = (m.from >> 4) === (s.t === 1 ? 7 : 0);
+  if (s.full <= 12 && backRank && (pc === "n" || pc === "b")) w *= 1.5;        // desarrollar
+  const fwd = s.t === 1 ? (m.from >> 4) - (m.to >> 4) : (m.to >> 4) - (m.from >> 4);
+  if (fwd < 0 && !cap) w *= 0.75;                                                // las retiradas se ven menos
+  if (pc === "k" && m.flag !== "castle" && Chess.nonPawnCount(s) > 6) w *= 0.4;
+  if (pc === "p" && [0, 7].includes(m.from & 7) && s.full <= 15) w *= 0.6;       // peones de torre al principio
+  return w;
+}
+function humanBookMoves(node, P) {
+  const path = Pgn.pathTo(node).slice(1);
+  if (path.length >= P.bookPlies || Chess.toFen(game.root.state) !== Chess.START_FEN) return [];
+  const ucis = path.map(n => n.uci), next = new Map();
+  for (const e of ECO_BOOK) {
+    if (!e.ucis || e.ucis.length <= ucis.length) continue;
+    let ok = true;
+    for (let i = 0; i < ucis.length; i++) if (e.ucis[i] !== ucis[i]) { ok = false; break; }
+    if (ok) next.set(e.ucis[ucis.length], (next.get(e.ucis[ucis.length]) || 0) + 1);
+  }
+  return [...next].map(([uci, n]) => ({ uci, n }));
+}
+async function humanOpeningMove(node, elo, P) {
+  const path = Pgn.pathTo(node).slice(1);
+  if (path.length >= P.bookPlies) return null;
+  const s = node.state;
+  let moves = [];
+  if (settings.token) {
+    const band = HUMAN_BANDS.filter(b => b <= elo).pop() || 0;
+    const url = `https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=${band}&fen=${encodeURIComponent(Chess.toFen(s))}&moves=12&topGames=0&recentGames=0`;
+    let data = explorerCache.get(url);
+    if (!data) {
+      try {
+        const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 3000);
+        const res = await Lichess.fetch(url, { headers: authHeaders(), signal: ctrl.signal });
+        clearTimeout(timer);
+        if (res.ok) { data = await res.json(); explorerCache.set(url, data); }
+      } catch {}
+    }
+    if (data && data.moves) {
+      const tot = data.white + data.draws + data.black;
+      if (tot >= 15) moves = data.moves.map(m => { const x = (() => { try { return Chess.parseMove(s, m.san, "en").move; } catch { return null; } })(); return x ? { uci: Chess.uci(x), n: m.white + m.draws + m.black } : null; }).filter(m => m && m.n / tot >= 0.03);
+    }
+  }
+  if (!moves.length) {
+    const local = localMoveIndex().get(Chess.posKey(s));
+    if (local) { const arr = [...local.values()], tot = arr.reduce((a, m) => a + m.n, 0); if (tot >= 3) moves = arr.map(m => { try { return { uci: Chess.uci(Chess.parseMove(s, m.san, "en").move), n: m.n }; } catch { return null; } }).filter(Boolean); }
+  }
+  if (!moves.length) moves = humanBookMoves(node, P);
+  if (!moves.length) return null;
+  const tot = moves.reduce((a, m) => a + m.n, 0);
+  let r = Math.random() * tot;
+  for (const m of moves) { r -= m.n; if (r <= 0) return m.uci; }
+  return moves[0].uci;
+}
+function humanPick(node, lines, elo, rnd = Math.random) {
+  const s = node.state, P = humanParams(elo), L = Chess.legal(s), me = s.t;
+  const cands = [];
+  for (const l of lines || []) {
+    const u = l && l.pv && l.pv[0];
+    if (!u || cands.some(c => c.uci === u)) continue;
+    const m = Chess.moveFromUci(s, u, L);
+    if (m) cands.push({ uci: u, m, w: me === 1 ? winPct(l) : 100 - winPct(l), mate: l.mate });
+  }
+  if (!cands.length) return null;
+  const best = cands.reduce((a, b) => (b.w > a.w ? b : a));
+  if (best.mate != null && best.w >= 100 && rnd() < P.seeMate) return best.uci;
+  // Más errores con poco tiempo en el reloj y en posiciones con muchas capturas posibles
+  let blunder = P.blunder;
+  if (Clock.running && Clock.base) { const left = clockLeft(me); if (left < Math.max(15000, Clock.base * 0.1)) blunder *= 2; }
+  if (L.filter(m => m.captured && m.captured !== ".").length >= 4) blunder *= 1.4;
+  if (rnd() < blunder) {
+    // Un error «humano»: una jugada natural que no está entre las buenas del motor
+    const others = L.filter(m => !cands.some(c => c.uci === Chess.uci(m)));
+    if (others.length) {
+      const ws = others.map(m => humanNatural(s, m, node)), tot = ws.reduce((a, b) => a + b, 0);
+      let r = rnd() * tot;
+      for (let i = 0; i < others.length; i++) { r -= ws[i]; if (r <= 0) return Chess.uci(others[i]); }
+    }
+  }
+  const ws = cands.map(c => Math.exp(-(best.w - c.w) / P.temp) * humanNatural(s, c.m, node));
+  const tot = ws.reduce((a, b) => a + b, 0);
+  let r = rnd() * tot;
+  for (let i = 0; i < cands.length; i++) { r -= ws[i]; if (r <= 0) return cands[i].uci; }
+  return best.uci;
+}
+/* Cuánto «piensa» el rival humano: algo de tiempo siempre y, con reloj, como una persona que administra su tiempo */
+function humanThinkMs() {
+  if (!Clock.running) return 500 + Math.random() * 900;
+  const left = clockLeft(ui.cpu.side);
+  return Math.max(250, Math.min(8000, (left / 35 + Clock.inc * 0.6) * (0.5 + Math.random())));
+}
+async function humanCpuMove(node) {
+  const elo = ui.cpu.human, P = humanParams(elo), t0 = Date.now(), wait = humanThinkMs();
+  const done = u => {
+    const play = () => {
+      ui.cpu.thinking = false;
+      if (cur() !== node || !ui.cpu.on || ui.cpu.over) { render(); return; }
+      const m = u && Chess.moveFromUci(node.state, u);
+      if (m) playMove(m, "cpu"); else render();
+    };
+    setTimeout(play, Math.max(0, wait - (Date.now() - t0)));
+  };
+  let u = null;
+  try { u = await humanOpeningMove(node, elo, P); } catch {}
+  if (u) { done(u); return; }
+  if (cur() !== node || !ui.cpu.on || ui.cpu.over) { ui.cpu.thinking = false; render(); return; }
+  const strong = Engine.kind === "stockfish";
+  const job = await Engine.analyse(node, { purpose: "cpu", movetime: Math.min(900, Math.max(200, wait * 0.6)), multipv: strong ? 5 : 1, skill: strong ? 20 : ui.cpu.level });
+  if (!job || !job.best) { ui.cpu.thinking = false; render(); return; }
+  if (job.lines[0]) ui.cpu.lastEval = job.lines[0];
+  done(strong ? humanPick(node, job.lines, elo) || job.best : job.best);
+}
 function cpuLevelName(level) {
+  if (ui.cpu.human) return `humano ~${ui.cpu.human}`;
   if (ui.cpu.adaptive) return `nivel adaptativo ${fmtAdaptive(level)}`;
   const opts = [...$("cpuLevel").options], i = opts.findIndex(o => +o.value === +level);
   return "nivel " + (i >= 0 ? i : level);
@@ -5564,7 +5707,8 @@ function adaptiveSummary() {
   return `Nivel actual: <b>${fmtAdaptive(st.a)}</b> de 20 · ${g.length} partida${g.length === 1 ? "" : "s"} · en las últimas ${last.length}: ${String(pts).replace(".", ",")} puntos${g.length >= 4 ? ` · tendencia ${trend > 0.4 ? "↑ subiendo: estás mejorando" : trend < -0.4 ? "↓ bajando" : "→ estable"}` : ""}
     <div style="margin-top:4px;height:42px;display:flex;align-items:flex-end" aria-label="Evolución del nivel">${bars}</div>`;
 }
-function cpuName() { return `CPU ${cpuLevelName(ui.cpu.level)} (${CPU_STYLES[ui.cpu.style].replace(/^\S+ /, "").toLowerCase()})`; }
+function cpuName() { return ui.cpu.human ? `Rival humano ~${ui.cpu.human}` : `CPU ${cpuLevelName(ui.cpu.level)} (${CPU_STYLES[ui.cpu.style].replace(/^\S+ /, "").toLowerCase()})`; }
+const cpuStyleText = () => (ui.cpu.human ? "👤 juega como una persona" : CPU_STYLES[ui.cpu.style]);
 function cpuThinkMs() {
   const level = ui.cpu.level, base = 250 + level * 70;
   if (!Clock.running) return base;
@@ -5579,6 +5723,7 @@ function maybeCpuMove() {
   Engine.cancel("live");
   renderStatus(); renderBoard();
   const { level, style } = ui.cpu;
+  if (ui.cpu.human) { humanCpuMove(node); return; }
   const styled = style !== "balanced" && Engine.kind === "stockfish";
   Engine.analyse(node, { purpose: "cpu", movetime: cpuThinkMs(), multipv: styled ? 4 : 1, skill: styled ? 20 : level }).then(job => {
     ui.cpu.thinking = false;
@@ -5613,7 +5758,7 @@ function openCpuDialog(blind) {
 }
 function startCpuGame(opts = {}) {
   if (Batch.running) { toast("El motor está analizando tus partidas de la biblioteca: espera a que termine o detenlo en «📊 Estadísticas»."); return false; }
-  Object.assign(settings, { cpuLevel: $("cpuLevel").value === "a" ? "a" : +$("cpuLevel").value, cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value });
+  Object.assign(settings, { cpuLevel: parseCpuLevel($("cpuLevel").value), cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value });
   saveSettings();
   if (editor.active && settings.cpuFrom === "here" && !applyEditor()) return false;
   if (settings.cpuFrom === "new") {
@@ -5627,8 +5772,8 @@ function startCpuGame(opts = {}) {
   const user = opts.color || (c === "r" ? (Math.random() < 0.5 ? 1 : -1) : c === "board" ? (ui.flipped ? -1 : 1) : +c);
   ui.flipped = user === -1;
   const tc = parseTc(settings.cpuClock);
-  const adaptive = settings.cpuLevel === "a";
-  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, adaptive, level: adaptive ? Math.round(adaptiveState().a) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
+  const adaptive = settings.cpuLevel === "a", human = humanElo(settings.cpuLevel);
+  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, adaptive, human, level: adaptive ? Math.round(adaptiveState().a) : human ? Math.max(0, Math.min(20, Math.round((human - 700) / 75))) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
   settings.live = false;
   if (!game.root.children.length && game.headers.Event === "Estudio") {
     const d = new Date();
@@ -5641,7 +5786,7 @@ function startCpuGame(opts = {}) {
   }
   if (ui.cpu.blind !== !!ui.blind) setBlind(ui.cpu.blind);
   if (tc) clockStart(tc); else { clockStop(); Clock.shown = false; renderClocks(); }
-  toast(`Juegas con ${user === 1 ? "blancas" : "negras"} contra la CPU (${cpuLevelName(ui.cpu.level)}, ${CPU_STYLES[ui.cpu.style]}${tc ? `, ${settings.cpuClock}` : ""}).`, 3500);
+  toast(`Juegas con ${user === 1 ? "blancas" : "negras"} contra ${ui.cpu.human ? `un rival humano de unos ${ui.cpu.human} de Elo` : `la CPU (${cpuLevelName(ui.cpu.level)}, ${CPU_STYLES[ui.cpu.style]}`}${tc ? `, ${settings.cpuClock}` : ""}${ui.cpu.human ? "" : ")"}.`, 3500);
   render();
   cpuPanel();
   maybeCpuMove();
@@ -5688,7 +5833,7 @@ function cpuGameOver(result, text) {
 }
 /* 📋 Informe del entrenador: tras la partida contra la CPU, tus errores más caros y un ejercicio con cada uno */
 async function coachReport() {
-  const box = $("cpuBox"), user = -ui.cpu.side, desc = `${cpuLevelName(ui.cpu.level)} · ${CPU_STYLES[ui.cpu.style]}`;
+  const box = $("cpuBox"), user = -ui.cpu.side, desc = `${cpuLevelName(ui.cpu.level)} · ${cpuStyleText()}`;
   if (Pgn.mainlineFrom(game.root).filter(n => n.parent.state.t === user).length < 3) { toast("La partida es demasiado corta para hacer un informe."); return; }
   box.innerHTML = `<div class="retry-head">📋 Informe del entrenador</div><div class="small">⏳ El motor está analizando la partida (verás el avance en «📖 Estudio»)…</div>`;
   await analyseGame();
@@ -5742,7 +5887,7 @@ function cpuOfferDraw() {
 }
 function cpuPanel(head, text) {
   const box = $("cpuBox");
-  const desc = `${cpuLevelName(ui.cpu.level)} · ${CPU_STYLES[ui.cpu.style]}${ui.cpu.tc ? ` · ⏱ ${ui.cpu.tc}` : ""}${ui.cpu.blind ? " · 🙈 a ciegas" : ""}`;
+  const desc = `${cpuLevelName(ui.cpu.level)} · ${cpuStyleText()}${ui.cpu.tc ? ` · ⏱ ${ui.cpu.tc}` : ""}${ui.cpu.blind ? " · 🙈 a ciegas" : ""}`;
   box.hidden = false;
   if (ui.cpu.over || head) {
     box.innerHTML = `<div class="retry-head">🏁 ${esc(head || "Partida terminada")}</div><div>${esc(text || "")} <span class="small">(CPU ${esc(desc)})</span></div>
@@ -5764,7 +5909,7 @@ function cpuAction(a) {
   else if (a === "close") { $("cpuBox").hidden = true; Clock.shown = false; renderClocks(); }
   else if (a === "rematch") {
     const prev = -ui.cpu.side;
-    $("cpuLevel").value = ui.cpu.adaptive ? "a" : String(ui.cpu.level); $("cpuStyle").value = ui.cpu.style; $("cpuClock").value = ui.cpu.tc || ""; $("cpuFrom").value = "new"; $("cpuBlind").checked = ui.cpu.blind;
+    $("cpuLevel").value = ui.cpu.adaptive ? "a" : ui.cpu.human ? "h" + ui.cpu.human : String(ui.cpu.level); $("cpuStyle").value = ui.cpu.style; $("cpuClock").value = ui.cpu.tc || ""; $("cpuFrom").value = "new"; $("cpuBlind").checked = ui.cpu.blind;
     startCpuGame({ color: -prev });
   }
 }
@@ -8646,11 +8791,13 @@ $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; sa
 $("displayLang").onchange = e => { settings.lang = e.target.value; saveSettings(); render(); renderLocalEcoList(); };
 $("themeSelect").onchange = e => { settings.theme = e.target.value; saveSettings(); document.body.dataset.theme = settings.theme; };
 $("soundToggle").onclick = () => { settings.sound = !settings.sound; saveSettings(); $("soundToggle").textContent = settings.sound ? "🔊" : "🔇"; if (settings.sound) Sound.play("move"); };
-$("cpuLevel").onchange = e => { settings.cpuLevel = e.target.value === "a" ? "a" : +e.target.value; saveSettings(); renderAdaptiveInfo(); };
+$("cpuLevel").onchange = e => { settings.cpuLevel = parseCpuLevel(e.target.value); saveSettings(); renderAdaptiveInfo(); };
 function renderAdaptiveInfo() {
-  const el = $("cpuAdaptiveInfo");
-  el.hidden = $("cpuLevel").value !== "a";
-  if (!el.hidden) el.innerHTML = "🎯 " + adaptiveSummary();
+  const el = $("cpuAdaptiveInfo"), v = $("cpuLevel").value, elo = humanElo(v);
+  el.hidden = v !== "a" && !elo;
+  $("cpuStyle").disabled = !!elo;
+  if (v === "a") el.innerHTML = "🎯 " + adaptiveSummary();
+  else if (elo) el.innerHTML = `👤 <b>Juega como una persona de unos ${elo} de Elo</b> (el estilo no se usa). En la apertura elige lo que se juega a ese nivel: con tu token de Lichess, las jugadas reales de partidas de jugadores de ese Elo; sin él, las del libro de aperturas y tus partidas. Después piensa como una persona de su nivel: casi nunca ve las jugadas «de máquina», prefiere las naturales (capturas, recapturas, jaques, desarrollo) y comete los errores típicos de ese nivel${elo <= 1400 ? ", incluido dejarse alguna pieza" : ""}, más aún con poco tiempo en el reloj y en posiciones complicadas.`;
 }
 $("playCpuToggle").onclick = () => openCpuDialog();
 $("cpuStartBtn").onclick = () => startCpuGame();
