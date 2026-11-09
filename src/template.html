@@ -1245,6 +1245,11 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <span id="courseProgress" class="srs-pill"></span>
       </h2>
       <p class="small">Lecciones comentadas paso a paso, con flechas que señalan las ideas. Abre una lección y avanza con <b>▶ Siguiente</b> (o la flecha <kbd>→</kbd>): junto al tablero (debajo, en el móvil) verás la explicación de cada jugada. Si mueves tú una pieza, pruebas tu propia variante. Con <b>🎯 Practicar</b> juegas tú las jugadas de la lección, y los ejercicios 🧩 se resuelven igual.</p>
+      <div class="controls">
+        <button id="courseImportBtn" class="sm-btn info-btn" title="Carga un curso en formato .pgn (tuyo, de tu entrenador o de un compañero) y úsalo aquí igual que los de la aplicación">📥 Añadir un curso (.pgn)</button>
+        <a href="#" class="small help-link" data-help="help-cursos">Cómo escribir tu propio curso</a>
+        <input type="file" id="courseFileInput" accept=".pgn,text/plain,application/x-chess-pgn" hidden>
+      </div>
       <div id="courseList" class="course-list"></div>
     </div>
 

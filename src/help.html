@@ -336,6 +336,15 @@
           <li><b>🎯 Practicar</b> te pide que juegues tú las jugadas de la lección (el rival responde solo), y en los ejercicios 🧩, <b>🎯 Resolver</b> te deja buscar la solución sin verla.</li>
           <li>Las lecciones que terminas se marcan con ✔. <b>⬇ Descargar .pgn</b> guarda el curso como fichero, y <b>🗂 Abrir como .pgn</b> lo abre en la biblioteca para que guardes las lecciones que quieras (y puedas añadirles tus notas y marcadores).</li>
           <li>Todas las lecciones están escritas para AjedrezBase y comprobadas con Stockfish.</li>
+          <li><b>📥 Añadir un curso (.pgn)</b>: carga un curso tuyo, de tu entrenador o de un compañero, y aparece con el icono 📂 junto a los demás: con su panel de lecciones, el progreso, «🎯 Practicar» y los ejercicios. Se guarda en este navegador (en la tableta y en el ordenador hay que añadirlo en cada uno) y se quita con <b>🗑 Quitar curso</b>. Sirve cualquier .pgn: cada partida es una lección, y si no traen título ni número se les pone (por ejemplo, «Ana – Luis (2025)»). Para probarlo hay un curso de ejemplo, «Trampas y miniaturas», en la carpeta <code>cursos-extra</code> del repositorio.</li>
+        </ul>
+        <p class="small"><b>✍ Cómo escribir tu propio curso.</b> Un curso es un fichero .pgn normal (puedes crearlo con AjedrezBase: juega la lección, escribe los comentarios, dibuja las flechas y pulsa «⬇ Descargar .pgn»). Cada partida es una lección, y estas cabeceras le dan su forma:</p>
+        <ul>
+          <li><code>[Event "Curso de …"]</code> en la primera lección da el nombre al curso (o <code>[Course "…"]</code>), y <code>[CourseDesc "…"]</code> su descripción.</li>
+          <li><code>[Round "1"]</code> el número de la lección y <code>[Title "…"]</code> su título; <code>[Level "Principiante"]</code> (o «Intermedio», «Club»…) su nivel.</li>
+          <li><code>[Type "ejercicio"]</code> la convierte en un ejercicio 🧩 que se resuelve (juega el bando al que le toca mover), y <code>[Type "repertorio"]</code> en un repertorio para entrenar con repasos.</li>
+          <li><code>[Orientation "black"]</code> muestra el tablero desde el lado de las negras; <code>[SetUp "1"]</code> y <code>[FEN "…"]</code> empiezan desde una posición.</li>
+          <li>Los comentarios <code>{ … }</code> son la explicación de cada paso (el primero, antes de la primera jugada, es la introducción); las flechas y círculos van como <code>[%cal Ge2e4]</code> y <code>[%csl Rd5]</code>, y las variantes entre paréntesis. Marca los errores con <code>?</code>, <code>??</code> o <code>?!</code>.</li>
         </ul>
         <div class="example"><b>Ejemplo:</b> 📘 Cursos → Finales → «La posición de Lucena» → lee la explicación y avanza con ▶ hasta el final → pulsa 🎯 Practicar y juega tú el «puente».</div>
       </details>

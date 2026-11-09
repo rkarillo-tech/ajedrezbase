@@ -6320,6 +6320,8 @@ $("repReviewCourse").onchange = e => {
   const l = courseLessons("repertorios")[+v];
   reviewRepertoire({ l, i: +v, title: l.title, g: Pgn.parseGame(l.g, { lang: "en" }).game, side: l.black ? -1 : 1 });
 };
+$("courseImportBtn").onclick = () => $("courseFileInput").click();
+$("courseFileInput").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (f) await importCourseFile(f); };
 $("trainDueBtn").onclick = () => {
   const due = [...Lib.games.values()].filter(r => r.srs && r.srs.due <= Date.now()).sort((x, y) => x.srs.due - y.srs.due);
   if (!due.length) { toast("¡No tienes partidas pendientes de repaso hoy! 🎉 (Entrena una partida guardada para programarla.)", 4000); return; }
@@ -6852,6 +6854,70 @@ const COURSES = [
   { id: "partidas", icon: "🏆", name: "Partidas magistrales", desc: "Partidas célebres de Morphy, Anderssen, Fischer, Karpov y Kaspárov, comentadas jugada a jugada: qué ideas las decidieron y dónde se equivocaron." }
 ];
 const courseCache = {};
+/* 📥 Cursos añadidos por el usuario desde un .pgn: se guardan en este navegador y funcionan como los de la aplicación */
+const USER_COURSES_KEY = "ajedrezCursosPropios";
+const userCourses = () => LS.get(USER_COURSES_KEY, []);
+function registerUserCourse(uc) {
+  const i = COURSES.findIndex(c => c.id === uc.id);
+  const entry = { id: uc.id, icon: "📂", name: uc.name, desc: uc.desc, user: true };
+  if (i >= 0) COURSES[i] = entry; else COURSES.push(entry);
+  COURSE_PGN[uc.id] = uc.pgn;
+  delete courseCache[uc.id];
+}
+userCourses().forEach(registerUserCourse);
+/* Lee un .pgn y lo prepara como curso: cada partida es una lección (con título y número aunque no los traiga) */
+function courseFromPgn(text, fileName) {
+  const parts = Pgn.splitGames(text).filter(g => g.movetext.trim() || g.headers.FEN);
+  const lessons = [], bad = [];
+  parts.forEach((g, k) => {
+    const r = Pgn.parseGame(g, { lang: "auto" });
+    if (r.error && !r.count) { bad.push(k + 1); return; }
+    lessons.push(g);
+  });
+  if (!lessons.length) return { error: "El fichero no tiene ninguna partida o lección que se pueda leer." };
+  const rounds = lessons.map(g => +g.headers.Round);
+  const renumber = rounds.some(x => !(x > 0)) || new Set(rounds).size !== rounds.length;
+  const isDefault = v => !v || v === "?" || /^(blancas|negras|white|black)$/i.test(v);
+  lessons.forEach((g, i) => {
+    const h = g.headers;
+    if (renumber) h.Round = String(i + 1);
+    if (!h.Title) h.Title = !isDefault(h.White) && !isDefault(h.Black) ? `${h.White} – ${h.Black}${h.Date && /^\d{4}/.test(h.Date) ? ` (${h.Date.slice(0, 4)})` : ""}` : h.Event && h.Event !== "?" && lessons.length > 1 ? `${h.Event} ${i + 1}` : `Lección ${i + 1}`;
+  });
+  const h0 = lessons[0].headers;
+  const name = (h0.Course || (h0.Event && h0.Event !== "?" && !/^(estudio|casual|rated|\?)/i.test(h0.Event) ? h0.Event.replace(/^curso\s+(de|del)\s+/i, "") : "") || String(fileName || "Mi curso").replace(/\.pgn$/i, "").replace(/[_-]+/g, " ")).trim();
+  return { name: name.charAt(0).toUpperCase() + name.slice(1), desc: h0.CourseDesc || "", pgn: lessons.map(collRaw).join("\n\n") + "\n", n: lessons.length, bad };
+}
+async function importCourseFile(file) {
+  let text;
+  try { text = await file.text(); } catch { toast("No se pudo leer el fichero."); return; }
+  if (text.length > 3e6) { toast("El fichero es demasiado grande para un curso (más de 3 MB)."); return; }
+  const c = courseFromPgn(text, file.name);
+  if (c.error) { toast(c.error, 5000); return; }
+  const name = (prompt(`Curso con ${c.n} lección${c.n === 1 ? "" : "es"}${c.bad.length ? ` (${c.bad.length} no se pudieron leer y se omiten)` : ""}.\n\nNombre del curso:`, c.name) || "").trim();
+  if (!name) return;
+  const list = userCourses();
+  const same = list.find(x => norm(x.name) === norm(name));
+  if (same && !confirm(`Ya tienes un curso llamado «${same.name}». ¿Sustituirlo por este?`)) return;
+  const uc = { id: same ? same.id : "u" + Date.now().toString(36), name, desc: c.desc || `Curso añadido desde «${file.name}» · ${c.n} lección${c.n === 1 ? "" : "es"}`, pgn: c.pgn, added: Date.now() };
+  const next = list.filter(x => x.id !== uc.id).concat(uc);
+  if (!LS.set(USER_COURSES_KEY, next)) { toast("❌ No hay espacio en el navegador para guardar este curso.", 5000); return; }
+  registerUserCourse(uc);
+  renderCourses();
+  const box = document.querySelector(`#courseList details[data-course="${uc.id}"]`);
+  if (box) { box.open = true; box.scrollIntoView({ block: "nearest" }); }
+  toast(`📥 Curso «${name}» añadido con ${c.n} lección${c.n === 1 ? "" : "es"}. Ábrelo como cualquier otro.`, 4500);
+}
+function removeUserCourse(id) {
+  const c = COURSES.find(x => x.id === id);
+  if (!c || !c.user || !confirm(`¿Quitar el curso «${c.name}»? Se borra de este navegador (tu fichero .pgn no se toca).`)) return;
+  LS.set(USER_COURSES_KEY, userCourses().filter(x => x.id !== id));
+  COURSES.splice(COURSES.indexOf(c), 1);
+  delete COURSE_PGN[id]; delete courseCache[id];
+  const done = courseDone(); if (done[id]) { delete done[id]; LS.set("ajedrezCursos", done); }
+  if (ui.lesson && ui.lesson.course === id) { ui.lesson = null; renderLesson(); }
+  renderCourses();
+  toast(`Curso «${c.name}» quitado.`);
+}
 function courseLessons(id) {
   if (!courseCache[id]) {
     courseCache[id] = Pgn.splitGames(COURSE_PGN[id] || "").map(g => {
@@ -6893,13 +6959,14 @@ function renderCourses() {
     return `<details class="course" data-course="${c.id}"${open.has(c.id) ? " open" : ""}>
       <summary><span class="course-icon">${c.icon}</span><span><b>${esc(c.name)}</b> <span class="small">${L.filter(l => ok.has(l.round)).length} de ${L.length} lecciones</span><br><span class="small">${esc(c.desc)}</span></span></summary>
       <div class="lesson-list">${rows}</div>
-      <div class="controls"><button class="sm-btn" data-dl="${c.id}" title="Descargar el curso como fichero .pgn">⬇ Descargar .pgn</button><button class="sm-btn" data-coll="${c.id}" title="Abrirlo en «Biblioteca › Abrir .pgn» para guardar las lecciones que quieras">🗂 Abrir como .pgn</button></div>
+      <div class="controls"><button class="sm-btn" data-dl="${c.id}" title="Descargar el curso como fichero .pgn">⬇ Descargar .pgn</button><button class="sm-btn" data-coll="${c.id}" title="Abrirlo en «Biblioteca › Abrir .pgn» para guardar las lecciones que quieras">🗂 Abrir como .pgn</button>${c.user ? `<button class="sm-btn danger" data-rmc="${c.id}" title="Quitar este curso de la aplicación">🗑 Quitar curso</button>` : ""}</div>
     </details>`;
   }).join("");
   $("courseProgress").textContent = `${finished} de ${total} lecciones${dueReps ? ` · 📅 ${dueReps} repertorio${dueReps === 1 ? "" : "s"} para repasar` : ""}`;
   $("courseProgress").className = "srs-pill" + (finished ? " ok" : "");
   box.querySelectorAll("[data-i]").forEach(b => b.onclick = () => openLesson(b.dataset.c, +b.dataset.i));
-  box.querySelectorAll("[data-dl]").forEach(b => b.onclick = () => download(`ajedrezbase_curso_${b.dataset.dl}.pgn`, COURSE_PGN[b.dataset.dl], "application/x-chess-pgn"));
+  box.querySelectorAll("[data-dl]").forEach(b => b.onclick = () => { const c = COURSES.find(x => x.id === b.dataset.dl); download(`ajedrezbase_curso_${c && c.user ? safeName(c.name) : b.dataset.dl}.pgn`, COURSE_PGN[b.dataset.dl], "application/x-chess-pgn"); });
+  box.querySelectorAll("[data-rmc]").forEach(b => b.onclick = () => removeUserCourse(b.dataset.rmc));
   box.querySelectorAll("[data-coll]").forEach(b => b.onclick = () => {
     const c = COURSES.find(x => x.id === b.dataset.coll);
     const n = setCollection(COURSE_PGN[c.id], false, "Curso de " + c.name.toLowerCase());

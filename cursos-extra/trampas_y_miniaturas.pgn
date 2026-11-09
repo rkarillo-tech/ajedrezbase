@@ -1,0 +1,68 @@
+[Event "Curso de trampas y miniaturas"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "Teed – Delmar (1896): el peón f que se va de paseo"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[White "Frank Melville Teed"]
+[Black "Eugene Delmar"]
+[Date "1896.??.??"]
+[Result "1-0"]
+
+{ Curso de trampas y miniaturas: partidas que se deciden antes de la jugada 20 por un error de apertura. Sirven para aprender qué no hacer y para reconocer los patrones de mate. Empezamos con una de las más cortas de la historia: las negras debilitan la diagonal de su rey y lo pagan en ocho jugadas. } 1. d4 f5 { La defensa Holandesa: correcta, pero deja el rey algo más expuesto por la diagonal h5-e8. } 2. Bg5 h6 3. Bh4 g5 4. Bg3 f4 $2 { Las negras persiguen el alfil con sus peones del flanco de rey, debilitando aún más su enroque... } 5. e3 h5 $2 { ...y siguen avanzando peones en lugar de desarrollar piezas. La diagonal h5-e8 queda abierta. } 6. Bd3 Rh6 $4 { Defiende el peón de h5... y deja la casilla g6 sin control. } 7. Qxh5+ $1 { ¡Sacrificio de dama! } 7... Rxh5 8. Bg6# { [%csl Re8] [%cal Gg6e8] Mate: el alfil da jaque por la diagonal abierta y el rey no tiene casillas. Lección: no avances los peones de delante de tu rey sin necesidad. } 1-0
+
+[Event "Curso de trampas y miniaturas"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "Réti – Tartakower (1910): el sacrificio de dama más famoso"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[White "Richard Réti"]
+[Black "Savielly Tartakower"]
+[Date "1910.??.??"]
+[Result "1-0"]
+
+{ Una Caro-Kann que acaba en once jugadas. Las negras, con el rey todavía en el centro, se llevan un peón, y las blancas, con el enroque largo ya hecho, lo castigan con un sacrificio de dama que conviene conocer. } 1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Nf6 5. Qd3 e5 6. dxe5 Qa5+ 7. Bd2 Qxe5 8. O-O-O { [%cal Gd1d8] Las blancas enrocan largo: la torre ya apunta a la columna d, donde está el rey negro. } 8... Nxe4 $4 { Gana una pieza... y pierde la partida. Había que desarrollarse con 8...Ae7. } 9. Qd8+ $3 Kxd8 10. Bg5+ { [%cal Gg5d8,Gd1d8] ¡Jaque doble! Del alfil y de la torre: el rey tiene que moverse. } 10... Kc7 (10... Ke8 11. Rd8#) 11. Bd8# { [%csl Rc7] Mate con el alfil. Lección: con el rey en el centro, abrir líneas o ganar material puede costar la partida; y un jaque doble obliga siempre a mover el rey. } 1-0
+
+[Event "Curso de trampas y miniaturas"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "Ed. Lasker – Thomas (1912): la caza del rey"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[White "Edward Lasker"]
+[Black "George Alan Thomas"]
+[Date "1912.??.??"]
+[Result "1-0"]
+
+{ Una de las cazas del rey más bonitas de la historia: el rey negro sale de g8 y recibe el mate en g1, en el otro extremo del tablero. } 1. d4 e6 2. Nf3 f5 3. Nc3 Nf6 4. Bg5 Be7 5. Bxf6 Bxf6 6. e4 fxe4 7. Nxe4 b6 8. Ne5 O-O 9. Bd3 Bb7 $2 { El error de verdad: deja que el caballo de e5 y el alfil de d3 sigan apuntando al enroque. Había que cambiar el caballo con 9...Axe5. } 10. Qh5 Qe7 $2 { [%cal Gh5h7,Gd3h7] Ahora dama y alfil apuntan a h7, y las negras no ven el peligro. } 11. Qxh7+ $3 Kxh7 12. Nxf6+ { [%cal Gh2h6] Jaque doble del caballo y del alfil de d3. } 12... Kh6 13. Neg4+ Kg5 14. h4+ Kf4 15. g3+ Kf3 16. Be2+ Kg2 17. Rh2+ Kg1 18. Kd2# { [%csl Rg1] [%cal Ga1g1] El rey blanco se aparta y la torre de a1 da el mate por la primera fila. Lección: cuando dos piezas apuntan al mismo punto del enroque, ¡cuidado con el sacrificio! } 1-0
+
+[Event "Curso de trampas y miniaturas"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "La trampa de Blackburne (gambito Shilling)"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Result "0-1"]
+
+{ Una trampa muy frecuente en partidas rápidas entre aficionados. Las negras dejan su peón de e5 sin defensa, y si las blancas lo toman con el caballo, la dama negra entra con fuerza. Conviene conocerla con los dos colores. } 1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 $6 { Un caballo que se ofrece: no es una buena jugada, pero esconde una trampa. Lo correcto para las blancas es 4.Cxd4 o simplemente enrocar. } 4. Nxe5 $2 { Parece que gana un peón y amenaza f7... } (4. Nxd4 { es lo correcto: tras 4...exd4 5.O-O las blancas están mejor. }) 4... Qg5 $1 { [%cal Gg5e5,Gg5g2] La dama ataca a la vez el caballo de e5 y el peón de g2. } 5. Nxf7 $4 { Ataca la dama y la torre de h8... pero es un error grave. } (5. Bxf7+ { era el mal menor: 5...Re7 6.O-O Dxe5, y las negras tienen una pieza de más por un peón. }) 5... Qxg2 6. Rf1 Qxe4+ 7. Be2 Nf3# { [%csl Re1] Mate «ahogado» del caballo: el rey está rodeado por sus propias piezas. Lección: antes de comerte un peón «gratis», pregúntate por qué te lo regalan. } 0-1
+
+[Event "Curso de trampas y miniaturas"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "La trampa del gambito Englund"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Result "0-1"]
+
+{ Las negras sacrifican un peón con 1...e5 contra 1.d4. No es una buena apertura, pero si las blancas juegan con prisa caen en un mate en la primera fila. } 1. d4 e5 $6 2. dxe5 Nc6 3. Nf3 Qe7 4. Bf4 $6 { Defiende el peón de e5, pero deja el peón de b2 sin protección. Era más prudente 4.Cc3 o 4.Dd5. } 4... Qb4+ 5. Bd2 Qxb2 6. Bc3 $4 { Ataca la dama... y cae en la trampa. Había que jugar 6.Cc3. } 6... Bb4 $1 { [%cal Gb4c3,Gb2c1] ¡Clavada! El alfil de c3 no puede moverse sin dejar la torre de a1 en el aire, y amenaza ...Axc3+. } 7. Qd2 Bxc3 8. Qxc3 Qc1# { [%csl Re1] Mate en la primera fila: la dama blanca ya no defiende d1. Lección: cuando el rival saca la dama pronto, cuidado con los peones y las casillas que dejas sin defensa. } 0-1
+
+[Event "Curso de trampas y miniaturas"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "La trampa siberiana (gambito Morra)"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[Result "0-1"]
+
+{ El gambito Morra (1.e4 c5 2.d4 cxd4 3.c3) da a las blancas un desarrollo rápido. Pero en esta línea hay una trampa con la que las negras pueden ganar en el acto. } 1. e4 c5 2. d4 cxd4 3. c3 dxc3 4. Nxc3 Nc6 5. Nf3 e6 6. Bc4 Qc7 7. O-O Nf6 8. Qe2 Ng4 { [%cal Gc7h2,Gg4h2] La dama y el caballo apuntan a h2: amenaza ...Dh2#. } 9. h3 $4 { Echa al caballo... y deja el mate preparado. Había que jugar 9.Cb5 o 9.g3. } 9... Nd4 $3 { ¡La dama blanca no tiene dónde ir sin dejar de vigilar h2! Si 10.Cxd4, mate en h2. } 10. Nxd4 Qh2# { [%csl Rg1] Mate. Lección: cuando el rival amenaza mate en una casilla, comprueba cómo se defiende antes de atacar sus piezas. } 0-1
