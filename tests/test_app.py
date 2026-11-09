@@ -611,7 +611,7 @@ def prueba_cursos(browser):
     ctx = contexto(browser)
     pg, errores = nueva_pagina(ctx)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar(pg.locator("#courseList details.course").count() == 7 and "0 de 74" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los siete cursos y el progreso")
+    comprobar(pg.locator("#courseList details.course").count() == 7 and "0 de 76" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los siete cursos y el progreso")
     pg.locator('details[data-course="finales"] summary').click()
     pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").click()
     comprobar(pg.is_visible("#lessonBox") and "construir el puente" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("1K1k4/1P6"), "abrir una lección la pone en el tablero con su explicación")
@@ -650,7 +650,7 @@ def prueba_cursos(browser):
     pg.reload()
     pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar("2 de 74" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
+    comprobar("2 de 76" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
     pg.locator('details[data-course="aperturas"] summary').click()
     pg.locator('details[data-course="aperturas"] [data-coll]').click()
     comprobar(pg.inner_text("#collCount") == "12" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")
@@ -1008,7 +1008,27 @@ def prueba_tactil_y_tema(browser):
     print("Novedades 1.16: dibujar flechas con el dedo y tema claro")
     ctx = contexto(browser)
     pg, errores = nueva_pagina(ctx)
-    comprobar(not pg.is_visible("#drawToggle"), "en el ordenador (con ratón) no aparece el botón de dibujar: se dibuja con el clic derecho")
+    comprobar(pg.is_visible("#drawToggle"), "el botón «✏ Dibujar flechas» aparece también en el ordenador (para los paneles táctiles)")
+    pg.evaluate("setGame(Pgn.newGame(), { noConfirm: true })")
+    cen = lambda n: (lambda b: (b["x"] + b["width"] / 2, b["y"] + b["height"] / 2))(casilla(pg, n).bounding_box())
+    (a1, a2), (b1, b2) = cen("d2"), cen("d4")
+    pg.keyboard.down("Control"); pg.mouse.move(a1, a2); pg.mouse.down(); pg.mouse.move(b1, b2, steps=4)
+    comprobar(pg.locator("#arrowsGroup line[opacity]").count() == 1, "mientras se dibuja se ve la flecha provisional")
+    pg.mouse.up(); pg.keyboard.up("Control")
+    comprobar(pg.evaluate("JSON.stringify(cur().shapes)") == '[{"color":"green","from":"d2","to":"d4"}]' and not pg.evaluate("game.root.children.length"), "Ctrl + arrastrar dibuja una flecha (sin mover la pieza)")
+    pg.mouse.move(a1, a2); pg.mouse.down(button="right"); pg.mouse.move(b1, b2, steps=4)
+    pg.mouse.wheel(0, 120)
+    pg.mouse.up(button="right")
+    comprobar(pg.evaluate("cur().shapes.length") == 0 and pg.evaluate("cur() === game.root"), "con el botón derecho se borra repitiendo la flecha, y la rueda no mueve las jugadas mientras se dibuja")
+    pg.evaluate("setGame(Pgn.parseGame('1. e4 e5 2. Nf3 Nc6 *', { lang: 'en' }).game, { noConfirm: true }); goTo(game.root); ui.drawAt = 0")
+    pg.mouse.move(a1, a2)
+    for _ in range(4): pg.mouse.wheel(0, 8)
+    pg.wait_for_timeout(150)
+    comprobar(pg.evaluate("cur() === game.root"), "los desplazamientos pequeños de un panel táctil no avanzan jugadas sueltas")
+    pg.wait_for_timeout(300)
+    pg.mouse.wheel(0, 100)
+    pg.wait_for_timeout(150)
+    comprobar(pg.evaluate("cur().san") == "e4", "un desplazamiento claro de la rueda sí avanza una jugada")
     pg.click("#settingsBtn")
     pg.select_option("#setUiTheme", "light")
     fondo = pg.evaluate("getComputedStyle(document.body).backgroundColor")
@@ -1200,6 +1220,49 @@ def prueba_reloj_dos_jugadores_y_ventaja(browser):
     ctx.close()
 
 
+def prueba_filtros_avanzados(browser):
+    print("Novedades 1.19: filtros avanzados en la biblioteca y en los .pgn")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("settings.myNames = 'Yo Mismo'; saveSettings()")
+    partidas = [
+        ("Yo Mismo", "Ana", "1800", "1700", "2024.03.01", "1-0", "180+2", "B90", "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 1-0"),
+        ("Luis", "Yo Mismo", "1900", "1850", "2023.05.10", "1-0", "600+0", "C60", "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 1-0"),
+        ("Yo Mismo", "Eva", "1500", "1550", "2025.01.20", "1/2-1/2", "60+0", "D35", "1. d4 d5 2. c4 e6 3. Nc3 Nf6 1/2-1/2"),
+        ("Kasparov", "Karpov", "2740", "2720", "1985.10.15", "0-1", "", "B44", "1. e4 c5 2. Nf3 e6 3. d4 cxd4 0-1"),
+    ]
+    for w, b, we, be, d, r, tc, eco, mv in partidas:
+        pgn = f'[White "{w}"]\n[Black "{b}"]\n[WhiteElo "{we}"]\n[BlackElo "{be}"]\n[Date "{d}"]\n[Result "{r}"]\n' + (f'[TimeControl "{tc}"]\n' if tc else "") + f'[ECO "{eco}"]\n\n{mv}'
+        pg.evaluate(f"""(async () => {{ setGame(Pgn.parseGame({json.dumps(pgn)}, {{ lang: 'en' }}).game, {{ noConfirm: true, name: {json.dumps(w + ' - ' + b)} }}); await saveToLibrary({{ silent: true, force: true }}); }})()""")
+    pg.wait_for_function("Lib.games.size === 4")
+    pg.click('.tab-btn[data-tab="library"]')
+    pg.locator("#libAdv summary").click()
+    filas = lambda: pg.locator("#libBody tr").count()
+    pg.fill("#libEloMin", "1800"); pg.wait_for_timeout(400)
+    comprobar(filas() == 2 and "Elo medio" in pg.inner_text("#libAdvStats"), "filtrar por Elo medio mínimo deja sólo esas partidas y muestra su resumen")
+    pg.fill("#libEloMin", ""); pg.select_option("#libSpeed", "blitz"); pg.wait_for_timeout(400)
+    comprobar(filas() == 1 and "Yo Mismo - Ana" in pg.inner_text("#libBody"), "filtrar por ritmo (blitz) usa el control de tiempo")
+    pg.select_option("#libSpeed", ""); pg.select_option("#libColor", "1"); pg.wait_for_timeout(400)
+    comprobar(filas() == 2 and "tu puntuación: 75 %" in pg.inner_text("#libAdvStats"), "filtrar las partidas en las que juego con blancas, con mi puntuación")
+    pg.select_option("#libColor", ""); pg.select_option("#libResult", "loss"); pg.wait_for_timeout(400)
+    comprobar(filas() == 1 and "Luis - Yo Mismo" in pg.inner_text("#libBody"), "filtrar las partidas que perdí")
+    pg.select_option("#libResult", ""); pg.fill("#libEco", "B40-B99"); pg.wait_for_timeout(400)
+    comprobar(filas() == 2, "filtrar por un rango de aperturas ECO")
+    pg.fill("#libEco", ""); pg.fill("#libYearMax", "1999"); pg.wait_for_timeout(400)
+    comprobar(filas() == 1 and "Kasparov" in pg.inner_text("#libBody") and "1 activo" in pg.inner_text("#libAdvCount"), "filtrar por año, con el número de filtros activos")
+    pg.click("#libAdvClear"); pg.wait_for_timeout(300)
+    comprobar(filas() == 4, "«Quitar filtros» vuelve a mostrar todas")
+    # En un .pgn abierto
+    pg.evaluate("setCollection(SAMPLE_MULTI_PGN, false, 'Antología'); switchSub('collection')")
+    total = pg.evaluate("Coll.games.length")
+    pg.locator("#dbAdv summary").click()
+    pg.fill("#dbYearMax", "1900"); pg.wait_for_timeout(400)
+    viejas = pg.evaluate("collFiltered().length")
+    comprobar(0 < viejas < total and pg.evaluate("collFiltered().every(i => +(Coll.games[i].headers.Date || '0').slice(0, 4) <= 1900)"), f"los filtros también funcionan en un .pgn abierto ({viejas} de {total} anteriores a 1900)")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1347,7 +1410,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

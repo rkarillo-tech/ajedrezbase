@@ -556,18 +556,21 @@ function renderShapes() {
     if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
     if (Retry.active) for (const a of Retry.arrows) list.push(a);
+    // Mientras se dibuja: la flecha (o el círculo) que va a quedar, para ver dónde se suelta
+    if (ui.drawStart && ui.drawStart.over != null) list.push({ color: ui.drawStart.color, from: ui.drawStart.sq, to: ui.drawStart.over, preview: true });
   }
   let html = "";
   for (const sh of list) {
     const col = SHAPE_COLORS[sh.color] || SHAPE_COLORS.green;
     const [x1, y1] = sqCenter(sh.from), [x2, y2] = sqCenter(sh.to);
-    if (sh.from === sh.to) { html += `<circle cx="${x1}" cy="${y1}" r="44" fill="none" stroke="${col}" stroke-width="7"/>`; continue; }
+    const op = sh.preview ? ` opacity=".55"` : "";
+    if (sh.from === sh.to) { html += `<circle cx="${x1}" cy="${y1}" r="44" fill="none" stroke="${col}" stroke-width="7"${op}/>`; continue; }
     const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
     const sw = sh.color === "engine" ? 13 : 15;
     const ex = x2 - ux * 22, ey = y2 - uy * 22;
     const marker = sh.color === "threat" ? "red" : sh.color;
     const dash = sh.color === "threat" ? ` stroke-dasharray="18 14"` : "";
-    html += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="${dash ? "butt" : "round"}"${dash} marker-end="url(#ah-${marker})"/>`;
+    html += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="${dash ? "butt" : "round"}"${dash}${op} marker-end="url(#ah-${marker})"/>`;
   }
   $("arrowsGroup").innerHTML = html;
 }
@@ -604,14 +607,18 @@ boardEl.addEventListener("pointerdown", e => {
   const i = +sqEl.dataset.sq;
   if (e.button === 2) {
     if (editor.active) { editor.state.b[i] = "."; editor.sel = null; editorChanged(); return; }
-    ui.drawStart = { sq: i, color: shapeColor(e) };
+    ui.drawStart = { sq: i, color: shapeColor(e), over: i };
+    ui.drawAt = Date.now();
+    renderShapes();
     return;
   }
   if (e.button !== 0) return;
-  // Modo dibujo (pantallas táctiles): arrastrar dibuja una flecha y tocar una casilla la rodea
-  if (ui.drawMode && !editor.active) {
-    ui.drawStart = { sq: i, color: ui.drawColor || "green", touch: true };
+  // Modo dibujo (botón ✏) o Ctrl + arrastrar: arrastrar dibuja una flecha y pulsar una casilla la rodea
+  if ((ui.drawMode || e.ctrlKey) && !editor.active) {
+    ui.drawStart = { sq: i, color: ui.drawMode ? ui.drawColor || "green" : shapeColor(e), touch: true, over: i };
+    ui.drawAt = Date.now();
     sqEl.classList.add("hint-sq");
+    renderShapes();
     e.preventDefault();
     return;
   }
@@ -638,6 +645,11 @@ boardEl.addEventListener("pointerdown", e => {
   } else if (ui.selected != null) { ui.selected = null; renderBoard(); }
 });
 window.addEventListener("pointermove", e => {
+  if (ui.drawStart) {
+    const over = sqFromPoint(e.clientX, e.clientY);
+    if (over != null && over !== ui.drawStart.over) { ui.drawStart.over = over; renderShapes(); }
+    return;
+  }
   const d = ui.drag;
   if (!d) return;
   if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 5) return;
@@ -668,14 +680,17 @@ window.addEventListener("pointerup", e => {
   if (ui.drawStart && ui.drawStart.touch) {
     const to = sqFromPoint(e.clientX, e.clientY), d = ui.drawStart;
     ui.drawStart = null;
+    ui.drawAt = Date.now();
     boardEl.querySelectorAll(".hint-sq").forEach(x => x.classList.remove("hint-sq"));
     if (to != null) toggleShape(d.sq, to, d.color);
     return;
   }
-  if (e.button === 2 && ui.drawStart) {
-    const to = sqFromPoint(e.clientX, e.clientY);
-    if (to != null) toggleShape(ui.drawStart.sq, to, ui.drawStart.color);
+  if (ui.drawStart) {
+    const to = sqFromPoint(e.clientX, e.clientY), d = ui.drawStart;
     ui.drawStart = null;
+    ui.drawAt = Date.now();
+    const target = to != null ? to : d.over;
+    if (target != null) toggleShape(d.sq, target, d.color); else renderShapes();
     return;
   }
   const d = ui.drag;
@@ -3689,15 +3704,111 @@ function openLibGame(id, path) {
   return true;
 }
 
+/* ---------- B4a. Filtros avanzados (biblioteca y .pgn abierto): Elo, año, ritmo, resultado, color y apertura ---------- */
+function advFilterHtml(px) {
+  return `<details class="adv-filter" id="${px}Adv"><summary>⚙ Filtros avanzados <span class="srs-pill" id="${px}AdvCount" hidden></span></summary>
+    <div class="filter-row">
+      <input id="${px}EloMin" class="adv-num" type="number" min="0" max="3500" step="50" placeholder="Elo mín." aria-label="Elo medio mínimo">
+      <input id="${px}EloMax" class="adv-num" type="number" min="0" max="3500" step="50" placeholder="Elo máx." aria-label="Elo medio máximo">
+      <input id="${px}YearMin" class="adv-num" type="number" min="1400" max="2100" placeholder="Año desde" aria-label="Año desde">
+      <input id="${px}YearMax" class="adv-num" type="number" min="1400" max="2100" placeholder="Año hasta" aria-label="Año hasta">
+    </div>
+    <div class="filter-row">
+      <select id="${px}Speed" aria-label="Ritmo"><option value="">Cualquier ritmo</option><option value="bullet">Bala (menos de 3 min)</option><option value="blitz">Blitz (3 a 9 min)</option><option value="rapid">Rápidas (10 a 59 min)</option><option value="classical">Clásicas (1 h o más)</option><option value="corr">Por correspondencia</option></select>
+      <select id="${px}Result" aria-label="Resultado"><option value="">Cualquier resultado</option><option value="1-0">Ganan las blancas</option><option value="1/2-1/2">Tablas</option><option value="0-1">Ganan las negras</option><option value="win">Gano yo</option><option value="loss">Pierdo yo</option><option value="draw">Hago tablas</option></select>
+      <select id="${px}Color" aria-label="Con qué color juego"><option value="">Juegue con cualquier color</option><option value="1">Juego con blancas</option><option value="-1">Juego con negras</option></select>
+      <input id="${px}Eco" class="adv-eco" placeholder="Apertura: B90, C60-C99 o nombre" aria-label="Apertura">
+      <button id="${px}AdvClear" class="sm-btn">Quitar filtros</button>
+    </div>
+    <div class="small adv-stats" id="${px}AdvStats"></div>
+  </details>`;
+}
+const ADV_IDS = ["EloMin", "EloMax", "YearMin", "YearMax", "Speed", "Result", "Color", "Eco"];
+function advState(px) {
+  const v = id => ($(px + id) ? $(px + id).value.trim() : "");
+  const F = { eloMin: +v("EloMin") || 0, eloMax: +v("EloMax") || 0, yearMin: +v("YearMin") || 0, yearMax: +v("YearMax") || 0, speed: v("Speed"), result: v("Result"), color: v("Color"), eco: norm(v("Eco")) };
+  F.count = ADV_IDS.filter(id => v(id)).length;
+  return F;
+}
+/* Ritmo según el control de tiempo (como Lichess: tiempo base + 40 × incremento) o el nombre del evento */
+function speedOf(tc, event) {
+  const m = /^(\d+)(?:\+(\d+))?$/.exec(tc || "");
+  if (m) { const t = +m[1] + 40 * +(m[2] || 0); return t < 180 ? "bullet" : t < 600 ? "blitz" : t < 3600 ? "rapid" : "classical"; }
+  if (/^-$/.test(tc || "") || /correspond/i.test(event || "")) return /correspond/i.test(event || "") ? "corr" : "";
+  const e = norm(event);
+  return /bullet|bala/.test(e) ? "bullet" : /blitz/.test(e) ? "blitz" : /rapid/.test(e) ? "rapid" : /classical|clasic/.test(e) ? "classical" : "";
+}
+/* Datos de una partida para filtrar: de un registro de la biblioteca o de las cabeceras de un .pgn */
+function advMeta(x) {
+  const h = x.headers || null;
+  const g = k => (h ? h[k] : x[{ White: "white", Black: "black", WhiteElo: "whiteElo", BlackElo: "blackElo", Date: "date", Result: "result", ECO: "eco", TimeControl: "timeControl", Event: "event" }[k]]) || "";
+  return { white: g("White"), black: g("Black"), we: +g("WhiteElo") || 0, be: +g("BlackElo") || 0, year: +(String(g("Date")).slice(0, 4)) || 0, result: String(g("Result")).trim(), eco: String(g("ECO")).toUpperCase(), tc: g("TimeControl"), event: g("Event"), opening: h ? h.Opening || "" : x.title || "" };
+}
+function advMatch(meta, F, names) {
+  if (F.eloMin || F.eloMax) {
+    const elos = [meta.we, meta.be].filter(Boolean);
+    if (!elos.length) return false;
+    const avg = elos.reduce((a, b) => a + b, 0) / elos.length;
+    if (F.eloMin && avg < F.eloMin) return false;
+    if (F.eloMax && avg > F.eloMax) return false;
+  }
+  if (F.yearMin && (!meta.year || meta.year < F.yearMin)) return false;
+  if (F.yearMax && (!meta.year || meta.year > F.yearMax)) return false;
+  if (F.speed && speedOf(meta.tc, meta.event) !== F.speed) return false;
+  const mine = names.length ? (names.some(n => norm(meta.white).includes(n)) ? 1 : names.some(n => norm(meta.black).includes(n)) ? -1 : 0) : 0;
+  if (F.color && mine !== +F.color) return false;
+  if (F.result) {
+    if (["1-0", "0-1", "1/2-1/2"].includes(F.result)) { if (meta.result !== F.result) return false; }
+    else {
+      const sc = mine ? scoreOf(meta.result, mine) : null;
+      if (sc == null || (F.result === "win" && sc !== 1) || (F.result === "loss" && sc !== 0) || (F.result === "draw" && sc !== 0.5)) return false;
+    }
+  }
+  if (F.eco) {
+    const range = /^([a-e])(\d{2})\s*-\s*([a-e])?(\d{2})$/.exec(F.eco);
+    if (range) {
+      const lo = range[1].toUpperCase() + range[2], hi = (range[3] || range[1]).toUpperCase() + range[4];
+      if (!meta.eco || meta.eco < lo || meta.eco > hi) return false;
+    } else if (/^[a-e]\d{0,2}$/.test(F.eco)) { if (!meta.eco.startsWith(F.eco.toUpperCase())) return false; }
+    else if (!norm(ecoName(meta.eco) + " " + meta.opening).includes(F.eco)) return false;
+  }
+  return true;
+}
+/* Resumen del conjunto filtrado: resultados, Elo medio y, si sabemos tu nombre, tu puntuación */
+function advStatsHtml(metas, names) {
+  if (!metas.length) return "";
+  const w = metas.filter(m => m.result === "1-0").length, d = metas.filter(m => m.result === "1/2-1/2").length, b = metas.filter(m => m.result === "0-1").length, fin = w + d + b;
+  const elos = metas.flatMap(m => [m.we, m.be]).filter(Boolean);
+  let mineTxt = "";
+  if (names.length) {
+    const sc = metas.map(m => { const c = names.some(n => norm(m.white).includes(n)) ? 1 : names.some(n => norm(m.black).includes(n)) ? -1 : 0; return c ? scoreOf(m.result, c) : null; }).filter(x => x != null);
+    if (sc.length) mineTxt = ` · tu puntuación: <b>${Math.round(sc.reduce((a, x) => a + x, 0) / sc.length * 100)} %</b> en ${sc.length} partida${sc.length === 1 ? "" : "s"}`;
+  }
+  return `${metas.length} partida${metas.length === 1 ? "" : "s"}${fin ? ` · blancas ${Math.round(w / fin * 100)} % · tablas ${Math.round(d / fin * 100)} % · negras ${Math.round(b / fin * 100)} %` : ""}${elos.length ? ` · Elo medio ${Math.round(elos.reduce((a, x) => a + x, 0) / elos.length)}` : ""}${mineTxt}`;
+}
+function setupAdvFilter(px, rerender) {
+  $(px + "AdvWrap").innerHTML = advFilterHtml(px);
+  const re = debounce(rerender, 200);
+  for (const id of ADV_IDS) { const el = $(px + id); el.addEventListener(el.tagName === "SELECT" ? "change" : "input", re); }
+  $(px + "AdvClear").onclick = () => { for (const id of ADV_IDS) $(px + id).value = ""; rerender(); };
+}
+function showAdvSummary(px, F, metas) {
+  const c = $(px + "AdvCount");
+  if (!c) return;
+  c.hidden = !F.count; c.textContent = F.count ? `${F.count} activo${F.count === 1 ? "" : "s"}` : "";
+  $(px + "AdvStats").innerHTML = advStatsHtml(metas, myNameList()) + (F.result && ["win", "loss", "draw"].includes(F.result) || F.color ? (myNameList().length ? "" : ` · <span class="msg-err">para «yo» pon tu nombre en 📊 Estadísticas</span>`) : "");
+}
+
 /* ---------- B4. Vista «Mis partidas» ---------- */
 function libFiltered() {
   const q = norm($("libFilter").value).split(/\s+/).filter(Boolean);
-  const tag = $("libTagFilter").value, now = Date.now();
+  const tag = $("libTagFilter").value, now = Date.now(), F = advState("lib"), names = myNameList();
   let arr = [...Lib.games.values()].filter(r => {
     if (tag === "*fav" && !r.fav) return false;
     if (tag === "*due" && !(r.srs && r.srs.due <= now)) return false;
     if (tag === "*marks" && !marksOfGame(r.id).length) return false;
     if (tag && !tag.startsWith("*") && !(r.tags || []).includes(tag)) return false;
+    if (F.count && !advMatch(advMeta(r), F, names)) return false;
     if (!q.length) return true;
     const hay = norm([r.title, r.white, r.black, r.event, r.site, r.date, r.eco, r.result, (r.tags || []).join(" ")].join(" "));
     return q.every(w => hay.includes(w));
@@ -3757,6 +3868,7 @@ function renderLibrary() {
   }
   tbody.append(frag);
   $("libStatus").textContent = arr.length > 500 ? `Mostrando 500 de ${arr.length}. Usa el buscador para afinar.` : arr.length ? `${arr.length} partida${arr.length === 1 ? "" : "s"}` : "";
+  showAdvSummary("lib", advState("lib"), arr.map(advMeta));
   updateSelButtons();
 }
 function updateSelButtons() {
@@ -3798,8 +3910,9 @@ function setCollection(text, append, name) {
 }
 function collFiltered() {
   const q = norm($("dbFilterInput").value).split(/\s+/).filter(Boolean);
-  const rows = [];
+  const rows = [], F = advState("db"), names = myNameList();
   Coll.games.forEach((g, i) => {
+    if (F.count && !advMatch(advMeta(g), F, names)) return;
     if (!q.length) { rows.push(i); return; }
     const h = g.headers;
     const hay = norm([h.White, h.Black, h.Event, h.Site, h.Date, h.ECO, h.Result, h.Opening].join(" "));
@@ -3831,6 +3944,7 @@ function renderCollection() {
   $("dbStatus").textContent = Coll.games.length
     ? `${Coll.names.length ? "«" + Coll.names.join("», «") + "» · " : ""}${Coll.games.length} partidas en memoria (${fmtBytes(Coll.bytes)})${rows.length > 500 ? ` · mostrando 500 de ${rows.length}` : ""}`
     : "";
+  showAdvSummary("db", advState("db"), rows.map(i => advMeta(Coll.games[i])));
   $("saveCollFilteredBtn").disabled = !rows.length;
   $("saveCollFilteredBtn").textContent = rows.length ? `💾 Guardar en la biblioteca las ${rows.length} partidas filtradas` : "💾 Guardar en la biblioteca las partidas filtradas";
 }
@@ -5932,7 +6046,7 @@ $("clearShapesBtn").onclick = () => { cur().shapes = []; markDirty(); render(); 
 function setDrawMode(on) {
   ui.drawMode = !!on;
   $("drawToggle").setAttribute("aria-pressed", String(ui.drawMode));
-  $("drawToggle").textContent = ui.drawMode ? "✏ Dibujando: toca para volver a mover" : "✏ Dibujar flechas";
+  $("drawToggle").textContent = ui.drawMode ? "✏ Dibujando: pulsa para volver a mover" : "✏ Dibujar flechas";
   $("drawTools").hidden = !ui.drawMode;
   $("boardWrap").classList.toggle("drawing", ui.drawMode);
   if (ui.drawMode) { ui.selected = null; renderBoard(); }
@@ -6120,6 +6234,8 @@ $("drillDueBtn").onclick = () => startDrills("due");
 $("drillAllBtn").onclick = () => startDrills("all");
 $("posMode").onchange = renderPosTarget;
 $("posBtn").onclick = searchPosition;
+setupAdvFilter("lib", renderLibrary);
+setupAdvFilter("db", renderCollection);
 $("libFilter").oninput = debounce(renderLibrary, 150);
 $("libTagFilter").onchange = renderLibrary;
 $("libSort").onchange = renderLibrary;
@@ -6950,15 +7066,26 @@ if (window.matchMedia && matchMedia("(hover: hover)").matches) {
 }
 
 /* Rueda del ratón sobre el tablero: avanzar y retroceder */
-let wheelLast = 0;
+/* Con un panel táctil (touchpad), el gesto de dos dedos produce muchos desplazamientos pequeños seguidos:
+   se acumulan y sólo se avanza una jugada por cada «golpe» claro. Mientras se dibuja con el botón derecho
+   (o justo después) la rueda no hace nada, para que el gesto de dibujar no mueva las jugadas. */
+let wheelLast = 0, wheelAcc = 0, wheelAccAt = 0;
 $("boardWrap").addEventListener("wheel", e => {
   if (!settings.wheel || editor.active || quiz() || document.querySelector(".modal-back.open")) return;
   e.preventDefault();
   const now = Date.now();
-  if (now - wheelLast < 80 || Math.abs(e.deltaY) < 4) return;
+  if (ui.drawStart || (e.buttons & 2) || ui.drawMode || now - (ui.drawAt || 0) < 600) { wheelAcc = 0; return; }
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  const dy = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+  if (now - wheelAccAt > 250 || Math.sign(dy) !== Math.sign(wheelAcc)) wheelAcc = 0;
+  wheelAcc += dy;
+  wheelAccAt = now;
+  if (Math.abs(wheelAcc) < 50 || now - wheelLast < 120) return;
   wheelLast = now;
+  const fwd = wheelAcc > 0;
+  wheelAcc = 0;
   stopAutoplay();
-  if (e.deltaY > 0) goForward(); else goBack();
+  if (fwd) goForward(); else goBack();
 }, { passive: false });
 
 /* Exportar la posición como imagen PNG (descarga y, si se puede, copia al portapapeles) */

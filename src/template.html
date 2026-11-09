@@ -171,13 +171,12 @@ main {
 .version-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--deep); margin-top: 6px; }
 .version-row .version-what { flex: 1; min-width: 180px; }
 #myRepSection .filter-row > * { min-width: 0; max-width: 100%; }
-/* Dibujar flechas con el dedo: sólo en pantallas táctiles (en el ordenador se dibujan con el clic derecho) */
-.draw-bar { display: none; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+/* Dibujar flechas sin clic derecho: botón ✏ (en el móvil, la tableta y el portátil con panel táctil) */
+.draw-bar { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
 .draw-bar #drawTools:not([hidden]) { display: inline-flex; gap: 4px; align-items: center; }
 .draw-color i { display: inline-block; width: 16px; height: 16px; border-radius: 50%; vertical-align: middle; }
 .draw-color.on { outline: 2px solid var(--text); outline-offset: 1px; }
 #drawToggle[aria-pressed="true"] { background: var(--btn-warn); border-color: var(--warn); }
-@media (pointer: coarse) { .draw-bar { display: flex; } }
 .board-wrap.drawing .square { cursor: crosshair; }
 .think-box { background: var(--deep-blue2); border-color: var(--info); }
 .think-box h3 { font-size: .9rem; margin: 10px 0 4px; }
@@ -192,6 +191,13 @@ main {
 .exp-eval .src { color: var(--muted); font-size: .7rem; margin-left: 2px; }
 #rivalSection .filter-row > * { min-width: 0; max-width: 100%; }
 .rival-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+.adv-filter { margin-top: 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--deep); padding: 4px 10px 6px; }
+.adv-filter summary { cursor: pointer; font-size: .84rem; font-weight: 700; }
+.adv-filter .filter-row { margin-top: 6px; }
+.adv-filter .filter-row > * { min-width: 0; max-width: 100%; }
+.adv-filter .adv-num { flex: 1 1 90px; min-width: 70px; }
+.adv-filter .adv-eco { flex: 2 1 180px; }
+.adv-stats { margin-top: 4px; }
 .rep-review h3 { font-size: .92rem; margin: 12px 0 4px; }
 .rep-review .version-row { margin-top: 4px; }
 
@@ -802,7 +808,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button id="undoBtn" class="danger" title="Borrar esta jugada y todo lo que sigue">✂ Cortar</button>
     </div>
     <div id="drawBar" class="draw-bar" role="toolbar" aria-label="Dibujar en el tablero">
-      <button id="drawToggle" class="sm-btn" aria-pressed="false" title="Con el modo dibujo activado, arrastra el dedo de una casilla a otra para dibujar una flecha o toca una casilla para rodearla">✏ Dibujar flechas</button>
+      <button id="drawToggle" class="sm-btn" aria-pressed="false" title="Con el modo dibujo activado, arrastra (con el dedo o con el clic normal) de una casilla a otra para dibujar una flecha, o pulsa una casilla para rodearla. En el ordenador también: clic derecho y arrastrar, o Ctrl + arrastrar">✏ Dibujar flechas</button>
       <span id="drawTools" hidden>
         <button class="sm-btn draw-color on" data-color="green" aria-label="Verde" title="Verde"><i style="background:rgb(76,175,80)"></i></button>
         <button class="sm-btn draw-color" data-color="red" aria-label="Rojo" title="Rojo"><i style="background:rgb(239,83,80)"></i></button>
@@ -1097,6 +1103,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
             <option value="date">Fecha de la partida</option>
           </select>
         </div>
+        <div id="libAdvWrap"></div>
         <div class="controls">
           <label class="switch"><input type="checkbox" id="libSelectAll"> Todas</label>
           <button id="libDeleteSel" class="sm-btn danger" disabled>🗑 Borrar seleccionadas</button>
@@ -1195,6 +1202,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <p class="small">Las partidas públicas se descargan sin token y van a esta lista, sólo en memoria (como un .pgn abierto); guarda las que quieras con 💾. Si la partida tiene análisis de Lichess, sus evaluaciones se conservan.</p>
         </details>
         <input id="dbFilterInput" placeholder="Filtrar por jugador, evento, año, ECO o resultado…" style="margin-top:8px" aria-label="Filtrar partidas">
+        <div id="dbAdvWrap"></div>
         <div class="cb-table-wrap" style="max-height:380px">
           <table class="cb-table">
             <thead><tr><th>#</th><th>Blancas</th><th>Negras</th><th>Res.</th><th class="hide-sm">Evento / ECO</th><th>Año</th><th></th></tr></thead>
