@@ -198,6 +198,15 @@ main {
 .adv-filter .adv-num { flex: 1 1 90px; min-width: 70px; }
 .adv-filter .adv-eco { flex: 2 1 180px; }
 .adv-stats { margin-top: 4px; }
+/* 🧊 Vista 3D inclinada (⚙ Ajustes › Vista del tablero): el tablero y las flechas se inclinan hacia atrás
+   y las piezas se quedan de pie. El cuadro de coronación queda plano, fuera de la inclinación. */
+.board-wrap.view3d { perspective: 1150px; perspective-origin: 50% 0%; margin-bottom: 10px; }
+.board-wrap.view3d .board { transform: rotateX(32deg); transform-origin: 50% 100%; transform-style: preserve-3d; overflow: visible; box-shadow: 0 9px 0 -1px color-mix(in srgb, var(--dark) 55%, #000), 0 22px 26px rgba(0,0,0,.45); }
+.board-wrap.view3d .drawing-layer { transform: rotateX(32deg); transform-origin: 50% calc(100% + 3px); }
+.board-wrap.view3d .square, .board-wrap.view3d .piece-holder { transform-style: preserve-3d; }
+.board-wrap.view3d .piece-holder > .piece-svg, .board-wrap.view3d .piece-holder > .unicode-piece { transform: rotateX(-32deg) scale(1.12); transform-origin: 50% 88%; pointer-events: auto; }
+.board-wrap.view3d .piece-holder > .piece-svg { filter: drop-shadow(0 5px 3px rgba(0,0,0,0.45)); }
+.board-wrap.view3d .board.locked .piece-svg { cursor: default; }
 .rep-review h3 { font-size: .92rem; margin: 12px 0 4px; }
 .rep-review .version-row { margin-top: 4px; }
 
@@ -1470,6 +1479,11 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <option value="dark">🌙 Oscuro</option>
       <option value="light">☀ Claro</option>
       <option value="auto">🌓 Automático (como el sistema)</option>
+    </select>
+    <label for="setBoardView">Vista del tablero</label>
+    <select id="setBoardView">
+      <option value="2d">⬛ Plana (2D)</option>
+      <option value="3d">🧊 Inclinada (3D): el tablero en perspectiva y las piezas de pie</option>
     </select>
     <label for="setBoardSize">Tamaño del tablero: <b id="boardSizeVal">automático</b></label>
     <div class="gc-row">
