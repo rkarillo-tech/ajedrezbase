@@ -55,7 +55,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, boardView: "2d"
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -529,7 +529,7 @@ function animateMove(mv, dir) {
     const el = boardEl.querySelector(`.square[data-sq="${to}"] .piece-holder`);
     const sqEl = boardEl.querySelector(`.square[data-sq="${to}"]`);
     if (!el || !sqEl || !el.animate) return;
-    const size = sqEl.offsetWidth || sqEl.getBoundingClientRect().width;   // medida sin la perspectiva de la vista 3D
+    const size = sqEl.getBoundingClientRect().width;
     const col = i => (ui.flipped ? 7 - (i & 7) : i & 7), row = i => (ui.flipped ? 7 - (i >> 4) : i >> 4);
     const dx = (col(from) - col(to)) * size, dy = (row(from) - row(to)) * size;
     el.style.zIndex = 9;
@@ -5964,14 +5964,6 @@ function applyUiTheme() {
 $("setUiTheme").onchange = e => { settings.uiTheme = e.target.value; saveSettings(); applyUiTheme(); };
 if (lightQuery) (lightQuery.addEventListener ? lightQuery.addEventListener("change", applyUiTheme) : lightQuery.addListener(applyUiTheme));
 applyUiTheme();
-/* Vista del tablero: plana (2D) o inclinada (3D) */
-function applyBoardView() {
-  const v = settings.boardView === "3d" ? "3d" : "2d";
-  $("boardWrap").classList.toggle("view3d", v === "3d");
-  $("setBoardView").value = v;
-}
-$("setBoardView").onchange = e => { settings.boardView = e.target.value; saveSettings(); applyBoardView(); };
-applyBoardView();
 $("setAutosave").onchange = e => { settings.autosave = e.target.checked; saveSettings(); if (!settings.autosave) { try { localStorage.removeItem("ajedrezStudioCurrent"); } catch {} } };
 
 $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; saveSettings(); buildEditorPalettes(); render(); };

@@ -1263,32 +1263,6 @@ def prueba_filtros_avanzados(browser):
     ctx.close()
 
 
-def prueba_vista_3d(browser):
-    print("Novedades 1.20: vista 3D inclinada")
-    ctx = contexto(browser)
-    pg, errores = nueva_pagina(ctx)
-    pg.click("#settingsBtn")
-    pg.select_option("#setBoardView", "3d")
-    pg.keyboard.press("Escape")
-    comprobar(pg.evaluate("document.getElementById('boardWrap').classList.contains('view3d')") and "rotateX" not in pg.evaluate("getComputedStyle(document.getElementById('promoModal')).transform"), "en Ajustes se puede elegir la vista inclinada (3D); el cuadro de coronación queda plano")
-    pg.evaluate("setGame(Pgn.newGame(), { noConfirm: true })")
-    casilla(pg, "e2").click(); casilla(pg, "e4").click()
-    comprobar(pg.evaluate("cur().san") == "e4", "en 3D se mueve con clic-clic")
-    arrastrar(pg, casilla(pg, "e7"), casilla(pg, "e5"))
-    comprobar(pg.evaluate("cur().san") == "e5", "y arrastrando la pieza")
-    pos = pg.evaluate("(() => { const el = document.querySelector('.square[data-sq=\"' + Chess.sqIdx('g1') + '\"] .piece-svg'); const b = el.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height * 0.12]; })()")
-    pg.mouse.click(pos[0], pos[1])
-    comprobar(pg.evaluate("ui.selected === Chess.sqIdx('g1')"), "pulsar en la parte de arriba de una pieza de pie selecciona esa pieza (no la casilla de detrás)")
-    pg.reload()
-    pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
-    comprobar(pg.evaluate("document.getElementById('boardWrap').classList.contains('view3d')"), "la vista 3D se recuerda al volver a abrir")
-    pg.click("#settingsBtn")
-    pg.select_option("#setBoardView", "2d")
-    comprobar(not pg.evaluate("document.getElementById('boardWrap').classList.contains('view3d')"), "y se puede volver a la vista plana")
-    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
-    ctx.close()
-
-
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1436,7 +1410,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_vista_3d, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:
