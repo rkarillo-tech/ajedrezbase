@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.19.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.20.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -198,6 +198,15 @@ main {
 .adv-filter .adv-num { flex: 1 1 90px; min-width: 70px; }
 .adv-filter .adv-eco { flex: 2 1 180px; }
 .adv-stats { margin-top: 4px; }
+/* 🧊 Vista 3D inclinada (⚙ Ajustes › Vista del tablero): el tablero y las flechas se inclinan hacia atrás
+   y las piezas se quedan de pie. El cuadro de coronación queda plano, fuera de la inclinación. */
+.board-wrap.view3d { perspective: 1150px; perspective-origin: 50% 0%; margin-bottom: 10px; }
+.board-wrap.view3d .board { transform: rotateX(32deg); transform-origin: 50% 100%; transform-style: preserve-3d; overflow: visible; box-shadow: 0 9px 0 -1px color-mix(in srgb, var(--dark) 55%, #000), 0 22px 26px rgba(0,0,0,.45); }
+.board-wrap.view3d .drawing-layer { transform: rotateX(32deg); transform-origin: 50% calc(100% + 3px); }
+.board-wrap.view3d .square, .board-wrap.view3d .piece-holder { transform-style: preserve-3d; }
+.board-wrap.view3d .piece-holder > .piece-svg, .board-wrap.view3d .piece-holder > .unicode-piece { transform: rotateX(-32deg) scale(1.12); transform-origin: 50% 88%; pointer-events: auto; }
+.board-wrap.view3d .piece-holder > .piece-svg { filter: drop-shadow(0 5px 3px rgba(0,0,0,0.45)); }
+.board-wrap.view3d .board.locked .piece-svg { cursor: default; }
 .rep-review h3 { font-size: .92rem; margin: 12px 0 4px; }
 .rep-review .version-row { margin-top: 4px; }
 
@@ -1426,7 +1435,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.19.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.20.0 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
 </footer>
@@ -1470,6 +1479,11 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <option value="dark">🌙 Oscuro</option>
       <option value="light">☀ Claro</option>
       <option value="auto">🌓 Automático (como el sistema)</option>
+    </select>
+    <label for="setBoardView">Vista del tablero</label>
+    <select id="setBoardView">
+      <option value="2d">⬛ Plana (2D)</option>
+      <option value="3d">🧊 Inclinada (3D): el tablero en perspectiva y las piezas de pie</option>
     </select>
     <label for="setBoardSize">Tamaño del tablero: <b id="boardSizeVal">automático</b></label>
     <div class="gc-row">
@@ -1948,7 +1962,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <summary>🛠 22. Ajustes y personalización</summary>
         <ul>
           <li><b>Barra superior</b>: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.</li>
-          <li><b>⚙ Ajustes</b>: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, <b>estado del motor</b> (qué motor se usa, por qué y si hay una copia guardada, con el botón <b>🔄 Reintentar Stockfish 19</b>), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón, recordar la partida al recargar, el <b>aspecto</b> (🌙 oscuro, ☀ claro o 🌓 automático, que sigue el modo claro u oscuro del sistema) y el <b>tamaño del tablero</b> (de 60 % a 130 %: «Automático» es el más grande que cabe en la pantalla; más pequeño deja sitio a las jugadas y la lección, y por encima del 100 % sólo crece en pantallas grandes del ordenador; se guarda en cada dispositivo).</li>
+          <li><b>⚙ Ajustes</b>: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, <b>estado del motor</b> (qué motor se usa, por qué y si hay una copia guardada, con el botón <b>🔄 Reintentar Stockfish 19</b>), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón, recordar la partida al recargar, el <b>aspecto</b> (🌙 oscuro, ☀ claro o 🌓 automático, que sigue el modo claro u oscuro del sistema), la <b>vista del tablero</b> (⬛ plana o 🧊 inclinada en 3D: el tablero en perspectiva, como si lo miraras sentado delante, con las piezas de pie; todo funciona igual, y para estudiar con calma la plana suele ser más clara) y el <b>tamaño del tablero</b> (de 60 % a 130 %: «Automático» es el más grande que cabe en la pantalla; más pequeño deja sitio a las jugadas y la lección, y por encima del 100 % sólo crece en pantallas grandes del ordenador; se guarda en cada dispositivo).</li>
           <li><b>🔊</b> activa o silencia los sonidos.</li>
           <li>Todos los ajustes se recuerdan en este navegador.</li>
         </ul>
@@ -2124,7 +2138,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.19.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.20.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -3531,7 +3545,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, boardView: "2d"
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -4052,7 +4066,7 @@ function animateMove(mv, dir) {
     const el = boardEl.querySelector(`.square[data-sq="${to}"] .piece-holder`);
     const sqEl = boardEl.querySelector(`.square[data-sq="${to}"]`);
     if (!el || !sqEl || !el.animate) return;
-    const size = sqEl.getBoundingClientRect().width;
+    const size = sqEl.offsetWidth || sqEl.getBoundingClientRect().width;   // medida sin la perspectiva de la vista 3D
     const col = i => (ui.flipped ? 7 - (i & 7) : i & 7), row = i => (ui.flipped ? 7 - (i >> 4) : i >> 4);
     const dx = (col(from) - col(to)) * size, dy = (row(from) - row(to)) * size;
     el.style.zIndex = 9;
@@ -9487,6 +9501,14 @@ function applyUiTheme() {
 $("setUiTheme").onchange = e => { settings.uiTheme = e.target.value; saveSettings(); applyUiTheme(); };
 if (lightQuery) (lightQuery.addEventListener ? lightQuery.addEventListener("change", applyUiTheme) : lightQuery.addListener(applyUiTheme));
 applyUiTheme();
+/* Vista del tablero: plana (2D) o inclinada (3D) */
+function applyBoardView() {
+  const v = settings.boardView === "3d" ? "3d" : "2d";
+  $("boardWrap").classList.toggle("view3d", v === "3d");
+  $("setBoardView").value = v;
+}
+$("setBoardView").onchange = e => { settings.boardView = e.target.value; saveSettings(); applyBoardView(); };
+applyBoardView();
 $("setAutosave").onchange = e => { settings.autosave = e.target.checked; saveSettings(); if (!settings.autosave) { try { localStorage.removeItem("ajedrezStudioCurrent"); } catch {} } };
 
 $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; saveSettings(); buildEditorPalettes(); render(); };
