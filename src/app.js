@@ -556,18 +556,21 @@ function renderShapes() {
     if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
     if (Retry.active) for (const a of Retry.arrows) list.push(a);
+    // Mientras se dibuja: la flecha (o el círculo) que va a quedar, para ver dónde se suelta
+    if (ui.drawStart && ui.drawStart.over != null) list.push({ color: ui.drawStart.color, from: ui.drawStart.sq, to: ui.drawStart.over, preview: true });
   }
   let html = "";
   for (const sh of list) {
     const col = SHAPE_COLORS[sh.color] || SHAPE_COLORS.green;
     const [x1, y1] = sqCenter(sh.from), [x2, y2] = sqCenter(sh.to);
-    if (sh.from === sh.to) { html += `<circle cx="${x1}" cy="${y1}" r="44" fill="none" stroke="${col}" stroke-width="7"/>`; continue; }
+    const op = sh.preview ? ` opacity=".55"` : "";
+    if (sh.from === sh.to) { html += `<circle cx="${x1}" cy="${y1}" r="44" fill="none" stroke="${col}" stroke-width="7"${op}/>`; continue; }
     const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
     const sw = sh.color === "engine" ? 13 : 15;
     const ex = x2 - ux * 22, ey = y2 - uy * 22;
     const marker = sh.color === "threat" ? "red" : sh.color;
     const dash = sh.color === "threat" ? ` stroke-dasharray="18 14"` : "";
-    html += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="${dash ? "butt" : "round"}"${dash} marker-end="url(#ah-${marker})"/>`;
+    html += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="${dash ? "butt" : "round"}"${dash}${op} marker-end="url(#ah-${marker})"/>`;
   }
   $("arrowsGroup").innerHTML = html;
 }
@@ -604,14 +607,18 @@ boardEl.addEventListener("pointerdown", e => {
   const i = +sqEl.dataset.sq;
   if (e.button === 2) {
     if (editor.active) { editor.state.b[i] = "."; editor.sel = null; editorChanged(); return; }
-    ui.drawStart = { sq: i, color: shapeColor(e) };
+    ui.drawStart = { sq: i, color: shapeColor(e), over: i };
+    ui.drawAt = Date.now();
+    renderShapes();
     return;
   }
   if (e.button !== 0) return;
-  // Modo dibujo (pantallas táctiles): arrastrar dibuja una flecha y tocar una casilla la rodea
-  if (ui.drawMode && !editor.active) {
-    ui.drawStart = { sq: i, color: ui.drawColor || "green", touch: true };
+  // Modo dibujo (botón ✏) o Ctrl + arrastrar: arrastrar dibuja una flecha y pulsar una casilla la rodea
+  if ((ui.drawMode || e.ctrlKey) && !editor.active) {
+    ui.drawStart = { sq: i, color: ui.drawMode ? ui.drawColor || "green" : shapeColor(e), touch: true, over: i };
+    ui.drawAt = Date.now();
     sqEl.classList.add("hint-sq");
+    renderShapes();
     e.preventDefault();
     return;
   }
@@ -638,6 +645,11 @@ boardEl.addEventListener("pointerdown", e => {
   } else if (ui.selected != null) { ui.selected = null; renderBoard(); }
 });
 window.addEventListener("pointermove", e => {
+  if (ui.drawStart) {
+    const over = sqFromPoint(e.clientX, e.clientY);
+    if (over != null && over !== ui.drawStart.over) { ui.drawStart.over = over; renderShapes(); }
+    return;
+  }
   const d = ui.drag;
   if (!d) return;
   if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 5) return;
@@ -668,14 +680,17 @@ window.addEventListener("pointerup", e => {
   if (ui.drawStart && ui.drawStart.touch) {
     const to = sqFromPoint(e.clientX, e.clientY), d = ui.drawStart;
     ui.drawStart = null;
+    ui.drawAt = Date.now();
     boardEl.querySelectorAll(".hint-sq").forEach(x => x.classList.remove("hint-sq"));
     if (to != null) toggleShape(d.sq, to, d.color);
     return;
   }
-  if (e.button === 2 && ui.drawStart) {
-    const to = sqFromPoint(e.clientX, e.clientY);
-    if (to != null) toggleShape(ui.drawStart.sq, to, ui.drawStart.color);
+  if (ui.drawStart) {
+    const to = sqFromPoint(e.clientX, e.clientY), d = ui.drawStart;
     ui.drawStart = null;
+    ui.drawAt = Date.now();
+    const target = to != null ? to : d.over;
+    if (target != null) toggleShape(d.sq, target, d.color); else renderShapes();
     return;
   }
   const d = ui.drag;
@@ -5932,7 +5947,7 @@ $("clearShapesBtn").onclick = () => { cur().shapes = []; markDirty(); render(); 
 function setDrawMode(on) {
   ui.drawMode = !!on;
   $("drawToggle").setAttribute("aria-pressed", String(ui.drawMode));
-  $("drawToggle").textContent = ui.drawMode ? "✏ Dibujando: toca para volver a mover" : "✏ Dibujar flechas";
+  $("drawToggle").textContent = ui.drawMode ? "✏ Dibujando: pulsa para volver a mover" : "✏ Dibujar flechas";
   $("drawTools").hidden = !ui.drawMode;
   $("boardWrap").classList.toggle("drawing", ui.drawMode);
   if (ui.drawMode) { ui.selected = null; renderBoard(); }
@@ -6950,15 +6965,26 @@ if (window.matchMedia && matchMedia("(hover: hover)").matches) {
 }
 
 /* Rueda del ratón sobre el tablero: avanzar y retroceder */
-let wheelLast = 0;
+/* Con un panel táctil (touchpad), el gesto de dos dedos produce muchos desplazamientos pequeños seguidos:
+   se acumulan y sólo se avanza una jugada por cada «golpe» claro. Mientras se dibuja con el botón derecho
+   (o justo después) la rueda no hace nada, para que el gesto de dibujar no mueva las jugadas. */
+let wheelLast = 0, wheelAcc = 0, wheelAccAt = 0;
 $("boardWrap").addEventListener("wheel", e => {
   if (!settings.wheel || editor.active || quiz() || document.querySelector(".modal-back.open")) return;
   e.preventDefault();
   const now = Date.now();
-  if (now - wheelLast < 80 || Math.abs(e.deltaY) < 4) return;
+  if (ui.drawStart || (e.buttons & 2) || ui.drawMode || now - (ui.drawAt || 0) < 600) { wheelAcc = 0; return; }
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  const dy = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+  if (now - wheelAccAt > 250 || Math.sign(dy) !== Math.sign(wheelAcc)) wheelAcc = 0;
+  wheelAcc += dy;
+  wheelAccAt = now;
+  if (Math.abs(wheelAcc) < 50 || now - wheelLast < 120) return;
   wheelLast = now;
+  const fwd = wheelAcc > 0;
+  wheelAcc = 0;
   stopAutoplay();
-  if (e.deltaY > 0) goForward(); else goBack();
+  if (fwd) goForward(); else goBack();
 }, { passive: false });
 
 /* Exportar la posición como imagen PNG (descarga y, si se puede, copia al portapapeles) */

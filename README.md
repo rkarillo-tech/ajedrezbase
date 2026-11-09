@@ -17,7 +17,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 
 | | |
 | --- | --- |
-| **Tablero** | Arrastrar o clic-clic, coronación a elegir, flechas y círculos de colores (clic derecho, o ✏ con el dedo en móvil y tableta), 4 estilos de piezas, 5 colores de tablero, tamaño ajustable y aspecto oscuro, claro o automático |
+| **Tablero** | Arrastrar o clic-clic, coronación a elegir, flechas y círculos de colores (clic derecho, Ctrl + arrastrar o el botón ✏, que va bien con el dedo y con los paneles táctiles), 4 estilos de piezas, 5 colores de tablero, tamaño ajustable y aspecto oscuro, claro o automático |
 | **Variantes** | Árbol completo: variantes anidadas, promover, hacer principal, cortar; comentarios y símbolos `!` `?` `±`… en cada jugada |
 | **PGN** | Importa notación española (`Cf3`), inglesa, figurines, coordenadas y PGN completos de Lichess, Chess.com o ChessBase; exporta PGN estándar; conserva los tiempos de reloj (`[%clk]`) y muestra cuánto se tardó en cada jugada |
 | **Motor** | Stockfish 19 (NNUE) en el navegador: hasta 3 líneas, flecha, barra de evaluación, **🧠 Piensa conmigo** (`T`: el razonamiento de la mejor jugada explicado en palabras, con la línea paso a paso, las alternativas y la jugada tentadora que falla) y **👁 Ver amenaza** (`X`); nube de Lichess y motor propio de respaldo sin conexión |

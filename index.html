@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.18.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.18.1 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -171,13 +171,12 @@ main {
 .version-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--deep); margin-top: 6px; }
 .version-row .version-what { flex: 1; min-width: 180px; }
 #myRepSection .filter-row > * { min-width: 0; max-width: 100%; }
-/* Dibujar flechas con el dedo: sólo en pantallas táctiles (en el ordenador se dibujan con el clic derecho) */
-.draw-bar { display: none; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+/* Dibujar flechas sin clic derecho: botón ✏ (en el móvil, la tableta y el portátil con panel táctil) */
+.draw-bar { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
 .draw-bar #drawTools:not([hidden]) { display: inline-flex; gap: 4px; align-items: center; }
 .draw-color i { display: inline-block; width: 16px; height: 16px; border-radius: 50%; vertical-align: middle; }
 .draw-color.on { outline: 2px solid var(--text); outline-offset: 1px; }
 #drawToggle[aria-pressed="true"] { background: var(--btn-warn); border-color: var(--warn); }
-@media (pointer: coarse) { .draw-bar { display: flex; } }
 .board-wrap.drawing .square { cursor: crosshair; }
 .think-box { background: var(--deep-blue2); border-color: var(--info); }
 .think-box h3 { font-size: .9rem; margin: 10px 0 4px; }
@@ -802,7 +801,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button id="undoBtn" class="danger" title="Borrar esta jugada y todo lo que sigue">✂ Cortar</button>
     </div>
     <div id="drawBar" class="draw-bar" role="toolbar" aria-label="Dibujar en el tablero">
-      <button id="drawToggle" class="sm-btn" aria-pressed="false" title="Con el modo dibujo activado, arrastra el dedo de una casilla a otra para dibujar una flecha o toca una casilla para rodearla">✏ Dibujar flechas</button>
+      <button id="drawToggle" class="sm-btn" aria-pressed="false" title="Con el modo dibujo activado, arrastra (con el dedo o con el clic normal) de una casilla a otra para dibujar una flecha, o pulsa una casilla para rodearla. En el ordenador también: clic derecho y arrastrar, o Ctrl + arrastrar">✏ Dibujar flechas</button>
       <span id="drawTools" hidden>
         <button class="sm-btn draw-color on" data-color="green" aria-label="Verde" title="Verde"><i style="background:rgb(76,175,80)"></i></button>
         <button class="sm-btn draw-color" data-color="red" aria-label="Rojo" title="Rojo"><i style="background:rgb(239,83,80)"></i></button>
@@ -1418,7 +1417,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.18.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.18.1 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
 </footer>
@@ -1586,7 +1585,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li><b>Mover</b>: arrastra la pieza, o haz clic en la pieza y luego en la casilla de destino. Los puntos verdes indican las jugadas legales (se pueden ocultar en ⚙ Ajustes).</li>
           <li><b>Coronar</b>: al llevar un peón a la última fila aparece un cuadro para elegir dama, torre, alfil o caballo.</li>
           <li><b>Escribir la jugada</b>: en el recuadro «⌨ Escribe una jugada» bajo el tablero, teclea <code>e4</code>, <code>Cf3</code>, <code>Axc6</code>, <code>O-O</code> (o en inglés, <code>Nf3</code>) y pulsa <kbd>Intro</kbd>. Sirve para jugar sin ratón.</li>
-          <li><b>Navegar</b>: botones <b>|◀ ◀ ▶ ▶|</b> bajo el gráfico, el teclado (<kbd>←</kbd> <kbd>→</kbd> <kbd>Inicio</kbd> <kbd>Fin</kbd>) o la <b>rueda del ratón</b> con el puntero sobre el tablero. También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.</li>
+          <li><b>Navegar</b>: botones <b>|◀ ◀ ▶ ▶|</b> bajo el gráfico, el teclado (<kbd>←</kbd> <kbd>→</kbd> <kbd>Inicio</kbd> <kbd>Fin</kbd>) o la <b>rueda del ratón</b> con el puntero sobre el tablero (con un panel táctil, un deslizamiento claro de dos dedos avanza o retrocede una jugada; mientras dibujas flechas, la rueda no hace nada). También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.</li>
           <li><b>Vista previa</b>: al pasar el ratón por una jugada de la lista o de las líneas del motor aparece un minitablero con esa posición, sin moverte de donde estás.</li>
           <li>Las piezas se deslizan al avanzar y retroceder; si lo prefieres, desactiva «Animar las piezas» o «Rueda del ratón» en ⚙ Ajustes.</li>
           <li><b>▶ Auto</b> (o <kbd>Espacio</kbd>) reproduce la partida sola, una jugada por segundo.</li>
@@ -1626,7 +1625,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li><b>📋 Ver como planilla</b>: muestra la partida en dos columnas (número · blancas · negras), como en una planilla de torneo; los comentarios y variantes aparecen entre filas. <b>📜 Ver como lista</b> vuelve a la vista continua.</li>
           <li><b>✍ Redactar comentario con el motor</b>: analiza la jugada actual y escribe un comentario en español: si era un error, cuál era la mejor y cuál es la refutación, y además las ideas estratégicas de la jugada, por ejemplo «Crea un peón pasado en d6», «Deja aislado el peón rival de d5», «Instala el caballo en e5, una casilla fuerte…», «Cede la pareja de alfiles», «La torre llega a la séptima fila» o «Se cambian las damas».</li>
           <li><b>Flechas y círculos</b>: clic derecho y arrastrar dibuja una flecha; clic derecho en una casilla la rodea. Verde por defecto, <kbd>⇧</kbd> roja, <kbd>Alt</kbd> azul, <kbd>⇧</kbd>+<kbd>Alt</kbd> amarilla. Repite el gesto para borrarla, o usa <b>🧽 Borrar flechas</b>. Se guardan en el PGN y Lichess/ChessBase las entienden.</li>
-          <li><b>En el móvil o la tableta</b> (sin clic derecho): pulsa <b>✏ Dibujar flechas</b>, junto a los botones de navegación. Mientras está activado, arrastrar el dedo de una casilla a otra dibuja una flecha y tocar una casilla la rodea; elige el color con los botones de colores, y 🧽 borra las de esa posición. Las piezas no se mueven hasta que vuelves a pulsar el botón.</li>
+          <li><b>Sin clic derecho</b> (móvil, tableta o portátil con panel táctil): pulsa <b>✏ Dibujar flechas</b>, junto a los botones de navegación. Mientras está activado, arrastrar (con el dedo o con el clic normal) de una casilla a otra dibuja una flecha y pulsar una casilla la rodea; elige el color con los botones de colores, y 🧽 borra las de esa posición. Las piezas no se mueven hasta que vuelves a pulsar el botón. En el ordenador también sirve <kbd>Ctrl</kbd> + arrastrar (con <kbd>⇧</kbd> roja, con <kbd>Alt</kbd> azul).</li>
+          <li>Mientras dibujas ves la flecha provisional, para saber dónde la vas a soltar. Para borrar una, dibújala otra vez igual; para cambiarle el color, dibújala con otro.</li>
         </ul>
         <div class="example"><b>Ejemplo:</b> en la jugada 12 crees que había algo mejor → pulsa la jugada 11 de las negras en la lista → juega tu idea en el tablero → escribe en el comentario «Más activa: amenaza Cxe5» → dibuja una flecha roja con <kbd>⇧</kbd> + clic derecho mostrando la amenaza.</div>
       </details>
@@ -2114,7 +2114,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.18.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.18.1</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -4069,18 +4069,21 @@ function renderShapes() {
     if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
     if (Retry.active) for (const a of Retry.arrows) list.push(a);
+    // Mientras se dibuja: la flecha (o el círculo) que va a quedar, para ver dónde se suelta
+    if (ui.drawStart && ui.drawStart.over != null) list.push({ color: ui.drawStart.color, from: ui.drawStart.sq, to: ui.drawStart.over, preview: true });
   }
   let html = "";
   for (const sh of list) {
     const col = SHAPE_COLORS[sh.color] || SHAPE_COLORS.green;
     const [x1, y1] = sqCenter(sh.from), [x2, y2] = sqCenter(sh.to);
-    if (sh.from === sh.to) { html += `<circle cx="${x1}" cy="${y1}" r="44" fill="none" stroke="${col}" stroke-width="7"/>`; continue; }
+    const op = sh.preview ? ` opacity=".55"` : "";
+    if (sh.from === sh.to) { html += `<circle cx="${x1}" cy="${y1}" r="44" fill="none" stroke="${col}" stroke-width="7"${op}/>`; continue; }
     const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
     const sw = sh.color === "engine" ? 13 : 15;
     const ex = x2 - ux * 22, ey = y2 - uy * 22;
     const marker = sh.color === "threat" ? "red" : sh.color;
     const dash = sh.color === "threat" ? ` stroke-dasharray="18 14"` : "";
-    html += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="${dash ? "butt" : "round"}"${dash} marker-end="url(#ah-${marker})"/>`;
+    html += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="${dash ? "butt" : "round"}"${dash}${op} marker-end="url(#ah-${marker})"/>`;
   }
   $("arrowsGroup").innerHTML = html;
 }
@@ -4117,14 +4120,18 @@ boardEl.addEventListener("pointerdown", e => {
   const i = +sqEl.dataset.sq;
   if (e.button === 2) {
     if (editor.active) { editor.state.b[i] = "."; editor.sel = null; editorChanged(); return; }
-    ui.drawStart = { sq: i, color: shapeColor(e) };
+    ui.drawStart = { sq: i, color: shapeColor(e), over: i };
+    ui.drawAt = Date.now();
+    renderShapes();
     return;
   }
   if (e.button !== 0) return;
-  // Modo dibujo (pantallas táctiles): arrastrar dibuja una flecha y tocar una casilla la rodea
-  if (ui.drawMode && !editor.active) {
-    ui.drawStart = { sq: i, color: ui.drawColor || "green", touch: true };
+  // Modo dibujo (botón ✏) o Ctrl + arrastrar: arrastrar dibuja una flecha y pulsar una casilla la rodea
+  if ((ui.drawMode || e.ctrlKey) && !editor.active) {
+    ui.drawStart = { sq: i, color: ui.drawMode ? ui.drawColor || "green" : shapeColor(e), touch: true, over: i };
+    ui.drawAt = Date.now();
     sqEl.classList.add("hint-sq");
+    renderShapes();
     e.preventDefault();
     return;
   }
@@ -4151,6 +4158,11 @@ boardEl.addEventListener("pointerdown", e => {
   } else if (ui.selected != null) { ui.selected = null; renderBoard(); }
 });
 window.addEventListener("pointermove", e => {
+  if (ui.drawStart) {
+    const over = sqFromPoint(e.clientX, e.clientY);
+    if (over != null && over !== ui.drawStart.over) { ui.drawStart.over = over; renderShapes(); }
+    return;
+  }
   const d = ui.drag;
   if (!d) return;
   if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 5) return;
@@ -4181,14 +4193,17 @@ window.addEventListener("pointerup", e => {
   if (ui.drawStart && ui.drawStart.touch) {
     const to = sqFromPoint(e.clientX, e.clientY), d = ui.drawStart;
     ui.drawStart = null;
+    ui.drawAt = Date.now();
     boardEl.querySelectorAll(".hint-sq").forEach(x => x.classList.remove("hint-sq"));
     if (to != null) toggleShape(d.sq, to, d.color);
     return;
   }
-  if (e.button === 2 && ui.drawStart) {
-    const to = sqFromPoint(e.clientX, e.clientY);
-    if (to != null) toggleShape(ui.drawStart.sq, to, ui.drawStart.color);
+  if (ui.drawStart) {
+    const to = sqFromPoint(e.clientX, e.clientY), d = ui.drawStart;
     ui.drawStart = null;
+    ui.drawAt = Date.now();
+    const target = to != null ? to : d.over;
+    if (target != null) toggleShape(d.sq, target, d.color); else renderShapes();
     return;
   }
   const d = ui.drag;
@@ -9445,7 +9460,7 @@ $("clearShapesBtn").onclick = () => { cur().shapes = []; markDirty(); render(); 
 function setDrawMode(on) {
   ui.drawMode = !!on;
   $("drawToggle").setAttribute("aria-pressed", String(ui.drawMode));
-  $("drawToggle").textContent = ui.drawMode ? "✏ Dibujando: toca para volver a mover" : "✏ Dibujar flechas";
+  $("drawToggle").textContent = ui.drawMode ? "✏ Dibujando: pulsa para volver a mover" : "✏ Dibujar flechas";
   $("drawTools").hidden = !ui.drawMode;
   $("boardWrap").classList.toggle("drawing", ui.drawMode);
   if (ui.drawMode) { ui.selected = null; renderBoard(); }
@@ -10463,15 +10478,26 @@ if (window.matchMedia && matchMedia("(hover: hover)").matches) {
 }
 
 /* Rueda del ratón sobre el tablero: avanzar y retroceder */
-let wheelLast = 0;
+/* Con un panel táctil (touchpad), el gesto de dos dedos produce muchos desplazamientos pequeños seguidos:
+   se acumulan y sólo se avanza una jugada por cada «golpe» claro. Mientras se dibuja con el botón derecho
+   (o justo después) la rueda no hace nada, para que el gesto de dibujar no mueva las jugadas. */
+let wheelLast = 0, wheelAcc = 0, wheelAccAt = 0;
 $("boardWrap").addEventListener("wheel", e => {
   if (!settings.wheel || editor.active || quiz() || document.querySelector(".modal-back.open")) return;
   e.preventDefault();
   const now = Date.now();
-  if (now - wheelLast < 80 || Math.abs(e.deltaY) < 4) return;
+  if (ui.drawStart || (e.buttons & 2) || ui.drawMode || now - (ui.drawAt || 0) < 600) { wheelAcc = 0; return; }
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  const dy = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+  if (now - wheelAccAt > 250 || Math.sign(dy) !== Math.sign(wheelAcc)) wheelAcc = 0;
+  wheelAcc += dy;
+  wheelAccAt = now;
+  if (Math.abs(wheelAcc) < 50 || now - wheelLast < 120) return;
   wheelLast = now;
+  const fwd = wheelAcc > 0;
+  wheelAcc = 0;
   stopAutoplay();
-  if (e.deltaY > 0) goForward(); else goBack();
+  if (fwd) goForward(); else goBack();
 }, { passive: false });
 
 /* Exportar la posición como imagen PNG (descarga y, si se puede, copia al portapapeles) */
