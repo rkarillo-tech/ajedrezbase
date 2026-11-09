@@ -219,3 +219,43 @@ Nf3 c5 5. c3 { La «pirámide» c3-d4-e3 sostiene el centro contra …c5. } 5...
 6. Nbd2 Bd6 7. Bg3 { Mantén el alfil: si las negras cambian en g3, hxg3 abre la
 columna h para tu torre. } 7... O-O 8. Bd3 *
 
+[Event "Repertorios de aperturas"]
+[Site "AjedrezBase"]
+[Round "6"]
+[White "Tu repertorio"]
+[Black "Rival"]
+[Result "*"]
+[Title "Repertorio con blancas: 1.d4 y 2.c4 (Gambito de Dama)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "repertorio"]
+
+{ Si ya dominas el sistema Londres y quieres dar el salto al juego clásico con 1.d4, el Gambito de Dama (2.c4) es el arma de casi todos los campeones del mundo. Las blancas presionan el centro desde la jugada 2 y luchan por tener más espacio. Entrénalo con 🎯 jugando con blancas. } 1. d4 d5 (1... Nf6 2. c4 e6 (2... g6 { Contra la India de Rey o Grünfeld, ocupamos el centro clásico con Cc3 y e4. } 3. Nc3 Bg7 (3... d5 4. cxd5 Nxd5 5. e4 Nxc3 6. bxc3 Bg7 7. Nf3) 4. e4 d6 5. Nf3 O-O 6. Be2 e5 7. O-O) 3. Nf3 { Con 3.Cf3 evitamos la Nimzoindia (3.Cc3 Ab4) y llevamos la partida a terrenos conocidos. } 3... d5 (3... b6 { La India de Dama: combatimos el alfil de b7 con nuestro propio fianchetto en g2. } 4. g3 Bb7 5. Bg2 Be7 6. O-O O-O 7. Nc3) 4. Nc3 Be7 5. Bg5 O-O 6. e3) 2. c4 e6 (2... c6 { La defensa Eslava: desarrollamos los dos caballos y jugamos e3 para sostener c4 sin encerrar nuestro juego. } 3. Nf3 Nf6 4. Nc3 dxc4 5. a4 { Impide ...b5 y asegura recuperar el peón de c4 con Ae2/Axc4. } 5... Bf5 6. e3 e6 7. Bxc4 Bb4 8. O-O O-O) (2... dxc4 { El Gambito de Dama Aceptado: jugamos e3 para recuperar el peón de inmediato y dominar el centro. } 3. Nf3 Nf6 4. e3 e6 5. Bxc4 c5 6. O-O a6 7. a4 Nc6 8. Qe2) 3. Nc3 Nf6 4. cxd5 { La variante del cambio: fija la estructura Carlsbad y nos da el plan clarísimo del ataque de minorías (Tb1, b4-b5) o el plan central con f3 y e4. } 4... exd5 5. Bg5 c6 6. e3 Be7 7. Bd3 Nbd7 8. Qc2 O-O 9. Nf3 Re8 10. O-O Nf8 11. Rab1 *
+
+[Event "Repertorios de aperturas"]
+[Site "AjedrezBase"]
+[Round "7"]
+[White "Rival"]
+[Black "Tu repertorio"]
+[Result "*"]
+[Title "Repertorio con negras contra 1.e4: la Defensa Siciliana"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[Type "repertorio"]
+[Orientation "black"]
+
+{ La alternativa combativa a la Caro-Kann: con 1...c5 las negras crean una posición asimétrica desde la primera jugada para luchar por la victoria. Usaremos una estructura flexible basada en ...d6, ...Cf6 y ...a6/e6 (Najdorf/Scheveningen), y planes claros contra la Alapin y la Siciliana cerrada. Entrénalo con 🎯 jugando con negras. } 1. e4 c5 2. Nf3 (2. c3 { Contra la Alapin, golpeamos el centro en el acto con ...d5, igual que vimos en el repertorio blanco. } 2... d5 3. exd5 Qxd5 4. d4 Nf6 5. Nf3 e6 6. Be2 Be7 7. O-O O-O) (2. Nc3 { La Siciliana cerrada o el Grand Prix: jugamos ...Cc6, ...g6 y ...Ag7 controlando la gran diagonal y la casilla d4. } 2... Nc6 3. g3 (3. f4 g6 4. Nf3 Bg7 5. Bc4 e6 6. O-O Nge7) 3... g6 4. Bg2 Bg7 5. d3 d6 6. f4 e6 7. Nf3 Nge7) 2... d6 3. d4 (3. Bb5+ { El ataque Moscú (jaque en b5): tapamos con el alfil para cambiar piezas o jugar con solidez. } 3... Bd7 4. Bxd7+ Qxd7 5. O-O Nc6 6. c3 Nf6 7. Re1 e6) 3... cxd4 4. Nxd4 Nf6 5. Nc3 a6 { La variante Najdorf: vigila b5, prepara ...e5 o ...e6 y mantiene todas las opciones abiertas. } 6. Be2 (6. Be3 e5 7. Nb3 Be6 8. f3 Be7 9. Qd2 O-O 10. O-O-O Nbd7) (6. Bg5 e6 7. f4 Be7 8. Qf3 Qc7 9. O-O-O Nbd7) 6... e5 7. Nb3 Be7 8. O-O O-O 9. Be3 Be6 *
+
+[Event "Repertorios de aperturas"]
+[Site "AjedrezBase"]
+[Round "8"]
+[White "Rival"]
+[Black "Tu repertorio"]
+[Result "*"]
+[Title "Repertorio con negras contra 1.d4: la Defensa India de Rey"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[Type "repertorio"]
+[Orientation "black"]
+
+{ Para quienes buscan acción contra 1.d4: la India de Rey permite a las blancas ocupar el centro con peones para luego contraatacarlo con ...e5 o ...c5 y lanzar un ataque directo sobre el enroque blanco con ...f5. Entrénalo con 🎯 jugando con negras. } 1. d4 Nf6 2. c4 (2. Bf4 { Contra el sistema Londres, el fianchetto en g7 es muy eficaz y preparamos ...d6 y ...c5 o ...e5. } 2... g6 3. e3 Bg7 4. Nf3 O-O 5. Be2 d6 6. h3 c5 7. c3 b6) 2... g6 3. Nc3 (3. Nf3 Bg7 4. g3 { Contra el fianchetto blanco, golpeamos el centro con ...c5 tras enrocar. } 4... O-O 5. Bg2 d6 6. O-O Nbd7 7. Nc3 e5) 3... Bg7 4. e4 d6 5. Nf3 (5. f3 { La variante Sämisch: contra este centro tan pesado, atacamos por el flanco de dama con ...c5 y ...Cc6. } 5... O-O 6. Be3 c5 7. Nge2 Nc6 8. Qd2 a6) 5... O-O 6. Be2 e5 7. O-O (7. dxe5 dxe5 8. Qxd8 Rxd8 { Si las blancas cambian damas pronto, la casilla d4 es débil y las negras igualan sin problemas. }) 7... Nc6 8. d5 Ne7 9. Ne1 Nd7 10. Be3 f5 { El plan temático: ruptura en f5 y ataque en el flanco de rey. } *

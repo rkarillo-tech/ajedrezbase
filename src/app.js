@@ -6847,11 +6847,13 @@ const COURSE_PGN = /*__COURSES__*/{};
 const COURSES = [
   { id: "aperturas", icon: "📖", name: "Aperturas", desc: "Los principios, los errores típicos y las aperturas principales con blancas y con negras, explicando el porqué de cada jugada." },
   { id: "planes", icon: "💡", name: "Planes de apertura", desc: "Posiciones típicas que salen de las aperturas: ¿cuál es el plan? Encuentra tú las jugadas clave (ataque de minorías, cadenas de peones, rupturas, casillas fuertes, enroques opuestos, peones doblados, la pareja de alfiles…) y entiende por qué se juegan." },
-  { id: "repertorios", icon: "🗂", name: "Repertorios para entrenar", desc: "Repertorios completos con blancas (1.e4) y con negras (Caro-Kann y Gambito de Dama), con el porqué de cada jugada. Entrénalos con 🎯: los repasos se espacian solos." },
+  { id: "repertorios", icon: "🗂", name: "Repertorios para entrenar", desc: "Repertorios completos con blancas (1.e4, el Londres o el Gambito de Dama) y con negras (Caro-Kann, Siciliana, Gambito de Dama Declinado o India de Rey), con el porqué de cada jugada. Entrénalos con 🎯: los repasos se espacian solos." },
   { id: "tactica", icon: "⚔", name: "Táctica", desc: "Horquillas, clavadas, enfiladas, descubiertas, sobrecarga y mates típicos, con ejercicios para resolver." },
+  { id: "mates", icon: "🗡", name: "Patrones de mate y ataque al rey", desc: "Los mates con nombre propio (Anastasia, Boden, árabe, Damiano, Lolli, Greco, las hombreras, las torres en séptima) y los sacrificios clásicos contra el rey: el doble sacrificio de alfil de Lasker, el sacrificio en f7 y el ataque Fegatello." },
   { id: "estrategia", icon: "🧭", name: "Estrategia", desc: "Cómo hacer un plan: estructuras de peones, piezas buenas y malas, columnas, casillas fuertes y peones pasados." },
   { id: "finales", icon: "👑", name: "Finales", desc: "Los mates básicos, rey y peón, la oposición, Lucena, Philidor y los finales que hay que saber de memoria." },
-  { id: "partidas", icon: "🏆", name: "Partidas magistrales", desc: "Partidas célebres de Morphy, Anderssen, Fischer, Karpov y Kaspárov, comentadas jugada a jugada: qué ideas las decidieron y dónde se equivocaron." }
+  { id: "partidas", icon: "🏆", name: "Partidas magistrales", desc: "Partidas célebres de Morphy, Anderssen, Fischer, Karpov y Kaspárov, comentadas jugada a jugada: qué ideas las decidieron y dónde se equivocaron." },
+  { id: "trampas", icon: "🪤", name: "Trampas y miniaturas", desc: "Partidas célebres de menos de 20 jugadas y trampas de apertura que conviene conocer con los dos colores: Teed–Delmar, Réti–Tartakower, la caza del rey de Lasker, la trampa de Blackburne, la del Englund y la siberiana." }
 ];
 const courseCache = {};
 /* 📥 Cursos añadidos por el usuario desde un .pgn: se guardan en este navegador y funcionan como los de la aplicación */
@@ -6872,6 +6874,9 @@ function courseFromPgn(text, fileName) {
   parts.forEach((g, k) => {
     const r = Pgn.parseGame(g, { lang: "auto" });
     if (r.error && !r.count) { bad.push(k + 1); return; }
+    // Posición imposible (el bando que no mueve está en jaque): se descarta, el motor no podría analizarla
+    const s0 = r.game.root.state;
+    if (Chess.inCheck(Object.assign({}, s0, { t: -s0.t }))) { bad.push(k + 1); return; }
     lessons.push(g);
   });
   if (!lessons.length) return { error: "El fichero no tiene ninguna partida o lección que se pueda leer." };

@@ -1,0 +1,148 @@
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "El mate de Anastasia: caballo y torre por la columna h"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "5rk1/pp3ppp/8/3N4/8/4R2Q/PPP2PPP/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Rg8,Rh7] [%cal Gd5e7,Ge3h3] El mate de Anastasia combina un caballo en e7 (que quita las casillas g8 y g6 al rey negro) con una torre o dama en la columna h. Para abrir la columna h, casi siempre se sacrifica primero la dama en h7. Observa cómo el peón de f7 estorba a su propio rey. } 1. Ne7+ $1 { [%cal Ge7g8,Ge7g6] Primero el caballo da jaque y controla las casillas de escape g8 y g6. } 1... Kh8 2. Qxh7+ $3 { [%cal Gh3h7] ¡Sacrificio de dama! Obliga al rey negro a capturar en la columna h, dejándola abierta para la torre. } 2... Kxh7 3. Rh3# { [%csl Rh7] [%cal Ge7g8,Ge7g6,Gh3h7] ¡Mate de Anastasia! El peón negro de g7 y su propio peón de f7 impiden que el rey escape, mientras el caballo vigila g8 y g6. Recuerda la receta: caballo en e7, sacrificio en h7 y torre a h3. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "El mate de Boden: el cruce de los dos alfiles"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "2kr3r/pp1nqppp/2n5/8/5B2/5Q2/PPP2PPP/5BK1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Rc8] [%cal Gf4b8,Gf1a6] El mate de Boden castiga a menudo al enroque largo: dos alfiles en diagonales que se cruzan quitan todas las casillas al rey, mientras sus propias piezas (aquí el caballo de d7 y la torre de d8) le cierran la salida. El alfil de f4 ya vigila b8 y c7. Sólo falta abrir la diagonal a6-c8, que tapa el peón de b7. } 1. Qxc6+ $3 { [%cal Gf3c6] ¡Sacrificio de dama! El peón de b7 está obligado a capturar: el rey no puede ir a b8 ni a c7, que controla el alfil de f4. } 1... bxc6 { Al capturar, el peón deja libre la diagonal a6-c8. } 2. Ba6# { [%csl Rc8] [%cal Ga6c8,Gf4b8] ¡Mate de Boden! El alfil de a6 da jaque y vigila b7; el de f4 cubre b8 y c7; y el caballo de d7 y la torre de d8 encierran a su propio rey. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "El mate árabe: la pareja perfecta de torre y caballo"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "7k/2R5/5N2/8/8/8/6PP/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Rh8] [%cal Gf6h7,Gf6g8,Gc7h7] El mate árabe es uno de los más antiguos del ajedrez (viene del shatranj). En una esquina del tablero, el caballo desde f6 cumple dos funciones a la vez: quita la casilla de escape g8 al rey y defiende a la torre cuando da mate en h7. } 1. Rh7# { [%csl Rh8] [%cal Gc7h7,Gf6h7,Gf6g8] Mate limpio. Torre y caballo cerca del rey en la esquina son una pareja letal porque el caballo cubre exactamente las casillas del color que la torre no controla. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "El mate de Damiano y la sobrecarga de la octava fila"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "r4rk1/ppp2p1p/5PpQ/8/8/8/PPP3PP/4R1K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Rg7] [%cal Ge1e8,Gh6g7] Un peón avanzado en f6 es un clavo en el ataúd del enroque corto: controla g7 y prepara el mate en esa casilla. Si el rival intenta evitarlo defendiendo la última fila o creando aire, la torre y la dama coordinadas rematan en pocas jugadas. } 1. Re8 $1 { [%cal Ge8f8,Gh6g7] ¡Desviación! Amenaza Txf8# y Dg7# a la vez. La torre de f8 está sobrecargada. } 1... Rfxe8 (1... Raxe8 2. Qg7#) 2. Qg7# { [%csl Rg8] [%cal Gh6g7,Gf6g7] Mate. Moraleja: nunca subestimes un peón enemigo instalado en f6 junto a una dama en h6. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "Ejercicio: el mate de Lolli"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "5rk1/pp3p1p/5PpQ/8/8/8/PPP3PP/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Rg7] Juegan las blancas y dan mate en una. El peón en f6 y la dama en h6 forman la batería de Lolli cuando el rival ha jugado ...g6 y ha debilitado las casillas oscuras de su enroque. } 1. Qg7# { [%csl Rg8] [%cal Gh6g7,Gf6g7] Mate de Lolli. Por eso, cuando tu alfil de fianchetto en g7 desaparece, ten muchísimo cuidado con el agujero que queda en f6 y h6. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "Ejercicio: el mate de Greco en la esquina"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "7k/ppp3p1/8/8/2B5/8/PPP2PPP/3Q2K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Gc4g8] [%csl Rh8,Rg8] Juegan las blancas y dan mate en una. En el patrón de Greco, el alfil de c4 corta la casilla de escape g8 y el peón negro de g7 encierra a su propio rey. Basta con que la dama llegue a la columna h. } 1. Qh5# { [%csl Rh8] [%cal Gd1h5,Gh5h8,Gc4g8] ¡Mate de Greco! La dama da jaque por la columna h, el alfil vigila g8 y el peón de g7 impide que el rey escape. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "7"]
+[Title "Ejercicio: el mate de las hombreras (Epaulette mate)"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "3rkr2/ppp3pp/6N1/2Q5/8/8/PPP2PPP/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Rd8,Rf8] Juegan las blancas y dan mate en una. Cuando el rey tiene sus dos casillas laterales ocupadas por sus propias torres (como las hombreras de un uniforme), un jaque de frente, con la dama protegida, no le deja escapatoria. } 1. Qe7# { [%csl Re8,Rd8,Rf8] [%cal Gc5e7,Gg6e7] ¡Mate de las hombreras! La dama, protegida por el caballo de g6, da jaque de frente; las dos torres negras en d8 y f8 impiden que su propio rey escape hacia los lados. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "8"]
+[Title "Las dos torres en séptima (los cerdos ciegos)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "5rk1/1R4pp/8/8/8/8/5PPP/1R4K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Gb7g7,Gb1b7] Dos torres dobladas en la séptima fila («los cerdos ciegos», como los llamaba Nimzowitsch) devoran todo a su paso y fuerzan el mate en pocas jugadas. } 1. Rxg7+ $5 { [%cal Gb7g7] Primero cae el peón de g7 con jaque. (También gana, aún más rápido, 1.Tb8, que cambia la única torre defensora; pero aquí queremos ver cómo trabajan las dos torres en séptima.) } 1... Kh8 2. Rbb7 { [%cal Gb7h7,Gg7h7] Ahora las dos torres dobladas en séptima amenazan Txh7# imparable. } 2... Rd8 3. Rxh7+ Kg8 4. Rbg7+ Kf8 5. Rh8# { [%csl Rf8] Mate con las dos torres coordinadas. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "9"]
+[Title "El doble sacrificio de alfil (Lasker – Bauer, 1889)"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[White "Emanuel Lasker"]
+[Black "Johann Hermann Bauer"]
+[Date "1889.08.26"]
+[ECO "A03"]
+[Result "1-0"]
+
+{ Ámsterdam, 1889. Si en el curso de táctica vimos el sacrificio griego en h7, aquí Emanuel Lasker (futuro campeón del mundo) inventa un nuevo estándar: sacrificar primero en h7 y acto seguido el segundo alfil en g7 para dejar al rey negro totalmente desnudo frente a la dama y la torre. } 1. f4 d5 2. e3 Nf6 3. b3 e6 4. Bb2 Be7 5. Bd3 b6 6. Nf3 Bb7 7. Nc3 Nbd7 8. O-O O-O 9. Ne2 { [%cal Ge2g3] El caballo pasa al flanco de rey y abre la gran diagonal a1-h8 para el alfil de b2. } 9... c5 10. Ng3 Qc7 11. Ne5 { [%csl Ge5] El caballo ocupa e5 y los dos alfiles blancos (d3 y b2) apuntan directamente al enroque negro. } 11... Nxe5 12. Bxe5 $6 { La jugada de la partida; más precisa era 12.fxe5, que abre la columna f para la torre. } 12... Qc6 13. Qe2 a6 $6 { Las negras no ven el peligro que se cierne sobre su rey y pierden un tiempo en el flanco de dama. } 14. Nh5 $1 { [%cal Gh5f6] Ataca al caballo de f6, el único defensor del enroque negro. } 14... Nxh5 $2 { Eliminar al caballo deja h7 y g7 a merced de los dos alfiles. Era mejor 14...Ce8. } 15. Bxh7+ $3 { [%cal Gd3h7] ¡Primer sacrificio! El clásico regalo griego para atraer al rey. } 15... Kxh7 16. Qxh5+ Kg8 17. Bxg7 $3 { [%cal Ge5g7] ¡El segundo alfil! Se destruye el último peón que protegía al rey negro. } 17... Kxg7 (17... f5 18. Be5 { y la torre entra por f3-g3 con mate imparable. }) 18. Qg4+ Kh7 19. Rf3 { [%cal Gf3h3] ¡El ascensor de la torre! La maniobra típica para traer una pieza pesada más al ataque. } 19... e5 20. Rh3+ Qh6 21. Rxh6+ Kxh6 22. Qd7 { [%cal Gd7b7,Gd7e7] ¡La guinda táctica! Ataque doble a los dos alfiles negros: Lasker recupera el material invertido y se queda con un final ganado. Lección: cuando dos alfiles apuntan sin obstáculos al enroque rival y desaparece el caballo de f6, busca el doble sacrificio en h7 y g7. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "10"]
+[Title "El sacrificio en f7 contra un ataque prematuro"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQ1RK1 b kq - 2 5"]
+[Result "1-0"]
+
+{ La casilla f7 (o f2 en las blancas) es el talón de Aquiles del inicio de la partida porque sólo la defiende el rey. Cuando un bando se retrasa en el enroque o mueve dos veces la misma pieza sin necesidad, el sacrificio en f7 obliga al rey a salir de paseo al centro del tablero. } 5... Ng4 $6 { [%cal Gg4f2,Gc5f2] Las negras atacan f2 con dos piezas... pero violan los principios de apertura moviendo dos veces el caballo antes de enrocar, y además f2 ya está defendido por la torre de f1. } 6. Bxf7+ $1 { [%cal Gc4f7] ¡Castigo inmediato! Las blancas entregan el alfil para desnudar al rey negro y recuperar la pieza en g4 con ganancia de un peón. } 6... Kxf7 7. Ng5+ { [%cal Gg5f7,Gg5g4,Gd1g4] Jaque al rey y ataque descubierto de la dama blanca sobre el caballo suelto de g4. } 7... Kg8 8. Qxg4 { Las blancas han ganado un peón limpio, tienen el rey seguro en g1 y el rey negro ha perdido el derecho a enrocar y encierra a su propia torre de h8. Lección: no lances ataques prematuros contra f2/f7 con dos piezas sueltas si tu propio rey sigue en el centro. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "11"]
+[Title "La demolición con Cxf7: el ataque Fegatello (hígado frito)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "C57"]
+[Result "1-0"]
+
+{ En la Defensa de los Dos Caballos (1.e4 e5 2.Cf3 Cc6 3.Ac4 Cf6 4.Cg5 d5 5.exd5), recapturar con 5...Cxd5 permite el famoso ataque Fegatello («hígado frito» en italiano). Veamos cómo se conduce este sacrificio clásico de caballo en f7. } 1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 Nxd5 $6 { [%csl Rd5,Rf7] Permite el sacrificio en f7. Lo correcto es 5...Ca5!. } 6. Nxf7 $1 { [%cal Gg5f7,Gc4d5] El caballo se entrega en f7 para atraer al rey negro a la columna f y a la diagonal a2-g8, mientras el caballo negro de d5 queda clavado e indefenso. } 6... Kxf7 7. Qf3+ { [%cal Gf3f7,Gf3d5] ¡Doble ataque! Jaque al rey y segunda pieza atacando el caballo de d5. } 7... Ke6 { Única jugada si las negras no quieren devolver inmediatamente la pieza en d5 con un peón de menos. } (7... Kg8 8. Bxd5+ Qxd5 9. Qxd5+ Be6 10. Qxe6#) 8. Nc3 { [%cal Gc3d5] ¡La regla de la pieza clavada! No tengas prisa en comer: suma más atacantes contra el caballo de d5, que no puede moverse. } 8... Nb4 { Las negras intentan defender d5 por tercera vez y amenazan ...Cxc2+. } 9. Qe4 { Defiende c2 y mantiene toda la presión sobre d5. } 9... c6 10. a3 Na6 11. d4 { [%cal Gd4e5] ¡Abrir el centro! Con el rey rival en e6, hay que abrir todas las columnas y diagonales posibles. } 11... Nc7 12. Bf4 { Todas las piezas blancas están desarrolladas y atacando; el rey negro en el centro no puede sobrevivir. } 12... Bd6 $2 { Pierde material; aun así, la posición negra era ya muy difícil. } 13. dxe5 Bc5 14. O-O-O { Con la torre en la columna d, la posición negra se derrumba. } 1-0
+
+[Event "Curso de patrones de mate y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "12"]
+[Title "Ejercicio: eliminación del defensor del enroque (Axf6 y Dxh7#)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r4rk1/ppp2ppp/2n2n2/3p2B1/3P4/2NB3Q/PPP2PPP/4R1K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Gg5f6,Gd3h7,Gh3h7] Juegan las blancas. El alfil de d3 y la dama de h3 forman una batería apuntando a h7, que sólo está defendido por el caballo de f6 y el rey. ¿Qué pieza debes eliminar primero antes de dar mate? } 1. Bxf6 $1 { [%cal Gg5f6] ¡Eliminación del defensor! Si desaparece el caballo de f6, nadie defiende h7. } 1... gxf6 { Si 1...h6, las blancas han ganado una pieza limpia. } 2. Qxh7# { [%csl Rg8] [%cal Gh3h7,Gd3h7] Mate. Antes de lanzar tu dama contra h7, mira si puedes cambiar o desviar al caballo de f6. } 1-0
