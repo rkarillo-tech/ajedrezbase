@@ -1,0 +1,75 @@
+[Event "Curso de sacrificios y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "El doble sacrificio de alfil (Lasker – Bauer, 1889)"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[White "Emanuel Lasker"]
+[Black "Johann Hermann Bauer"]
+[Date "1889.08.26"]
+[ECO "A03"]
+[Result "1-0"]
+
+{ Ámsterdam, 1889. Si en el curso de táctica vimos el sacrificio griego en h7, aquí Emanuel Lasker (futuro campeón del mundo) inventa un nuevo estándar: sacrificar primero en h7 y acto seguido el segundo alfil en g7 para dejar al rey negro totalmente desnudo frente a la dama y la torre. } 1. f4 d5 2. e3 Nf6 3. b3 e6 4. Bb2 Be7 5. Bd3 b6 6. Nf3 Bb7 7. Nc3 Nbd7 8. O-O O-O 9. Ne2 { [%cal Ge2g3] El caballo pasa al flanco de rey y abre la gran diagonal a1-h8 para el alfil de b2. } 9... c5 10. Ng3 Qc7 11. Ne5 { [%csl Ge5] El caballo ocupa e5 y los dos alfiles blancos (d3 y b2) apuntan directamente al enroque negro. } 11... Nxe5 12. Bxe5 Qc6 13. Qe2 a6 $6 { Las negras no ven el peligro que se cierne sobre su rey y pierden un tiempo en el flanco de dama. } 14. Nh5 $1 { [%cal Gh5f6] Ataca al caballo de f6, el único defensor del enroque negro. } 14... Nxh5 $2 { Eliminar al caballo deja h7 y g7 a merced de los dos alfiles. Era mejor 14...Ce8. } 15. Bxh7+ $3 { [%cal Gd3h7] ¡Primer sacrificio! El clásico regalo griego para atraer al rey. } 15... Kxh7 16. Qxh5+ Kg8 17. Bxg7 $3 { [%cal Ge5g7] ¡El segundo alfil! Se destruye el último peón que protegía al rey negro. } 17... Kxg7 (17... f5 18. Be5 { y la torre entra por f3-g3 con mate imparable. }) 18. Qg4+ Kh7 19. Rf3 { [%cal Gf3h3] ¡El ascensor de la torre! La maniobra típica para traer una pieza pesada más al ataque. } 19... e5 20. Rh3+ Qh6 21. Rxh6+ Kxh6 22. Qd7 { [%cal Gd7b7,Gd7e7] ¡La guinda táctica! Ataque doble a los dos alfiles negros: Lasker recupera el material invertido y se queda con un final ganado. Lección: cuando dos alfiles apuntan sin obstáculos al enroque rival y desaparece el caballo de f6, busca el doble sacrificio en h7 y g7. } 1-0
+
+[Event "Curso de sacrificios y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "El sacrificio en f7 contra un ataque prematuro"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQ1RK1 b kq - 2 5"]
+[Result "1-0"]
+
+{ La casilla f7 (o f2 en las blancas) es el talón de Aquiles del inicio de la partida porque sólo la defiende el rey. Cuando un bando se retrasa en el enroque o mueve dos veces la misma pieza sin necesidad, el sacrificio en f7 obliga al rey a salir de paseo al centro del tablero. } 5... Ng4 $6 { [%cal Gg4f2,Gc5f2] Las negras atacan f2 con dos piezas... pero violan los principios de apertura moviendo dos veces el caballo antes de enrocar, y además f2 ya está defendido por la torre de f1. } 6. Bxf7+ $1 { [%cal Gc4f7] ¡Castigo inmediato! Las blancas entregan el alfil para desnudar al rey negro y recuperar la pieza en g4 con ganancia de un peón. } 6... Kxf7 7. Ng5+ { [%cal Gg5f7,Gg5g4,Gd1g4] Jaque al rey y ataque descubierto de la dama blanca sobre el caballo suelto de g4. } 7... Kg8 8. Qxg4 { Las blancas han ganado un peón limpio, tienen el rey seguro en g1 y el rey negro ha perdido el derecho a enrocar y encierra a su propia torre de h8. Lección: no lances ataques prematuros contra f2/f7 con dos piezas sueltas si tu propio rey sigue en el centro. } 1-0
+
+[Event "Curso de sacrificios y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "La demolición con Cxf7: el ataque Fegatello (hígado frito)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[ECO "C57"]
+[Result "1-0"]
+
+{ En el curso de aperturas mencionamos que en la Defensa de los Dos Caballos (1.e4 e5 2.Cf3 Cc6 3.Ac4 Cf6 4.Cg5 d5 5.exd5), recapturar con 5...Cxd5 permite el famoso ataque Fegatello («hígado frito» en italiano). Veamos cómo se conduce este sacrificio clásico de caballo en f7. } 1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 Nxd5 $6 { [%csl Rd5,Rf7] Permite el sacrificio en f7. Lo correcto es 5...Ca5!, como vimos en el curso de aperturas. } 6. Nxf7 $1 { [%cal Gg5f7,Gc4d5] El caballo se entrega en f7 para atraer al rey negro a la columna f y a la diagonal a2-g8, mientras el caballo negro de d5 queda clavado e indefenso. } 6... Kxf7 7. Qf3+ { [%cal Gf3f7,Gf3d5] ¡Doble ataque! Jaque al rey y segunda pieza atacando el caballo de d5. } 7... Ke6 { Única jugada si las negras no quieren devolver inmediatamente la pieza en d5 con un peón de menos. } (7... Kg8 8. Bxd5+ Qxd5 9. Qxd5+ Be6 10. Qxe6#) 8. Nc3 { [%cal Gc3d5] ¡La regla de la pieza clavada! No tengas prisa en comer: suma más atacantes contra el caballo de d5, que no puede moverse. } 8... Nb4 { Las negras intentan defender d5 por tercera vez y amenazan ...Cxc2+. } 9. Qe4 { Defiende c2 y mantiene toda la presión sobre d5. } 9... c6 10. a3 Na6 11. d4 { [%cal Gd4e5] ¡Abrir el centro! Con el rey rival en e6, hay que abrir todas las columnas y diagonales posibles. } 11... Nc7 12. Bf4 { Todas las piezas blancas están desarrolladas y atacando; el rey negro en el centro no puede sobrevivir. } 12... Bd6 13. dxe5 Bc5 14. O-O-O { Con la torre en la columna d, la posición negra se derrumba. } 1-0
+
+[Event "Curso de sacrificios y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "Apertura de líneas en el centro contra el rey sin enrocar"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "r3r1k1/pp1n1pbp/2pp1np1/q7/2P1P3/2N1BP2/PP1QB1PP/2KR3R b - - 3 12"]
+[Result "0-1"]
+
+{ No todos los ataques buscan el flanco de rey. En esquemas dinámicos como la Siciliana o la Benoni, las negras buscan rupturas centrales (...d5 o ...b5) para abrir líneas y activar el alfil de fianchetto en g7 contra el flanco de dama blanco. } 12... Rac8 { [%cal Gc8c3] La torre se coloca en la columna c, apuntando por rayos X al caballo de c3 y al rey blanco en c1. } 13. Kb1 d5 { [%cal Gd5e4,Gd5c4] ¡La ruptura liberadora! Las negras abren el centro aprovechando la excelente colocación de sus torres. } 14. cxd5 cxd5 15. Nxd5 Qxd2 16. Nxf6+ Bxf6 17. Rxd2 { Parece que las blancas ganan el caballo de d7... } 17... Nc5 { ...pero el caballo salta con tiempo hacia una casilla activa. La pareja de alfiles y las columnas abiertas dan a las negras un juego muy cómodo. } 0-1
+
+[Event "Curso de sacrificios y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "Ejercicio: el sacrificio de desviación en la octava fila"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "3r2k1/p4ppp/1q6/8/8/2Q5/PP3PPP/3R2K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Rd8,Rg8] Juegan las blancas y ganan. La torre de d8 es la única defensora de la última fila, pero a la vez está protegida por la dama de b6. ¿Cómo destruyes la coordinación negra de un golpe? } 1. Qa5 $1 { [%cal Ga5d8,Ga5b6,Gd1d8] ¡Ataque a la dama y rayos X sobre d8! La dama negra no puede abandonar la defensa de la torre de d8 ni capturar la dama blanca. } 1... Qxa5 { Si las negras se comen la dama... } (1... Rb8 2. Qxb6 axb6 { y las blancas ganan un peón limpio en el final, o con 1...Dc7 2.Dxd8+ Dxd8 3.Txd8#. }) 2. Rxd8# { [%cal Gd1d8] ¡Mate en el pasillo! La dama blanca se ofreció en a5 porque la dama negra estaba sobrecargada defendiendo d8. } 1-0
+
+[Event "Curso de sacrificios y ataque al rey"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "Ejercicio: eliminación del defensor del enroque (Axf6 y Dxh7#)"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r4rk1/ppp2ppp/2n2n2/3p2B1/3P4/2NB3Q/PPP2PPP/4R1K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Gg5f6,Gd3h7,Gh3h7] Juegan las blancas. El alfil de d3 y la dama de h3 forman una batería apuntando a h7, que sólo está defendido por el caballo de f6 y el rey. ¿Qué pieza debes eliminar primero antes de dar mate? } 1. Bxf6 $1 { [%cal Gg5f6] ¡Eliminación del defensor! Si desaparece el caballo de f6, nadie defiende h7. } 1... gxf6 { Si 1...h6, las blancas han ganado una pieza limpia. } 2. Qxh7# { [%csl Rg8] [%cal Gh3h7,Gd3h7] Mate. Antes de lanzar tu dama contra h7, mira si puedes cambiar o desviar al caballo de f6. } 1-0

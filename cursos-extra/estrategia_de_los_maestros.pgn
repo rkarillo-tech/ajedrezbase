@@ -1,0 +1,77 @@
+[Event "Curso de estrategia de los maestros"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "Capablanca: la simplificación y el peón pasado"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[White "José Raúl Capablanca"]
+[Black "Dawid Janowski"]
+[Date "1916.01.??"]
+[SetUp "1"]
+[FEN "2r3k1/pp1bppbp/1q4p1/3P4/8/1N2B3/PP2QPPP/2R3K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gd5] [%cal Gc1c8] José Raúl Capablanca era el maestro supremo de la sencillez: cuando tenía una ventaja clara (aquí, un peón pasado y protegido en d5), cambiaba las piezas pesadas del rival para eliminar cualquier contrajuego y entraba en un final ganado por pura técnica. } 1. Rxc8+ $1 { [%cal Gc1c8] Primero se cambia la única torre activa de las negras. } 1... Bxc8 2. Qc4 { [%cal Gc4b6,Gc4c8] ¡Ataque doble a la dama de b6 y al alfil de c8! Fuerza el cambio de damas o gana material. } 2... Qd8 3. Bxa7 { Mientras simplifica, el alfil recoge el peón de a7 y crea dos peones pasados unidos en el flanco de dama. } 3... Bxb2 4. Bd4 { [%cal Gd4b2] Cambia también el alfil defensor de casillas negras. Cuantas menos piezas queden en el tablero, más imparable es el peón pasado de d5. } 4... Bxd4 5. Qxd4 e6 6. d6 { [%csl Gd6] El peón avanza a la sexta fila y ata de pies y manos a las piezas negras. A partir de aquí, Capablanca sólo tiene que acercar su rey y avanzar el peón a. Lección: cuando tengas un peón pasado fuerte, cambia las piezas mayores del rival para que no pueda complicar la partida. } 1-0
+
+[Event "Curso de estrategia de los maestros"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "Nimzowitsch: el bloqueo y la profilaxis"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "2r3k1/pp3ppp/4p3/3pP3/1P1n1P2/P2B4/6PP/2R3K1 b - - 0 1"]
+[Result "0-1"]
+[Orientation "black"]
+
+{ [%csl Gd4,Gc4] Aaron Nimzowitsch, autor de «Mi sistema», revolucionó la estrategia con dos conceptos clave: la profilaxis (impedir lo que quiere hacer el rival antes de que lo haga) y el bloqueo de las casillas débiles. Aquí las blancas tienen un alfil restringido por sus propios peones y debilidades graves en las casillas blancas. } 1... Rxc1+ $1 { [%cal Gc8c1] Primero, las negras cambian la única torre defensora de las blancas. } 2. Kf2 Nb3 { [%cal Gb3c5,Gb3d2] El caballo domina las casillas blancas que los peones de a3, b4 y f4 ya no pueden defender. } 3. Ke3 Kf8 { En los finales, el rey va al centro antes de lanzar el golpe definitivo. } 4. g4 Ke7 5. h4 h6 { Profilaxis pura: antes de que las blancas rompan con g5 o f5, las negras frenan el flanco de rey. Con el rey blanco atado y el caballo negro muy superior al alfil en una estructura cerrada, las negras dominan todo el tablero. } 0-1
+
+[Event "Curso de estrategia de los maestros"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "Rubinstein: la técnica en los finales de torres"]
+[Level "Club"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "2r2rk1/pp3ppp/4p3/8/3P4/P3P3/1P3PPP/2R2RK1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Gc1c8,Gg1f1] Akiba Rubinstein fue el mayor virtuoso de los finales de torres del siglo XX. Su regla de oro: domina la única columna abierta, evita que el rival active sus torres gratis y lleva tu rey hacia el centro. } 1. Rxc8 { [%cal Gc1c8] Primero cambiamos un par de torres para disputar el control de la columna c. } 1... Rxc8 2. Rb1 { Prepara b4 y evita que la torre negra invada b2 con ganancia de tiempo. } 2... Rc2 3. b4 Kf8 4. Kf1 Ke7 5. Ke1 Kd6 6. Rb3 { La torre blanca se activa por la tercera fila mientras el rey se prepara para disputar las casillas centrales. En los finales de torres, la coordinación entre torre activa y rey centralizado decide la partida. } 1-0
+
+[Event "Curso de estrategia de los maestros"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "Smyslov: crear el peón pasado en el flanco de dama"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[SetUp "1"]
+[FEN "6k1/p4ppp/1p2p3/1P6/P7/4B3/5PPP/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gb5,Ga4,Ra7,Rb6] Cuando tienes una mayoría o presión de peones en el flanco de dama y el rey rival está lejos en el flanco de rey, una ruptura oportuna permite crear un peón pasado imparable. } 1. a5 $1 { [%cal Ga5b6] Ataca la base de los peones negros del flanco de dama. } 1... bxa5 (1... Kf8 2. axb6 axb6 3. Bxb6 { ganando un peón limpio y pasado en b5. }) 2. Bxa7 { [%cal Gb5b6,Gb6b7] El alfil elimina el peón de a7 y deja libre el camino para el peón de b5, que está protegido por el alfil desde delante. } 2... Kf8 3. b6 { Amenaza b7 y b8=D. El rey negro no llega a tiempo. } 1-0
+
+[Event "Curso de estrategia de los maestros"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "Ejercicio: restringir al caballo en el borde del tablero"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "8/5pk1/6p1/7p/n7/3B4/5PPP/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Ra4] [%cal Gd3b5] «Un caballo en el borde es una deshonra» (Tarrasch). Juegan las blancas. El caballo negro en a4 está en la banda: ¿cómo le quitas todas las casillas de salto (b6, c5, c3 y b2) con una sola jugada de tu alfil? } 1. Bb5 $1 { [%cal Gb5a4,Gb5c6,Gb5d7] [%csl Rb6,Rc5,Rc3,Rb2] ¡Dominación total! El alfil ataca al caballo de a4 y, a la vez, controla sus casillas de escape. Un alfil a tres casillas de distancia en la misma fila o columna de un caballo en la banda le corta todos los saltos hacia delante. } 1... Nc3 (1... Nb6 2. Kf1 { y el caballo ha quedado totalmente fuera de juego mientras el rey blanco va al centro. }) 2. Bd3 { El alfil domina por completo al caballo en tableros abiertos. } 1-0
+
+[Event "Curso de estrategia de los maestros"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "Ejercicio: activar el rey antes de tocar los peones"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "4k3/ppp2ppp/8/8/8/8/PPP2PPP/4K3 w - - 0 1"]
+[Result "*"]
+
+{ [%cal Ge1e2,Ge2d3] En la apertura el rey se esconde en el rincón; en el final, el rey debe salir corriendo al centro del tablero porque ya no hay damas que le den mate. ¿Cuál es la primera jugada automática al entrar en un final puro? } 1. Ke2 { [%cal Ge2e3,Ge2d3] ¡Centralizar el rey! Un rey en e4 o d4 vale casi como una pieza menor más: defiende sus peones e invade las casillas débiles del rival. } 1... Ke7 2. Ke3 Ke6 3. Ke4 { Las blancas han ganado la oposición central y tienen la iniciativa. } *
