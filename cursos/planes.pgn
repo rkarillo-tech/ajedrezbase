@@ -104,3 +104,29 @@
 [Result "*"]
 
 { [%csl Gf5] Eslava (1.d4 d5 2.c4 c6 3.Cf3 Cf6 4.e3 Af5 5.Cc3 e6). Las negras han sacado su alfil de casillas blancas antes de cerrarlo con ...e6: es su pieza buena. Una idea muy práctica para las blancas es perseguirlo con el caballo para cambiarlo y quedarse con la pareja de alfiles, una ventaja duradera. A cambio, el caballo va un momento al borde. ¿Cómo lo haces? } 6. Nh4 { [%cal Gh4f5] El caballo ataca el alfil de f5. } 6... Bg6 { El alfil se retira, pero sigue al alcance del caballo. } 7. Nxg6 { ¡Cambio! Las blancas se quedan con la pareja de alfiles, que vale más cuanto más se abra la posición. } 7... hxg6 { Las negras recapturan con el peón h y abren la columna h para su torre. } 8. Bd3 { [%cal Gd3g6] El alfil se desarrolla apuntando a g6. El plan blanco: enrocar, Dc2 y abrir el centro con cxd5 y e4 en el momento justo, para que los dos alfiles tengan diagonales. Las negras buscarán ...Cbd7, ...Ad6 y las rupturas ...c5 o ...e5. } *
+
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "9"]
+[Title "Escandinava: ganar tiempos atacando la dama"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "rnb1kbnr/ppp1pppp/8/q7/8/2N5/PPPP1PPP/R1BQKBNR w KQkq - 2 4"]
+[Result "*"]
+
+{ [%csl Ra5] Defensa Escandinava (1.e4 d5 2.exd5 Dxd5 3.Cc3 Da5). La dama negra ha salido muy pronto, y eso tiene un precio: cada vez que una pieza blanca la ataca, la dama tiene que moverse otra vez y las negras pierden un tiempo, mientras las blancas se desarrollan. El plan blanco es sencillo: desarrollar las piezas con tempo (atacando algo) y ocupar el centro. ¿Por dónde empiezas? } 4. Nf3 { Desarrolla el caballo hacia el centro y prepara el enroque. } 4... Nf6 5. d4 { Ocupa el centro y abre la diagonal del alfil de c1. } 5... Bf5 6. Ne5 { [%cal Ge5f7,Ge5c6] El caballo salta a una casilla central, donde molesta: vigila f7 y c6. } 6... c6 { Las negras preparan una retirada para la dama y aseguran d5. } 7. Bf4 { Otra pieza más en juego. Las blancas tienen ya tres piezas desarrolladas y amenazan con mejorar aún más. } 7... Nbd7 8. Nc4 { [%cal Gc4a5] ¡Con tempo! El caballo ataca la dama, que tiene que volver a moverse. } 8... Qd8 { La dama regresa a su casilla inicial: las negras han gastado ya tres jugadas con ella. } 9. Ne3 { [%cal Ge3f5] Y otra vez con tempo: ahora ataca el alfil de f5. Las blancas siguen con Ac4, Df3 o el enroque, con una clara ventaja de desarrollo. Moraleja: cuando el rival saca la dama pronto, desarrolla tus piezas atacándola. } *
+
+[Event "Curso de planes de apertura"]
+[Site "AjedrezBase"]
+[Round "10"]
+[Title "Holandesa Stonewall: el agujero de e5"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "rnb1k2r/pp2q1pp/2pbpn2/3p1p2/2PP4/1P3NP1/P3PPBP/RNBQ1RK1 w kq - 1 8"]
+[Result "*"]
+
+{ [%csl Ge5,Rc6,Rd5,Re6,Rf5] Defensa Holandesa, variante Stonewall (1.d4 f5 2.g3 Cf6 3.Ag2 e6 4.Cf3 d5 5.O-O Ad6 6.c4 c6 7.b3 De7). Las negras han formado un muro de peones (c6, d5, e6, f5) que controla mucho espacio, pero que deja un agujero en e5: ningún peón negro puede ya atacar esa casilla. Además, el alfil de c8 queda encerrado detrás de sus propios peones. El plan blanco: ocupar e5 con un caballo y cambiar el alfil bueno de las negras, el de d6. ¿Qué pieza va a e5? } 8. Ne5 { [%csl Ge5] El caballo ocupa el agujero: desde e5 nadie puede echarlo con un peón. } 8... O-O 9. Bf4 { [%cal Gf4d6] El alfil se ofrece a cambiar el de d6, el alfil bueno de las negras. Sin él, las casillas negras (e5, d6, c5) quedan aún más débiles y sólo le queda el alfil malo de c8. } 9... Ne4 { Las negras también ocupan su casilla fuerte, e4. } 10. Nd2 { Las blancas preparan cambiar el caballo de e4 (con Cxe4) y siguen con su plan: más piezas hacia e5 y presión en el flanco de dama con Tc1 y cxd5. Resumen: contra el Stonewall, ocupa e5 y cambia el alfil bueno del rival. } *
