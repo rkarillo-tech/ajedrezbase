@@ -1148,6 +1148,58 @@ def prueba_rival_explorador_y_piensa(browser):
     ctx.close()
 
 
+def prueba_reloj_dos_jugadores_y_ventaja(browser):
+    print("Novedades 1.18: tiempos de reloj, dos jugadores y ventaja de material")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pgn = """[White "Yo"]
+[Black "Rival"]
+[Result "0-1"]
+[TimeControl "180+2"]
+
+1. e4 { [%eval 0.3] [%clk 0:03:00] } e5 { [%eval 0.3] [%clk 0:03:00] } 2. Nf3 { [%eval 0.3] [%clk 0:02:58] } Nc6 { [%eval 0.3] [%clk 0:02:59] } 3. Bc4 { [%eval 0.3] [%clk 0:02:40] } Nf6 { [%eval 0.3] [%clk 0:02:55] } 4. Ng5 { [%eval 0.3] [%clk 0:00:25] } d5 { [%eval 0.3] [%clk 0:02:50] } 5. exd5 { [%eval 0.3] [%clk 0:00:20] } Nxd5 { [%eval 0.3] [%clk 0:02:45] } 6. Qf3 { [%eval -3.0] [%clk 0:00:12] } Qxg5 { [%eval -3.0] [%clk 0:02:40] } 0-1"""
+    pg.evaluate(f"setGame(Pgn.parseGame({json.dumps(pgn)}, {{ lang: 'en' }}).game, {{ noConfirm: true }})")
+    pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[6])")
+    comprobar(pg.is_visible("#topClock") and {pg.inner_text("#topClock"), pg.inner_text("#bottomClock")} == {"2:55", "0:25"}, "los tiempos de reloj de la partida se ven en las barras de los jugadores al recorrerla")
+    tip = pg.evaluate("document.querySelector(`.mv[data-id='${Pgn.mainlineFrom(game.root)[6].id}']`).title")
+    comprobar("tardó 2:17" in tip and "le quedaban 0:25" in tip, "al pasar por una jugada se ve cuánto tardó y cuánto le quedaba")
+    comprobar("[%clk 0:00:25]" in pg.evaluate("Pgn.exportPgn(game)"), "los tiempos se conservan al exportar el PGN")
+    pg.evaluate("ui.report = buildGameReport([game.root, ...Pgn.mainlineFrom(game.root)]); renderGameReport()")
+    rep = pg.inner_text("#reportExtra")
+    comprobar("El reloj" in rep and "la jugada que más pensó fue 4.Cg5 (2:17)" in rep and "errores los cometió con poco tiempo" in rep, "el informe explica cómo se usó el reloj y qué errores se cometieron con poco tiempo")
+    # Dos jugadores
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuOpponent", "two")
+    comprobar(pg.is_disabled("#cpuLevel") and pg.is_visible("#cpuFlipWrap") and pg.is_hidden("#cpuOddsWrap"), "al elegir «otra persona» se ocultan las opciones de la CPU y aparece «girar el tablero»")
+    pg.select_option("#cpuColor", "1"); pg.select_option("#cpuClock", "3+2"); pg.select_option("#cpuFrom", "new")
+    pg.check("#cpuAutoFlip")
+    pg.click("#cpuStartBtn")
+    comprobar(pg.evaluate("ui.cpu.on && ui.cpu.two") and "dos jugadores" in pg.inner_text("#cpuBox") and pg.evaluate("game.headers.Event") == "Partida entre dos jugadores", "empieza una partida entre dos jugadores")
+    pg.evaluate("playMove(Chess.moveFromUci(cur().state, 'e2e4'), 'user')")
+    pg.wait_for_timeout(300)
+    comprobar(pg.evaluate("cur().san === 'e4' && ui.flipped && !ui.cpu.thinking") and pg.evaluate("canUserMove()"), "nadie juega por las negras: le toca a la otra persona, y el tablero se gira")
+    pg.evaluate("playMove(Chess.moveFromUci(cur().state, 'e7e5'), 'user')")
+    comprobar(pg.evaluate("!ui.flipped && cur().clk != null && cur().parent.clk != null"), "con reloj, cada jugada guarda el tiempo que quedaba")
+    pg.locator("#cpuBox [data-c=resign]").click()
+    comprobar("Se rinden las blancas" in pg.inner_text("#cpuBox") and pg.evaluate("game.headers.Result") == "0-1", "se rinde el bando al que le toca mover")
+    # Ventaja de material contra la CPU
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuOpponent", "cpu")
+    pg.select_option("#cpuLevel", "1"); pg.select_option("#cpuColor", "1"); pg.select_option("#cpuClock", ""); pg.select_option("#cpuFrom", "new")
+    pg.select_option("#cpuOdds", "cpu:q")
+    pg.click("#cpuStartBtn")
+    comprobar(pg.evaluate("game.root.state.b[3] === '.' && game.headers.SetUp === '1'") and "ventaja: la CPU sin la dama" in pg.evaluate("game.headers.Event"), "con ventaja, la CPU empieza sin la dama")
+    pg.locator("#cpuBox [data-c=stop]").click()
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuOdds", "me:r"); pg.select_option("#cpuColor", "1")
+    pg.click("#cpuStartBtn")
+    comprobar(pg.evaluate("game.root.state.b[112] === '.' && !(game.root.state.c & 2)"), "y también se puede dar ventaja tú (sin la torre de a1 y sin enroque largo)")
+    pg.locator("#cpuBox [data-c=stop]").click()
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1295,7 +1347,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

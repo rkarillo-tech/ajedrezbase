@@ -70,8 +70,11 @@ var Pgn = (function (C) {
       else if (!isNaN(parseFloat(v))) ev = { cp: Math.round(parseFloat(v) * 100) };
       return "";
     });
+    // Tiempo que le quedaba en el reloj tras la jugada ([%clk 0:04:58] o [%clk 0:04:58.3]): se guarda en segundos
+    let clk = null;
+    rest = rest.replace(/\[%clk\s+(\d+):(\d{1,2}):(\d{1,2}(?:\.\d+)?)\s*\]/g, (_, h, m, sec) => { clk = +h * 3600 + +m * 60 + parseFloat(sec); return ""; });
     rest = rest.replace(/\[%(clk|emt|tqu)[^\]]*\]/g, "").replace(/\s+/g, " ").trim();
-    return { text: rest, shapes, ev };
+    return { text: rest, shapes, ev, clk };
   }
   function shapesToComment(shapes) {
     if (!shapes || !shapes.length) return "";
@@ -166,6 +169,7 @@ var Pgn = (function (C) {
           cur.comment = (cur.comment ? cur.comment + " " : "") + pc.text;
           cur.shapes.push(...pc.shapes);
           if (pc.ev) cur.eval = Object.assign({ depth: 0, source: "pgn" }, pc.ev);
+          if (pc.clk != null) cur.clk = pc.clk;
         } else pending += (pending ? " " : "") + pc.text;
       } else if (tk.type === "open") {
         stack.push(cur);
@@ -217,6 +221,7 @@ var Pgn = (function (C) {
     let txt = "";
     if (opts.shapes !== false) txt += shapesToComment(n.shapes);
     if (opts.evals && n.eval && (n.eval.cp != null || n.eval.mate != null)) txt += n.eval.mate != null ? `[%eval #${n.eval.mate}]` : `[%eval ${(n.eval.cp / 100).toFixed(2)}]`;
+    if (opts.clocks !== false && n.clk != null) { const t = Math.max(0, n.clk), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), sc = t % 60; txt += (txt ? " " : "") + `[%clk ${h}:${String(m).padStart(2, "0")}:${(sc % 1 ? sc.toFixed(1) : String(Math.round(sc))).padStart(sc % 1 ? 4 : 2, "0")}]`; }
     if (opts.comments !== false && n.comment) txt += (txt ? " " : "") + n.comment.replace(/[{}]/g, "");
     return txt ? `{ ${txt} }` : "";
   }
