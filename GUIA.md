@@ -41,7 +41,7 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - Si el texto tiene varias partidas, se muestra la primera y todas quedan en **📚 Biblioteca › 🗂 Abrir .pgn** (sin guardar).
 - Si hay una jugada ilegal o mal escrita, la importación se detiene ahí y te dice cuál es (por ejemplo «Detenido en 23. Axf7»).
 
-> **Ejemplo:** en Lichess, en una partida tuya, «Compartir y exportar» → «Descargar PGN» o copiar el texto PGN → pégalo aquí → Importar. Los comentarios y evaluaciones `[%eval]` de Lichess también se leen.
+> **Ejemplo:** en Lichess, en una partida tuya, «Compartir y exportar» → «Descargar PGN» o copiar el texto PGN → pégalo aquí → Importar. Los comentarios, las evaluaciones `[%eval]` y los **tiempos de reloj** `[%clk]` de Lichess también se leen. Con los tiempos, al recorrer la partida las barras de los jugadores muestran lo que le quedaba a cada uno, al pasar por una jugada ves cuánto tardó, y el informe del análisis explica cómo se usó el reloj. Se conservan al guardar y al exportar.
 
 ## 🌿 4. Variantes, comentarios, símbolos y flechas
 - **Crear una variante**: vuelve a una jugada anterior y mueve otra cosa. Se crea una línea alternativa sangrada en la lista; la partida original no se toca. (Si prefieres que la nueva jugada *sustituya* lo que seguía, cambia «Al mover en mitad de la partida» a «Sobrescribir línea».)
@@ -81,6 +81,7 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
   - **📝 Resumen**: la apertura y cómo fue cambiando la valoración («empezó equilibrada; tras 21…g5 pasó a ventaja negra…») hasta el resultado.
   - **📍 Momentos clave**: las 5 jugadas que más cambiaron la partida, ordenadas por impacto, con qué pasó (pérdida de material, mate permitido o escapado, ventaja desperdiciada…). Pulsa una para ir a ella.
   - **⏱ Precisión por fases**: apertura, medio juego y final para cada jugador.
+  - **⏰ El reloj** (si la partida guarda los tiempos, como las de Lichess o las que juegas con reloj contra la CPU): el tiempo medio por jugada de cada jugador, la jugada que más pensó, desde cuándo se quedó con poco tiempo y cuántos de sus errores cometió con apuros.
   - **🎯 Qué practicar**: recomendaciones según los errores de cada jugador (táctica, mates, finales, la apertura…).
 - El informe también sale en la versión para imprimir.
 - La clasificación se basa en cuánto baja la probabilidad de ganar, igual que en Lichess. Tus propios comentarios y símbolos no se sobrescriben.
@@ -96,8 +97,10 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 
 > **Ejemplo:** tras importar tu partida del torneo, pulsa «Analizar y comentar» → mira en el gráfico dónde cae la curva → pulsa ese punto → lee el comentario de la jugada marcada con ?? → prueba en el tablero la alternativa que propone.
 
-## 🤖 7. Jugar contra la CPU: nivel (también adaptativo), rival humano, estilo y reloj
+## 🤖 7. Jugar contra la CPU o contra otra persona: nivel, rival humano, estilo, ventaja y reloj
 - Pulsa **🤖 Jugar vs CPU** en la barra superior y elige:
+  - **Rival**: **🤖 la CPU** o **👥 otra persona, en este dispositivo**. Con otra persona jugáis por turnos (con reloj si queréis), nadie mueve solo, y puedes marcar **⇅ Girar el tablero en cada jugada** para que cada uno vea sus piezas abajo. «🏳 Rendirse» rinde al bando al que le toca mover, «½ Tablas» pide que estéis de acuerdo los dos y, sin reloj, «↶ Deshacer» quita la última jugada. Al acabar, «🤖 Analizar la partida» comenta los errores de los dos.
+  - **Ventaja de material** (contra la CPU, en partidas nuevas): la CPU juega sin el peón de f, sin un caballo, sin una torre o sin la dama, o eres tú quien da ventaja (sin un caballo o sin una torre). Es la forma clásica de igualar fuerzas entre un jugador fuerte y uno que empieza.
   - **Juegas con**: el bando de abajo del tablero, blancas, negras o al azar.
   - **Nivel** del 1 al 8, o **🎯 Adaptativo**: la CPU se ajusta a ti. Tiene un nivel interno de 0 a 20 que sube cuando ganas y baja cuando pierdes (con saltos grandes al principio para encontrar tu nivel y más finos después), para que siempre sea un rival a tu medida y ganes más o menos la mitad de las partidas. Si ya tienes nivel en los problemas, empieza desde ahí. En el cuadro verás tu nivel actual, tus últimos resultados y un pequeño gráfico de su evolución: si sube con el tiempo, estás mejorando. Sólo cuentan las partidas terminadas con resultado (no las interrumpidas con ⏹ ni las de menos de tres jugadas).
   - **👤 Rival humano** (al final de la lista de niveles, de ~800 a ~2200 de Elo): juega **como una persona** de ese nivel, no como una máquina rebajada. En la apertura elige lo que se juega de verdad a ese nivel (con tu token de Lichess, las jugadas de partidas de jugadores de ese Elo; sin él, el libro de aperturas y tus partidas) y la deja antes cuanto más bajo es el nivel. Después, Stockfish le da varias candidatas y elige como lo haría una persona: casi siempre una jugada buena y natural (capturas, recapturas, jaques, desarrollo, enroque), a veces una peor y, de vez en cuando, un error claro, sobre todo con poco tiempo en el reloj o con mucha táctica en el tablero. También se toma su tiempo para pensar. Con él, el estilo no se usa. Es otra opción más: los niveles 1 a 8 y el adaptativo siguen igual.

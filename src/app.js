@@ -55,7 +55,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark"
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -588,7 +588,7 @@ function canUserMove() {
   if (Guess.active) return Guess.state === "ask" && !Guess.busy && cur().state.t === Guess.side;
   if (Retry.active) return !Retry.busy && Retry.state !== "solved" && Retry.state !== "shown";
   if (trainer.active) return trainerUserTurn();
-  if (ui.cpu.on && cur().state.t === ui.cpu.side) return false;
+  if (ui.cpu.on && !ui.cpu.two && cur().state.t === ui.cpu.side) return false;
   return true;
 }
 function sqFromPoint(x, y) {
@@ -886,6 +886,7 @@ function renderMoves() {
     }
     const b = document.createElement("span");
     b.className = "mv" + (node === cur() ? " active" : "");
+    if (node.clk != null) { const sp = spentOn(node); b.title = `⏱ ${sp != null ? "tardó " + fmtSecs(sp) + " · " : ""}le quedaban ${fmtClock(node.clk * 1000)}`; }
     b.dataset.id = node.id;
     const mk = marked.get(node.id);
     b.innerHTML = esc(dispSan(node)) + (node.nag ? `<span class="nag ${NAG_CLASS[node.nag] || ""}">${esc(node.nag)}</span>` : "") + (node.posNag ? `<span class="nag-pos">${esc(node.posNag)}</span>` : "") + (mk ? `<span class="mv-mark" title="${esc(CATS[mk.cat].name + (mk.note ? ": " + mk.note : ""))}">${CATS[mk.cat].icon}</span>` : "");
@@ -1206,6 +1207,7 @@ function render() {
   if (Think.node && Think.node !== cur() && !Think.busy) { $("thinkBox").hidden = true; Think.node = null; }
   renderBoard();
   renderBars();
+  renderClocks();
   renderStatus();
   renderMoves();
   renderComment();
@@ -1673,6 +1675,32 @@ function analysisSummary(R, root, src) {
   return { v: 1, at: Date.now(), src, engine: src === "pgn" ? "" : Engine.name, hash: lineHash(root), plies: R.moves.length, eco: R.eco ? R.eco.entry.eco : "", p, err };
 }
 const analysisOf = g => (g.analysis && g.analysis.hash === lineHash(g.root) ? g.analysis : null);
+/* ⏰ El reloj en el informe: tiempo medio, la jugada más pensada, los apuros y los errores cometidos con poco tiempo */
+function timeReportHtml(R) {
+  if (!gameHasClocks()) return "";
+  const h = game.headers, tc = tcOf(h), line = Pgn.mainlineFrom(game.root);
+  const low = tc ? Math.max(30, tc.base * 0.1) : 30;
+  const out = [];
+  for (const c of [1, -1]) {
+    const mine = line.filter(n => n.parent.state.t === c && n.clk != null);
+    if (mine.length < 3) continue;
+    const spent = mine.map(n => ({ n, s: spentOn(n) })).filter(x => x.s != null);
+    const avg = spent.length ? spent.reduce((a, x) => a + x.s, 0) / spent.length : null;
+    const longest = spent.slice().sort((a, b) => b.s - a.s)[0];
+    const firstLow = mine.find(n => n.clk < low);
+    const errs = R.moves.filter(x => x.info.mover === c && (x.info.cls === "?" || x.info.cls === "??"));
+    const errsLow = errs.filter(x => x.n.clk != null && x.n.clk < low);
+    const who = esc(c === 1 ? h.White || "Blancas" : h.Black || "Negras");
+    let t = `<b>${who}</b>: `;
+    t += avg != null ? `${fmtSecs(avg)} por jugada de media` : "";
+    if (longest && longest.s >= 10) t += `; la jugada que más pensó fue <a href="#" data-tm="${longest.n.id}">${esc(numPrefix(longest.n.parent.state) + dispSan(longest.n))}</a> (${fmtSecs(longest.s)})`;
+    t += firstLow ? `. Se quedó con menos de ${fmtSecs(low)} desde <a href="#" data-tm="${firstLow.id}">${esc(numPrefix(firstLow.parent.state) + dispSan(firstLow))}</a>` : ". Nunca se apuró de tiempo";
+    if (errs.length) t += errsLow.length ? `, y <b>${errsLow.length} de sus ${errs.length} errores los cometió con poco tiempo</b>${errsLow.length / errs.length >= 0.5 ? ": administrar mejor el reloj le habría ahorrado puntos" : ""}.` : `; ninguno de sus errores fue por falta de tiempo.`;
+    else t += ".";
+    out.push(`<div class="rep-player">${t}</div>`);
+  }
+  return out.length ? `<h3>⏰ El reloj</h3>` + out.join("") : "";
+}
 function renderGameReport() {
   const box = $("reportExtra"), R = ui.report;
   if (!R) { box.innerHTML = ""; return; }
@@ -1688,9 +1716,11 @@ function renderGameReport() {
   } else html += `<p class="small">No hubo errores importantes: ninguna jugada cambió el rumbo de la partida.</p>`;
   html += `<h3>⏱ Precisión por fases</h3><table class="rep-phases"><thead><tr><th></th><th>${nm(1)}</th><th>${nm(-1)}</th></tr></thead><tbody>` +
     PHASES.map(([k, label]) => `<tr><td>${label}</td><td>${pcell(R.phases[k + 1])}</td><td>${pcell(R.phases[k + -1])}</td></tr>`).join("") + `</tbody></table>`;
+  html += timeReportHtml(R);
   html += `<h3>🎯 Qué practicar</h3>` + R.players.map(pl => `<div class="rep-player"><b>${esc(pl.verdict)}</b>${pl.practice.length ? `<ul>${pl.practice.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<div class="small">Nada destacable: ¡buena partida!</div>`}</div>`).join("");
   box.innerHTML = html;
   box.querySelectorAll("[data-k]").forEach(a => a.onclick = e => { e.preventDefault(); const x = R.key[+a.dataset.k]; if (x && !quiz()) goTo(x.n); });
+  box.querySelectorAll("[data-tm]").forEach(a => a.onclick = e => { e.preventDefault(); const n = Pgn.findById(game.root, +a.dataset.tm); if (n && !quiz()) goTo(n); });
 }
 
 async function explainCurrentMove() {
@@ -2184,11 +2214,37 @@ function fmtClock(ms) {
   const s = Math.ceil(ms / 1000);
   return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
 }
+/* ⏱ Tiempos de reloj guardados en la partida ([%clk]): lo que le quedaba a cada bando tras cada jugada */
+function tcOf(h) { const m = /^(\d+)(?:\+(\d+))?$/.exec((h && h.TimeControl) || ""); return m ? { base: +m[1], inc: +(m[2] || 0) } : null; }
+function gameHasClocks(g = game) { let n = g.root, k = 0, c = 0; while (n.children.length && k < 40) { n = n.children[0]; k++; if (n.clk != null) c++; } return c >= 2; }
+function clockAt(node, c) {
+  for (let n = node; n && n.parent; n = n.parent) if (n.parent.state.t === c && n.clk != null) return n.clk;
+  const tc = tcOf(game.headers);
+  return tc ? tc.base : null;
+}
+/* Segundos que tardó el bando en hacer la jugada que lleva a este nodo */
+function spentOn(node) {
+  if (!node || !node.parent || node.clk == null) return null;
+  const tc = tcOf(game.headers), gp = node.parent.parent;
+  if (gp && gp.parent) return gp.clk == null ? null : Math.max(0, gp.clk + (tc ? tc.inc : 0) - node.clk);
+  return tc ? Math.max(0, tc.base - node.clk) : null;   // primera jugada de ese bando
+}
+const fmtSecs = sec => (sec < 60 ? `${Math.round(sec)} s` : `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`);
 function renderClocks() {
   const top = ui.flipped ? 1 : -1;
+  const statics = !Clock.shown && gameHasClocks();
   for (const [id, c] of [["topClock", top], ["bottomClock", -top]]) {
     const el = $(id);
-    el.hidden = !Clock.shown;
+    el.hidden = !Clock.shown && !statics;
+    if (statics) {
+      const left = clockAt(cur(), c), tc = tcOf(game.headers);
+      el.textContent = left == null ? "–" : fmtClock(left * 1000);
+      el.classList.remove("running");
+      el.classList.toggle("low", left != null && left < Math.max(20, tc ? tc.base * 0.1 : 0));
+      el.title = "Tiempo que le quedaba en el reloj en esta posición (guardado en la partida)";
+      continue;
+    }
+    el.title = "";
     if (!Clock.shown) continue;
     const left = clockLeft(c), run = Clock.running && Clock.started && Clock.turn === c;
     el.textContent = fmtClock(left);
@@ -2483,8 +2539,35 @@ function adaptiveSummary() {
   return `Nivel actual: <b>${fmtAdaptive(st.a)}</b> de 20 · ${g.length} partida${g.length === 1 ? "" : "s"} · en las últimas ${last.length}: ${String(pts).replace(".", ",")} puntos${g.length >= 4 ? ` · tendencia ${trend > 0.4 ? "↑ subiendo: estás mejorando" : trend < -0.4 ? "↓ bajando" : "→ estable"}` : ""}
     <div style="margin-top:4px;height:42px;display:flex;align-items:flex-end" aria-label="Evolución del nivel">${bars}</div>`;
 }
-function cpuName() { return ui.cpu.human ? `Rival humano ~${ui.cpu.human}` : `CPU ${cpuLevelName(ui.cpu.level)} (${CPU_STYLES[ui.cpu.style].replace(/^\S+ /, "").toLowerCase()})`; }
+function cpuName() { return ui.cpu.two ? "" : ui.cpu.human ? `Rival humano ~${ui.cpu.human}` : `CPU ${cpuLevelName(ui.cpu.level)} (${CPU_STYLES[ui.cpu.style].replace(/^\S+ /, "").toLowerCase()})`; }
 const cpuStyleText = () => (ui.cpu.human ? "👤 juega como una persona" : CPU_STYLES[ui.cpu.style]);
+const ODDS_TEXT = { p: "sin el peón de f", n: "sin un caballo", r: "sin una torre", q: "sin la dama" };
+/* Posición inicial con ventaja de material: quita la pieza al bando que da la ventaja */
+function oddsFen(odds, user) {
+  const m = /^(cpu|me):([pnrq])$/.exec(odds || "");
+  if (!m) return null;
+  const color = m[1] === "cpu" ? -user : user, s = Chess.parseFen(Chess.START_FEN);
+  const rank = color === 1 ? 7 : 0, pawnRank = color === 1 ? 6 : 1;
+  const sq = { p: pawnRank * 16 + 5, n: rank * 16 + 1, r: rank * 16 + 0, q: rank * 16 + 3 }[m[2]];
+  s.b[sq] = ".";
+  if (m[2] === "r") s.c &= color === 1 ? ~2 : ~8;   // ya no puede enrocar largo
+  return Chess.toFen(s);
+}
+function oddsLabel(odds, user) {
+  const m = /^(cpu|me):([pnrq])$/.exec(odds || "");
+  return m ? `${m[1] === "cpu" ? "la CPU" : "tú"} ${ODDS_TEXT[m[2]]}` : "";
+}
+function cpuDialogSync() {
+  const two = $("cpuOpponent").value === "two";
+  $("cpuOddsWrap").hidden = two;
+  $("cpuFlipWrap").hidden = !two;
+  $("cpuLevel").disabled = two;
+  $("cpuStyle").disabled = two || !!humanElo($("cpuLevel").value);
+  $("cpuColorLabel").textContent = two ? "Abajo en el tablero" : "Juegas con";
+  $("cpuStartBtn").textContent = two ? "▶ Empezar la partida" : "▶ Empezar a jugar";
+  $("cpuNote").textContent = two ? "Dos personas juegan por turnos en este dispositivo, con reloj si queréis. Sin reloj se puede deshacer la última jugada." : "Mientras juegas, el motor y la evaluación se ocultan. Con reloj no se pueden deshacer jugadas, y si se te acaba el tiempo pierdes (salvo que el rival no tenga material para dar mate).";
+  if (two) $("cpuAdaptiveInfo").hidden = true; else renderAdaptiveInfo();
+}
 function cpuThinkMs() {
   const level = ui.cpu.level, base = 250 + level * 70;
   if (!Clock.running) return base;
@@ -2492,7 +2575,7 @@ function cpuThinkMs() {
   return Math.round(Math.max(60, Math.min(base, left / 40 + Clock.inc * 0.4)));
 }
 function maybeCpuMove() {
-  if (!ui.cpu.on || ui.cpu.thinking || ui.cpu.over) return;
+  if (!ui.cpu.on || ui.cpu.thinking || ui.cpu.over || ui.cpu.two) return;
   const node = cur();
   if (node.state.t !== ui.cpu.side || gameStatus(node).over) return;
   ui.cpu.thinking = true;
@@ -2513,9 +2596,11 @@ function maybeCpuMove() {
 /* Tras cada jugada de la partida contra la CPU: reloj, final de la partida y respuesta de la CPU */
 function cpuAfterMove(child, who) {
   if (!clockPress(child.parent.state.t)) return;
+  if (Clock.running) child.clk = Math.round(Clock.ms[child.parent.state.t] / 100) / 10;   // queda guardado en el PGN ([%clk])
   const st = gameStatus(child);
   if (st.over) { cpuGameOver(st.result, st.text); return; }
   cpuPanel();
+  if (ui.cpu.two) { if (ui.cpu.autoFlip) { ui.flipped = child.state.t === -1; render(); } return; }
   if (who === "user") setTimeout(maybeCpuMove, 60);
 }
 function openCpuDialog(blind) {
@@ -2530,39 +2615,47 @@ function openCpuDialog(blind) {
   if ($("cpuColor").selectedIndex < 0) $("cpuColor").value = "board";
   $("cpuFrom").value = editor.active ? "here" : settings.cpuFrom;
   $("cpuBlind").checked = blind != null ? blind : ui.blind;
+  $("cpuOpponent").value = settings.cpuOpponent === "two" ? "two" : "cpu";
+  $("cpuOdds").value = settings.cpuOdds || "";
+  if ($("cpuOdds").selectedIndex < 0) $("cpuOdds").value = "";
+  $("cpuAutoFlip").checked = settings.cpuAutoFlip !== false;
+  cpuDialogSync();
   openModal("cpuModal");
 }
 function startCpuGame(opts = {}) {
   if (Batch.running) { toast("El motor está analizando tus partidas de la biblioteca: espera a que termine o detenlo en «📊 Estadísticas»."); return false; }
-  Object.assign(settings, { cpuLevel: parseCpuLevel($("cpuLevel").value), cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value });
+  Object.assign(settings, { cpuLevel: parseCpuLevel($("cpuLevel").value), cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value, cpuOpponent: $("cpuOpponent").value, cpuOdds: $("cpuOdds").value, cpuAutoFlip: $("cpuAutoFlip").checked });
   saveSettings();
+  const two = settings.cpuOpponent === "two";
+  const c = settings.cpuColor;
+  const user = opts.color || (c === "r" ? (Math.random() < 0.5 ? 1 : -1) : c === "board" ? (ui.flipped ? -1 : 1) : +c);
+  const odds = two || settings.cpuFrom !== "new" ? "" : settings.cpuOdds;
   if (editor.active && settings.cpuFrom === "here" && !applyEditor()) return false;
   if (settings.cpuFrom === "new") {
     if (!confirmLeave()) return false;
     leaveModes();
-    setGame(Pgn.newGame(), { name: "", noConfirm: true });
+    setGame(Pgn.newGame(oddsFen(odds, user) || undefined), { name: "", noConfirm: true });
   } else leaveModes();
   if (gameStatus(cur()).over) { toast("La partida ya ha terminado en esta posición."); return false; }
   closeModals();
-  const c = settings.cpuColor;
-  const user = opts.color || (c === "r" ? (Math.random() < 0.5 ? 1 : -1) : c === "board" ? (ui.flipped ? -1 : 1) : +c);
   ui.flipped = user === -1;
   const tc = parseTc(settings.cpuClock);
   const adaptive = settings.cpuLevel === "a", human = humanElo(settings.cpuLevel);
-  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, adaptive, human, level: adaptive ? Math.round(adaptiveState().a) : human ? Math.max(0, Math.min(20, Math.round((human - 700) / 75))) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
+  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, two, odds, autoFlip: two && settings.cpuAutoFlip, adaptive: adaptive && !two, human: two ? 0 : human, level: adaptive ? Math.round(adaptiveState().a) : human ? Math.max(0, Math.min(20, Math.round((human - 700) / 75))) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
   settings.live = false;
   if (!game.root.children.length && game.headers.Event === "Estudio") {
     const d = new Date();
     Object.assign(game.headers, {
-      Event: "Partida contra la CPU", Date: `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`,
-      White: user === 1 ? "Tú" : cpuName(), Black: user === 1 ? cpuName() : "Tú"
+      Event: two ? "Partida entre dos jugadores" : "Partida contra la CPU" + (odds ? ` (ventaja: ${oddsLabel(odds, user)})` : ""), Date: `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`,
+      White: two ? "Blancas" : user === 1 ? "Tú" : cpuName(), Black: two ? "Negras" : user === 1 ? cpuName() : "Tú"
     });
     if (tc) game.headers.TimeControl = `${tc.base / 1000}+${tc.inc / 1000}`;
     syncHeaderForm();
   }
   if (ui.cpu.blind !== !!ui.blind) setBlind(ui.cpu.blind);
   if (tc) clockStart(tc); else { clockStop(); Clock.shown = false; renderClocks(); }
-  toast(`Juegas con ${user === 1 ? "blancas" : "negras"} contra ${ui.cpu.human ? `un rival humano de unos ${ui.cpu.human} de Elo` : `la CPU (${cpuLevelName(ui.cpu.level)}, ${CPU_STYLES[ui.cpu.style]}`}${tc ? `, ${settings.cpuClock}` : ""}${ui.cpu.human ? "" : ")"}.`, 3500);
+  if (two) toast(`👥 Partida entre dos jugadores${tc ? `, ${settings.cpuClock}` : ""}. Empiezan las ${cur().state.t === 1 ? "blancas" : "negras"}.`, 3500);
+  else toast(`Juegas con ${user === 1 ? "blancas" : "negras"} contra ${ui.cpu.human ? `un rival humano de unos ${ui.cpu.human} de Elo` : `la CPU (${cpuLevelName(ui.cpu.level)}, ${CPU_STYLES[ui.cpu.style]}`}${tc ? `, ${settings.cpuClock}` : ""}${ui.cpu.human ? "" : ")"}.`, 3500);
   render();
   cpuPanel();
   maybeCpuMove();
@@ -2604,7 +2697,8 @@ function cpuGameOver(result, text) {
   if (ui.cpu.blind && ui.blind) setBlind(false);
   const sc = scoreOf(result, user);
   Sound.play("end");
-  cpuPanel(sc === 1 ? "🏆 ¡Has ganado!" : sc === 0 ? "❌ Has perdido." : "🟰 Tablas.", text);
+  if (ui.cpu.two) cpuPanel(result === "1-0" ? "🏆 Ganan las blancas" : result === "0-1" ? "🏆 Ganan las negras" : "🟰 Tablas", text);
+  else cpuPanel(sc === 1 ? "🏆 ¡Has ganado!" : sc === 0 ? "❌ Has perdido." : "🟰 Tablas.", text);
   render();
 }
 /* 📋 Informe del entrenador: tras la partida contra la CPU, tus errores más caros y un ejercicio con cada uno */
@@ -2644,6 +2738,12 @@ async function coachReport() {
 }
 function cpuUndo() {
   if (Clock.running) return;
+  if (ui.cpu.two) {
+    if (cur() === ui.cpu.startNode || !cur().parent) { toast("No hay jugadas que deshacer."); return; }
+    game.current = cur().parent; ui.selected = null;
+    if (ui.cpu.autoFlip) ui.flipped = cur().state.t === -1;
+    render(); cpuPanel(); return;
+  }
   const user = -ui.cpu.side, path = Pgn.pathTo(cur()), start = path.indexOf(ui.cpu.startNode);
   let i = path.length - 2;
   while (i >= 0 && path[i].state.t !== user) i--;
@@ -2656,6 +2756,7 @@ function cpuUndo() {
   cpuPanel();
 }
 function cpuOfferDraw() {
+  if (ui.cpu.two) { if (confirm("¿Estáis de acuerdo los dos en hacer tablas?")) cpuGameOver("1/2-1/2", "Tablas de mutuo acuerdo."); return; }
   const l = ui.cpu.lastEval, plies = Pgn.pathTo(cur()).length - Pgn.pathTo(ui.cpu.startNode).length;
   const w = l ? (ui.cpu.side === 1 ? winPct(l) : 100 - winPct(l)) : 100;
   if (plies >= 20 && w <= 56) cpuGameOver("1/2-1/2", "La CPU acepta las tablas.");
@@ -2663,8 +2764,19 @@ function cpuOfferDraw() {
 }
 function cpuPanel(head, text) {
   const box = $("cpuBox");
-  const desc = `${cpuLevelName(ui.cpu.level)} · ${cpuStyleText()}${ui.cpu.tc ? ` · ⏱ ${ui.cpu.tc}` : ""}${ui.cpu.blind ? " · 🙈 a ciegas" : ""}`;
+  const desc = ui.cpu.two ? `👥 dos jugadores${ui.cpu.tc ? ` · ⏱ ${ui.cpu.tc}` : ""}${ui.cpu.blind ? " · 🙈 a ciegas" : ""}`
+    : `${cpuLevelName(ui.cpu.level)} · ${cpuStyleText()}${ui.cpu.odds ? ` · ventaja: ${oddsLabel(ui.cpu.odds)}` : ""}${ui.cpu.tc ? ` · ⏱ ${ui.cpu.tc}` : ""}${ui.cpu.blind ? " · 🙈 a ciegas" : ""}`;
   box.hidden = false;
+  if (ui.cpu.two) {
+    const toMove = cur().state.t === 1 ? "las blancas" : "las negras";
+    box.innerHTML = ui.cpu.over || head
+      ? `<div class="retry-head">🏁 ${esc(head || "Partida terminada")}</div><div>${esc(text || "")}</div>
+        <div class="controls"><button class="sm-btn primary" data-c="analyse" title="El motor analiza la partida y comenta los errores de los dos">🤖 Analizar la partida</button><button class="sm-btn" data-c="save">💾 Guardar</button><button class="sm-btn info-btn" data-c="rematch">🔁 Otra partida</button><button class="sm-btn" data-c="close">Cerrar</button></div>`
+      : `<div class="retry-head">👥 Partida entre dos jugadores</div><div class="small">${esc(desc)} · juegan ${toMove}</div>
+        <div class="controls">${ui.cpu.tc ? "" : `<button class="sm-btn" data-c="undo" title="Deshace la última jugada">↶ Deshacer</button>`}<button class="sm-btn" data-c="draw">½ Tablas</button><button class="sm-btn danger" data-c="resign" title="Se rinde el bando al que le toca mover">🏳 Rendirse (${toMove})</button><button class="sm-btn" data-c="stop" title="Deja la partida sin resultado y vuelve al análisis">⏹ Terminar</button></div>`;
+    box.querySelectorAll("[data-c]").forEach(b => b.onclick = () => cpuAction(b.dataset.c));
+    return;
+  }
   if (ui.cpu.over || head) {
     box.innerHTML = `<div class="retry-head">🏁 ${esc(head || "Partida terminada")}</div><div>${esc(text || "")} <span class="small">(CPU ${esc(desc)})</span></div>
       <div class="controls"><button class="sm-btn primary" data-c="coach" title="El motor analiza la partida y te enseña tus errores más caros, para practicarlos">📋 Informe del entrenador</button><button class="sm-btn" data-c="save">💾 Guardar</button><button class="sm-btn info-btn" data-c="rematch">🔁 Revancha</button><button class="sm-btn" data-c="close">Cerrar</button></div>`;
@@ -2677,7 +2789,10 @@ function cpuPanel(head, text) {
 function cpuAction(a) {
   if (a === "undo") cpuUndo();
   else if (a === "draw") cpuOfferDraw();
-  else if (a === "resign") { if (confirm("¿Seguro que quieres rendirte?")) cpuGameOver(ui.cpu.side === 1 ? "1-0" : "0-1", "Te has rendido."); }
+  else if (a === "resign") {
+    if (ui.cpu.two) { const t = cur().state.t, w = t === 1 ? "blancas" : "negras"; if (confirm(`¿Se rinden las ${w}?`)) cpuGameOver(t === 1 ? "0-1" : "1-0", `Se rinden las ${w}.`); }
+    else if (confirm("¿Seguro que quieres rendirte?")) cpuGameOver(ui.cpu.side === 1 ? "1-0" : "0-1", "Te has rendido.");
+  }
   else if (a === "stop") stopCpu(false);
   else if (a === "analyse") { $("cpuBox").hidden = true; switchTab("study"); analyseGame(); }
   else if (a === "coach") coachReport();
@@ -2685,6 +2800,7 @@ function cpuAction(a) {
   else if (a === "close") { $("cpuBox").hidden = true; Clock.shown = false; renderClocks(); }
   else if (a === "rematch") {
     const prev = -ui.cpu.side;
+    $("cpuOpponent").value = ui.cpu.two ? "two" : "cpu"; $("cpuOdds").value = ui.cpu.odds || ""; $("cpuAutoFlip").checked = !!ui.cpu.autoFlip || !ui.cpu.two;
     $("cpuLevel").value = ui.cpu.adaptive ? "a" : ui.cpu.human ? "h" + ui.cpu.human : String(ui.cpu.level); $("cpuStyle").value = ui.cpu.style; $("cpuClock").value = ui.cpu.tc || ""; $("cpuFrom").value = "new"; $("cpuBlind").checked = ui.cpu.blind;
     startCpuGame({ color: -prev });
   }
@@ -5740,7 +5856,8 @@ $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; sa
 $("displayLang").onchange = e => { settings.lang = e.target.value; saveSettings(); render(); renderLocalEcoList(); };
 $("themeSelect").onchange = e => { settings.theme = e.target.value; saveSettings(); document.body.dataset.theme = settings.theme; };
 $("soundToggle").onclick = () => { settings.sound = !settings.sound; saveSettings(); $("soundToggle").textContent = settings.sound ? "🔊" : "🔇"; if (settings.sound) Sound.play("move"); };
-$("cpuLevel").onchange = e => { settings.cpuLevel = parseCpuLevel(e.target.value); saveSettings(); renderAdaptiveInfo(); };
+$("cpuLevel").onchange = e => { settings.cpuLevel = parseCpuLevel(e.target.value); saveSettings(); cpuDialogSync(); };
+$("cpuOpponent").onchange = () => cpuDialogSync();
 function renderAdaptiveInfo() {
   const el = $("cpuAdaptiveInfo"), v = $("cpuLevel").value, elo = humanElo(v);
   el.hidden = v !== "a" && !elo;
@@ -5928,7 +6045,7 @@ async function downloadLichessGames() {
   const user = $("liUser").value.trim();
   if (!/^[A-Za-z0-9_-]{2,30}$/.test(user)) { toast("Escribe un nombre de usuario de Lichess válido."); $("liUser").focus(); return; }
   const max = +$("liMax").value || 50, perf = $("liPerf").value || "ultraBullet,bullet,blitz,rapid,classical,correspondence";
-  const q = new URLSearchParams({ max, perfType: perf, opening: "true", clocks: "false", evals: "true", sort: "dateDesc" });
+  const q = new URLSearchParams({ max, perfType: perf, opening: "true", clocks: "true", evals: "true", sort: "dateDesc" });
   if ($("liRated").checked) q.set("rated", "true");
   if ($("liAnalysed").checked) q.set("analysed", "true");
   const btn = $("liBtn");

@@ -691,7 +691,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <option value="slate">Pizarra</option>
       <option value="coral">Coral</option>
     </select>
-    <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor: nivel, estilo y reloj">🤖 Jugar vs CPU</button>
+    <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor (nivel, estilo, ventaja y reloj) o contra otra persona en este dispositivo">🤖 Jugar vs CPU</button>
     <button id="soundToggle" class="hdr-extra" title="Sonido de las jugadas" aria-label="Sonido">🔊</button>
     <button id="settingsBtn" title="Ajustes (motor, token de Lichess, análisis)" aria-label="Ajustes">⚙</button>
     <button id="installBtn" class="primary" hidden title="Instalar AjedrezBase como aplicación (funciona sin conexión)">⬇ Instalar</button>
@@ -1482,9 +1482,24 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 
 <div class="modal-back" id="cpuModal" role="dialog" aria-modal="true" aria-labelledby="cpuTitle">
   <div class="modal">
-    <h2 id="cpuTitle"><span>🤖 Jugar contra la CPU</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <h2 id="cpuTitle"><span>🤖 Jugar una partida</span><button class="sm-btn" data-close>Cerrar</button></h2>
     <div class="grid2">
-      <div><label for="cpuColor">Juegas con</label>
+      <div><label for="cpuOpponent">Rival</label>
+        <select id="cpuOpponent">
+          <option value="cpu">🤖 La CPU</option>
+          <option value="two">👥 Otra persona, en este dispositivo</option>
+        </select></div>
+      <div id="cpuOddsWrap"><label for="cpuOdds">Ventaja de material</label>
+        <select id="cpuOdds">
+          <option value="">Sin ventaja: las mismas piezas</option>
+          <option value="cpu:p">La CPU juega sin el peón de f</option>
+          <option value="cpu:n">La CPU juega sin un caballo</option>
+          <option value="cpu:r">La CPU juega sin una torre</option>
+          <option value="cpu:q">La CPU juega sin la dama</option>
+          <option value="me:n">Tú juegas sin un caballo</option>
+          <option value="me:r">Tú juegas sin una torre</option>
+        </select></div>
+      <div><label for="cpuColor" id="cpuColorLabel">Juegas con</label>
         <select id="cpuColor">
           <option value="board">El bando de abajo del tablero</option>
           <option value="1">Blancas</option>
@@ -1529,6 +1544,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <option value="here">La posición del tablero</option>
         </select></div>
       <div><label>&nbsp;</label><label class="switch"><input type="checkbox" id="cpuBlind"> 🙈 A ciegas (piezas ocultas)</label></div>
+      <div id="cpuFlipWrap" hidden><label>&nbsp;</label><label class="switch"><input type="checkbox" id="cpuAutoFlip"> ⇅ Girar el tablero en cada jugada</label></div>
     </div>
     <div class="note-box small" id="cpuAdaptiveInfo" hidden></div>
     <p class="small" id="cpuNote">Mientras juegas, el motor y la evaluación se ocultan. Con reloj no se pueden deshacer jugadas, y si se te acaba el tiempo pierdes (salvo que el rival no tenga material para dar mate).</p>
