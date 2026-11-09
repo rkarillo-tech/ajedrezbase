@@ -1,19 +1,21 @@
 # Cursos extra
 
-Cursos en formato PGN que **no** van dentro de la aplicación: se cargan con
-**📘 Cursos › 📥 Añadir un curso (.pgn)** y funcionan igual que los de serie (panel de la lección,
-progreso, «🎯 Practicar» y ejercicios).
+Cursos en formato PGN que **no** van dentro de la aplicación. Se cargan con
+**📘 Cursos › 📥 Añadir un curso (.pgn)** y funcionan igual que los de serie: panel de la lección,
+progreso, «🎯 Practicar» y ejercicios.
 
-| Fichero | Contenido |
+Los cursos que se suben aquí se revisan con `tools/revisar_cursos.js` (y Stockfish). Los que salen
+bien se integran en la aplicación (carpeta `cursos/`).
+
+| Fichero | Estado |
 | --- | --- |
-| [`trampas_y_miniaturas.pgn`](trampas_y_miniaturas.pgn) | 6 partidas y trampas célebres de menos de 20 jugadas: Teed–Delmar, Réti–Tartakower, Ed. Lasker–Thomas, la trampa de Blackburne, la del gambito Englund y la siberiana. Revisado con Stockfish. |
-| [`patrones_de_mate.pgn`](patrones_de_mate.pgn) | 8 lecciones y ejercicios sobre las redes de mate clásicas: Anastasia, Boden, mate árabe, Damiano, Lolli, Greco, las hombreras y las dos torres en séptima. |
-| [`sacrificios_y_ataque_al_rey.pgn`](sacrificios_y_ataque_al_rey.pgn) | 6 lecciones y ejercicios de ataque: el doble sacrificio de alfil (Lasker–Bauer), el sacrificio en f7, el ataque Fegatello (hígado frito), rupturas centrales y eliminación del defensor. |
-| [`estrategia_de_los_maestros.pgn`](estrategia_de_los_maestros.pgn) | 6 lecciones y ejercicios posicionales inspirados en Capablanca, Nimzowitsch, Rubinstein y Smyslov: simplificación, bloqueo, profilaxis, finales de torres y dominación del caballo. |
-| [`repertorios_dinamicos.pgn`](repertorios_dinamicos.pgn) | 3 repertorios interactivos (`Type "repertorio"`) para entrenar con 🎯: Gambito de Dama con blancas, Defensa Siciliana contra 1.e4 y Defensa India de Rey contra 1.d4. |
+| [`estrategia_de_los_maestros.pgn`](estrategia_de_los_maestros.pgn) | ⚠ **Pendiente de rehacer.** Algunas lecciones se atribuyen a partidas que no son reales (por ejemplo, «Capablanca – Janowski 1916»), hay jugadas que pierden sin estar marcadas y algún comentario es falso: en el ejercicio del caballo en el borde, el alfil en b5 no le quita sus casillas de salto. |
 
-Para descargarlo desde el móvil o la tableta, abre el fichero en GitHub y pulsa «Download raw file»
-(el icono de descarga), o usa el enlace directo:
-<https://github.com/rkarillo-tech/ajedrezbase/raw/main/cursos-extra/trampas_y_miniaturas.pgn>
+Ya integrados en la aplicación (versión 1.22.0):
+- «Patrones de mate» y parte de «Sacrificios y ataque al rey», corregidos, en el curso **🗡 Patrones de mate y ataque al rey**.
+- «Repertorios dinámicos», en **🗂 Repertorios para entrenar** (lecciones 6 a 8).
+- «Trampas y miniaturas», como curso propio.
+
+Para descargar un fichero desde el móvil o la tableta, ábrelo en GitHub y pulsa «Download raw file».
 
 Cómo escribir tu propio curso: en la aplicación, ❓ Ayuda › 18. Cursos.

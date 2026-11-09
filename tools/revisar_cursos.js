@@ -69,6 +69,9 @@ const fmt = v => (Math.abs(v) >= 1900 ? (v > 0 ? "#" : "-#") : (v / 100).toFixed
       const h = r.game.headers, name = `${path.basename(f)} · ${h.Round || "?"}. ${h.Title || "(sin título)"}`;
       if (r.error) { report(`${name}: ${r.error.label}: ${r.error.message}`); continue; }
       if (!h.Title || !h.Round) report(`${name}: falta [Title] o [Round]`);
+      // Posición inicial imposible: el bando que NO mueve está en jaque (además, el motor se bloquearía)
+      const s0 = r.game.root.state, rev = Object.assign({}, s0, { t: -s0.t });
+      if (Chess.inCheck(rev)) { report(`${name}: posición ilegal: el bando que no mueve está en jaque`); continue; }
       if (!r.game.root.comment) report(`${name}: falta el comentario inicial`);
       if (!sf) continue;
       const line = Pgn.mainlineFrom(r.game.root);
