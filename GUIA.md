@@ -255,6 +255,15 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 - **🎯 Practicar** te pide que juegues tú las jugadas de la lección (el rival responde solo), y en los ejercicios 🧩, **🎯 Resolver** te deja buscar la solución sin verla.
 - Las lecciones que terminas se marcan con ✔. **⬇ Descargar .pgn** guarda el curso como fichero, y **🗂 Abrir como .pgn** lo abre en la biblioteca para que guardes las lecciones que quieras (y puedas añadirles tus notas y marcadores).
 - Todas las lecciones están escritas para AjedrezBase y comprobadas con Stockfish.
+- **📥 Añadir un curso (.pgn)**: carga un curso tuyo, de tu entrenador o de un compañero, y aparece con el icono 📂 junto a los demás: con su panel de lecciones, el progreso, «🎯 Practicar» y los ejercicios. Se guarda en este navegador (en la tableta y en el ordenador hay que añadirlo en cada uno) y se quita con **🗑 Quitar curso**. Sirve cualquier .pgn: cada partida es una lección, y si no traen título ni número se les pone (por ejemplo, «Ana – Luis (2025)»). Para probarlo hay un curso de ejemplo, «Trampas y miniaturas», en la carpeta `cursos-extra` del repositorio.
+
+**✍ Cómo escribir tu propio curso.** Un curso es un fichero .pgn normal (puedes crearlo con AjedrezBase: juega la lección, escribe los comentarios, dibuja las flechas y pulsa «⬇ Descargar .pgn»). Cada partida es una lección, y estas cabeceras le dan su forma:
+
+- `[Event "Curso de …"]` en la primera lección da el nombre al curso (o `[Course "…"]`), y `[CourseDesc "…"]` su descripción.
+- `[Round "1"]` el número de la lección y `[Title "…"]` su título; `[Level "Principiante"]` (o «Intermedio», «Club»…) su nivel.
+- `[Type "ejercicio"]` la convierte en un ejercicio 🧩 que se resuelve (juega el bando al que le toca mover), y `[Type "repertorio"]` en un repertorio para entrenar con repasos.
+- `[Orientation "black"]` muestra el tablero desde el lado de las negras; `[SetUp "1"]` y `[FEN "…"]` empiezan desde una posición.
+- Los comentarios `{ … }` son la explicación de cada paso (el primero, antes de la primera jugada, es la introducción); las flechas y círculos van como `[%cal Ge2e4]` y `[%csl Rd5]`, y las variantes entre paréntesis. Marca los errores con `?`, `??` o `?!`.
 
 > **Ejemplo:** 📘 Cursos → Finales → «La posición de Lucena» → lee la explicación y avanza con ▶ hasta el final → pulsa 🎯 Practicar y juega tú el «puente».
 

@@ -4,6 +4,7 @@
    marcadas con ?, ??, ?! o !? (y que las marcadas con ?? o ? sean de verdad malas).
 
    node tools/revisar_cursos.js                                   sólo lectura y etiquetas
+   node tools/revisar_cursos.js cursos-extra/mi_curso.pgn         un fichero suelto
    SF=ruta/a/stockfish-19-lite-single.js node tools/revisar_cursos.js [curso] [ms]
 */
 "use strict";
@@ -16,7 +17,9 @@ const { Chess, Pgn } = new Function(src + ";return { Chess, Pgn };")();
 
 const only = process.argv[2] || "";
 const ms = +process.argv[3] || 400;
-const files = fs.readdirSync(path.join(ROOT, "cursos")).filter(f => f.endsWith(".pgn") && (!only || f.startsWith(only)));
+// Un fichero suelto (p. ej. cursos-extra/mi_curso.pgn) o los cursos de cursos/ que empiecen por «only»
+const single = only.endsWith(".pgn") && fs.existsSync(only) ? path.resolve(only) : null;
+const files = single ? [single] : fs.readdirSync(path.join(ROOT, "cursos")).filter(f => f.endsWith(".pgn") && (!only || f.startsWith(only)));
 let problems = 0;
 const report = msg => { problems++; console.log("  ✗ " + msg); };
 
@@ -57,13 +60,13 @@ const fmt = v => (Math.abs(v) >= 1900 ? (v > 0 ? "#" : "-#") : (v / 100).toFixed
   const sf = process.env.SF ? engine(process.env.SF) : null;
   let lessons = 0;
   for (const f of files) {
-    const text = fs.readFileSync(path.join(ROOT, "cursos", f), "utf8");
+    const text = fs.readFileSync(single || path.join(ROOT, "cursos", f), "utf8");
     const parts = Pgn.splitGames(text);
-    console.log(`${f}: ${parts.length} lecciones`);
+    console.log(`${path.basename(f)}: ${parts.length} lecciones`);
     for (const part of parts) {
       lessons++;
       const r = Pgn.parseGame(part, { lang: "en" });
-      const h = r.game.headers, name = `${f} · ${h.Round || "?"}. ${h.Title || "(sin título)"}`;
+      const h = r.game.headers, name = `${path.basename(f)} · ${h.Round || "?"}. ${h.Title || "(sin título)"}`;
       if (r.error) { report(`${name}: ${r.error.label}: ${r.error.message}`); continue; }
       if (!h.Title || !h.Round) report(`${name}: falta [Title] o [Round]`);
       if (!r.game.root.comment) report(`${name}: falta el comentario inicial`);
