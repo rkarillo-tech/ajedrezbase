@@ -86,6 +86,14 @@ def contexto(browser, **kw):
     return ctx
 
 
+def entrenar(pg, seccion):
+    """Abre la pestaña Entrenar y, dentro, la actividad indicada (puzzles, rep, drill, cards, guess o blind)."""
+    pg.click('.tab-btn[data-tab="tools"]')
+    if not pg.is_visible(f'#trainMenu [data-train-open="{seccion}"]'):
+        pg.click("#trainBackBtn")
+    pg.click(f'#trainMenu [data-train-open="{seccion}"]')
+
+
 def casilla(pg, nombre):
     return pg.locator(f'.square[aria-label^="{nombre}"]')
 
@@ -184,7 +192,7 @@ def prueba_biblioteca(browser):
     pg.click("#commentSearchBtn")
     pg.wait_for_timeout(400)
     comprobar(pg.locator("#searchResults .mark-card").count() == 1, "la búsqueda encuentra el comentario sin distinguir mayúsculas")
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "cards")
     pg.click("#cardsDueBtn")
     ans = pg.evaluate("Lib.marks.get(trainer.markId).answer")
     casilla(pg, ans[:2]).click(); casilla(pg, ans[2:4]).click()
@@ -232,6 +240,17 @@ def prueba_ayuda_y_movil(browser):
     comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "sin desplazamiento horizontal en el móvil")
     pg.click('.tab-btn[data-tab="tools"]')
     comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "sin desplazamiento horizontal en el móvil en la pestaña Entrenar")
+    comprobar(pg.locator("#trainMenu .train-card").count() == 6 and pg.is_visible("#todayBox") and not pg.is_visible("#puzzleStartBtn") and not pg.is_visible("#trainBackBtn"),
+              "Entrenar se abre con «Hoy» y un menú de actividades, sin todas las secciones apiladas")
+    pg.click('#trainMenu [data-train-open="puzzles"]')
+    comprobar(pg.is_visible("#puzzleStartBtn") and not pg.is_visible("#trainMenu") and not pg.is_visible("#drillDueBtn") and pg.is_visible("#trainBackBtn"),
+              "cada tarjeta abre sólo su actividad, con un botón para volver")
+    comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "sin desplazamiento horizontal en el móvil dentro de una actividad")
+    pg.click("#trainBackBtn")
+    comprobar(pg.is_visible("#trainMenu") and not pg.is_visible("#puzzleStartBtn"), "«← Todas las actividades» vuelve al menú")
+    pg.click('#trainMenu [data-train-open="rep"]')
+    pg.click('.tab-btn[data-tab="tools"]')
+    comprobar(pg.is_visible("#trainMenu") and not pg.is_visible("#repNewBtn"), "pulsar la pestaña Entrenar estando en una actividad también vuelve al menú")
     pg.click('.tab-btn[data-tab="study"]')
     comprobar(not pg.is_visible("#pieceStyleSelect") and pg.is_visible("#menuBtn"), "en el móvil la cabecera es compacta (piezas, notación y colores en ☰)")
     pg.click("#menuBtn")
@@ -426,7 +445,7 @@ def prueba_v13(browser):
     pg.wait_for_function("document.querySelector('#statsOut .st-tiles b').textContent === '1'", timeout=5000)
     comprobar(True, "el filtro de color recalcula las estadísticas")
     antes = pg.evaluate("Pgn.mainlineFrom(game.root).length")
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "drill")
     pg.wait_for_function("document.getElementById('drillInfo').textContent.includes('1 posición')", timeout=10000)
     comprobar("1 pendiente" in pg.inner_text("#drillBadge"), "los errores de tus partidas aparecen como ejercicios pendientes")
     pg.click("#drillDueBtn")
@@ -534,7 +553,7 @@ def prueba_v14(browser):
     pg.fill("#moveInput", "1. e4 e5 2. Ac4 Cc6 3. Dh5 Cf6 4. Dxf7#")
     pg.click("#importBtn")
     antes = pg.evaluate("Pgn.mainlineFrom(game.root).length")
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "guess")
     pg.select_option("#guessSource", "board")
     pg.select_option("#guessSide", "1")
     pg.click("#guessStartBtn")
@@ -567,6 +586,7 @@ def prueba_v14(browser):
     pg.locator("#guessBox [data-g=end]").click()
     pg.locator("#guessBox [data-g=back]").click()
 
+    entrenar(pg, "blind")
     pg.keyboard.press("b")
     comprobar(pg.evaluate("boardEl.classList.contains('blind')") and "ocultas" in pg.inner_text("#blindBadge"), "la tecla B oculta las piezas")
     pg.click("#peekBtn")
@@ -764,7 +784,7 @@ def prueba_entrenamiento_19(browser):
     pg.click('.tab-btn[data-tab="courses"]')
     comprobar("mañana" in pg.locator('details[data-course="repertorios"] .lesson-row', has_text="Caro-Kann").inner_text(), "la lista de cursos dice cuándo toca repasar cada repertorio")
     # Problemas de táctica
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "puzzles")
     comprobar(pg.evaluate("PUZZLES.length") >= 20 and pg.locator("#puzzleTheme option").count() >= 4, "hay un banco de problemas con varios temas")
     pg.select_option("#puzzleCount", "5")
     pg.click("#puzzleStartBtn")
@@ -812,6 +832,7 @@ def prueba_dia_a_dia(browser):
     pg.wait_for_function("document.getElementById('trainFeedback').textContent.includes('Tu nivel')", timeout=10000)
     comprobar("1 día seguido" in pg.inner_text("#todayBox") and "1 de 5" in pg.inner_text("#todayBox") and pg.inner_text("#streakBadge") == "🔥1", "hacer un problema cuenta para la racha y para el objetivo del día")
     pg.click("#stopPuzzlesBtn")
+    entrenar(pg, "puzzles")
     pg.locator("#puzzleStats").evaluate("e => e.parentElement.open = true")
     comprobar(pg.locator("#puzzleStats .theme-table tr").count() >= 1, "📊 muestra el acierto por temas")
     # Examen: uno bien y otro mal (una jugada equivocada cuenta como fallo)
@@ -835,7 +856,7 @@ def prueba_dia_a_dia(browser):
     pg.evaluate("saveCollGames([0, 1])")
     pg.wait_for_function("Lib.games.size === 2")
     pg.evaluate("settings.myNames = 'rafa'; saveSettings()")
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "rep")
     pg.click("#repCompareBtn")
     txt = pg.inner_text("#repCompareOut")
     comprobar("2 partidas" in txt and "Te saliste en 1...e5" in txt and "1...c6" in txt and "Te saliste en 4.Ag5" in txt and "4.cxd5" in txt, "compara tus partidas con tu repertorio y dice dónde te saliste (con el repertorio que más jugadas sigue)")
@@ -895,7 +916,7 @@ def prueba_mis_repertorios(browser):
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=20000)
     pg.evaluate("settings.token = 'lip_prueba'; settings.explorerDb = 'lichess'; settings.myNames = 'Yo Mismo'; saveSettings()")
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "rep")
     comprobar("Aún no tienes repertorios propios" in pg.inner_text("#myRepList"), "Mis repertorios explica cómo empezar cuando no hay ninguno")
     pg.fill("#repNewName", "Blancas: 1.e4")
     pg.click("#repNewBtn")
@@ -907,7 +928,7 @@ def prueba_mis_repertorios(browser):
     jugar(["e2e4"], ["e7e6", "f1a6"])
     pg.wait_for_function("!ui.dirty", timeout=5000)
     comprobar("(1... c5" in pg.evaluate("Lib.games.get(ui.libId).pgn"), "las líneas jugadas en el tablero se guardan solas en el repertorio")
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "rep")
     comprobar("3 líneas" in pg.inner_text("#myRepList") and "con blancas" in pg.inner_text("#myRepList").lower(), "la lista muestra el bando y cuántas líneas tiene")
     pg.locator("[data-rep-review]").first.click()
     pg.wait_for_function("!RepReview.busy", timeout=180000)
@@ -923,13 +944,13 @@ def prueba_mis_repertorios(browser):
     # Una partida tuya en la que el rival se sale del repertorio
     pg.evaluate("""(async () => { const g = Pgn.parseGame('[White "Yo Mismo"]\\n[Black "Rival"]\\n[Result "1-0"]\\n\\n1. e4 d5 2. exd5 Qxd5 3. Nc3 1-0', { lang: 'en' }).game; setGame(g, { name: 'Partida de prueba', noConfirm: true }); await saveToLibrary({ silent: true, force: true }); })()""")
     pg.wait_for_function("[...Lib.games.values()].some(r => r.title === 'Partida de prueba')")
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "rep")
     pg.click("#repCompareBtn")
     cmp_txt = pg.inner_text("#repCompareOut")
     comprobar("El rival se salió en 1...d5" in cmp_txt and "Blancas: 1.e4" in cmp_txt and pg.locator("#repCompareOut [data-add]").count() == 1, "la comparación usa tus repertorios y ofrece preparar la línea nueva del rival")
     pg.locator("#repCompareOut [data-add]").first.click()
     comprobar(pg.evaluate("cur().san === 'd5' && cur().parent.san === 'e4' && Lib.games.get(ui.libId).title === 'Blancas: 1.e4'"), "preparar la línea nueva abre tu repertorio con la jugada del rival")
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "rep")
     pg.locator("[data-rep-train]").first.click()
     comprobar(pg.evaluate("trainer.active && trainer.side === 1 && trainer.libId === ui.libId"), "▶ Entrenar empieza el entrenamiento del repertorio con su bando")
     pg.click("#stopTrainBtn")
@@ -1378,7 +1399,7 @@ def prueba_geometria_y_ciegas(browser):
               "los rebotes del alfil salen como en el vídeo (d2: h6 f8 a3 c1; g8: a2 b1 h7)")
     comprobar(pg.evaluate("knightPath(knightBfs(Chess.sqIdx('d2')), Chess.sqIdx('h7')).length") == 4, "el caballo va de d2 a h7 en tres saltos")
     fen0 = pg.evaluate("Chess.toFen(game.current.state)")
-    pg.click('.tab-btn[data-tab="tools"]')
+    entrenar(pg, "blind")
     # Ruta del caballo
     pg.select_option("#visMode", "knight")
     pg.click("#visStartBtn")

@@ -154,6 +154,18 @@ main {
 .theme-table td { padding: 2px 6px; }
 .theme-table td:nth-child(3) { width: 40%; }
 .theme-table tr.weak td:first-child { color: var(--warn); font-weight: 700; }
+.train-session:not(:has(> :not([hidden]))) { display: none; }
+.train-session { margin-bottom: 10px; }
+.train-session .controls { margin-top: 6px; }
+.train-menu-title { margin-top: 14px; }
+.train-menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.train-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; text-align: left; padding: 10px 12px; min-height: 64px; background: var(--deep); border: 1px solid var(--border); border-radius: 9px; color: var(--text); cursor: pointer; }
+.train-card:hover, .train-card:focus-visible { border-color: var(--accent); background: var(--panel2); }
+.train-card .tc-ico { font-size: 1.6rem; line-height: 1; }
+.train-card .tc-body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.train-card .tc-badge { grid-column: 2; justify-self: start; }
+#trainBack { margin: 0 0 4px; }
+#trainBack + .section, #trainBack ~ .section[data-train]:not([hidden]):first-of-type { border-top: 0; }
 .today-box { background: var(--deep); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; }
 .today-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .streak { font-size: 1.05rem; }
@@ -1289,12 +1301,33 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 
     <!-- ===== PESTAÑA 5: ENTRENADOR + EDITOR ===== -->
     <div id="tab-tools" class="tab-pane" role="tabpanel">
+      <div id="trainSession" class="train-session">
+        <div id="trainFeedback" class="note-box" aria-live="polite" hidden></div>
+        <div id="trainSessionBtns" class="controls" hidden>
+          <button id="hintTrainBtn" disabled>💡 Pista</button>
+          <button id="stopTrainBtn" class="danger" disabled>⏹ Salir</button>
+        </div>
+      </div>
+
+      <div data-train="menu">
       <h2>
         <span>📅 Hoy</span>
       </h2>
       <div id="todayBox" class="today-box"></div>
+      <h2 class="train-menu-title"><span>🎯 ¿Qué quieres entrenar?</span></h2>
+      <div id="trainMenu" class="train-menu">
+        <button type="button" class="train-card" data-train-open="puzzles"><span class="tc-ico" aria-hidden="true">🧩</span><span class="tc-body"><b>Problemas de táctica</b><span class="small">Por temas y dificultad, con repaso espaciado y examen de nivel</span></span><span class="srs-pill tc-badge" data-badge-of="puzzleBadge" hidden></span></button>
+        <button type="button" class="train-card" data-train-open="rep"><span class="tc-ico" aria-hidden="true">🗂</span><span class="tc-body"><b>Repertorios</b><span class="small">Crea, entrena y revisa tus líneas de apertura</span></span><span class="srs-pill tc-badge" data-badge-of="myRepBadge" hidden></span></button>
+        <button type="button" class="train-card" data-train-open="drill"><span class="tc-ico" aria-hidden="true">🎯</span><span class="tc-body"><b>Errores de tus partidas</b><span class="small">Encuentra la jugada buena donde fallaste</span></span><span class="srs-pill tc-badge" data-badge-of="drillBadge" hidden></span></button>
+        <button type="button" class="train-card" data-train-open="cards"><span class="tc-ico" aria-hidden="true">🧠</span><span class="tc-body"><b>Tarjetas de tus marcadores</b><span class="small">Repasa las posiciones que marcaste con 📌</span></span><span class="srs-pill tc-badge" data-badge-of="cardDueBadge" hidden></span></button>
+        <button type="button" class="train-card" data-train-open="guess"><span class="tc-ico" aria-hidden="true">🔮</span><span class="tc-body"><b>Adivina la jugada</b><span class="small">Acierta las jugadas de un maestro o las tuyas</span></span></button>
+        <button type="button" class="train-card" data-train-open="blind"><span class="tc-ico" aria-hidden="true">🙈</span><span class="tc-body"><b>A ciegas y visualización</b><span class="small">Piezas ocultas, ruta del caballo, memoria…</span></span></button>
+      </div>
+      </div>
 
-      <div class="section">
+      <div id="trainBack" class="controls" hidden><button id="trainBackBtn" class="sm-btn" type="button">← Todas las actividades</button></div>
+
+      <div class="section" data-train="rep">
       <h2>
         <span>🎯 Entrenador de repertorio (repetición espaciada)</span>
         <span id="trainStatusBadge" class="srs-pill">Inactivo</span>
@@ -1308,15 +1341,12 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </select>
         <div class="controls" style="margin:0">
           <button id="startTrainBtn" class="primary">▶ Empezar</button>
-          <button id="hintTrainBtn" disabled>💡 Pista</button>
-          <button id="stopTrainBtn" class="danger" disabled>⏹ Salir</button>
         </div>
       </div>
       <div class="controls"><button id="trainDueBtn" class="sm-btn warn-btn">📅 Entrenar la siguiente partida pendiente</button><span id="gameDueBadge" class="srs-pill">0 pendientes</span></div>
-      <div id="trainFeedback" class="note-box" aria-live="polite" hidden></div>
       </div>
 
-      <div class="section">
+      <div class="section" data-train="puzzles">
         <h2>
           <span>🧩 Problemas de táctica</span>
           <span id="puzzleBadge" class="srs-pill"></span>
@@ -1338,7 +1368,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </div>
       </div>
 
-      <div class="section" id="myRepSection">
+      <div class="section" id="myRepSection" data-train="rep">
         <h2><span>🗂 Mis repertorios</span><span id="myRepBadge" class="srs-pill"></span></h2>
         <p class="small">Crea tus propios repertorios: juega tus líneas en el tablero (cada respuesta del rival que prepares es una variante) y entrénalos con repaso espaciado. <b>🩺 Revisar</b> busca huecos (respuestas frecuentes del rival que no tienes), líneas sin terminar y jugadas dudosas según Stockfish, y te dice cómo te va con él en tus partidas. Se guardan en tu biblioteca con la etiqueta «repertorio».</p>
         <div class="filter-row">
@@ -1354,14 +1384,14 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <div id="repReviewOut" class="rep-review"></div>
       </div>
 
-      <div class="section">
+      <div class="section" data-train="rep">
         <h2><span>🗂 Tus partidas frente a tu repertorio</span></h2>
         <p class="small">Compara tus partidas de la biblioteca con tus repertorios (los tuyos de «Mis repertorios» y los de «📘 Cursos»): en qué jugada te saliste tú (algo que repasar) o tu rival (una línea nueva que preparar). Necesita tu nombre en «📊 Estadísticas».</p>
         <div class="controls"><button id="repCompareBtn" class="sm-btn primary">🔍 Comparar mis partidas</button></div>
         <div id="repCompareOut" class="mark-list"></div>
       </div>
 
-      <div class="section">
+      <div class="section" data-train="cards">
         <h2>
           <span>🧠 Tarjetas de tus marcadores</span>
           <span id="cardDueBadge" class="srs-pill">0 pendientes</span>
@@ -1374,7 +1404,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </div>
       </div>
 
-      <div class="section">
+      <div class="section" data-train="drill">
         <h2>
           <span>🎯 Errores de tus partidas</span>
           <span id="drillBadge" class="srs-pill">0 pendientes</span>
@@ -1401,7 +1431,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <div id="drillInfo" class="small"></div>
       </div>
 
-      <div class="section">
+      <div class="section" data-train="guess">
         <h2>
           <span>🔮 Adivina la jugada</span>
           <span id="guessBadge" class="srs-pill">Inactivo</span>
@@ -1425,7 +1455,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </div>
       </div>
 
-      <div class="section">
+      <div class="section" data-train="blind">
         <h2>
           <span>🙈 A ciegas y visualización</span>
           <span id="blindBadge" class="srs-pill">Piezas visibles</span>
@@ -1462,7 +1492,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         </div>
       </div>
 
-      <div class="section">
+      <div class="section" data-train="menu">
         <h2>
           <span>🛠 Editor de posición</span>
           <button id="toggleEditorModeBtn" class="warn-btn sm-btn">✏ Colocar piezas</button>
