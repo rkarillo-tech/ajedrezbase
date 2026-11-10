@@ -1,0 +1,51 @@
+[Event "Curso de geometría del tablero"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "Las distancias del rey: la diagonal no cuesta más"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "1k6/8/3P3K/8/6p1/8/8/8 w - - 0 1"]
+[Result "1/2-1/2"]
+
+{ [%csl Gh6,Rg4,Yd6] El tablero de ajedrez tiene una geometría rara: para el rey, ir en diagonal cuesta lo mismo que ir en línea recta. De h6 a h1 hay 5 pasos; de h6 a c1, en diagonal, también 5. Por eso un rey puede ir «en zigzag» hacia dos objetivos a la vez sin perder ni un tiempo. Aquí las blancas tienen un problema doble: el peón negro de g4 corre a coronar y el rey negro amenaza comerse el peón de d6. ¿Hay una jugada de rey que ayude en los dos sitios? } 1. Kg5 { [%cal Gh6g5,Gg5f6,Gf6e7] ¡En diagonal! El rey ataca el peón de g4 y, a la vez, se acerca a su peón de d6. Cualquier jugada recta pierde: 1.Rg6? Rc8 y el rey negro se come d6 mientras el peón g corona, o 1.Rh5? g3 y el peón ya no se alcanza. } (1. Kg6 { ? El rey se acerca a g4… pero se aleja de d6. } 1... Kc8 2. Kf5 g3 3. Ke6 Kd8 { El rey negro llega a tiempo a d6 y el peón g corona: las negras ganan. }) 1... g3 { El peón huye del rey blanco. } (1... Kc8 { Si el negro va a por d6… } 2. Kxg4 Kd7 3. Kf3 Kxd6 { …se cambian los dos peones: tablas. }) 2. Kf6 { [%cal Gf6e7] Otra vez en diagonal: el rey ya no puede alcanzar el peón g, así que cambia de plan y va a ayudar a su peón de d6, que también va a coronar. } 2... g2 3. d7 Kc7 4. Ke7 { [%csl Gd8] El rey protege la casilla de coronación. } (4. d8=Q+ { ? Con prisa. } 4... Kxd8 { y el peón g corona solo: pierden las blancas. }) 4... g1=Q 5. d8=Q+ { [%csl Gd8,Gg1] Las dos coronan: dama contra dama, tablas. Recuerda: cuando tu rey tenga que estar en dos sitios a la vez, busca un camino en diagonal que se acerque a los dos. En la siguiente lección verás el ejemplo más famoso de esta idea. } 1/2-1/2
+
+[Event "Curso de geometría del tablero"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "El estudio de Réti: el rey que persigue dos liebres"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "7K/8/k1P5/7p/8/8/8/8 w - - 0 1"]
+[Result "1/2-1/2"]
+
+{ [%csl Rh5,Gh8,Yc6] El estudio de Richard Réti (1921), uno de los más famosos de la historia. Parece imposible: el peón negro de h5 está lejísimos del rey blanco (fuera de su «cuadrado») y el rey negro se come el peón de c6 cuando quiera. Pero las blancas hacen tablas usando la geometría del rey: con jugadas en diagonal persiguen el peón de h y, a la vez, se acercan a su peón de c. ¿Por dónde empieza el rey? } 1. Kg7 { [%cal Gh8g7,Gg7f6,Gf6e5] ¡En diagonal! De h8 a h5 por la columna h son 3 pasos; por g7, f6 y e5, que va hacia el centro, el rey tarda lo mismo en llegar a la altura del peón… y de paso se acerca a c6. } (1. Kh7 { ? El camino recto no sirve: } 1... h4 2. Kg6 h3 { y el peón corona. }) 1... h4 2. Kf6 { [%cal Gf6e5,Gf6e7] Ahora el rey amenaza dos cosas: entrar en el cuadrado del peón de h (con Re5) o ir a apoyar su peón de c (con Re7). } 2... Kb6 { Las negras van a por el peón de c6. } (2... h3 { Si el negro corre… } 3. Ke7 h2 4. c7 Kb7 5. Kd7 { …las blancas también coronan: tablas. }) 3. Ke5 { [%cal Ge5f4,Ge5d6] ¡La idea! Desde e5 el rey llega a tiempo a los dos sitios. } 3... h3 (3... Kxc6 { Si se come el peón… } 4. Kf4 { …el rey blanco ya está en el cuadrado del peón de h y lo alcanza: tablas. }) 4. Kd6 { Ya no se puede parar el peón de h, pero el rey blanco apoya a su peón de c. } 4... h2 5. c7 h1=Q 6. c8=Q { [%csl Gc8,Gh1] Las dos coronan: tablas. Réti demostró que el rey, andando en diagonal, puede perseguir «dos liebres» a la vez: es la misma geometría que en la lección anterior, llevada al límite. } 1/2-1/2
+
+[Event "Curso de geometría del tablero"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "La geometría del caballo: caballo contra peón"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "8/8/8/8/p7/8/1k6/5N1K w - - 0 1"]
+[Result "1/2-1/2"]
+
+{ [%csl Gf1,Ra4,Ra1] El caballo tiene la geometría más extraña: para moverse una casilla en diagonal necesita dos saltos (de d4 a e5: d4-f3-e5) y para moverse una casilla a su lado, ¡tres! Además cambia de color en cada salto. Por eso el caballo es lento en las distancias cortas y los finales de caballo contra peón se calculan casilla a casilla. Aquí el rey blanco está demasiado lejos: el caballo solo tiene que frenar el peón de a, que es el más difícil de parar porque está en la banda. Truco: el caballo para un peón si llega a una casilla delante de él o controla las casillas por las que tiene que pasar. ¿Por dónde va el caballo? } 1. Nd2 { [%cal Gf1d2,Gd2c4,Gc4a3] ¡La única! El caballo va hacia c4, desde donde controla a3 y a5. Si el peón avanza, salta con jaque. } (1. Ne3 { ? Parece natural, pero queda lejos de la columna a: } 1... Kb3 2. Nd5 a3 { y el caballo ya no llega a tiempo: el peón corona. }) 1... Kc2 { El rey negro intenta echar al caballo y abrirle paso al peón. } (1... a3 2. Nc4+ { [%cal Gc4b2,Gc4a3] ¡Jaque y ataque al peón a la vez! } 2... Kb3 3. Nxa3 { Tablas: el rey solo no puede ganar. }) 2. Nc4 { Desde c4 el caballo vigila a3 y a5. } 2... Kc3 3. Na3 { [%csl Ga3] ¡Delante del peón! Así lo bloquea. } 3... Kb3 4. Nb1 { [%cal Gb1a3] Desde b1 sigue controlando a3: el peón no puede avanzar sin que lo coman. } 4... Kb2 5. Nd2 { [%cal Gd2c4] Y otra vez el mismo baile: si el rey negro se acerca, el caballo se va a c4 o a b1, siempre vigilando la casilla que hay delante del peón. Tablas. Recuerda: busca la casilla que hay delante del peón y cuenta los saltos del caballo hasta ella (o hasta una casilla que la controle). En los ejercicios «🐴 Ruta del caballo» de 🙈 Visualización puedes entrenar este cálculo. } 1/2-1/2
+
+[Event "Curso de geometría del tablero"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "Las casillas conjugadas: Lasker y Reichhelm (1901)"]
+[Level "Avanzado"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Ga5,Gf5,Rb5,Rg5] Uno de los finales de peones más famosos, de Emanuel Lasker y Gustavus Reichhelm. Los peones están bloqueados; las blancas ganan si su rey entra por b5 (y se come a5) o por el flanco de rey (por g5, para comerse f5). El rey negro tiene que vigilar las dos entradas. La clave son las «casillas conjugadas»: para cada casilla del rey blanco hay una (o dos) casillas donde el rey negro tiene que estar para aguantar. Calculadas con el motor, son éstas: con el rey blanco en b1, el negro tiene que estar en a7 o c7; en c1 → b7; en d1 → c7; en c2 → b8; en d2 → c8; en c3 → b7; en d3 → c7; en e2 o e3 → d7 o d8; en c4 → b6. Ahora mismo el rey negro está en a7, que es la casilla conjugada de b1. ¿Qué juegas? } 1. Kb1 { [%csl Gb1,Ra7,Gc7] ¡La única jugada que gana! Ahora el rey negro debería estar en a7 o en c7… y está en a7, pero le toca mover y tiene que salir de ahí, y c7 está demasiado lejos. Es una oposición «a distancia» muy especial. } (1. Kb2 { ? } 1... Ka8 { [%csl Gb2,Ga8] Las negras encuentran la casilla conjugada (b2 ↔ a8) y aguantan. }) (1. Ka2 { ? } 1... Kb7 { Tablas: el rey negro siempre responde en la casilla conjugada. }) 1... Kb7 2. Kc1 { [%csl Gc1,Rb7] c1 es la pareja de b7: el rey negro tiene que volver a moverse y pierde la pareja. } 2... Kc7 3. Kd1 { d1 ↔ c7. Las blancas siempre van a la casilla cuya pareja es justo la que ocupa el rey negro. } 3... Kd7 4. Kc2 { c2 ↔ b8, y desde d7 el rey negro no llega a b8. } 4... Kc8 5. Kd2 { d2 ↔ c8. Otra vez le toca mover al negro y tiene que salir de la casilla buena. } 5... Kd7 6. Kc3 { c3 ↔ b7. } 6... Kc7 7. Kd3 { d3 ↔ c7. } 7... Kb7 (7... Kd7 { Si el negro se queda en el centro… } 8. Kc4 { [%cal Gc4b5] c4 ↔ b6, y el rey negro no llega: } 8... Kc7 9. Kb5 { y el rey blanco entra y se come a5. }) 8. Ke2 { [%cal Ge2f2,Gf2g3,Gg3h4] Ahora la otra entrada: el rey negro está lejos de d7 y d8, las parejas de e2. El rey blanco se va hacia g5. } 8... Kc8 9. Kf2 Kd7 10. Kg3 Ke7 11. Kh4 Kf6 12. Kh5 { [%cal Gh5g5] El rey negro defiende g5 y f5… } 12... Kf7 13. Kg5 Kg7 14. Kxf5 { [%csl Gf5] …pero no puede con todo: cae el peón de f5 y las blancas ganan (después cae también d6). Resumen: cuando los peones están bloqueados, cada casilla del rey atacante tiene su «pareja» para el rey defensor. Gana quien consigue que al rival le toque mover fuera de su pareja. La oposición que ya conoces es el caso más sencillo de casillas conjugadas. } 1-0

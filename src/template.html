@@ -1430,7 +1430,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <span>🙈 A ciegas y visualización</span>
           <span id="blindBadge" class="srs-pill">Piezas visibles</span>
         </h2>
-        <p class="small">Juega sin ver las piezas (escribe o pulsa las casillas) y entrena la visión del tablero: seguir una línea de memoria, el color de las casillas y sus coordenadas.</p>
+        <p class="small">Juega sin ver las piezas (escribe o pulsa las casillas) y entrena la visión del tablero: seguir una línea de memoria, el color de las casillas y sus coordenadas, la ruta del caballo, los rebotes del alfil y problemas a ciegas.</p>
         <div class="controls">
           <button id="blindBtn" class="sm-btn warn-btn" title="Oculta las piezas del tablero (tecla B)">🙈 Ocultar piezas</button>
           <button id="peekBtn" class="sm-btn" hidden title="Muestra las piezas un par de segundos">👁 Ojear</button>
@@ -1441,12 +1441,22 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
             <option value="line">Sigue la línea de memoria</option>
             <option value="color">Color de las casillas</option>
             <option value="coords">Encuentra la casilla (30 s)</option>
+            <option value="knight">🐴 Ruta del caballo</option>
+            <option value="bishop">🔁 Rebotes del alfil</option>
+            <option value="dodge">🐴 Caballo esquivando al alfil</option>
+            <option value="blindpz">🧩 Problemas a ciegas</option>
           </select>
           <select id="visPlies" aria-label="Dificultad">
             <option value="2">2 medias jugadas</option>
             <option value="4" selected>4 medias jugadas</option>
             <option value="6">6 medias jugadas</option>
             <option value="8">8 medias jugadas</option>
+          </select>
+          <select id="visSecs" aria-label="Tiempo para memorizar" hidden>
+            <option value="5">5 s para memorizar</option>
+            <option value="10" selected>10 s para memorizar</option>
+            <option value="20">20 s para memorizar</option>
+            <option value="30">30 s para memorizar</option>
           </select>
           <button id="visStartBtn" class="primary sm-btn">▶ Empezar</button>
         </div>
