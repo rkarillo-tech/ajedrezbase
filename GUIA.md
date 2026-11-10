@@ -57,10 +57,11 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 
 > **Ejemplo:** en la jugada 12 crees que había algo mejor → pulsa la jugada 11 de las negras en la lista → juega tu idea en el tablero → escribe en el comentario «Más activa: amenaza Cxe5» → dibuja una flecha roja con `⇧` + clic derecho mostrando la amenaza.
 
-## ⚙ 5. El motor: análisis en vivo, «Piensa conmigo», nube y etiquetas
+## ⚙ 5. El motor: análisis en vivo, «Piensa conmigo», «Habla con tus piezas», nube y etiquetas
 - **Analizar** (o tecla `E`) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.
 - **Flecha** muestra en morado la mejor jugada del motor. **⚡ Jugar** la ejecuta.
 - **🧠 Piensa conmigo** (o tecla `T`): el motor explica su razonamiento en palabras, como lo haría un entrenador: **la situación** (valoración, material y la amenaza del rival), **la mejor jugada y su idea** (gana material, cubre una amenaza, lleva al mate…), **lo que va a pasar** jugada a jugada (tu jugada, la mejor respuesta del rival, la tuya… con qué hace cada una), **por qué no las otras** candidatas y **la jugada tentadora** que parece buena pero falla, con su refutación. Desde ahí puedes jugar la jugada o añadir la línea como variante. Tarda unos segundos.
+- **🗣 Habla con tus piezas** (o tecla `H`): una «entrevista» a cada una de tus piezas, al estilo de los entrenadores que preguntan «¿qué pieza está peor?». Cada pieza dice cómo se siente (😊 contenta, 😐 normal, 😤 infeliz) y por qué: cuántas casillas controla, si está en la banda, si es un alfil malo encerrado por sus peones, si la torre está en una columna cerrada o sin desarrollar, si está colgando… Después, la pieza más infeliz **cuenta su sueño**: la casilla donde querría estar (un puesto avanzado para el caballo, una columna abierta o la séptima para la torre, una diagonal larga para el alfil) y **la ruta** para llegar, dibujada con flechas en el tablero (círculo rojo en la pieza, flechas amarillas, círculo verde en la casilla soñada). El motor revisa la primera jugada de la ruta y te dice si está de acuerdo o si hay algo más urgente (una amenaza, una táctica). Pulsa cualquier pieza de la tabla para hablar con ella, **▶ Jugar** hace la primera jugada de la ruta y **👂 Escuchar al rival** entrevista a las piezas del contrario: saber qué quiere su pieza más infeliz es la base de la *profilaxis*.
 - **👁 Amenaza** (o tecla `X`): enseña qué jugaría el rival *si le tocara mover*, con una flecha roja discontinua y su valoración. Responde al momento a «¿qué está tramando?» y a por qué una jugada pasiva es mala. Pulsa otra vez o cambia de jugada para quitarla.
 - **Evaluación**, siempre desde el punto de vista de las blancas: `+0.80` = ventaja blanca de unas 8 décimas de peón; `−1.50` = ventaja negra de 1,5 peones; `#3` = mate en 3 para las blancas; `−#2` = mate en 2 para las negras. Debajo del panel lo verás también en palabras («Ligera ventaja de las blancas», «Igualdad»…). Entre −0.30 y +0.30 es igualdad; hasta ±0.70, ligera ventaja; hasta ±1.50, ventaja clara; más, ventaja decisiva. El botón **❔** del panel tiene esta guía a mano.
 - **⚖ Tu jugada frente a la del motor**: en cada jugada el panel compara la que se ha hecho con la que proponía el motor y dice cuánto pierde y si es buena, una imprecisión (?!), un error (?) o un error grave (??). Si aún no se ha analizado, pulsa **Compararla con la del motor**. Con **↪ Probar la del motor** vuelves atrás y juegas la del motor como variante, para ver la diferencia en el tablero.
@@ -312,6 +313,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 | `M` | Marcar la posición |
 | `X` | Ver la amenaza del rival |
 | `T` | 🧠 Piensa conmigo: el razonamiento del motor en palabras |
+| `H` | 🗣 Habla con tus piezas: qué pieza está peor y adónde quiere ir |
 | `B` | Ocultar / mostrar las piezas (a ciegas) |
 | Rueda del ratón | Avanzar / retroceder (con el puntero sobre el tablero) |
 | `?` | Abrir esta ayuda |

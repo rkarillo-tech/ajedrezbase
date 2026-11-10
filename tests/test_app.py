@@ -1342,6 +1342,33 @@ def prueba_marcadores_y_velocidad(browser):
     ctx.close()
 
 
+def prueba_habla_con_tus_piezas(browser):
+    print("Novedades 1.24: «Habla con tus piezas»")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.evaluate("setGame(Pgn.newGame('r1bq1rk1/pp2bppp/2np1n2/4p3/4P3/N1N5/PPP1BPPP/R1BQ1RK1 w - - 0 10'), { noConfirm: true })")
+    pg.click("#talkBtn")
+    pg.wait_for_function("!Talk.busy && !document.getElementById('talkBox').hidden && document.getElementById('talkEngine') && !document.getElementById('talkEngine').textContent.startsWith('⏳')", timeout=30000)
+    txt = pg.inner_text("#talkBox")
+    comprobar("La entrevista" in txt and "El caballo de a3" in txt and "en la banda" in txt and pg.locator("#talkBox .talk-row").first.inner_text().startswith("😤"), "la entrevista encuentra la pieza más infeliz (el caballo en la banda)")
+    comprobar("Su hogar ideal sería d5" in txt and "puesto avanzado" in txt and "Ca3 → c4 → e3 → d5" in txt, "propone la casilla soñada (d5) y la ruta para llegar")
+    comprobar("Los peones no se entrevistan" in txt and "motor" in pg.inner_text("#talkEngine"), "recuerda que los peones no se entrevistan y el motor revisa la maniobra")
+    comprobar(pg.evaluate("Talk.shapes.length") == 5, "dibuja la ruta en el tablero (pieza, flechas y casilla soñada)")
+    pg.locator("#talkBox .talk-row", has_text="El alfil de e2").click()
+    pg.wait_for_function("!Talk.busy", timeout=30000)
+    comprobar("de la pieza elegida: El alfil de e2" in pg.inner_text("#talkBox"), "se puede «hablar» con cualquier pieza pulsándola")
+    pg.locator("#talkBox [data-k=rival]").click()
+    pg.wait_for_function("!Talk.busy", timeout=30000)
+    comprobar("negras (el rival)" in pg.inner_text("#talkBox") and "Profilaxis" in pg.inner_text("#talkBox"), "«Escuchar al rival» hace la entrevista a las piezas del rival (profilaxis)")
+    pg.locator("#talkBox [data-k=rival]").click()
+    pg.wait_for_function("!Talk.busy && document.getElementById('talkBox').textContent.includes('Ca3 → c4')", timeout=30000)
+    pg.locator("#talkBox [data-k=play]").click()
+    comprobar(pg.evaluate("cur().san") == "Nc4" and pg.is_hidden("#talkBox"), "«▶ Jugar» hace la primera jugada de la ruta")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1489,7 +1516,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

@@ -207,6 +207,12 @@ main {
 .game-marks .gm-note { color: var(--soft-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 .auto-speed { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 5px; font-size: .84rem; }
 .auto-speed select { width: auto; padding: 3px 6px; }
+.talk-box .talk-row { display: flex; gap: 6px; align-items: baseline; width: 100%; text-align: left; justify-content: flex-start; background: transparent; border: 1px solid transparent; padding: 3px 5px; margin-top: 2px; font-size: .86rem; line-height: 1.4; }
+.talk-box .talk-row:hover, .talk-box .talk-row.sel { background: var(--panel2); border-color: var(--border); }
+.talk-box .talk-face { font-size: 1.05rem; }
+.talk-box .talk-who { font-weight: 700; white-space: nowrap; }
+.talk-box .talk-say { flex: 1; min-width: 0; color: var(--soft-text); }
+.talk-box .talk-route { font-weight: 700; color: var(--warn); }
 .rep-review h3 { font-size: .92rem; margin: 12px 0 4px; }
 .rep-review .version-row { margin-top: 4px; }
 
@@ -622,6 +628,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
   #thinkBox { order: 7; }
+  #talkBox { order: 7; }
   #evalChartWrap { order: 8; }
   #chartLegend { order: 9; }
   #exportControls { order: 10; }
@@ -676,6 +683,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
   #thinkBox { order: 7; }
+  #talkBox { order: 7; }
   #evalChartWrap { order: 8; }
   #chartLegend { order: 9; }
   #exportControls { order: 10; }
@@ -777,6 +785,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <label class="switch" title="Análisis continuo de la posición (tecla E)"><input type="checkbox" id="liveToggle"> Analizar</label>
           <label class="switch" title="Flecha con la mejor jugada"><input type="checkbox" id="arrowToggle"> Flecha</label>
           <button id="playBestMoveBtn" class="sm-btn" title="Jugar la mejor jugada del motor">⚡ Jugar</button>
+          <button id="talkBtn" class="sm-btn info-btn" title="Habla con tus piezas: cuál está contenta, cuál es la más infeliz, cuál sería su casilla soñada y la ruta para llegar (tecla H)">🗣 Habla con tus piezas</button>
           <button id="thinkBtn" class="sm-btn primary" title="El motor explica su razonamiento: la situación, la mejor jugada y por qué, qué responderá el rival, las alternativas y las trampas (tecla T)">🧠 Piensa conmigo</button>
           <button id="threatBtn" class="sm-btn" title="Ver qué amenaza el rival: qué jugaría si le tocara mover (tecla X)">👁 Amenaza</button>
           <button id="cloudStockfishBtn" class="sm-btn info-btn" title="Evaluación profunda de Stockfish en la nube de Lichess">☁ Nube</button>
@@ -801,6 +810,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     </div>
 
     <div id="thinkBox" class="retry-box think-box" hidden aria-live="polite"></div>
+    <div id="talkBox" class="retry-box think-box talk-box" hidden aria-live="polite"></div>
     <div class="eval-chart-wrap" id="evalChartWrap" title="Probabilidad de ganar a lo largo de la línea principal: arriba ventaja blanca, abajo negra. Clic para saltar a esa jugada.">
       <svg id="evalChartSvg" viewBox="0 0 600 64" preserveAspectRatio="none"></svg>
       <div id="chartMsg" class="chart-msg" hidden></div>
