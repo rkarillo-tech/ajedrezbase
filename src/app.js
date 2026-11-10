@@ -55,7 +55,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, autoplayMs: 2000
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -787,16 +787,33 @@ function goSibling(dir) {
 }
 function stopAutoplay() {
   if (ui.autoplay) { clearInterval(ui.autoplay); ui.autoplay = null; $("playBtn").textContent = "▶ Auto"; }
+  if ($("autoSpeedRow")) $("autoSpeedRow").hidden = true;
 }
 function toggleAutoplay() {
   if (ui.autoplay) { stopAutoplay(); return; }
   if (!cur().children.length) goStart();
   $("playBtn").textContent = "⏸ Pausa";
+  $("autoSpeed").value = String(autoplayMs());
+  $("autoSpeedRow").hidden = false;
+  startAutoplayTimer();
+}
+/* Velocidad del modo Auto: milisegundos entre jugadas (⚙ Ajustes o el selector que aparece mientras reproduce) */
+const AUTO_SPEEDS = [500, 1000, 2000, 3500, 6000];
+const autoplayMs = () => (AUTO_SPEEDS.includes(+settings.autoplayMs) ? +settings.autoplayMs : 2000);
+function startAutoplayTimer() {
+  clearInterval(ui.autoplay);
   ui.autoplay = setInterval(() => {
     if (!cur().children.length) { stopAutoplay(); return; }
     goForward();
     soundFor(cur());
-  }, 1000);
+  }, autoplayMs());
+}
+function setAutoplaySpeed(ms) {
+  settings.autoplayMs = ms;
+  saveSettings();
+  $("autoSpeed").value = String(ms);
+  $("setAutoSpeed").value = String(ms);
+  if (ui.autoplay) startAutoplayTimer();
 }
 
 /* ---------- 12. Estado de la partida ---------- */
@@ -1218,8 +1235,24 @@ function updateButtons() {
   $("playCpuToggle").textContent = ui.cpu.on ? "⏹ Terminar vs CPU" : "🤖 Jugar vs CPU";
   $("playCpuToggle").className = ui.cpu.on ? "on" : "info-btn";
 }
+/* 📌 Marcadores de la partida abierta: debajo de la lista de jugadas, para volver a ellos con un clic */
+function renderGameMarks() {
+  const box = $("gameMarksBox");
+  if (!box) return;
+  const list = ui.libId && typeof Lib !== "undefined" && Lib.ready ? marksOfGame(ui.libId) : [];
+  box.hidden = !list.length || quiz();
+  if (box.hidden) { box.innerHTML = ""; return; }
+  const items = list.map(m => ({ m, n: resolvePath(game.root, m.path, true) })).filter(x => x.n)
+    .sort((a, b) => Pgn.pathTo(a.n).length - Pgn.pathTo(b.n).length);
+  if (!items.length) { box.hidden = true; return; }
+  box.innerHTML = `<div class="gm-head">📌 Marcadores de esta partida (${items.length})<a href="#" data-allmarks class="small">Ver todos</a></div>`
+    + items.map((x, i) => `<button class="gm-row${x.n === cur() ? " current" : ""}" data-gm="${i}" title="${esc(x.m.note || "")}"><span>${CATS[x.m.cat] ? CATS[x.m.cat].icon : "📌"}</span><span class="gm-move">${x.n.parent ? esc(numPrefix(x.n.parent.state) + dispSan(x.n)) : "Inicio"}</span><span class="gm-note">${esc(x.m.note || (CATS[x.m.cat] ? CATS[x.m.cat].name : ""))}</span></button>`).join("");
+  box.querySelectorAll("[data-gm]").forEach(b => b.onclick = () => { const x = items[+b.dataset.gm]; if (x && !quiz()) goTo(x.n); });
+  box.querySelector("[data-allmarks]").onclick = e => { e.preventDefault(); switchTab("library"); switchSub("marks"); };
+}
 function render() {
   if (Think.node && Think.node !== cur() && !Think.busy) { $("thinkBox").hidden = true; Think.node = null; }
+  renderGameMarks();
   renderBoard();
   renderBars();
   renderClocks();
@@ -4440,6 +4473,7 @@ function refreshLibraryViews() {
   $("gameDueBadge").textContent = `${gDue} pendiente${gDue === 1 ? "" : "s"}`;
   $("gameDueBadge").className = "srs-pill" + (gDue ? " due" : "");
   renderMyReps();
+  renderGameMarks();
   const cDue = trainableMarks(false).length;
   $("cardDueBadge").textContent = `${cDue} pendiente${cDue === 1 ? "" : "s"}`;
   $("cardDueBadge").className = "srs-pill" + (cDue ? " due" : "");
@@ -5947,6 +5981,9 @@ function applyBoardSize() {
   $("setBoardSize").value = v;
   $("boardSizeVal").textContent = v === 100 ? "automático (100 %)" : v + " %";
 }
+$("setAutoSpeed").value = String(autoplayMs());
+$("setAutoSpeed").onchange = e => setAutoplaySpeed(+e.target.value);
+$("autoSpeed").onchange = e => setAutoplaySpeed(+e.target.value);
 $("setBoardSize").oninput = e => { settings.boardSize = +e.target.value; applyBoardSize(); };
 $("setBoardSize").onchange = () => saveSettings();
 $("boardSizeReset").onclick = () => { settings.boardSize = 100; applyBoardSize(); saveSettings(); };

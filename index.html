@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.22.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.23.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -198,6 +198,15 @@ main {
 .adv-filter .adv-num { flex: 1 1 90px; min-width: 70px; }
 .adv-filter .adv-eco { flex: 2 1 180px; }
 .adv-stats { margin-top: 4px; }
+.game-marks { margin-top: 6px; border: 1px solid var(--warn); border-radius: 8px; background: var(--deep); padding: 5px 8px; }
+.game-marks .gm-head { display: flex; align-items: center; gap: 8px; font-size: .84rem; font-weight: 700; }
+.game-marks .gm-head a { margin-left: auto; font-weight: 400; }
+.game-marks .gm-row { display: flex; gap: 6px; align-items: baseline; width: 100%; text-align: left; justify-content: flex-start; background: transparent; border: 1px solid transparent; padding: 3px 5px; margin-top: 2px; font-size: .84rem; }
+.game-marks .gm-row:hover, .game-marks .gm-row.current { background: var(--panel2); border-color: var(--border); }
+.game-marks .gm-move { font-weight: 700; white-space: nowrap; }
+.game-marks .gm-note { color: var(--soft-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.auto-speed { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 5px; font-size: .84rem; }
+.auto-speed select { width: auto; padding: 3px 6px; }
 .rep-review h3 { font-size: .92rem; margin: 12px 0 4px; }
 .rep-review .version-row { margin-top: 4px; }
 
@@ -608,6 +617,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback { order: 3; }
   #moves { order: 4; max-height: 32vh; }
   #varControls { order: 5; }
+  #gameMarksBox { order: 5; }
+  #autoSpeedRow { order: 1; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
   #thinkBox { order: 7; }
@@ -660,6 +671,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback { order: 3; }
   #moves { order: 4; max-height: 52vh; max-height: 52dvh; min-height: 90px; margin-top: 4px; }
   #varControls { order: 5; }
+  #gameMarksBox { order: 5; }
+  #autoSpeedRow { order: 1; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
   #thinkBox { order: 7; }
@@ -817,6 +830,16 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <button id="drawClear" class="sm-btn" title="Borrar las flechas y círculos de esta posición">🧽</button>
       </span>
     </div>
+    <div id="autoSpeedRow" class="auto-speed" hidden>
+      <label for="autoSpeed">⏱ Velocidad del modo Auto:</label>
+      <select id="autoSpeed" aria-label="Velocidad del modo Auto">
+        <option value="500">Muy rápida (½ s)</option>
+        <option value="1000">Rápida (1 s)</option>
+        <option value="2000">Normal (2 s)</option>
+        <option value="3500">Lenta (3,5 s)</option>
+        <option value="6000">Muy lenta (6 s)</option>
+      </select>
+    </div>
     <div id="statusText" class="status-line" aria-live="polite"></div>
     <div id="retryBox" class="retry-box" hidden aria-live="polite" tabindex="-1"></div>
     <div id="cpuBox" class="retry-box" hidden aria-live="polite"></div>
@@ -832,9 +855,10 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button id="promoteVarBtn" class="sm-btn" title="Subir esta variante un puesto">⬆ Promover variante</button>
       <button id="mainVarBtn" class="sm-btn" title="Convertir esta línea en la principal">★ Hacer principal</button>
       <button id="clearShapesBtn" class="sm-btn" title="Borrar flechas y círculos de esta posición">🧽 Borrar flechas</button>
-      <button id="markBtn2" class="sm-btn warn-btn" title="Marcar esta posición">📌 Marcar</button>
+      <button id="markBtn2" class="sm-btn warn-btn" title="Marca esta jugada para encontrarla fácilmente después y añádele una nota (tecla M)">📌 Marcar jugada</button>
       <span class="small hide-sm" style="margin-left:auto">Clic derecho: flechas/círculos (⇧ rojo, Alt azul, ⇧+Alt amarillo)</span>
     </div>
+    <div id="gameMarksBox" class="game-marks" hidden></div>
     <div class="controls" id="exportControls">
       <button id="moveViewBtn" class="sm-btn" title="Cambiar entre lista continua y planilla de dos columnas">📋 Ver como planilla</button>
       <button id="pngBtn" class="sm-btn" title="Descargar la posición como imagen PNG (y copiarla al portapapeles)">🖼 Imagen</button>
@@ -894,7 +918,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <div class="gc-row">
         <input id="gameTags" list="tagList" placeholder="Etiquetas separadas por comas: repertorio, finales…" aria-label="Etiquetas">
         <datalist id="tagList"></datalist>
-        <button id="markBtn" class="warn-btn" title="Marcar esta posición como idea, táctica, error típico…">📌 Marcar posición</button>
+        <button id="markBtn" class="warn-btn" title="Marca la jugada actual (favorita, idea, táctica, error típico…) con una nota, para encontrarla fácilmente">📌 Marcar jugada</button>
       </div>
       <div id="saveState" class="save-state">No guardada en la biblioteca</div>
       <div class="controls" id="gcVersions" hidden style="margin-top:5px">
@@ -1431,7 +1455,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.22.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.23.0 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
 </footer>
@@ -1475,6 +1499,14 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <option value="dark">🌙 Oscuro</option>
       <option value="light">☀ Claro</option>
       <option value="auto">🌓 Automático (como el sistema)</option>
+    </select>
+    <label for="setAutoSpeed">Velocidad del modo Auto (▶ Auto)</label>
+    <select id="setAutoSpeed">
+      <option value="500">Muy rápida (½ s por jugada)</option>
+      <option value="1000">Rápida (1 s)</option>
+      <option value="2000">Normal (2 s)</option>
+      <option value="3500">Lenta (3,5 s)</option>
+      <option value="6000">Muy lenta (6 s)</option>
     </select>
     <label for="setBoardSize">Tamaño del tablero: <b id="boardSizeVal">automático</b></label>
     <div class="gc-row">
@@ -1602,7 +1634,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li><b>Navegar</b>: botones <b>|◀ ◀ ▶ ▶|</b> bajo el gráfico, el teclado (<kbd>←</kbd> <kbd>→</kbd> <kbd>Inicio</kbd> <kbd>Fin</kbd>) o la <b>rueda del ratón</b> con el puntero sobre el tablero (con un panel táctil, un deslizamiento claro de dos dedos avanza o retrocede una jugada; mientras dibujas flechas, la rueda no hace nada). También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.</li>
           <li><b>Vista previa</b>: al pasar el ratón por una jugada de la lista o de las líneas del motor aparece un minitablero con esa posición, sin moverte de donde estás.</li>
           <li>Las piezas se deslizan al avanzar y retroceder; si lo prefieres, desactiva «Animar las piezas» o «Rueda del ratón» en ⚙ Ajustes.</li>
-          <li><b>▶ Auto</b> (o <kbd>Espacio</kbd>) reproduce la partida sola, una jugada por segundo.</li>
+          <li><b>▶ Auto</b> (o <kbd>Espacio</kbd>) reproduce la partida sola. Mientras se reproduce aparece <b>⏱ Velocidad del modo Auto</b>: muy rápida (½ s por jugada), rápida (1 s), normal (2 s), lenta (3,5 s) o muy lenta (6 s). La que elijas se recuerda (también se cambia en ⚙ Ajustes).</li>
           <li><b>⇅ Girar</b> (o <kbd>F</kbd>) da la vuelta al tablero.</li>
           <li>La aplicación detecta jaque mate, ahogado, triple repetición, regla de 50 jugadas y material insuficiente; lo verás en la línea de estado bajo los botones.</li>
         </ul>
@@ -1764,10 +1796,10 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <details id="help-marcadores">
         <summary>📌 10. Marcadores (ideas, tácticas, errores típicos…)</summary>
         <ul>
-          <li>Sitúate en la jugada que quieres recordar y pulsa <b>📌 Marcar posición</b> (o la tecla <kbd>M</kbd>). Si la partida no está guardada, te propone guardarla, porque el marcador apunta a ella.</li>
+          <li>Sitúate en la jugada que quieres recordar y pulsa <b>📌 Marcar jugada</b> (debajo de la lista de jugadas o en la barra de la partida, o la tecla <kbd>M</kbd>). Si la partida no está guardada, te propone guardarla, porque el marcador apunta a ella.</li>
           <li>Elige la <b>categoría</b>: 💡 Idea, ⚔ Táctica, ⚠ Error típico, 🧭 Plan, ♟ Final, 📖 Apertura o ⭐ Favorita. Escribe una <b>nota</b> (si la jugada ya tenía comentario, se propone como nota).</li>
           <li><b>Entrenar como tarjeta</b>: «encontrar la jugada marcada» (para tácticas e ideas) o «la marcada es un error, encontrar la mejor» (para errores típicos: el motor calcula cuál era la buena).</li>
-          <li>En la lista de jugadas, la jugada marcada muestra el icono de su categoría.</li>
+          <li>En la lista de jugadas, la jugada marcada muestra el icono de su categoría, y debajo de la lista aparece <b>📌 Marcadores de esta partida</b>: todas las jugadas que has marcado, en orden y con su nota. Pulsa una para ir a ella; «Ver todos» abre los de todas tus partidas.</li>
           <li>En <b>📚 Biblioteca › 📌 Marcadores</b> los ves todos con un minitablero; puedes buscar en las notas, filtrar por categoría, editarlos ✏ o borrarlos 🗑. Pulsa uno para abrir la partida justo en esa jugada.</li>
           <li>Para cambiar un marcador, vuelve a la misma jugada y pulsa otra vez 📌.</li>
         </ul>
@@ -1962,7 +1994,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <summary>🛠 22. Ajustes y personalización</summary>
         <ul>
           <li><b>Barra superior</b>: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.</li>
-          <li><b>⚙ Ajustes</b>: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, <b>estado del motor</b> (qué motor se usa, por qué y si hay una copia guardada, con el botón <b>🔄 Reintentar Stockfish 19</b>), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón, recordar la partida al recargar, el <b>aspecto</b> (🌙 oscuro, ☀ claro o 🌓 automático, que sigue el modo claro u oscuro del sistema) y el <b>tamaño del tablero</b> (de 60 % a 130 %: «Automático» es el más grande que cabe en la pantalla; más pequeño deja sitio a las jugadas y la lección, y por encima del 100 % sólo crece en pantallas grandes del ordenador; se guarda en cada dispositivo).</li>
+          <li><b>⚙ Ajustes</b>: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, <b>estado del motor</b> (qué motor se usa, por qué y si hay una copia guardada, con el botón <b>🔄 Reintentar Stockfish 19</b>), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón, recordar la partida al recargar, la <b>velocidad del modo Auto</b>, el <b>aspecto</b> (🌙 oscuro, ☀ claro o 🌓 automático, que sigue el modo claro u oscuro del sistema) y el <b>tamaño del tablero</b> (de 60 % a 130 %: «Automático» es el más grande que cabe en la pantalla; más pequeño deja sitio a las jugadas y la lección, y por encima del 100 % sólo crece en pantallas grandes del ordenador; se guarda en cada dispositivo).</li>
           <li><b>🔊</b> activa o silencia los sonidos.</li>
           <li>Todos los ajustes se recuerdan en este navegador.</li>
         </ul>
@@ -2114,7 +2146,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <!-- Marcador -->
 <div class="modal-back" id="markModal" role="dialog" aria-modal="true" aria-labelledby="markTitle">
   <div class="modal">
-    <h2 id="markTitle"><span>📌 Marcar posición</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <h2 id="markTitle"><span>📌 Marcar jugada</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <p class="small" style="margin:0 0 6px">La encontrarás en «📌 Marcadores de esta partida», debajo de la lista de jugadas, y con todas las demás en «📚 Biblioteca › 📌 Marcadores».</p>
     <div id="markWhere" class="small"></div>
     <label>Categoría</label>
     <div id="markCats" class="cat-chips"></div>
@@ -2138,7 +2171,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.22.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.23.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -3545,7 +3578,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, autoplayMs: 2000
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -4324,16 +4357,33 @@ function goSibling(dir) {
 }
 function stopAutoplay() {
   if (ui.autoplay) { clearInterval(ui.autoplay); ui.autoplay = null; $("playBtn").textContent = "▶ Auto"; }
+  if ($("autoSpeedRow")) $("autoSpeedRow").hidden = true;
 }
 function toggleAutoplay() {
   if (ui.autoplay) { stopAutoplay(); return; }
   if (!cur().children.length) goStart();
   $("playBtn").textContent = "⏸ Pausa";
+  $("autoSpeed").value = String(autoplayMs());
+  $("autoSpeedRow").hidden = false;
+  startAutoplayTimer();
+}
+/* Velocidad del modo Auto: milisegundos entre jugadas (⚙ Ajustes o el selector que aparece mientras reproduce) */
+const AUTO_SPEEDS = [500, 1000, 2000, 3500, 6000];
+const autoplayMs = () => (AUTO_SPEEDS.includes(+settings.autoplayMs) ? +settings.autoplayMs : 2000);
+function startAutoplayTimer() {
+  clearInterval(ui.autoplay);
   ui.autoplay = setInterval(() => {
     if (!cur().children.length) { stopAutoplay(); return; }
     goForward();
     soundFor(cur());
-  }, 1000);
+  }, autoplayMs());
+}
+function setAutoplaySpeed(ms) {
+  settings.autoplayMs = ms;
+  saveSettings();
+  $("autoSpeed").value = String(ms);
+  $("setAutoSpeed").value = String(ms);
+  if (ui.autoplay) startAutoplayTimer();
 }
 
 /* ---------- 12. Estado de la partida ---------- */
@@ -4755,8 +4805,24 @@ function updateButtons() {
   $("playCpuToggle").textContent = ui.cpu.on ? "⏹ Terminar vs CPU" : "🤖 Jugar vs CPU";
   $("playCpuToggle").className = ui.cpu.on ? "on" : "info-btn";
 }
+/* 📌 Marcadores de la partida abierta: debajo de la lista de jugadas, para volver a ellos con un clic */
+function renderGameMarks() {
+  const box = $("gameMarksBox");
+  if (!box) return;
+  const list = ui.libId && typeof Lib !== "undefined" && Lib.ready ? marksOfGame(ui.libId) : [];
+  box.hidden = !list.length || quiz();
+  if (box.hidden) { box.innerHTML = ""; return; }
+  const items = list.map(m => ({ m, n: resolvePath(game.root, m.path, true) })).filter(x => x.n)
+    .sort((a, b) => Pgn.pathTo(a.n).length - Pgn.pathTo(b.n).length);
+  if (!items.length) { box.hidden = true; return; }
+  box.innerHTML = `<div class="gm-head">📌 Marcadores de esta partida (${items.length})<a href="#" data-allmarks class="small">Ver todos</a></div>`
+    + items.map((x, i) => `<button class="gm-row${x.n === cur() ? " current" : ""}" data-gm="${i}" title="${esc(x.m.note || "")}"><span>${CATS[x.m.cat] ? CATS[x.m.cat].icon : "📌"}</span><span class="gm-move">${x.n.parent ? esc(numPrefix(x.n.parent.state) + dispSan(x.n)) : "Inicio"}</span><span class="gm-note">${esc(x.m.note || (CATS[x.m.cat] ? CATS[x.m.cat].name : ""))}</span></button>`).join("");
+  box.querySelectorAll("[data-gm]").forEach(b => b.onclick = () => { const x = items[+b.dataset.gm]; if (x && !quiz()) goTo(x.n); });
+  box.querySelector("[data-allmarks]").onclick = e => { e.preventDefault(); switchTab("library"); switchSub("marks"); };
+}
 function render() {
   if (Think.node && Think.node !== cur() && !Think.busy) { $("thinkBox").hidden = true; Think.node = null; }
+  renderGameMarks();
   renderBoard();
   renderBars();
   renderClocks();
@@ -7977,6 +8043,7 @@ function refreshLibraryViews() {
   $("gameDueBadge").textContent = `${gDue} pendiente${gDue === 1 ? "" : "s"}`;
   $("gameDueBadge").className = "srs-pill" + (gDue ? " due" : "");
   renderMyReps();
+  renderGameMarks();
   const cDue = trainableMarks(false).length;
   $("cardDueBadge").textContent = `${cDue} pendiente${cDue === 1 ? "" : "s"}`;
   $("cardDueBadge").className = "srs-pill" + (cDue ? " due" : "");
@@ -9484,6 +9551,9 @@ function applyBoardSize() {
   $("setBoardSize").value = v;
   $("boardSizeVal").textContent = v === 100 ? "automático (100 %)" : v + " %";
 }
+$("setAutoSpeed").value = String(autoplayMs());
+$("setAutoSpeed").onchange = e => setAutoplaySpeed(+e.target.value);
+$("autoSpeed").onchange = e => setAutoplaySpeed(+e.target.value);
 $("setBoardSize").oninput = e => { settings.boardSize = +e.target.value; applyBoardSize(); };
 $("setBoardSize").onchange = () => saveSettings();
 $("boardSizeReset").onclick = () => { settings.boardSize = 100; applyBoardSize(); saveSettings(); };

@@ -198,6 +198,15 @@ main {
 .adv-filter .adv-num { flex: 1 1 90px; min-width: 70px; }
 .adv-filter .adv-eco { flex: 2 1 180px; }
 .adv-stats { margin-top: 4px; }
+.game-marks { margin-top: 6px; border: 1px solid var(--warn); border-radius: 8px; background: var(--deep); padding: 5px 8px; }
+.game-marks .gm-head { display: flex; align-items: center; gap: 8px; font-size: .84rem; font-weight: 700; }
+.game-marks .gm-head a { margin-left: auto; font-weight: 400; }
+.game-marks .gm-row { display: flex; gap: 6px; align-items: baseline; width: 100%; text-align: left; justify-content: flex-start; background: transparent; border: 1px solid transparent; padding: 3px 5px; margin-top: 2px; font-size: .84rem; }
+.game-marks .gm-row:hover, .game-marks .gm-row.current { background: var(--panel2); border-color: var(--border); }
+.game-marks .gm-move { font-weight: 700; white-space: nowrap; }
+.game-marks .gm-note { color: var(--soft-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.auto-speed { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 5px; font-size: .84rem; }
+.auto-speed select { width: auto; padding: 3px 6px; }
 .rep-review h3 { font-size: .92rem; margin: 12px 0 4px; }
 .rep-review .version-row { margin-top: 4px; }
 
@@ -608,6 +617,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback { order: 3; }
   #moves { order: 4; max-height: 32vh; }
   #varControls { order: 5; }
+  #gameMarksBox { order: 5; }
+  #autoSpeedRow { order: 1; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
   #thinkBox { order: 7; }
@@ -660,6 +671,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback { order: 3; }
   #moves { order: 4; max-height: 52vh; max-height: 52dvh; min-height: 90px; margin-top: 4px; }
   #varControls { order: 5; }
+  #gameMarksBox { order: 5; }
+  #autoSpeedRow { order: 1; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
   #thinkBox { order: 7; }
@@ -817,6 +830,16 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <button id="drawClear" class="sm-btn" title="Borrar las flechas y círculos de esta posición">🧽</button>
       </span>
     </div>
+    <div id="autoSpeedRow" class="auto-speed" hidden>
+      <label for="autoSpeed">⏱ Velocidad del modo Auto:</label>
+      <select id="autoSpeed" aria-label="Velocidad del modo Auto">
+        <option value="500">Muy rápida (½ s)</option>
+        <option value="1000">Rápida (1 s)</option>
+        <option value="2000">Normal (2 s)</option>
+        <option value="3500">Lenta (3,5 s)</option>
+        <option value="6000">Muy lenta (6 s)</option>
+      </select>
+    </div>
     <div id="statusText" class="status-line" aria-live="polite"></div>
     <div id="retryBox" class="retry-box" hidden aria-live="polite" tabindex="-1"></div>
     <div id="cpuBox" class="retry-box" hidden aria-live="polite"></div>
@@ -832,9 +855,10 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button id="promoteVarBtn" class="sm-btn" title="Subir esta variante un puesto">⬆ Promover variante</button>
       <button id="mainVarBtn" class="sm-btn" title="Convertir esta línea en la principal">★ Hacer principal</button>
       <button id="clearShapesBtn" class="sm-btn" title="Borrar flechas y círculos de esta posición">🧽 Borrar flechas</button>
-      <button id="markBtn2" class="sm-btn warn-btn" title="Marcar esta posición">📌 Marcar</button>
+      <button id="markBtn2" class="sm-btn warn-btn" title="Marca esta jugada para encontrarla fácilmente después y añádele una nota (tecla M)">📌 Marcar jugada</button>
       <span class="small hide-sm" style="margin-left:auto">Clic derecho: flechas/círculos (⇧ rojo, Alt azul, ⇧+Alt amarillo)</span>
     </div>
+    <div id="gameMarksBox" class="game-marks" hidden></div>
     <div class="controls" id="exportControls">
       <button id="moveViewBtn" class="sm-btn" title="Cambiar entre lista continua y planilla de dos columnas">📋 Ver como planilla</button>
       <button id="pngBtn" class="sm-btn" title="Descargar la posición como imagen PNG (y copiarla al portapapeles)">🖼 Imagen</button>
@@ -894,7 +918,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <div class="gc-row">
         <input id="gameTags" list="tagList" placeholder="Etiquetas separadas por comas: repertorio, finales…" aria-label="Etiquetas">
         <datalist id="tagList"></datalist>
-        <button id="markBtn" class="warn-btn" title="Marcar esta posición como idea, táctica, error típico…">📌 Marcar posición</button>
+        <button id="markBtn" class="warn-btn" title="Marca la jugada actual (favorita, idea, táctica, error típico…) con una nota, para encontrarla fácilmente">📌 Marcar jugada</button>
       </div>
       <div id="saveState" class="save-state">No guardada en la biblioteca</div>
       <div class="controls" id="gcVersions" hidden style="margin-top:5px">
@@ -1476,6 +1500,14 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <option value="light">☀ Claro</option>
       <option value="auto">🌓 Automático (como el sistema)</option>
     </select>
+    <label for="setAutoSpeed">Velocidad del modo Auto (▶ Auto)</label>
+    <select id="setAutoSpeed">
+      <option value="500">Muy rápida (½ s por jugada)</option>
+      <option value="1000">Rápida (1 s)</option>
+      <option value="2000">Normal (2 s)</option>
+      <option value="3500">Lenta (3,5 s)</option>
+      <option value="6000">Muy lenta (6 s)</option>
+    </select>
     <label for="setBoardSize">Tamaño del tablero: <b id="boardSizeVal">automático</b></label>
     <div class="gc-row">
       <input id="setBoardSize" type="range" min="60" max="130" step="5" style="flex:1">
@@ -1573,7 +1605,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <!-- Marcador -->
 <div class="modal-back" id="markModal" role="dialog" aria-modal="true" aria-labelledby="markTitle">
   <div class="modal">
-    <h2 id="markTitle"><span>📌 Marcar posición</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <h2 id="markTitle"><span>📌 Marcar jugada</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <p class="small" style="margin:0 0 6px">La encontrarás en «📌 Marcadores de esta partida», debajo de la lista de jugadas, y con todas las demás en «📚 Biblioteca › 📌 Marcadores».</p>
     <div id="markWhere" class="small"></div>
     <label>Categoría</label>
     <div id="markCats" class="cat-chips"></div>
