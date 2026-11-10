@@ -6369,7 +6369,44 @@ function switchTab(name) {
   if (name === "courses") renderCourses();
   if (name === "endgames" && pieceCount(cur().state) <= 7) querySyzygy();
 }
-document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
+/* En el móvil en vertical las pestañas son una barra fija abajo: al pulsar una se lleva su contenido a la vista, y «♟ Tablero» vuelve arriba */
+const phoneLayout = matchMedia("(max-width: 640px) and (orientation: portrait)");
+document.querySelectorAll(".tab-btn[data-tab]").forEach(btn => btn.addEventListener("click", () => {
+  if (btn.dataset.tab === "tools" && ui.activeTab === "tools") openTrainSection(null);   // pulsar «Entrenar» estando ya en ella vuelve al menú
+  switchTab(btn.dataset.tab);
+  if (phoneLayout.matches) $("tab-" + btn.dataset.tab).scrollIntoView({ block: "start" });
+}));
+$("tabBoardBtn").onclick = () => scrollTo({ top: 0 });
+$("moreBtn").onclick = () => {
+  const open = document.querySelector(".board-side").classList.toggle("more-open");
+  $("moreBtn").setAttribute("aria-expanded", open);
+};
+
+/* ---------- 27a. Pestaña «Entrenar»: menú de actividades; cada tarjeta abre sólo su sección ---------- */
+function openTrainSection(id) {
+  const view = id || "menu";
+  ui.trainView = view;
+  document.querySelectorAll("#tab-tools [data-train]").forEach(el => { el.hidden = el.dataset.train !== view; });
+  $("trainBack").hidden = view === "menu";
+  const r = $("tab-tools").getBoundingClientRect();
+  if ($("tab-tools").classList.contains("active") && r.top < 0) $("tab-tools").scrollIntoView({ block: "start" });
+}
+function syncTrainBadge(card) {
+  const src = $(card.dataset.badgeOf), txt = src.textContent.trim();
+  card.textContent = txt;
+  card.className = src.className + " tc-badge";
+  card.hidden = !txt || /^0 /.test(txt);
+}
+document.querySelectorAll("#trainMenu [data-train-open]").forEach(b => b.addEventListener("click", () => openTrainSection(b.dataset.trainOpen)));
+document.querySelectorAll("#trainMenu [data-badge-of]").forEach(card => {
+  syncTrainBadge(card);
+  new MutationObserver(() => syncTrainBadge(card)).observe($(card.dataset.badgeOf), { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+});
+$("trainBackBtn").onclick = () => openTrainSection(null);
+// «Pista» y «Salir» sirven para cualquier entrenamiento: sólo se ven mientras hay uno en marcha
+new MutationObserver(() => { $("trainSessionBtns").hidden = $("stopTrainBtn").disabled && $("hintTrainBtn").disabled; })
+  .observe($("trainSessionBtns"), { attributes: true, attributeFilter: ["disabled"], subtree: true });
+openTrainSection(null);
 
 function openModal(id) {
   if (id === "settingsModal") {
@@ -7213,7 +7250,7 @@ function startDrills(mode) {
   if (!Lib.ready) return;
   if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
   const pool = drillPool(), now = Date.now();
-  if (!pool.length) { toast("No hay ejercicios de ese tipo: analiza antes tus partidas guardadas.", 4000); switchTab("tools"); return; }
+  if (!pool.length) { toast("No hay ejercicios de ese tipo: analiza antes tus partidas guardadas.", 4000); switchTab("tools"); openTrainSection("drill"); return; }
   let list = mode === "due" ? pool.filter(x => !x.srs || x.srs.due <= now) : pool.slice();
   if (!list.length) { toast("¡No tienes ejercicios pendientes hoy! 🎉 Pulsa «Al azar» para repasar igualmente.", 4000); return; }
   for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
