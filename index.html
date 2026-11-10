@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.23.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.24.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -207,6 +207,12 @@ main {
 .game-marks .gm-note { color: var(--soft-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 .auto-speed { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 5px; font-size: .84rem; }
 .auto-speed select { width: auto; padding: 3px 6px; }
+.talk-box .talk-row { display: flex; gap: 6px; align-items: baseline; width: 100%; text-align: left; justify-content: flex-start; background: transparent; border: 1px solid transparent; padding: 3px 5px; margin-top: 2px; font-size: .86rem; line-height: 1.4; }
+.talk-box .talk-row:hover, .talk-box .talk-row.sel { background: var(--panel2); border-color: var(--border); }
+.talk-box .talk-face { font-size: 1.05rem; }
+.talk-box .talk-who { font-weight: 700; white-space: nowrap; }
+.talk-box .talk-say { flex: 1; min-width: 0; color: var(--soft-text); }
+.talk-box .talk-route { font-weight: 700; color: var(--warn); }
 .rep-review h3 { font-size: .92rem; margin: 12px 0 4px; }
 .rep-review .version-row { margin-top: 4px; }
 
@@ -622,6 +628,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
   #thinkBox { order: 7; }
+  #talkBox { order: 7; }
   #evalChartWrap { order: 8; }
   #chartLegend { order: 9; }
   #exportControls { order: 10; }
@@ -676,6 +683,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #typeMoveRow { order: 6; }
   #engineBox { order: 7; }
   #thinkBox { order: 7; }
+  #talkBox { order: 7; }
   #evalChartWrap { order: 8; }
   #chartLegend { order: 9; }
   #exportControls { order: 10; }
@@ -777,6 +785,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <label class="switch" title="Análisis continuo de la posición (tecla E)"><input type="checkbox" id="liveToggle"> Analizar</label>
           <label class="switch" title="Flecha con la mejor jugada"><input type="checkbox" id="arrowToggle"> Flecha</label>
           <button id="playBestMoveBtn" class="sm-btn" title="Jugar la mejor jugada del motor">⚡ Jugar</button>
+          <button id="talkBtn" class="sm-btn info-btn" title="Habla con tus piezas: cuál está contenta, cuál es la más infeliz, cuál sería su casilla soñada y la ruta para llegar (tecla H)">🗣 Habla con tus piezas</button>
           <button id="thinkBtn" class="sm-btn primary" title="El motor explica su razonamiento: la situación, la mejor jugada y por qué, qué responderá el rival, las alternativas y las trampas (tecla T)">🧠 Piensa conmigo</button>
           <button id="threatBtn" class="sm-btn" title="Ver qué amenaza el rival: qué jugaría si le tocara mover (tecla X)">👁 Amenaza</button>
           <button id="cloudStockfishBtn" class="sm-btn info-btn" title="Evaluación profunda de Stockfish en la nube de Lichess">☁ Nube</button>
@@ -801,6 +810,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     </div>
 
     <div id="thinkBox" class="retry-box think-box" hidden aria-live="polite"></div>
+    <div id="talkBox" class="retry-box think-box talk-box" hidden aria-live="polite"></div>
     <div class="eval-chart-wrap" id="evalChartWrap" title="Probabilidad de ganar a lo largo de la línea principal: arriba ventaja blanca, abajo negra. Clic para saltar a esa jugada.">
       <svg id="evalChartSvg" viewBox="0 0 600 64" preserveAspectRatio="none"></svg>
       <div id="chartMsg" class="chart-msg" hidden></div>
@@ -1455,7 +1465,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.23.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.24.0 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
 </footer>
@@ -1678,11 +1688,12 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       </details>
 
       <details id="help-motor">
-        <summary>⚙ 5. El motor: análisis en vivo, «Piensa conmigo», nube y etiquetas</summary>
+        <summary>⚙ 5. El motor: análisis en vivo, «Piensa conmigo», «Habla con tus piezas», nube y etiquetas</summary>
         <ul>
           <li><b>Analizar</b> (o tecla <kbd>E</kbd>) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.</li>
           <li><b>Flecha</b> muestra en morado la mejor jugada del motor. <b>⚡ Jugar</b> la ejecuta.</li>
           <li><b>🧠 Piensa conmigo</b> (o tecla <kbd>T</kbd>): el motor explica su razonamiento en palabras, como lo haría un entrenador: <b>la situación</b> (valoración, material y la amenaza del rival), <b>la mejor jugada y su idea</b> (gana material, cubre una amenaza, lleva al mate…), <b>lo que va a pasar</b> jugada a jugada (tu jugada, la mejor respuesta del rival, la tuya… con qué hace cada una), <b>por qué no las otras</b> candidatas y <b>la jugada tentadora</b> que parece buena pero falla, con su refutación. Desde ahí puedes jugar la jugada o añadir la línea como variante. Tarda unos segundos.</li>
+          <li><b>🗣 Habla con tus piezas</b> (o tecla <kbd>H</kbd>): una «entrevista» a cada una de tus piezas, al estilo de los entrenadores que preguntan «¿qué pieza está peor?». Cada pieza dice cómo se siente (😊 contenta, 😐 normal, 😤 infeliz) y por qué: cuántas casillas controla, si está en la banda, si es un alfil malo encerrado por sus peones, si la torre está en una columna cerrada o sin desarrollar, si está colgando… Después, la pieza más infeliz <b>cuenta su sueño</b>: la casilla donde querría estar (un puesto avanzado para el caballo, una columna abierta o la séptima para la torre, una diagonal larga para el alfil) y <b>la ruta</b> para llegar, dibujada con flechas en el tablero (círculo rojo en la pieza, flechas amarillas, círculo verde en la casilla soñada). El motor revisa la primera jugada de la ruta y te dice si está de acuerdo o si hay algo más urgente (una amenaza, una táctica). Pulsa cualquier pieza de la tabla para hablar con ella, <b>▶ Jugar</b> hace la primera jugada de la ruta y <b>👂 Escuchar al rival</b> entrevista a las piezas del contrario: saber qué quiere su pieza más infeliz es la base de la <i>profilaxis</i>.</li>
           <li><b>👁 Amenaza</b> (o tecla <kbd>X</kbd>): enseña qué jugaría el rival <i>si le tocara mover</i>, con una flecha roja discontinua y su valoración. Responde al momento a «¿qué está tramando?» y a por qué una jugada pasiva es mala. Pulsa otra vez o cambia de jugada para quitarla.</li>
           <li><b>Evaluación</b>, siempre desde el punto de vista de las blancas: <code>+0.80</code> = ventaja blanca de unas 8 décimas de peón; <code>−1.50</code> = ventaja negra de 1,5 peones; <code>#3</code> = mate en 3 para las blancas; <code>−#2</code> = mate en 2 para las negras. Debajo del panel lo verás también en palabras («Ligera ventaja de las blancas», «Igualdad»…). Entre −0.30 y +0.30 es igualdad; hasta ±0.70, ligera ventaja; hasta ±1.50, ventaja clara; más, ventaja decisiva. El botón <b>❔</b> del panel tiene esta guía a mano.</li>
           <li><b>⚖ Tu jugada frente a la del motor</b>: en cada jugada el panel compara la que se ha hecho con la que proponía el motor y dice cuánto pierde y si es buena, una imprecisión (?!), un error (?) o un error grave (??). Si aún no se ha analizado, pulsa <b>Compararla con la del motor</b>. Con <b>↪ Probar la del motor</b> vuelves atrás y juegas la del motor como variante, para ver la diferencia en el tablero.</li>
@@ -2012,6 +2023,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <tr><td><kbd>M</kbd></td><td>Marcar la posición</td></tr>
           <tr><td><kbd>X</kbd></td><td>Ver la amenaza del rival</td></tr>
           <tr><td><kbd>T</kbd></td><td>🧠 Piensa conmigo: el razonamiento del motor en palabras</td></tr>
+          <tr><td><kbd>H</kbd></td><td>🗣 Habla con tus piezas: qué pieza está peor y adónde quiere ir</td></tr>
           <tr><td><kbd>B</kbd></td><td>Ocultar / mostrar las piezas (a ciegas)</td></tr>
           <tr><td>Rueda del ratón</td><td>Avanzar / retroceder (con el puntero sobre el tablero)</td></tr>
           <tr><td><kbd>?</kbd></td><td>Abrir esta ayuda</td></tr>
@@ -2171,7 +2183,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.23.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.24.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -4124,6 +4136,7 @@ function renderShapes() {
     for (const sh of cur().shapes || []) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
     if (ui.engineArrow && settings.arrow && !quiz() && ui.engineArrow.node === cur() && !(ui.lesson && ui.lesson.game === game)) list.push({ color: "engine", from: ui.engineArrow.from, to: ui.engineArrow.to });
     if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
+    if (Talk.node === cur() && !quiz()) for (const sh of Talk.shapes) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
     if (Retry.active) for (const a of Retry.arrows) list.push(a);
     // Mientras se dibuja: la flecha (o el círculo) que va a quedar, para ver dónde se suelta
@@ -4822,6 +4835,7 @@ function renderGameMarks() {
 }
 function render() {
   if (Think.node && Think.node !== cur() && !Think.busy) { $("thinkBox").hidden = true; Think.node = null; }
+  if (Talk.node && Talk.node !== cur() && !Talk.busy) { $("talkBox").hidden = true; Talk.node = null; Talk.shapes = []; }
   renderGameMarks();
   renderBoard();
   renderBars();
@@ -5568,6 +5582,231 @@ async function thinkWithMe() {
     requestLive();
   }
 }
+
+/* ---------- 19b3. «🗣 Habla con tus piezas»: el método de la peor pieza ----------
+   1) La entrevista: cada pieza (sin peones ni rey) dice si está contenta, según su actividad y su sitio.
+   2) La casilla soñada de la más infeliz (o de la que elijas): puesto avanzado, diagonal o columna abierta.
+   3) La ruta para llegar, sin pisar casillas que atacan los peones rivales, revisada con el motor. */
+const Talk = { busy: false, node: null, side: 1, shapes: [], sel: null };
+const TALK_N = [-33, -31, -18, -14, 14, 18, 31, 33], TALK_B = [-17, -15, 15, 17], TALK_R = [-16, -1, 1, 16];
+const onB = i => (i & 0x88) === 0;
+const relRank = (sq, c) => (c === 1 ? 8 - (sq >> 4) : (sq >> 4) + 1);
+const isOwn = (p, c) => p !== "." && Chess.color(p) === c;
+function pawnHits(b, sq, by) {   // ¿ataca un peón de «by» la casilla sq?
+  const P = by === 1 ? "P" : "p", d = by === 1 ? [15, 17] : [-15, -17];
+  return d.some(x => onB(sq + x) && b[sq + x] === P);
+}
+/* ¿Puede algún peón rival llegar a atacar esta casilla? (si no, es una casilla fuerte para nosotros) */
+function pawnCanEverHit(b, sq, c) {
+  const enemy = c === 1 ? "p" : "P", r = sq >> 4, f = sq & 7;
+  for (const ff of [f - 1, f + 1]) {
+    if (ff < 0 || ff > 7) continue;
+    for (let rr = 0; rr < 8; rr++) {
+      if (b[rr * 16 + ff] !== enemy) continue;
+      if (c === 1 ? rr < r : rr > r) return true;   // el peón negro aún está por delante (puede bajar y atacar)
+    }
+  }
+  return false;
+}
+function talkTargets(b, sq, p) {
+  const t = p.toLowerCase(), c = Chess.color(p), out = [];
+  const dirs = t === "n" ? TALK_N : t === "b" ? TALK_B : t === "r" ? TALK_R : TALK_B.concat(TALK_R);
+  for (const d of dirs) {
+    for (let x = sq + d; onB(x); x += d) {
+      if (isOwn(b[x], c)) break;
+      out.push(x);
+      if (b[x] !== "." || t === "n") break;
+    }
+  }
+  return out;
+}
+const PIECE_TYPICAL = { n: 4, b: 6, r: 6, q: 10 };   // casillas seguras de una pieza «normal» en el medio juego
+/* La entrevista a una pieza: puntuación de 0 a 100, cara y lo que «dice» */
+function interviewPiece(st, sq, c) {
+  const b = st.b, p = b[sq], t = p.toLowerCase(), f = sq & 7, rr = relRank(sq, c);
+  const targets = talkTargets(b, sq, p), safe = targets.filter(x => !pawnHits(b, x, -c));
+  const mob = safe.length;
+  let score = Math.round(Math.min(mob / PIECE_TYPICAL[t], 1.4) * 55), says = [];
+  const opening = Chess.nonPawnCount(st) > 10;
+  const home = c === 1 ? 7 : 0;
+  // Piezas atacadas y sin defensa: lo primero
+  const att = Chess.attackers(b, sq, -c), def = Chess.attackers(b, sq, c);
+  const hanging = att.length && (!def.length || att.some(x => Chess.VAL[b[x].toLowerCase()] < Chess.VAL[t]));
+  if (t === "n") {
+    if (f === 0 || f === 7) { score -= 20; says.push("Estoy en la banda: «caballo en el borde, caballo muerto»."); }
+    if (Chess.isOutpost(st, sq, c)) { score += 35; says.push("Estoy en un puesto avanzado, apoyado por un peón: ningún peón rival puede echarme."); }
+    else if (rr >= 4 && !pawnCanEverHit(b, sq, c)) { score += 15; says.push("Ningún peón rival puede echarme de aquí."); }
+  }
+  if (t === "b") {
+    const light = ((sq >> 4) + f) % 2 === 0;
+    let ownSame = 0;
+    for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } if (b[i] === (c === 1 ? "P" : "p") && (((i >> 4) + (i & 7)) % 2 === 0) === light) ownSame++; }
+    if (ownSame >= 4 && mob <= 5) { score -= 20; says.push(`Mis propios peones (${ownSame} en casillas de mi color) me tapan: soy un alfil malo.`); }
+    else if (mob >= 8) says.push("Tengo una diagonal larga y abierta.");
+  }
+  if (t === "r") {
+    let own = false, enemy = false;
+    for (let r2 = 0; r2 < 8; r2++) { const x = b[r2 * 16 + f]; if (x === "P" || x === "p") { if (Chess.color(x) === c) own = true; else enemy = true; } }
+    if (!own && !enemy) { score += 25; says.push(`Domino la columna ${"abcdefgh"[f]}, que está abierta.`); }
+    else if (!own) { score += 12; says.push(`Estoy en la columna ${"abcdefgh"[f]}, semiabierta: presiono un peón rival.`); }
+    else if (mob <= 3) { score -= 10; says.push(`Mi columna está cerrada por mi propio peón: apenas tengo juego.`); }
+    if (rr === 7) { score += 25; says.push("Estoy en la séptima fila, atacando peones y encerrando al rey."); }
+  }
+  if ((t === "n" || t === "b") && (sq >> 4) === home && opening && st.full > 10) { score -= 20; says.push("Sigo en mi casilla inicial: aún no he entrado en juego."); }
+  if ([2, 3, 4, 5].includes(f) && rr >= 4 && rr <= 6 && t !== "r") score += 8;
+  // En la apertura, las torres y la dama esperan: no se las cuenta como «infelices» por estar atrás
+  if (opening && t === "r" && rr === 1 && score < 38 && !says.some(x => /abierta|semiabierta/.test(x))) { score = 38; says.length = 0; says.push("Las torres entran en juego cuando se abren columnas: de momento espero en la primera fila."); }
+  if (opening && t === "q" && sq === (c === 1 ? 0x73 : 0x03) && score < 40) { score = 40; says.length = 0; says.push("La dama sale más tarde: de momento estoy bien protegida."); }
+  const fem = t === "r" || t === "q";
+  if (hanging) says.unshift(`¡Cuidado! Me atacan y no estoy bien defendid${fem ? "a" : "o"}.`);
+  if (!says.length) says.push(mob <= 2 ? `Casi no puedo moverme: sólo tengo ${mob} casilla${mob === 1 ? "" : "s"} segura${mob === 1 ? "" : "s"}.` : `Controlo ${mob} casillas seguras.`);
+  score = Math.max(0, Math.min(100, score));
+  return { sq, p, t, score, mob, hanging, says, face: score >= 55 ? "😊" : score >= 35 ? "😐" : "😤" };
+}
+const pawnsOnRank = (b, r, c) => { for (let f = 0; f < 8; f++) if (b[r * 16 + f] === (c === 1 ? "P" : "p")) return true; return false; };
+/* Camino más corto de una pieza por casillas vacías que no atacan los peones rivales */
+function talkPath(b, from, to, p, maxD = 4) {
+  const c = Chess.color(p), prev = new Map([[from, -1]]), q = [[from, 0]];
+  while (q.length) {
+    const [x, d] = q.shift();
+    if (x === to) { const path = []; for (let y = to; y !== -1; y = prev.get(y)) path.unshift(y); return path; }
+    if (d >= maxD) continue;
+    const bb = b.slice(); bb[from] = "."; bb[x] = p;
+    for (const y of talkTargets(bb, x, p)) {
+      if (prev.has(y) || b[y] !== "." || pawnHits(b, y, -c)) continue;
+      const by = bb.slice(); by[x] = "."; by[y] = p;
+      const at = Chess.attackers(by, y, -c);
+      if (at.some(a => Chess.VAL[by[a].toLowerCase()] < Chess.VAL[p.toLowerCase()]) || at.length > Chess.attackers(by, y, c).length) continue;   // casillas de paso seguras
+      prev.set(y, x); q.push([y, d + 1]);
+    }
+  }
+  return null;
+}
+/* La casilla soñada de una pieza y la ruta para llegar */
+function dreamSquare(st, sq, c) {
+  const b = st.b, p = b[sq], t = p.toLowerCase(), f0 = sq & 7;
+  const now = talkTargets(b, sq, p).filter(x => !pawnHits(b, x, -c)).length;
+  let best = null;
+  for (let x = 0; x < 128; x++) {
+    if (x & 0x88) { x += 7; continue; }
+    if (x === sq || b[x] !== "." || pawnHits(b, x, -c)) continue;
+    { // un hogar seguro: ninguna pieza rival de menos valor la ataca allí, y si la atacan, está defendida
+      const bx = b.slice(); bx[sq] = "."; bx[x] = p;
+      const at = Chess.attackers(bx, x, -c), df = Chess.attackers(bx, x, c);
+      if (at.some(a => Chess.VAL[bx[a].toLowerCase()] < Chess.VAL[t]) || at.length > df.length) continue;
+    }
+    let val = 0, why = "";
+    const f = x & 7, rr = relRank(x, c);
+    if (t === "n") {
+      if (rr < 4 || rr > 6 || pawnCanEverHit(b, x, c)) continue;
+      const bb = b.slice(); bb[sq] = "."; bb[x] = p;
+      val = 30 + (Chess.isOutpost(Object.assign({}, st, { b: bb }), x, c) ? 30 : 0) + ([3, 4].includes(f) ? 15 : [2, 5].includes(f) ? 10 : 0) + (rr >= 5 ? 5 : 0);
+      why = Chess.isOutpost(Object.assign({}, st, { b: bb }), x, c) ? "un puesto avanzado, apoyado por un peón y donde ningún peón rival podrá echarlo" : "una casilla avanzada de la que ningún peón rival podrá echarlo";
+    } else {
+      const bb = b.slice(); bb[sq] = "."; bb[x] = p;
+      const mob = talkTargets(bb, x, p).filter(y => !pawnHits(bb, y, -c)).length;
+      val = t === "r" ? (rr <= 2 ? 5 : 0) : (mob - now) * 4;   // la torre, mejor desde atrás en su columna
+      if (t === "q") continue;   // la dama es flexible: no se la lleva de paseo
+      if (t === "r") {
+        let own = false, enemy = false;
+        for (let r2 = 0; r2 < 8; r2++) { const y = b[r2 * 16 + f]; if (y === "P" || y === "p") { if (Chess.color(y) === c) own = true; else enemy = true; } }
+        let ownNow = false;
+        for (let r2 = 0; r2 < 8; r2++) { const y = b[r2 * 16 + f0]; if (y === (c === 1 ? "P" : "p")) ownNow = true; }
+        if (rr === 7 && pawnsOnRank(b, x >> 4, -c)) { val += 40; why = "la séptima fila, donde atacaría los peones rivales"; }
+        else if (!own && !enemy && f !== f0) { val += 30; why = `la columna ${"abcdefgh"[f]}, que está abierta`; }
+        else if (!own && enemy && f !== f0 && ownNow) { val += 15; why = `la columna ${"abcdefgh"[f]}, semiabierta (presionaría un peón rival)`; }
+        else continue;
+      } else {
+        if (mob - now < 4 || mob < 6) continue;
+        why = `una diagonal más abierta: desde allí controlaría ${mob} casillas seguras (ahora ${now})`;
+      }
+      if (val < 12) continue;
+    }
+    const path = talkPath(b, sq, x, p, t === "n" ? 4 : 2);
+    if (!path) continue;
+    val -= (path.length - 1) * 7;
+    if (!best || val > best.val) best = { sq: x, path, val, why };
+  }
+  return best;
+}
+async function talkToPieces(opts = {}) {
+  const node = cur(), st = node.state, box = $("talkBox");
+  if (Talk.busy) return;
+  if (!opts.keep && Talk.node === node && !box.hidden && opts.side == null && opts.sel == null) { closeTalk(); return; }
+  if (quiz() || editor.active) { toast("Termina antes el ejercicio o la partida."); return; }
+  const side = opts.side != null ? opts.side : opts.keep ? Talk.side : st.t;
+  const c = side;
+  Talk.node = node; Talk.side = side;
+  // 1) La entrevista
+  const list = [];
+  for (let x = 0; x < 128; x++) { if (x & 0x88) { x += 7; continue; } const p = st.b[x]; if (isOwn(p, c) && "nbrq".includes(p.toLowerCase())) list.push(interviewPiece(st, x, c)); }
+  if (!list.length) { box.hidden = false; box.innerHTML = `<div class="retry-head">🗣 Habla con tus piezas</div><div class="small">Sólo quedan el rey y los peones: aquí manda el cálculo del final (el rey activo y los peones pasados).</div><div class="controls"><button class="sm-btn" data-k="close">Cerrar</button></div>`; box.querySelector("[data-k=close]").onclick = closeTalk; return; }
+  list.sort((a, b) => a.score - b.score);
+  let target = opts.sel != null ? list.find(x => x.sq === opts.sel) || list[0] : list[0];
+  // 2) y 3) Casilla soñada y ruta (si la más infeliz no tiene adónde ir, se escucha a la siguiente)
+  let dream = opts.sel == null && target.score >= 55 ? null : dreamSquare(st, target.sq, c), skipped = null;
+  if (!dream && opts.sel == null) {
+    for (const x of list.slice(1, 4)) { if (x.score >= 55) break; const d = dreamSquare(st, x.sq, c); if (d) { skipped = target; target = x; dream = d; break; } }
+  }
+  Talk.sel = target.sq;
+  const name = x => `${cap(PIECE_ART[x.t])} de ${Chess.sqName(x.sq)}`;
+  const sym = { n: "C", b: "A", r: "T", q: "D" }[target.t];
+  Talk.shapes = [{ color: "red", from: Chess.sqName(target.sq), to: Chess.sqName(target.sq) }];
+  let routeTxt = "";
+  if (dream) {
+    for (let i = 1; i < dream.path.length; i++) Talk.shapes.push({ color: "yellow", from: Chess.sqName(dream.path[i - 1]), to: Chess.sqName(dream.path[i]) });
+    Talk.shapes.push({ color: "green", from: Chess.sqName(dream.sq), to: Chess.sqName(dream.sq) });
+    routeTxt = dream.path.map((x, i) => (i === 0 ? sym : "") + Chess.sqName(x)).join(" → ");
+  }
+  // Filtro de seguridad: piezas propias colgadas y jaque
+  const hanging = list.filter(x => x.hanging);
+  const mine = c === st.t;
+  const safety = Chess.inCheck(Object.assign({}, st, { t: c })) ? `<b>⚠ Primero, el jaque:</b> antes de pensar en planes hay que salir del jaque.`
+    : hanging.length ? `<b>⚠ Primero, lo táctico:</b> ${hanging.map(name).map(esc).join(", ")} ${hanging.length > 1 ? "están atacadas y mal defendidas" : `está atacad${"rq".includes(hanging[0].t) ? "a" : "o"} y mal defendid${"rq".includes(hanging[0].t) ? "a" : "o"}`}. Resuélvelo antes de maniobrar.`
+    : `✔ No veo piezas ${mine ? "tuyas" : "suyas"} colgando ni jaques. Aun así, mira antes si ${mine ? "el rival amenaza algo" : "tienes algo concreto"} (👁 Amenaza): si no, es momento de hablar con las piezas.`;
+  box.hidden = false;
+  const allHappy = list[0].score >= 55;
+  box.innerHTML = `<div class="retry-head">🗣 Habla con ${mine ? "tus" : "sus"} piezas · ${c === 1 ? "blancas" : "negras"}${mine ? "" : " (el rival)"}</div>
+    <div class="small">${safety}</div>
+    <h3>1. La entrevista: «¿estás contenta ahí?»</h3>
+    ${list.map(x => `<button class="talk-row${x.sq === target.sq ? " sel" : ""}" data-sq="${x.sq}" title="Pulsa para buscar su casilla soñada"><span class="talk-face">${x.face}</span><span class="talk-who">${esc(name(x))}</span><span class="talk-say">«${esc(x.says.join(" "))}»</span></button>`).join("")}
+    <div class="small">Los peones no se entrevistan: son la estructura, y avanzarlos sin motivo deja debilidades para siempre.${allHappy ? " <b>Todas tus piezas están contentas:</b> busca un plan con los peones (una ruptura) o atiende a lo que quiere hacer el rival." : ""}</div>
+    <h3>2. La casilla soñada ${opts.sel != null ? "de la pieza elegida" : skipped ? "de la siguiente más infeliz" : "de la más infeliz"}: ${esc(name(target))}</h3>
+    ${skipped ? `<div class="small">${esc(name(skipped))} es la que menos aporta, pero ahora mismo no tiene una casilla mejor y segura (quizá necesite una ruptura de peones que le abra líneas). Escuchamos a la siguiente.</div>` : ""}
+    <div>${dream ? `Su hogar ideal sería <b>${Chess.sqName(dream.sq)}</b>: ${esc(dream.why)}.` : opts.sel == null && target.score >= 55 ? "Todas están bien colocadas: no hace falta mover a ninguna sólo por moverla. Puedes pulsar una para ver si tendría una casilla aún mejor." : "Ahora mismo no encuentro una casilla claramente mejor y segura para ella. Quizá haga falta antes una ruptura de peones que le abra líneas, o cambiarla por una pieza rival."}</div>
+    ${dream ? `<h3>3. La ruta</h3><div><span class="talk-route">${esc(routeTxt)}</span> <span class="small">(${dream.path.length - 1} jugada${dream.path.length === 2 ? "" : "s"}, sin pisar casillas que atacan los peones rivales)</span></div><div class="small" id="talkEngine">${mine && Engine.ready ? "⏳ El motor revisa que la primera jugada no pierda nada…" : ""}</div>` : ""}
+    <div class="controls">${dream && mine ? `<button class="sm-btn primary" data-k="play">▶ Jugar ${esc(sym + Chess.sqName(dream.path[1]))}</button>` : ""}<button class="sm-btn info-btn" data-k="rival">${mine ? "👂 Escuchar al rival (profilaxis)" : "🗣 Volver a mis piezas"}</button><button class="sm-btn" data-k="close">Cerrar</button></div>
+    <div class="small">${mine ? "Es un método para posiciones tranquilas: busca la pieza que menos aporta y dale un buen destino." : "Profilaxis («método Karpov»): ésta es la pieza que el rival querría mejorar; piensa cómo impedírselo."}</div>`;
+  box.querySelectorAll("[data-sq]").forEach(btn => btn.onclick = () => talkToPieces({ keep: true, sel: +btn.dataset.sq }));
+  box.querySelector("[data-k=rival]").onclick = () => talkToPieces({ side: mine ? -st.t : st.t });
+  box.querySelector("[data-k=close]").onclick = closeTalk;
+  const playBtn = box.querySelector("[data-k=play]");
+  if (playBtn) playBtn.onclick = () => {
+    const m = Chess.legal(st).find(x => x.from === dream.path[0] && x.to === dream.path[1]);
+    if (!m || cur() !== node || !canUserMove()) { toast("Esa jugada no es posible ahora mismo."); return; }
+    closeTalk(); playMove(m, "user");
+  };
+  renderShapes();
+  // Revisión con el motor de la primera jugada de la ruta
+  if (dream && mine && Engine.ready) {
+    const m = Chess.legal(st).find(x => x.from === dream.path[0] && x.to === dream.path[1]);
+    const out = () => $("talkEngine");
+    if (!m) { if (out()) out().textContent = "⚠ La primera jugada de la ruta no es legal ahora mismo (quizá por una clavada)."; return; }
+    Talk.busy = true; ui.analysing = true; ExpEval.token++; Engine.cancel("live");
+    try {
+      const top = await evalState(st, Engine.kind === "stockfish" ? 1200 : 1500, 1);
+      const aft = await evalState(Chess.apply(st, m), Engine.kind === "stockfish" ? 1000 : 1200, 1);
+      if (cur() !== node || !out()) return;
+      if (top && aft && top.lines[0] && aft.lines[0]) {
+        const loss = (winnerCp(top.lines[0]) - winnerCp(aft.lines[0])) * c;
+        const bestU = top.lines[0].pv[0], bm = bestU && Chess.moveFromUci(st, bestU);
+        out().innerHTML = loss <= 60 ? `✔ El motor está de acuerdo: la maniobra es segura${loss <= 15 ? " y de las mejores de la posición" : ""}.`
+          : `⚠ Ojo: según el motor, ahora mismo esa jugada pierde ${(loss / 100).toFixed(1).replace(".", ",")} peones${bm ? `; hay algo más urgente, como <b>${esc(numPrefix(st) + formatSan(Chess.san(st, bm), settings.lang, st.t))}</b>` : ""}. El plan es bueno, pero quizá no sea el momento.`;
+      }
+    } finally { Talk.busy = false; ui.analysing = false; requestLive(); }
+  }
+}
+function closeTalk() { $("talkBox").hidden = true; Talk.node = null; Talk.shapes = []; renderShapes(); }
 
 /* ---------- 19c. «Aprende de tus errores»: rehacer los ? y ?? de la partida ---------- */
 const Retry = { active: false, busy: false, queue: [], i: 0, attempts: 0, hint: 0, hintSq: -1, state: "", results: [], arrows: [], msg: "", prevFlip: false };
@@ -9605,6 +9844,7 @@ $("playBestMoveBtn").onclick = () => {
   if (m && canUserMove()) playMove(m, "user");
 };
 $("thinkBtn").onclick = () => thinkWithMe();
+$("talkBtn").onclick = () => talkToPieces();
 $("cloudStockfishBtn").onclick = async () => {
   const node = cur();
   $("engineSourceBadge").textContent = "☁ Consultando la nube…";
@@ -10965,7 +11205,7 @@ document.addEventListener("keydown", e => {
   if (document.querySelector(".modal-back.open")) return;
   const k = e.key;
   if (editor.active && !["f", "F", "?"].includes(k)) return;
-  if (quiz() && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", " ", "x", "X", "t", "T"].includes(k)) return;
+  if (quiz() && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", " ", "x", "X", "t", "T", "h", "H"].includes(k)) return;
   if (k === "ArrowLeft") { stopAutoplay(); goBack(); }
   else if (k === "ArrowRight") { stopAutoplay(); goForward(); }
   else if (k === "ArrowUp") goSibling(-1);
@@ -10979,6 +11219,7 @@ document.addEventListener("keydown", e => {
   else if (k === "m" || k === "M") openMarkDialog();
   else if (k === "x" || k === "X") showThreat();
   else if (k === "t" || k === "T") thinkWithMe();
+  else if (k === "h" || k === "H") talkToPieces();
   else if (k === "b" || k === "B") setBlind(!ui.blind);
   else return;
   e.preventDefault();

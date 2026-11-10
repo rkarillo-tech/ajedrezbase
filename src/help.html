@@ -76,11 +76,12 @@
       </details>
 
       <details id="help-motor">
-        <summary>⚙ 5. El motor: análisis en vivo, «Piensa conmigo», nube y etiquetas</summary>
+        <summary>⚙ 5. El motor: análisis en vivo, «Piensa conmigo», «Habla con tus piezas», nube y etiquetas</summary>
         <ul>
           <li><b>Analizar</b> (o tecla <kbd>E</kbd>) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.</li>
           <li><b>Flecha</b> muestra en morado la mejor jugada del motor. <b>⚡ Jugar</b> la ejecuta.</li>
           <li><b>🧠 Piensa conmigo</b> (o tecla <kbd>T</kbd>): el motor explica su razonamiento en palabras, como lo haría un entrenador: <b>la situación</b> (valoración, material y la amenaza del rival), <b>la mejor jugada y su idea</b> (gana material, cubre una amenaza, lleva al mate…), <b>lo que va a pasar</b> jugada a jugada (tu jugada, la mejor respuesta del rival, la tuya… con qué hace cada una), <b>por qué no las otras</b> candidatas y <b>la jugada tentadora</b> que parece buena pero falla, con su refutación. Desde ahí puedes jugar la jugada o añadir la línea como variante. Tarda unos segundos.</li>
+          <li><b>🗣 Habla con tus piezas</b> (o tecla <kbd>H</kbd>): una «entrevista» a cada una de tus piezas, al estilo de los entrenadores que preguntan «¿qué pieza está peor?». Cada pieza dice cómo se siente (😊 contenta, 😐 normal, 😤 infeliz) y por qué: cuántas casillas controla, si está en la banda, si es un alfil malo encerrado por sus peones, si la torre está en una columna cerrada o sin desarrollar, si está colgando… Después, la pieza más infeliz <b>cuenta su sueño</b>: la casilla donde querría estar (un puesto avanzado para el caballo, una columna abierta o la séptima para la torre, una diagonal larga para el alfil) y <b>la ruta</b> para llegar, dibujada con flechas en el tablero (círculo rojo en la pieza, flechas amarillas, círculo verde en la casilla soñada). El motor revisa la primera jugada de la ruta y te dice si está de acuerdo o si hay algo más urgente (una amenaza, una táctica). Pulsa cualquier pieza de la tabla para hablar con ella, <b>▶ Jugar</b> hace la primera jugada de la ruta y <b>👂 Escuchar al rival</b> entrevista a las piezas del contrario: saber qué quiere su pieza más infeliz es la base de la <i>profilaxis</i>.</li>
           <li><b>👁 Amenaza</b> (o tecla <kbd>X</kbd>): enseña qué jugaría el rival <i>si le tocara mover</i>, con una flecha roja discontinua y su valoración. Responde al momento a «¿qué está tramando?» y a por qué una jugada pasiva es mala. Pulsa otra vez o cambia de jugada para quitarla.</li>
           <li><b>Evaluación</b>, siempre desde el punto de vista de las blancas: <code>+0.80</code> = ventaja blanca de unas 8 décimas de peón; <code>−1.50</code> = ventaja negra de 1,5 peones; <code>#3</code> = mate en 3 para las blancas; <code>−#2</code> = mate en 2 para las negras. Debajo del panel lo verás también en palabras («Ligera ventaja de las blancas», «Igualdad»…). Entre −0.30 y +0.30 es igualdad; hasta ±0.70, ligera ventaja; hasta ±1.50, ventaja clara; más, ventaja decisiva. El botón <b>❔</b> del panel tiene esta guía a mano.</li>
           <li><b>⚖ Tu jugada frente a la del motor</b>: en cada jugada el panel compara la que se ha hecho con la que proponía el motor y dice cuánto pierde y si es buena, una imprecisión (?!), un error (?) o un error grave (??). Si aún no se ha analizado, pulsa <b>Compararla con la del motor</b>. Con <b>↪ Probar la del motor</b> vuelves atrás y juegas la del motor como variante, para ver la diferencia en el tablero.</li>
@@ -410,6 +411,7 @@
           <tr><td><kbd>M</kbd></td><td>Marcar la posición</td></tr>
           <tr><td><kbd>X</kbd></td><td>Ver la amenaza del rival</td></tr>
           <tr><td><kbd>T</kbd></td><td>🧠 Piensa conmigo: el razonamiento del motor en palabras</td></tr>
+          <tr><td><kbd>H</kbd></td><td>🗣 Habla con tus piezas: qué pieza está peor y adónde quiere ir</td></tr>
           <tr><td><kbd>B</kbd></td><td>Ocultar / mostrar las piezas (a ciegas)</td></tr>
           <tr><td>Rueda del ratón</td><td>Avanzar / retroceder (con el puntero sobre el tablero)</td></tr>
           <tr><td><kbd>?</kbd></td><td>Abrir esta ayuda</td></tr>
