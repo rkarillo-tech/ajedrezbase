@@ -188,17 +188,29 @@ def puzzles_js():
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 
 
+# ---------------------------------------------------------------- aplicación
+def app_js():
+    """La aplicación está repartida en src/app/*.js: se unen por orden de nombre en un único script.
+
+    Comparten ámbito (no son módulos), así que el orden importa: el número del nombre lo fija.
+    """
+    files = sorted((SRC / "app").glob("*.js"))
+    if not files:
+        raise SystemExit("src/app/: no hay ficheros .js")
+    return "".join(f.read_text(encoding="utf-8") for f in files)
+
+
 # ---------------------------------------------------------------- construcción
 def build():
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     mit = (ROOT / "LICENSE").read_text(encoding="utf-8").strip()
     pieces = 'const glyphUnicode = { K:"♔", Q:"♕", R:"♖", B:"♗", N:"♘", P:"♙", k:"♚", q:"♛", r:"♜", b:"♝", n:"♞", p:"♟" };\n' + read("pieces.js")
-    app = read("app.js").replace("/*__PIECES__*/", pieces)
+    app = app_js().replace("/*__PIECES__*/", pieces)
     if "/*__COURSES__*/{}" not in app:
-        raise SystemExit("src/app.js: falta el marcador de los cursos")
+        raise SystemExit("src/app/: falta el marcador de los cursos")
     app = app.replace("/*__COURSES__*/{}", courses_js())
     if "/*__PUZZLES__*/[]" not in app:
-        raise SystemExit("src/app.js: falta el marcador de los problemas")
+        raise SystemExit("src/app/: falta el marcador de los problemas")
     app = app.replace("/*__PUZZLES__*/[]", puzzles_js())
     parts = {"CORE": read("core.js"), "PGN": read("pgn.js"), "ECO": read("eco.js"), "APP": app}
     for name, code in parts.items():
