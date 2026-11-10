@@ -21,7 +21,7 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 - **Navegar**: botones **|◀ ◀ ▶ ▶|** bajo el gráfico, el teclado (`←` `→` `Inicio` `Fin`) o la **rueda del ratón** con el puntero sobre el tablero (con un panel táctil, un deslizamiento claro de dos dedos avanza o retrocede una jugada; mientras dibujas flechas, la rueda no hace nada). También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.
 - **Vista previa**: al pasar el ratón por una jugada de la lista o de las líneas del motor aparece un minitablero con esa posición, sin moverte de donde estás.
 - Las piezas se deslizan al avanzar y retroceder; si lo prefieres, desactiva «Animar las piezas» o «Rueda del ratón» en ⚙ Ajustes.
-- **▶ Auto** (o `Espacio`) reproduce la partida sola, una jugada por segundo.
+- **▶ Auto** (o `Espacio`) reproduce la partida sola. Mientras se reproduce aparece **⏱ Velocidad del modo Auto**: muy rápida (½ s por jugada), rápida (1 s), normal (2 s), lenta (3,5 s) o muy lenta (6 s). La que elijas se recuerda (también se cambia en ⚙ Ajustes).
 - **⇅ Girar** (o `F`) da la vuelta al tablero.
 - La aplicación detecta jaque mate, ahogado, triple repetición, regla de 50 jugadas y material insuficiente; lo verás en la línea de estado bajo los botones.
 
@@ -147,10 +147,10 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 ⚠ La biblioteca vive en **este navegador y en esta dirección**. No es la misma si abres la página desde GitHub Pages que desde el archivo de tu ordenador, ni en Chrome que en Firefox. Para pasarla de un sitio a otro, usa la copia de seguridad.
 
 ## 📌 10. Marcadores (ideas, tácticas, errores típicos…)
-- Sitúate en la jugada que quieres recordar y pulsa **📌 Marcar posición** (o la tecla `M`). Si la partida no está guardada, te propone guardarla, porque el marcador apunta a ella.
+- Sitúate en la jugada que quieres recordar y pulsa **📌 Marcar jugada** (debajo de la lista de jugadas o en la barra de la partida, o la tecla `M`). Si la partida no está guardada, te propone guardarla, porque el marcador apunta a ella.
 - Elige la **categoría**: 💡 Idea, ⚔ Táctica, ⚠ Error típico, 🧭 Plan, ♟ Final, 📖 Apertura o ⭐ Favorita. Escribe una **nota** (si la jugada ya tenía comentario, se propone como nota).
 - **Entrenar como tarjeta**: «encontrar la jugada marcada» (para tácticas e ideas) o «la marcada es un error, encontrar la mejor» (para errores típicos: el motor calcula cuál era la buena).
-- En la lista de jugadas, la jugada marcada muestra el icono de su categoría.
+- En la lista de jugadas, la jugada marcada muestra el icono de su categoría, y debajo de la lista aparece **📌 Marcadores de esta partida**: todas las jugadas que has marcado, en orden y con su nota. Pulsa una para ir a ella; «Ver todos» abre los de todas tus partidas.
 - En **📚 Biblioteca › 📌 Marcadores** los ves todos con un minitablero; puedes buscar en las notas, filtrar por categoría, editarlos ✏ o borrarlos 🗑. Pulsa uno para abrir la partida justo en esa jugada.
 - Para cambiar un marcador, vuelve a la misma jugada y pulsa otra vez 📌.
 
@@ -296,7 +296,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 
 ## 🛠 22. Ajustes y personalización
 - **Barra superior**: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.
-- **⚙ Ajustes**: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, **estado del motor** (qué motor se usa, por qué y si hay una copia guardada, con el botón **🔄 Reintentar Stockfish 19**), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón, recordar la partida al recargar, el **aspecto** (🌙 oscuro, ☀ claro o 🌓 automático, que sigue el modo claro u oscuro del sistema) y el **tamaño del tablero** (de 60 % a 130 %: «Automático» es el más grande que cabe en la pantalla; más pequeño deja sitio a las jugadas y la lección, y por encima del 100 % sólo crece en pantallas grandes del ordenador; se guarda en cada dispositivo).
+- **⚙ Ajustes**: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, **estado del motor** (qué motor se usa, por qué y si hay una copia guardada, con el botón **🔄 Reintentar Stockfish 19**), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón, recordar la partida al recargar, la **velocidad del modo Auto**, el **aspecto** (🌙 oscuro, ☀ claro o 🌓 automático, que sigue el modo claro u oscuro del sistema) y el **tamaño del tablero** (de 60 % a 130 %: «Automático» es el más grande que cabe en la pantalla; más pequeño deja sitio a las jugadas y la lección, y por encima del 100 % sólo crece en pantallas grandes del ordenador; se guarda en cada dispositivo).
 - **🔊** activa o silencia los sonidos.
 - Todos los ajustes se recuerdan en este navegador.
 

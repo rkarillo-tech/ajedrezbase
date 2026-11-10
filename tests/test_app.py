@@ -1296,6 +1296,52 @@ def prueba_importar_curso(browser):
     ctx.close()
 
 
+def prueba_marcadores_y_velocidad(browser):
+    print("Novedades 1.23: marcadores a mano y velocidad del modo Auto")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("setGame(Pgn.parseGame('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 *', { lang: 'en' }).game, { noConfirm: true, name: 'Española de prueba' })")
+    comprobar(pg.is_hidden("#gameMarksBox"), "sin marcadores no aparece el recuadro de marcadores")
+    pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[4])")
+    pg.click("#markBtn2")
+    pg.wait_for_selector("#markModal.open")
+    comprobar("Marcar jugada" in pg.inner_text("#markTitle") and "tras 3.Ab5" in pg.inner_text("#markWhere"), "«📌 Marcar jugada» abre el cuadro para esa jugada (guardando antes la partida)")
+    pg.locator("#markCats .cat-chip", has_text="Favorita").click()
+    pg.fill("#markNote", "La Española: el alfil presiona c6")
+    pg.click("#markSaveBtn")
+    pg.wait_for_function("!document.getElementById('gameMarksBox').hidden", timeout=5000)
+    pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[8])")
+    pg.keyboard.press("m")
+    pg.wait_for_selector("#markModal.open")
+    pg.fill("#markNote", "Enroque")
+    pg.click("#markSaveBtn")
+    pg.wait_for_function("document.querySelectorAll('#gameMarksBox .gm-row').length === 2", timeout=5000)
+    caja = pg.inner_text("#gameMarksBox")
+    comprobar("Marcadores de esta partida (2)" in caja and "3.Ab5" in caja and "el alfil presiona c6" in caja and "5.O-O" in caja, "los marcadores de la partida aparecen debajo de las jugadas, en orden y con su nota")
+    pg.evaluate("goTo(game.root)")
+    pg.locator("#gameMarksBox .gm-row").first.click()
+    comprobar(pg.evaluate("cur().san") == "Bb5", "un clic en un marcador lleva a esa jugada")
+    pg.locator("#gameMarksBox [data-allmarks]").click()
+    comprobar(pg.evaluate("ui.activeTab === 'library'") and pg.is_visible("#sub-marks"), "«Ver todos» abre la lista de todos los marcadores")
+    # Velocidad del modo Auto
+    pg.click('.tab-btn[data-tab="study"]')
+    pg.evaluate("goTo(game.root)")
+    pg.click("#playBtn")
+    comprobar(pg.is_visible("#autoSpeedRow") and pg.input_value("#autoSpeed") == "2000", "al pulsar ▶ Auto aparece el selector de velocidad (Normal: 2 s)")
+    pg.select_option("#autoSpeed", "500")
+    pg.wait_for_timeout(1300)
+    rapido = pg.evaluate("Pgn.pathTo(cur()).length - 1")
+    comprobar(rapido >= 2 and pg.evaluate("settings.autoplayMs") == 500, f"con «Muy rápida» avanza cada medio segundo ({rapido} jugadas en 1,3 s)")
+    pg.select_option("#autoSpeed", "6000")
+    antes = pg.evaluate("Pgn.pathTo(cur()).length")
+    pg.wait_for_timeout(1500)
+    comprobar(pg.evaluate("Pgn.pathTo(cur()).length") == antes, "con «Muy lenta» no avanza en un segundo y medio")
+    pg.click("#playBtn")
+    comprobar(pg.is_hidden("#autoSpeedRow") and pg.input_value("#setAutoSpeed") == "6000", "al pausar se oculta el selector, y la velocidad queda guardada en Ajustes")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1443,7 +1489,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:
