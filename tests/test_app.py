@@ -611,7 +611,7 @@ def prueba_cursos(browser):
     ctx = contexto(browser)
     pg, errores = nueva_pagina(ctx)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar(pg.locator("#courseList details.course").count() == 9 and "0 de 97" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los nueve cursos y el progreso")
+    comprobar(pg.locator("#courseList details.course").count() == 10 and "0 de 101" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los diez cursos y el progreso")
     pg.locator('details[data-course="finales"] summary').click()
     pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").click()
     comprobar(pg.is_visible("#lessonBox") and "construir el puente" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("1K1k4/1P6"), "abrir una lección la pone en el tablero con su explicación")
@@ -650,7 +650,7 @@ def prueba_cursos(browser):
     pg.reload()
     pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar("2 de 97" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
+    comprobar("2 de 101" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
     pg.locator('details[data-course="aperturas"] summary').click()
     pg.locator('details[data-course="aperturas"] [data-coll]').click()
     comprobar(pg.inner_text("#collCount") == "12" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")
@@ -1369,6 +1369,91 @@ def prueba_habla_con_tus_piezas(browser):
     ctx.close()
 
 
+def prueba_geometria_y_ciegas(browser):
+    print("Novedades 1.25: ruta del caballo, rebotes del alfil y problemas a ciegas")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    comprobar(pg.evaluate("bishopCircuit(Chess.sqIdx('d2'), -15).map(Chess.sqName).join(' ')") == "h6 f8 a3 c1"
+              and pg.evaluate("bishopCircuit(Chess.sqIdx('g8'), 15).map(Chess.sqName).join(' ')") == "a2 b1 h7",
+              "los rebotes del alfil salen como en el vídeo (d2: h6 f8 a3 c1; g8: a2 b1 h7)")
+    comprobar(pg.evaluate("knightPath(knightBfs(Chess.sqIdx('d2')), Chess.sqIdx('h7')).length") == 4, "el caballo va de d2 a h7 en tres saltos")
+    fen0 = pg.evaluate("Chess.toFen(game.current.state)")
+    pg.click('.tab-btn[data-tab="tools"]')
+    # Ruta del caballo
+    pg.select_option("#visMode", "knight")
+    pg.click("#visStartBtn")
+    comprobar(pg.evaluate("ui.visBoard && ui.visBoard.b[Vis.q.from] === 'N' && ui.visBoard.b.filter(p => p !== '.').length === 1")
+              and "Ruta del caballo · 1 de 10" in pg.inner_text("#visBox"), "la ruta del caballo pone un caballo solo en el tablero")
+    for sq in pg.evaluate("Vis.q.path.slice(1).map(Chess.sqName)"):
+        casilla(pg, sq).click()
+    comprobar("Correcto" in pg.inner_text("#visBox") and pg.locator("#arrowsGroup line").count() == pg.evaluate("Vis.q.dist"), "marcar la ruta más corta es un acierto y se dibuja con flechas")
+    pg.locator("#visBox [data-v=next]").click()
+    frm = pg.evaluate("Vis.q.from")
+    mala = pg.evaluate("Chess.sqName([...Array(128).keys()].find(x => !(x & 0x88) && x !== Vis.q.from && !TALK_N.includes(x - Vis.q.from)))")
+    casilla(pg, mala).click()
+    comprobar("no puede saltar" in pg.inner_text("#visBox") and pg.evaluate("Vis.q.route.length") == 0, "un salto imposible se avisa sin contar como fallo")
+    pg.locator("#visBox [data-v=give]").click()
+    comprobar("La más corta" in pg.inner_text("#visBox") and "cambia de color en cada salto" in pg.inner_text("#visBox"), "«Ver la solución» enseña la ruta y el truco del color")
+    pg.locator("#visBox [data-v=end]").click()
+    comprobar("1 de 2 aciertos" in pg.inner_text("#visBox") and pg.evaluate("ui.visBoard") is None and pg.evaluate("Chess.toFen(viewState())") == fen0, "al terminar vuelve la partida del tablero, intacta")
+    # Rebotes del alfil
+    pg.select_option("#visMode", "bishop")
+    pg.click("#visStartBtn")
+    for sq in pg.evaluate("Vis.q.bounces.map(Chess.sqName)"):
+        casilla(pg, sq).click()
+    comprobar("Correcto" in pg.inner_text("#visBox") and "como la del alfil" in pg.inner_text("#visBox"), "marcar en orden los rebotes del alfil")
+    pg.locator("#visBox [data-v=next]").click()
+    mala = pg.evaluate("Chess.sqName([...Array(128).keys()].find(x => !(x & 0x88) && x !== Vis.q.bounces[0] && x !== Vis.q.sq))")
+    casilla(pg, mala).click()
+    comprobar("rebota en" in pg.inner_text("#visBox") and pg.evaluate("Vis.bad") == 1, "un rebote equivocado enseña el recorrido correcto")
+    pg.locator("#visBox [data-v=end]").click()
+    # Caballo esquivando al alfil
+    pg.select_option("#visMode", "dodge")
+    pg.click("#visStartBtn")
+    ok = pg.evaluate("""(() => { const q = Vis.q; return ui.visBoard.b[q.bsq] === 'b' && q.path.slice(1).every(x => !q.blocked.has(x)) && q.dist >= 3; })()""")
+    comprobar(ok and "sin pisar ninguna casilla" in pg.inner_text("#visBox"), "con el alfil, la ruta más corta evita sus casillas")
+    pisada = pg.evaluate("(() => { const x = TALK_N.map(d => Vis.q.from + d).find(x => !(x & 0x88) && Vis.q.blocked.has(x) && x !== Vis.q.bsq); return x == null ? '' : Chess.sqName(x); })()")
+    if pisada:
+        casilla(pg, pisada).click()
+        comprobar("se come al caballo" in pg.inner_text("#visBox"), "pisar una casilla del alfil es un fallo")
+    pg.locator("#visBox [data-v=end]").click()
+    # Problemas a ciegas
+    pg.select_option("#visMode", "blindpz")
+    comprobar(pg.is_visible("#visSecs") and not pg.is_visible("#visPlies"), "en «problemas a ciegas» se elige el tiempo para memorizar")
+    pg.select_option("#visSecs", "5")
+    pg.click("#visStartBtn")
+    pg.wait_for_function("trainer.active && trainer.puzzle && Puz.blindPhase === 'look'", timeout=10000)
+    comprobar("Memoriza la posición" in pg.inner_text("#trainFeedback") and not pg.evaluate("ui.blind"), "primero se ve la posición unos segundos")
+    pg.locator("#trainFeedback [data-pz=hide]").click()
+    comprobar(pg.evaluate("ui.blind && boardEl.classList.contains('blind')") and "de memoria" in pg.inner_text("#trainFeedback"), "después se ocultan las piezas")
+    for _ in range(4):
+        if not pg.evaluate("trainer.active"):
+            break
+        pg.wait_for_function("!trainer.active || !trainer.busy", timeout=10000)
+        if not pg.evaluate("trainer.active"):
+            break
+        u = pg.evaluate("cur().children[0].uci")
+        casilla(pg, u[:2]).click(); casilla(pg, u[2:4]).click()
+        pg.wait_for_timeout(300)
+    pg.wait_for_function("!trainer.active", timeout=10000)
+    comprobar("Resuelto a ciegas" in pg.inner_text("#trainFeedback") and not pg.evaluate("ui.blind"), "al resolverlo se vuelven a ver las piezas")
+    comprobar(pg.evaluate("puzRating().n") == 0, "los problemas a ciegas no cambian tu nivel de problemas")
+    pg.click("#stopPuzzlesBtn")
+    comprobar("Problemas a ciegas: 1 de 1" in pg.inner_text("#trainFeedback"), "resumen de los problemas a ciegas")
+    pg.click("#puzzlesBackBtn")
+    # Curso de geometría: el estudio de Réti como ejercicio
+    pg.click('.tab-btn[data-tab="courses"]')
+    pg.locator('details[data-course="geometria"] summary').click()
+    comprobar(pg.locator('details[data-course="geometria"] .lesson-row').count() == 4, "el curso «📐 Geometría del tablero» tiene sus cuatro lecciones")
+    pg.locator('details[data-course="geometria"] .lesson-row', has_text="Réti").click()
+    comprobar(pg.is_visible("#lessonBox") and "Réti" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("7K/8/k1P5/7p"), "la lección del estudio de Réti se abre en el tablero")
+    casilla(pg, "h8").click(); casilla(pg, "g7").click()
+    pg.wait_for_timeout(400)
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).some(n => n.san === 'Kg7')") and "diagonal" in pg.inner_text("#lessonBox"), "en el ejercicio, 1.Rg7 es la jugada buena")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -1516,7 +1601,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_geometria_y_ciegas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

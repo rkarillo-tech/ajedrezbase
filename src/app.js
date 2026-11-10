@@ -174,7 +174,7 @@ const editor = { active: false, state: null, tool: "MOVE", sel: null, origin: nu
 const cur = () => game.current;
 /* ¿Estamos en un ejercicio o jugando contra la CPU? Entonces se oculta el motor y no se navega por la partida */
 const quiz = () => trainer.active || Retry.active || Guess.active || Vis.active || ui.cpu.on;
-const viewState = () => (editor.active ? editor.state : game.current.state);
+const viewState = () => (editor.active ? editor.state : ui.visBoard || game.current.state);   // ui.visBoard: tablero propio de los ejercicios de geometría
 
 /* ---------- 7. Motor: Stockfish 19 Lite (WASM, NNUE) → Stockfish 10 (asm.js) → motor interno ---------- */
 const STOCKFISH = [
@@ -455,7 +455,7 @@ const boardEl = $("board");
 const boardCache = { key: "", els: [], pieces: [] };
 function renderBoard() {
   const s = viewState(), node = cur();
-  const last = !editor.active && node.move ? node.move : null;
+  const last = !editor.active && !ui.visBoard && node.move ? node.move : null;
   const checkSq = !editor.active && Chess.inCheck(s) ? Chess.kingSq(s.b, s.t) : -1;
   const targets = new Map();
   if (!editor.active && ui.selected != null && settings.showLegal) for (const m of Chess.legal(s)) if (m.from === ui.selected) targets.set(m.to, m.captured !== ".");
@@ -550,7 +550,8 @@ function sqCenter(i) {
 const SHAPE_COLORS = { green: "rgba(76,175,80,0.85)", red: "rgba(239,83,80,0.85)", blue: "rgba(41,182,246,0.85)", yellow: "rgba(255,202,40,0.9)", engine: "rgba(186,104,200,0.72)", threat: "rgba(239,83,80,0.8)" };
 function renderShapes() {
   const list = [];
-  if (!editor.active) {
+  if (ui.visBoard) for (const sh of ui.visShapes || []) list.push(sh);
+  else if (!editor.active) {
     for (const sh of cur().shapes || []) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
     if (ui.engineArrow && settings.arrow && !quiz() && ui.engineArrow.node === cur() && !(ui.lesson && ui.lesson.game === game)) list.push({ color: "engine", from: ui.engineArrow.from, to: ui.engineArrow.to });
     if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
@@ -3345,12 +3346,143 @@ function visLineQuestion(plies) {
   }
   return null;
 }
+/* Geometría del tablero: el caballo y el alfil sobre un tablero vacío, sin tocar la partida
+   (ui.visBoard es la posición que se dibuja mientras dura el ejercicio) */
+const onBoard = sq => !(sq & 0x88);
+const sqIsLight = sq => ((sq >> 4) + (sq & 7)) % 2 === 0;
+function bishopRays(bsq) { const out = new Set(); for (const d of TALK_B) for (let t = bsq + d; onBoard(t); t += d) out.add(t); return out; }
+/* Búsqueda en anchura de los saltos del caballo; «blocked» son las casillas prohibidas */
+function knightBfs(from, blocked) {
+  const prev = new Map([[from, -1]]), q = [from];
+  while (q.length) {
+    const x = q.shift();
+    for (const d of TALK_N) { const t = x + d; if (!onBoard(t) || prev.has(t) || (blocked && blocked.has(t))) continue; prev.set(t, x); q.push(t); }
+  }
+  return prev;
+}
+function knightPath(prev, to) { if (!prev.has(to)) return null; const p = []; for (let x = to; x !== -1; x = prev.get(x)) p.unshift(x); return p; }
+/* Casillas donde rebota un alfil que sale de sq en la dirección d, hasta volver a sq en esa misma dirección */
+function bishopCircuit(sq, d) {
+  const f0 = sq & 15, r0 = sq >> 4, dr0 = Math.round(d / 16), df0 = d - 16 * dr0, out = [];
+  let f = f0, r = r0, dr = dr0, df = df0;
+  for (let k = 0; k < 200; k++) {
+    let ch = false;
+    if (f + df < 0 || f + df > 7) { df = -df; ch = true; }
+    if (r + dr < 0 || r + dr > 7) { dr = -dr; ch = true; }
+    if (k > 0 && f === f0 && r === r0 && df === df0 && dr === dr0) break;
+    if (ch) out.push(r * 16 + f);
+    f += df; r += dr;
+  }
+  return out;
+}
+function visSetBoard(pieces, shapes) {
+  const st = Chess.parseFen("8/8/8/8/8/8/8/8 w - - 0 1");
+  for (const [sq, p] of pieces) if (sq >= 0) st.b[sq] = p;
+  ui.visBoard = st;
+  ui.visShapes = shapes || [];
+}
+/* Ruta del caballo (más larga según avanzas) y, con alfil, sin pisar sus casillas */
+function visKnightQ(dodge) {
+  const n = Vis.n, [lo, hi] = dodge ? [3, 5] : n < 3 ? [2, 3] : n < 7 ? [3, 4] : [4, 6];
+  for (let t = 0; t < 600; t++) {
+    let bsq = -1, blocked = null;
+    if (dodge) { bsq = randomSq(); blocked = bishopRays(bsq); blocked.add(bsq); }
+    const from = randomSq();
+    if (blocked && blocked.has(from)) continue;
+    const prev = knightBfs(from, blocked);
+    const cands = [...prev.keys()].filter(x => { const d = knightPath(prev, x).length - 1; return d >= lo && d <= hi; });
+    if (!cands.length) continue;
+    const to = cands[Math.floor(Math.random() * cands.length)], path = knightPath(prev, to);
+    // Casi siempre, que el alfil obligue a dar un rodeo: si no, sería la ruta normal
+    if (dodge && t < 500 && knightPath(knightBfs(from), to).length === path.length && Math.random() < 0.8) continue;
+    return { from, to, bsq, blocked, path, dist: path.length - 1, route: [] };
+  }
+  return null;
+}
+function visBishopQ() {
+  for (;;) {
+    const sq = randomSq(), f = sq & 7, r = sq >> 4;
+    if ((f === 0 || f === 7) && (r === 0 || r === 7)) continue;
+    const ds = TALK_B.filter(d => onBoard(sq + d)), d = ds[Math.floor(Math.random() * ds.length)];
+    return { sq, d, bounces: bishopCircuit(sq, d), got: [] };
+  }
+}
+function visFlash(ok, bad) {
+  Vis.marks = { ok, bad };
+  renderBoard();
+  clearTimeout(Vis.markTimer);
+  Vis.markTimer = setTimeout(() => { if (Vis.state === "ask") { Vis.marks = {}; renderBoard(); } }, 600);
+}
+function visKnightClick(v) {
+  const q = Vis.q, N = Chess.sqName;
+  if (v === "undo") { q.route.pop(); Vis.msg = ""; visPanel(); return; }
+  if (v === "give") { visKnightEnd(false, "Te enseño una ruta."); return; }
+  if (typeof v !== "number") return;
+  const pos = q.route.length ? q.route[q.route.length - 1] : q.from;
+  if (v === pos) return;
+  if (!TALK_N.includes(v - pos)) { Vis.msg = `El caballo no puede saltar de ${N(pos)} a ${N(v)}.`; visFlash(undefined, v); visPanel(); return; }
+  if (v === q.bsq) { Vis.msg = "No vale comerse el alfil: hay que esquivarlo."; visFlash(undefined, v); visPanel(); return; }
+  q.route.push(v);
+  Vis.msg = "";
+  if (q.blocked && q.blocked.has(v)) { visKnightEnd(false, `❌ En ${N(v)} el alfil se come al caballo.`); return; }
+  const k = q.route.length;
+  if (v === q.to) { visKnightEnd(k === q.dist, k === q.dist ? `✔ <b>¡Correcto!</b> ${q.dist} saltos, el mínimo.` : `❌ Llegas en ${k} saltos, pero se puede en ${q.dist}.`); return; }
+  if (k >= q.dist) { visKnightEnd(false, `❌ Con ${q.dist} salto${q.dist === 1 ? "" : "s"} ya tendrías que estar en ${N(q.to)}.`); return; }
+  Sound.play("move");
+  visPanel();
+}
+function visKnightEnd(ok, txt) {
+  const q = Vis.q, N = Chess.sqName, sol = q.path, shapes = [{ color: "green", from: q.to, to: q.to }];
+  Vis.n++;
+  if (ok) Vis.ok++; else Vis.bad++;
+  Vis.state = "answered";
+  if (!ok) { let a = q.from; for (const x of q.route) { shapes.push({ color: "red", from: a, to: x }); a = x; } }
+  for (let i = 1; i < sol.length; i++) shapes.push({ color: "green", from: sol[i - 1], to: sol[i] });
+  ui.visShapes = shapes;
+  Vis.marks = {};
+  const same = sqIsLight(q.from) === sqIsLight(q.to);
+  Vis.msg = txt + (ok ? "" : ` La más corta, en ${q.dist} saltos: <b>${sol.map(N).join(" → ")}</b> (flechas verdes${q.route.length ? "; la tuya, en rojo" : ""}).`) +
+    `<br><span class="small">💡 El caballo cambia de color en cada salto: ${N(q.from)} y ${N(q.to)} son ${same ? "del mismo color, así que el número de saltos es par" : "de distinto color, así que el número de saltos es impar"}.</span>`;
+  Sound.play(ok ? "ok" : "error");
+  renderBoard();
+  visPanel();
+}
+function visBishopClick(v) {
+  const q = Vis.q, N = Chess.sqName;
+  if (v === "give") { visBishopEnd(false, "Este es el recorrido."); return; }
+  if (typeof v !== "number") return;
+  const want = q.bounces[q.got.length];
+  if (v === want) {
+    q.got.push(v);
+    if (q.got.length === q.bounces.length) { visBishopEnd(true, `✔ <b>¡Correcto!</b> Y vuelve a ${N(q.sq)}.`); return; }
+    Sound.play("move");
+    visFlash(v);
+    visPanel();
+    return;
+  }
+  visBishopEnd(false, `❌ Desde ${N(q.got.length ? q.got[q.got.length - 1] : q.sq)} rebota en <b>${N(want)}</b>, no en ${N(v)}.`, v);
+}
+function visBishopEnd(ok, txt, bad) {
+  const q = Vis.q, N = Chess.sqName, pts = [q.sq, ...q.bounces, q.sq], shapes = [];
+  Vis.n++;
+  if (ok) Vis.ok++; else Vis.bad++;
+  Vis.state = "answered";
+  for (let i = 1; i < pts.length; i++) shapes.push({ color: "green", from: pts[i - 1], to: pts[i] });
+  ui.visShapes = shapes;
+  Vis.marks = bad != null ? { bad } : {};
+  Vis.msg = `${txt} El recorrido: <b>${pts.map(N).join(" → ")}</b>.<br><span class="small">💡 Todas esas casillas son ${sqIsLight(q.sq) ? "claras" : "oscuras"}, como la del alfil: un alfil nunca cambia de color.</span>`;
+  Sound.play(ok ? "ok" : "error");
+  clearTimeout(Vis.markTimer);
+  renderBoard();
+  visPanel();
+}
 function startVis() {
   if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
   const mode = $("visMode").value;
+  if (mode === "blindpz") { startBlindPuzzles(+$("visSecs").value); return; }
   if (mode === "line" && !stashBoard()) return;
   leaveModes();
-  Object.assign(Vis, { active: true, mode, state: "", n: 0, ok: 0, bad: 0, total: mode === "line" ? 10 : mode === "color" ? 20 : 0, q: null, t0: Date.now(), msg: "", marks: {}, plies: +$("visPlies").value });
+  Object.assign(Vis, { active: true, mode, state: "", n: 0, ok: 0, bad: 0, total: mode === "line" || mode === "knight" || mode === "dodge" || mode === "bishop" ? 10 : mode === "color" ? 20 : 0, q: null, t0: Date.now(), msg: "", marks: {}, plies: +$("visPlies").value });
   clearInterval(Vis.timer);
   if (mode === "coords") { Vis.end = Date.now() + 30000; Vis.timer = setInterval(visTick, 200); }
   visNext();
@@ -3371,6 +3503,16 @@ function visNext() {
     for (const x of q.seq) n = Pgn.addMove(n, x.move);
     ui.flipped = q.P.t === -1;
     setGame(g, { noConfirm: true, keepVis: true, name: "🙈 Visualización" });
+  } else if (Vis.mode === "knight" || Vis.mode === "dodge") {
+    const q = visKnightQ(Vis.mode === "dodge");
+    if (!q) { visFinish(); return; }
+    Vis.q = q;
+    visSetBoard([[q.from, "N"], [q.bsq, "b"]], [{ color: "green", from: q.to, to: q.to }]);
+    renderBoard(); renderStatus();
+  } else if (Vis.mode === "bishop") {
+    const q = Vis.q = visBishopQ();
+    visSetBoard([[q.sq, "B"]], [{ color: "blue", from: q.sq, to: q.sq + q.d }]);
+    renderBoard(); renderStatus();
   } else {
     let sq;
     do sq = randomSq(); while (Vis.q && sq === Vis.q.sq);
@@ -3389,7 +3531,7 @@ function visPanel() {
   const box = $("visBox");
   box.hidden = false;
   const q = Vis.q;
-  let html = "";
+  let html = "", extra = "";
   if (Vis.mode === "line") {
     const lineTxt = lineText(q.P, q.seq.map(n => n.uci), Vis.plies);
     const ask = q.type === "where"
@@ -3406,12 +3548,25 @@ function visPanel() {
     html = `<div class="retry-head">🙈 Color de las casillas · ${Vis.n + 1} de ${Vis.total} · aciertos ${Vis.ok}</div>
       <div class="vis-big">${Chess.sqName(q.sq)}</div>
       <div class="vis-choices" style="justify-content:center"><button class="sm-btn" data-v="l">⬜ Clara</button><button class="sm-btn" data-v="d">⬛ Oscura</button></div>`;
+  } else if (Vis.mode === "knight" || Vis.mode === "dodge") {
+    const N = Chess.sqName, dodge = Vis.mode === "dodge";
+    html = `<div class="retry-head">${dodge ? "🐴 Caballo esquivando al alfil" : "🐴 Ruta del caballo"} · ${Vis.state === "answered" ? Vis.n : Vis.n + 1} de ${Vis.total} · aciertos ${Vis.ok}</div>
+      <div>Lleva el caballo de <b>${N(q.from)}</b> a <b>${N(q.to)}</b> (círculo verde) por el camino más corto${dodge ? `, <b>sin pisar ninguna casilla que controle el alfil negro de ${N(q.bsq)}</b>` : ""}.</div>
+      ${Vis.state === "ask" ? `<div class="small">Pulsa en orden las casillas por las que salta; la última es ${N(q.to)}. El caballo no se mueve en el tablero: imagina sus saltos.</div>` : ""}
+      <div class="vis-line">${[N(q.from), ...q.route.map(N)].join(" → ")}${Vis.state === "ask" ? " → …" : ""}</div>`;
+    if (Vis.state === "ask") extra = `${q.route.length ? `<button class="sm-btn" data-v="undo">↶ Deshacer</button>` : ""}<button class="sm-btn" data-v="give">🏳 Ver la solución</button>`;
+  } else if (Vis.mode === "bishop") {
+    const N = Chess.sqName;
+    html = `<div class="retry-head">🔁 Rebotes del alfil · ${Vis.state === "answered" ? Vis.n : Vis.n + 1} de ${Vis.total} · aciertos ${Vis.ok}</div>
+      <div>El alfil de <b>${N(q.sq)}</b> sale hacia <b>${N(q.sq + q.d)}</b> (flecha azul) y rebota en los bordes como una bola de billar. Pulsa en orden las <b>${q.bounces.length} casillas donde rebota</b> hasta volver a ${N(q.sq)}.</div>
+      <div class="vis-line">${[N(q.sq), ...q.got.map(N)].join(" → ")}${Vis.state === "ask" ? " → …" : ""}</div>`;
+    if (Vis.state === "ask") extra = `<button class="sm-btn" data-v="give">🏳 Ver la solución</button>`;
   } else {
     html = `<div class="retry-head">🙈 Encuentra la casilla · ⏱ <span id="visClock">${Math.ceil((Vis.end - Date.now()) / 1000)} s</span> · ✔ ${Vis.ok} ✖ ${Vis.bad}</div>
       <div class="vis-big">${Chess.sqName(q.sq)}</div><div class="small" style="text-align:center">Pulsa esa casilla en el tablero (${ui.flipped ? "negras" : "blancas"} abajo).</div>`;
   }
   if (Vis.msg) html += `<div class="retry-msg">${Vis.msg}</div>`;
-  html += `<div class="controls">${Vis.state === "answered" ? `<button class="sm-btn primary" data-v="next">${Vis.n >= Vis.total ? "Ver resultado ▶" : "Siguiente ▶"}</button>` : ""}<button class="sm-btn danger" data-v="end">⏹ Terminar</button></div>`;
+  html += `<div class="controls">${extra}${Vis.state === "answered" ? `<button class="sm-btn primary" data-v="next">${Vis.n >= Vis.total ? "Ver resultado ▶" : "Siguiente ▶"}</button>` : ""}<button class="sm-btn danger" data-v="end">⏹ Terminar</button></div>`;
   box.innerHTML = html;
   box.querySelectorAll("[data-v]").forEach(b => b.onclick = () => visAnswer(b.dataset.v));
 }
@@ -3435,6 +3590,8 @@ function visAnswer(v) {
     Vis.markTimer = setTimeout(() => { Vis.marks = {}; renderBoard(); }, 450);
     return;
   }
+  if (Vis.mode === "knight" || Vis.mode === "dodge") { visKnightClick(v); return; }
+  if (Vis.mode === "bishop") { visBishopClick(v); return; }
   let ok, txt;
   if (Vis.mode === "color") {
     if (v !== "l" && v !== "d") return;
@@ -3473,6 +3630,8 @@ function visStop(silent) {
   Vis.timer = null;
   Vis.active = false;
   Vis.marks = {};
+  ui.visBoard = null;
+  ui.visShapes = [];
   if (!silent) renderBoard();
 }
 function visFinish() {
@@ -3486,6 +3645,7 @@ function visFinish() {
     if (Vis.ok > prev) { recs[key] = Vis.ok; LS.set("ajedrezVisRecords", recs); }
     res = `${Vis.ok} casilla${Vis.ok === 1 ? "" : "s"} en 30 s${Vis.bad ? ` (${Vis.bad} fallo${Vis.bad === 1 ? "" : "s"})` : ""}. ${Vis.ok > prev ? "🏆 ¡Nuevo récord!" : `Tu récord con las ${ui.flipped ? "negras" : "blancas"} abajo: ${prev}.`}`;
   } else if (mode === "color") res = `${Vis.ok} de ${Vis.n} aciertos en ${secs} s.`;
+  else if (mode !== "line") res = `${Vis.ok} de ${Vis.n} aciertos.`;
   else res = `${Vis.ok} de ${Vis.n} aciertos con líneas de ${Vis.plies} medias jugadas.`;
   const box = $("visBox");
   box.hidden = false;
@@ -5242,13 +5402,14 @@ function startPuzzles() {
   if (!list.length) list = pool.slice().sort(() => Math.random() - 0.5).slice(0, n);   // todos hechos: repaso al azar
   if (!stashBoard()) return;
   leaveModes();
-  Object.assign(Puz, { queue: list, done: 0, ok: 0, total: list.length, delta: 0 });
+  Object.assign(Puz, { queue: list, done: 0, ok: 0, total: list.length, delta: 0, blind: 0 });
   nextPuzzle();
 }
 function nextPuzzle() {
   const p = Puz.queue.shift();
   if (!p) { endPuzzles(); return; }
   Puz.cur = p;
+  if (Puz.blind) { clearInterval(Puz.blindTimer); Puz.blindPhase = "wait"; Puz.peeks0 = ui.peeks || 0; if (ui.blind) setBlind(false); }
   const g = Pgn.newGame(p.fen);
   let n = g.root;
   for (const u of p.moves) { const m = Chess.moveFromUci(n.state, u); if (!m) break; n = Pgn.addMove(n, m); }
@@ -5256,11 +5417,12 @@ function nextPuzzle() {
   g.headers.Site = "AjedrezBase";
   const side = -g.root.state.t;
   ui.flipped = side === -1;
-  setGame(g, { noConfirm: true, name: `🧩 Problema ${Puz.done + 1} de ${Puz.total} · ${PUZZLE_LEVELS[puzzleLevelOf(p.rating)][2]}` });
+  setGame(g, { noConfirm: true, name: Puz.blind ? `🙈 Problema a ciegas ${Puz.done + 1} de ${Puz.total}` : `🧩 Problema ${Puz.done + 1} de ${Puz.total} · ${PUZZLE_LEVELS[puzzleLevelOf(p.rating)][2]}` });
   startTraining({ side, puzzle: true });
 }
 function puzzlePrompt() {
   const p = Puz.cur, side = trainer.side === 1 ? "blancas" : "negras";
+  if (Puz.blind) { blindPuzzlePrompt(side); return; }
   if (Puz.exam) {
     trainFeedback(`📏 <b>Examen</b> · problema ${Puz.exam.i} de ${EXAM_N} · juegan las <b>${side}</b> · ⏱ <b id="examClock">${Math.max(0, Math.ceil((Puz.exam.deadline - Date.now()) / 1000))}</b> s<br>El rival acaba de jugar ${esc(numPrefix(cur().parent.state) + dispSan(cur()))}: encuentra la mejor jugada. Sin pistas: una jugada equivocada cuenta como fallo.${trainer.correct ? " ¡Bien! Sigue." : ""}<div class="controls"><button class="sm-btn danger" data-pz="end">⏹ Abandonar el examen</button></div>`);
     wirePuzzleButtons();
@@ -5269,15 +5431,18 @@ function puzzlePrompt() {
   trainFeedback(`🧩 Problema ${Puz.done + 1} de ${Puz.total} · ${PUZZLE_LEVELS[puzzleLevelOf(p.rating)][2]} (${p.rating}) · juegan las <b>${side}</b>.<br>El rival acaba de jugar ${esc(numPrefix(cur().parent.state) + dispSan(cur()))}: encuentra la mejor jugada.${trainer.correct ? " ¡Bien! Sigue." : ""}` + puzzleButtons());
   wirePuzzleButtons();
 }
-const puzzleButtons = () => `<div class="controls"><button class="sm-btn" data-pz="hint">💡 Pista</button><button class="sm-btn danger" data-pz="end">⏹ Terminar</button></div>`;
+const puzzleButtons = () => `<div class="controls">${Puz.blind && Puz.blindPhase === "hidden" ? `<button class="sm-btn" data-pz="peek">👁 Ojear 2 s</button>` : ""}<button class="sm-btn" data-pz="hint">💡 Pista</button><button class="sm-btn danger" data-pz="end">⏹ Terminar</button></div>`;
 function wirePuzzleButtons() {
   $("trainFeedback").querySelectorAll("[data-pz]").forEach(b => b.onclick = () => {
     if (b.dataset.pz === "end") endPuzzles();
+    else if (b.dataset.pz === "peek") peekPieces();
+    else if (b.dataset.pz === "hide") { Puz.blindLeft = 0; blindPuzzleTick(); }
     else { trainerHint(); $("trainFeedback").insertAdjacentHTML("beforeend", puzzleButtons()); wirePuzzleButtons(); }
   });
 }
 function finishPuzzle(perfect) {
   if (Puz.exam) { finishExamPuzzle(perfect); return; }
+  if (Puz.blind) { finishBlindPuzzle(perfect); return; }
   const p = Puz.cur, all = puzSrs(), st = all[p.id] || { box: 0, reps: 0 };
   st.tries = (st.tries || 0) + 1;
   st.fails = (st.fails || 0) + (perfect ? 0 : 1);
@@ -5306,10 +5471,77 @@ function finishPuzzle(perfect) {
   renderPuzzleInfo();
   renderPuzzleStats();
 }
+/* 🙈 Problemas a ciegas: ves la posición unos segundos, se ocultan las piezas y lo resuelves de memoria.
+   No cuentan para tu nivel de problemas ni para el repaso: es un ejercicio de visualización. */
+function startBlindPuzzles(secs) {
+  if (!PUZZLES.length) { toast("No hay problemas en esta versión."); return; }
+  if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
+  const easy = PUZZLES.filter(p => p.rating < 1300 && p.moves.length <= 4);
+  if (!stashBoard()) return;
+  leaveModes();
+  Object.assign(Puz, { queue: shuffle(easy.slice()).slice(0, 5), done: 0, ok: 0, total: 5, delta: 0, exam: null, blind: secs, peeksAll: 0 });
+  nextPuzzle();
+}
+function blindPuzzlePrompt(side) {
+  const head = `🙈 Problema a ciegas ${Puz.done + 1} de ${Puz.total} · juegan las <b>${side}</b>`;
+  if (Puz.blindPhase === "wait") {
+    Puz.blindPhase = "look";
+    Puz.blindLeft = Puz.blind;
+    clearInterval(Puz.blindTimer);
+    Puz.blindTimer = setInterval(blindPuzzleTick, 1000);
+  }
+  if (Puz.blindPhase === "look") {
+    trainFeedback(`${head}.<br>El rival acaba de jugar ${esc(numPrefix(cur().parent.state) + dispSan(cur()))}. <b>Memoriza la posición</b>: las piezas se ocultan en <b id="blindClock">${Puz.blindLeft}</b> s.<div class="controls"><button class="sm-btn" data-pz="hide">🙈 Ya la tengo: ocultar</button><button class="sm-btn danger" data-pz="end">⏹ Terminar</button></div>`);
+  } else {
+    trainFeedback(`${head}.<br>Las piezas están ocultas: <b>encuentra la mejor jugada de memoria</b> pulsando las casillas (o arrastrando desde la casilla de la pieza).${trainer.correct ? " ¡Bien! Sigue." : ""}<div class="controls"><button class="sm-btn" data-pz="peek">👁 Ojear 2 s</button><button class="sm-btn" data-pz="hint">💡 Pista</button><button class="sm-btn danger" data-pz="end">⏹ Terminar</button></div>`);
+  }
+  wirePuzzleButtons();
+}
+function blindPuzzleTick() {
+  if (!trainer.active || !trainer.puzzle || !Puz.blind || Puz.blindPhase !== "look") { clearInterval(Puz.blindTimer); return; }
+  Puz.blindLeft = Math.max(0, Puz.blindLeft - 1);
+  const el = $("blindClock");
+  if (el && Puz.blindLeft > 0) { el.textContent = Puz.blindLeft; return; }
+  if (Puz.blindLeft > 0) return;
+  clearInterval(Puz.blindTimer);
+  Puz.blindPhase = "hidden";
+  setBlind(true);
+  puzzlePrompt();
+}
+function finishBlindPuzzle(perfect) {
+  clearInterval(Puz.blindTimer);
+  const peeks = (ui.peeks || 0) - Puz.peeks0;
+  Puz.peeksAll += peeks;
+  Puz.done++;
+  if (perfect && !peeks) Puz.ok++;
+  setBlind(false);
+  Sound.play(perfect ? "ok" : "end");
+  const left = Puz.queue.length;
+  trainFeedback(`${perfect ? (peeks ? `✔ Resuelto, ojeando ${peeks} ${peeks === 1 ? "vez" : "veces"}.` : "✔ <b>¡Resuelto a ciegas!</b>") : `Resuelto con ${trainer.errors} error${trainer.errors === 1 ? "" : "es"} y ${trainer.hints} pista${trainer.hints === 1 ? "" : "s"}.`} Ya ves las piezas otra vez: compara con lo que imaginabas. Tema: ${esc(puzzleThemesText(Puz.cur))}.<br>
+    <button id="nextPuzzleBtn" class="sm-btn primary" style="margin-top:6px">${left ? `Siguiente ▶ (quedan ${left})` : "Ver resumen ▶"}</button>
+    <button id="stopPuzzlesBtn" class="sm-btn" style="margin-top:6px">⏹ Terminar</button>`, perfect && !peeks ? "ok" : "");
+  $("nextPuzzleBtn").onclick = nextPuzzle;
+  $("stopPuzzlesBtn").onclick = endPuzzles;
+  trainer.active = false;
+  stopTraining(false);
+}
+function endBlindPuzzles() {
+  clearInterval(Puz.blindTimer);
+  if (Puz.done) logActivity("vis");
+  const secs = Puz.blind;
+  Puz.blind = 0;
+  if (ui.blind) setBlind(false);
+  trainFeedback(`🙈 Problemas a ciegas: <b>${Puz.ok}</b> de ${Puz.done} resueltos a la primera y sin ojear (${secs} s para memorizar).${Puz.peeksAll ? ` Has ojeado ${Puz.peeksAll} ${Puz.peeksAll === 1 ? "vez" : "veces"}.` : ""}<br>
+    <span class="small">${Puz.ok === Puz.done && Puz.done ? "¡Muy bien! Prueba con menos segundos." : "Truco: antes de que se oculten, nombra en voz baja dónde está cada pieza (rey g1, dama d1…)."}</span><br>
+    <button id="blindPzAgain" class="sm-btn primary" style="margin-top:6px">🔁 Otra vez</button> <button id="puzzlesBackBtn" class="sm-btn" style="margin-top:6px">↩ Volver a tu partida</button>`, Puz.ok === Puz.done && Puz.done ? "ok" : "");
+  $("blindPzAgain").onclick = () => startBlindPuzzles(secs);
+  $("puzzlesBackBtn").onclick = () => { restoreStash(); };
+}
 function endPuzzles() {
   if (Puz.exam) { endExam(true); return; }
   if (trainer.active && trainer.puzzle) stopTraining(true);
   Puz.queue = [];
+  if (Puz.blind) { endBlindPuzzles(); return; }
   const R = puzRating();
   trainFeedback(`🧩 Sesión terminada: <b>${Puz.ok}</b> de ${Puz.done} resueltos a la primera. Tu nivel: <b>${Math.round(R.r)}</b> (${Puz.delta >= 0 ? "+" : ""}${Puz.delta} en esta sesión).<br>
     <span class="small">Los que has fallado vuelven mañana; los acertados se espacian (3, 7, 16… días).</span><br>
@@ -5327,7 +5559,7 @@ function startExam() {
   if (!stashBoard()) return;
   leaveModes();
   const last = examHistory().slice(-1)[0], R = puzRating();
-  Object.assign(Puz, { queue: [], done: 0, ok: 0, total: EXAM_N, delta: 0, exam: { est: last ? last.r : R.n ? R.r : 1200, i: 0, res: [], used: new Set(), timer: null, deadline: 0 } });
+  Object.assign(Puz, { queue: [], done: 0, ok: 0, total: EXAM_N, delta: 0, blind: 0, exam: { est: last ? last.r : R.n ? R.r : 1200, i: 0, res: [], used: new Set(), timer: null, deadline: 0 } });
   nextExamPuzzle();
 }
 function nextExamPuzzle() {
@@ -6570,7 +6802,7 @@ $("examStartBtn").onclick = startExam;
 $("repCompareBtn").onclick = compareWithRepertoire;
 ["puzzleTheme", "puzzleLevel"].forEach(id => $(id).onchange = renderPuzzleInfo);
 $("visStartBtn").onclick = startVis;
-$("visMode").onchange = () => { $("visPlies").hidden = $("visMode").value !== "line"; };
+$("visMode").onchange = () => { $("visPlies").hidden = $("visMode").value !== "line"; $("visSecs").hidden = $("visMode").value !== "blindpz"; };
 $("blindBtn").onclick = () => setBlind(!ui.blind);
 $("peekBtn").onclick = peekPieces;
 $("blindCpuBtn").onclick = () => openCpuDialog(true);
@@ -7117,6 +7349,7 @@ const COURSES = [
   { id: "mates", icon: "🗡", name: "Patrones de mate y ataque al rey", desc: "Los mates con nombre propio (Anastasia, Boden, árabe, Damiano, Lolli, Greco, las hombreras, las torres en séptima) y los sacrificios clásicos contra el rey: el doble sacrificio de alfil de Lasker, el sacrificio en f7 y el ataque Fegatello." },
   { id: "estrategia", icon: "🧭", name: "Estrategia", desc: "Cómo hacer un plan: estructuras de peones, piezas buenas y malas, columnas, casillas fuertes y peones pasados." },
   { id: "finales", icon: "👑", name: "Finales", desc: "Los mates básicos, rey y peón, la oposición, Lucena, Philidor y los finales que hay que saber de memoria." },
+  { id: "geometria", icon: "📐", name: "Geometría del tablero", desc: "Los trucos geométricos del tablero que deciden finales: el rey que va en diagonal hacia dos objetivos (el estudio de Réti), la geometría del caballo contra un peón y las casillas conjugadas de Lasker y Reichhelm." },
   { id: "partidas", icon: "🏆", name: "Partidas magistrales", desc: "Partidas célebres de Morphy, Anderssen, Fischer, Karpov y Kaspárov, comentadas jugada a jugada: qué ideas las decidieron y dónde se equivocaron." },
   { id: "trampas", icon: "🪤", name: "Trampas y miniaturas", desc: "Partidas célebres de menos de 20 jugadas y trampas de apertura que conviene conocer con los dos colores: Teed–Delmar, Réti–Tartakower, la caza del rey de Lasker, la trampa de Blackburne, la del Englund y la siberiana." }
 ];
