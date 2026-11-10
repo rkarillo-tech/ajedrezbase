@@ -6455,10 +6455,6 @@ $("engineHelpBtn").onclick = () => { const h = $("engineHelp"); h.hidden = !h.hi
 $("retryEngineBtn").onclick = () => { if (settings.engine !== "auto") { settings.engine = "auto"; saveSettings(); $("setEngine").value = "auto"; } Engine.init(); renderEngineStatus(); toast("🔄 Cargando Stockfish 19…"); };
 $("versionsBtn").onclick = openVersions;
 $("copyGameBtn").onclick = () => saveToLibrary({ copy: true, force: true });
-$("menuBtn").onclick = () => {
-  const open = document.querySelector("header").classList.toggle("menu-open");
-  $("menuBtn").setAttribute("aria-expanded", open);
-};
 $("licBtn").onclick = () => openModal("licModal");
 $("helpBtn").onclick = () => openHelp();
 $("setEngine").onchange = e => { settings.engine = e.target.value; saveSettings(); Engine.init(); };
@@ -7931,6 +7927,38 @@ document.addEventListener("keydown", e => {
     $("installBtn").hidden = true;
   };
 })();
+
+/* ---------- 27b. Primeros pasos: accesos directos para quien abre la aplicación por primera vez ---------- */
+const firstVisit = !settings.welcomed && !LS.get("ajedrezStudioCurrent", null) && !location.hash;
+function showWelcome(on) {
+  $("welcomeBox").hidden = !on;
+  if (!on && !settings.welcomed) { settings.welcomed = true; saveSettings(); }
+}
+const WELCOME = {
+  analyse() { switchTab("study"); $("moveInput").focus(); $("moveInput").select(); toast("Pega aquí tu partida (PGN o jugadas sueltas) y pulsa «Importar». Después, «🤖 Analizar y comentar».", 7000); },
+  lichess() { switchTab("library"); switchSub("collection"); $("lichessImport").open = true; $("liUser").focus(); },
+  puzzles() { switchTab("tools"); openTrainSection("puzzles"); },
+  courses() { switchTab("courses"); },
+  cpu() { $("playCpuToggle").click(); }
+};
+document.querySelectorAll("[data-welcome]").forEach(b => b.addEventListener("click", () => {
+  showWelcome(false);
+  WELCOME[b.dataset.welcome]();
+  if (b.dataset.welcome !== "cpu" && !wideLayout.matches) $("tab-" + ui.activeTab).scrollIntoView({ block: "start" });
+}));
+$("welcomeClose").onclick = () => showWelcome(false);
+$("welcomeHelp").onclick = () => openHelp();
+$("welcomeBtn").onclick = () => { showWelcome(true); scrollTo({ top: 0 }); };
+/* Sólo va encima del tablero en vertical (móvil y tableta); en el resto, arriba de la columna de herramientas, para no empujar el tablero fuera de la pantalla */
+const welcomeOnTop = matchMedia("(orientation: portrait) and (max-width: 980px)");
+function placeWelcome() {
+  const box = $("welcomeBox"), main = document.querySelector("main");
+  if (welcomeOnTop.matches) { if (box.parentElement !== main) main.prepend(box); }
+  else if (box.parentElement !== $("toolsPanel")) $("toolsPanel").prepend(box);
+}
+welcomeOnTop.addEventListener("change", placeWelcome);
+placeWelcome();
+if (firstVisit) showWelcome(true);
 
 /* ---------- 28. Arranque ---------- */
 (function boot() {
