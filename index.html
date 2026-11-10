@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.27.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.28.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -154,6 +154,11 @@ main {
 .theme-table td { padding: 2px 6px; }
 .theme-table td:nth-child(3) { width: 40%; }
 .theme-table tr.weak td:first-child { color: var(--warn); font-weight: 700; }
+.welcome { grid-column: 1 / -1; border-color: var(--accent); }
+.welcome-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+.welcome-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
+.welcome-foot { margin-top: 7px; }
+#toolsPanel > .welcome { margin-bottom: 12px; background: var(--deep); }
 .train-session:not(:has(> :not([hidden]))) { display: none; }
 .train-session { margin-bottom: 10px; }
 .train-session .controls { margin-top: 6px; }
@@ -764,6 +769,22 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </header>
 
 <main>
+  <!-- Primeros pasos: sólo en la primera visita (o desde «Primeros pasos», al pie) -->
+  <section id="welcomeBox" class="panel welcome" hidden aria-label="Primeros pasos">
+    <div class="welcome-head">
+      <span><b>👋 Bienvenido a AjedrezBase.</b> <span class="small">¿Por dónde quieres empezar? Todo se queda en tu navegador, sin cuentas.</span></span>
+      <button id="welcomeClose" class="sm-btn" type="button" title="Puedes volver a abrirlo con «Primeros pasos», al pie de la página">✖ Cerrar</button>
+    </div>
+    <div class="welcome-grid">
+      <button type="button" class="train-card" data-welcome="analyse"><span class="tc-ico" aria-hidden="true">📋</span><span class="tc-body"><b>Analizar una partida mía</b><span class="small">Pega el PGN y el motor la comenta</span></span></button>
+      <button type="button" class="train-card" data-welcome="lichess"><span class="tc-ico" aria-hidden="true">☁</span><span class="tc-body"><b>Traer mis partidas de Lichess</b><span class="small">Con tu nombre de usuario, sin contraseña</span></span></button>
+      <button type="button" class="train-card" data-welcome="puzzles"><span class="tc-ico" aria-hidden="true">🧩</span><span class="tc-body"><b>Resolver problemas</b><span class="small">Táctica por temas y a tu nivel</span></span></button>
+      <button type="button" class="train-card" data-welcome="courses"><span class="tc-ico" aria-hidden="true">📘</span><span class="tc-body"><b>Hacer un curso</b><span class="small">Lecciones comentadas paso a paso</span></span></button>
+      <button type="button" class="train-card" data-welcome="cpu"><span class="tc-ico" aria-hidden="true">🤖</span><span class="tc-body"><b>Jugar una partida</b><span class="small">Contra la CPU o entre dos personas</span></span></button>
+    </div>
+    <div class="small welcome-foot">¿Prefieres leer antes? <button class="link-inline" id="welcomeHelp" type="button">Abre la guía</button>.</div>
+  </section>
+
   <!-- ================= COLUMNA IZQUIERDA ================= -->
   <section class="panel board-panel" aria-label="Tablero">
     <div class="board-main">
@@ -1530,7 +1551,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.27.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.28.0 · © 2026 Rafael Karino Arillo ·
+  <button class="link-inline" id="welcomeBtn" type="button">Primeros pasos</button> ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
 </footer>
@@ -1694,6 +1716,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li><b>Columna izquierda</b>: el tablero con la <b>barra de evaluación</b> (a su izquierda), los nombres de los jugadores con el material capturado, el <b>panel del motor</b>, el <b>gráfico de la partida</b>, los botones de navegación y la <b>lista de jugadas</b> con sus variantes.</li>
           <li><b>Columna derecha</b>, arriba: la <b>barra de la partida actual</b> (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, seis pestañas:
             <b>📖 Estudio</b> (importar, comentar, analizar), <b>📘 Cursos</b> (lecciones paso a paso), <b>🌍 Aperturas</b>, <b>📚 Biblioteca</b> (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), <b>👑 Finales</b> y <b>🎯 Entrenar</b> (el plan de hoy y un menú con cada actividad: problemas, repertorios, errores de tus partidas, tarjetas, adivina la jugada y visualización; cada tarjeta abre la suya y <b>← Todas las actividades</b> vuelve al menú).</li>
+          <li><b>👋 Primeros pasos</b>: la primera vez que abres la aplicación, un panel sobre el tablero te ofrece cinco accesos directos (analizar una partida tuya, traer tus partidas de Lichess, resolver problemas, hacer un curso o jugar). Se cierra al usarlo y vuelve con <b>Primeros pasos</b>, al pie de la página.</li>
           <li><b>En el móvil</b> (en vertical) las pestañas son una barra fija abajo, siempre a mano; <b>♟ Tablero</b> te devuelve arriba. Bajo el tablero quedan la navegación, las jugadas y el motor; el botón <b>⋯</b> despliega lo demás: colocar piezas, cortar, dibujar flechas, promover variantes, escribir la jugada, imagen, imprimir y enlace.</li>
           <li><b>Barra superior</b>: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.</li>
           <li><b>En el móvil y la tableta</b>, en vertical: debajo del tablero tienes los botones para avanzar y retroceder y la lista de jugadas, y más abajo el motor, el gráfico y las pestañas (deslízalas a los lados). Las piezas, la notación, los colores y el sonido están en el botón <b>☰</b> de arriba. En horizontal (también en tabletas), el tablero ocupa la izquierda, siempre entero, y las jugadas, la lección y el motor la derecha. Si lo quieres más pequeño, cambia el <b>tamaño del tablero</b> en ⚙ Ajustes.</li>
@@ -2253,7 +2276,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.27.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.28.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -11583,6 +11606,38 @@ document.addEventListener("keydown", e => {
     $("installBtn").hidden = true;
   };
 })();
+
+/* ---------- 27b. Primeros pasos: accesos directos para quien abre la aplicación por primera vez ---------- */
+const firstVisit = !settings.welcomed && !LS.get("ajedrezStudioCurrent", null) && !location.hash;
+function showWelcome(on) {
+  $("welcomeBox").hidden = !on;
+  if (!on && !settings.welcomed) { settings.welcomed = true; saveSettings(); }
+}
+const WELCOME = {
+  analyse() { switchTab("study"); $("moveInput").focus(); $("moveInput").select(); toast("Pega aquí tu partida (PGN o jugadas sueltas) y pulsa «Importar». Después, «🤖 Analizar y comentar».", 7000); },
+  lichess() { switchTab("library"); switchSub("collection"); $("lichessImport").open = true; $("liUser").focus(); },
+  puzzles() { switchTab("tools"); openTrainSection("puzzles"); },
+  courses() { switchTab("courses"); },
+  cpu() { $("playCpuToggle").click(); }
+};
+document.querySelectorAll("[data-welcome]").forEach(b => b.addEventListener("click", () => {
+  showWelcome(false);
+  WELCOME[b.dataset.welcome]();
+  if (b.dataset.welcome !== "cpu" && !wideLayout.matches) $("tab-" + ui.activeTab).scrollIntoView({ block: "start" });
+}));
+$("welcomeClose").onclick = () => showWelcome(false);
+$("welcomeHelp").onclick = () => openHelp();
+$("welcomeBtn").onclick = () => { showWelcome(true); scrollTo({ top: 0 }); };
+/* Sólo va encima del tablero en vertical (móvil y tableta); en el resto, arriba de la columna de herramientas, para no empujar el tablero fuera de la pantalla */
+const welcomeOnTop = matchMedia("(orientation: portrait) and (max-width: 980px)");
+function placeWelcome() {
+  const box = $("welcomeBox"), main = document.querySelector("main");
+  if (welcomeOnTop.matches) { if (box.parentElement !== main) main.prepend(box); }
+  else if (box.parentElement !== $("toolsPanel")) $("toolsPanel").prepend(box);
+}
+welcomeOnTop.addEventListener("change", placeWelcome);
+placeWelcome();
+if (firstVisit) showWelcome(true);
 
 /* ---------- 28. Arranque ---------- */
 (function boot() {

@@ -154,6 +154,11 @@ main {
 .theme-table td { padding: 2px 6px; }
 .theme-table td:nth-child(3) { width: 40%; }
 .theme-table tr.weak td:first-child { color: var(--warn); font-weight: 700; }
+.welcome { grid-column: 1 / -1; border-color: var(--accent); }
+.welcome-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+.welcome-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
+.welcome-foot { margin-top: 7px; }
+#toolsPanel > .welcome { margin-bottom: 12px; background: var(--deep); }
 .train-session:not(:has(> :not([hidden]))) { display: none; }
 .train-session { margin-bottom: 10px; }
 .train-session .controls { margin-top: 6px; }
@@ -764,6 +769,22 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </header>
 
 <main>
+  <!-- Primeros pasos: sólo en la primera visita (o desde «Primeros pasos», al pie) -->
+  <section id="welcomeBox" class="panel welcome" hidden aria-label="Primeros pasos">
+    <div class="welcome-head">
+      <span><b>👋 Bienvenido a AjedrezBase.</b> <span class="small">¿Por dónde quieres empezar? Todo se queda en tu navegador, sin cuentas.</span></span>
+      <button id="welcomeClose" class="sm-btn" type="button" title="Puedes volver a abrirlo con «Primeros pasos», al pie de la página">✖ Cerrar</button>
+    </div>
+    <div class="welcome-grid">
+      <button type="button" class="train-card" data-welcome="analyse"><span class="tc-ico" aria-hidden="true">📋</span><span class="tc-body"><b>Analizar una partida mía</b><span class="small">Pega el PGN y el motor la comenta</span></span></button>
+      <button type="button" class="train-card" data-welcome="lichess"><span class="tc-ico" aria-hidden="true">☁</span><span class="tc-body"><b>Traer mis partidas de Lichess</b><span class="small">Con tu nombre de usuario, sin contraseña</span></span></button>
+      <button type="button" class="train-card" data-welcome="puzzles"><span class="tc-ico" aria-hidden="true">🧩</span><span class="tc-body"><b>Resolver problemas</b><span class="small">Táctica por temas y a tu nivel</span></span></button>
+      <button type="button" class="train-card" data-welcome="courses"><span class="tc-ico" aria-hidden="true">📘</span><span class="tc-body"><b>Hacer un curso</b><span class="small">Lecciones comentadas paso a paso</span></span></button>
+      <button type="button" class="train-card" data-welcome="cpu"><span class="tc-ico" aria-hidden="true">🤖</span><span class="tc-body"><b>Jugar una partida</b><span class="small">Contra la CPU o entre dos personas</span></span></button>
+    </div>
+    <div class="small welcome-foot">¿Prefieres leer antes? <button class="link-inline" id="welcomeHelp" type="button">Abre la guía</button>.</div>
+  </section>
+
   <!-- ================= COLUMNA IZQUIERDA ================= -->
   <section class="panel board-panel" aria-label="Tablero">
     <div class="board-main">
@@ -1531,6 +1552,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 
 <footer class="app-footer">
   AjedrezBase {{VERSION}} · © 2026 Rafael Karino Arillo ·
+  <button class="link-inline" id="welcomeBtn" type="button">Primeros pasos</button> ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
 </footer>
