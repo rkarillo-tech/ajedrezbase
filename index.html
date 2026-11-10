@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.26.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.27.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -383,7 +383,7 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 
 /* Pestañas */
 .mode-tabs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; background: var(--deeper); padding: 4px; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 12px; }
-.tab-btn { padding: 7px 5px; border: 1px solid transparent; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.79rem; border-radius: 6px; justify-content: center; }
+.tab-btn { gap: 4px; padding: 7px 5px; border: 1px solid transparent; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.79rem; border-radius: 6px; justify-content: center; }
 .tab-btn.active { background: var(--panel2); color: var(--text); border-color: var(--border); }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
@@ -613,7 +613,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 }
 
 /* ---------- Móvil en vertical: cabecera compacta y, bajo el tablero, navegación y jugadas ---------- */
-.menu-btn { display: none; }
+.menu-btn, .more-btn, .tab-btn.tab-board { display: none; }
 @media (max-width: 640px) {
   header { padding: 6px 8px; gap: 5px; }
   .brand-title { width: 100%; justify-content: space-between; }
@@ -701,6 +701,29 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #exportControls { order: 10; }
   .mode-tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
   .tab-btn { flex: 1 0 auto; white-space: nowrap; }
+}
+
+/* ---------- Móvil en vertical: pestañas fijas abajo (con «♟ Tablero» para volver arriba) y acciones secundarias tras «⋯» ---------- */
+@media (max-width: 640px) and (orientation: portrait) {
+  body { padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+  .mode-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 120; margin: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; overflow: visible;
+    padding: 3px 2px calc(3px + env(safe-area-inset-bottom, 0px)); border-radius: 0; border-width: 1px 0 0; box-shadow: 0 -4px 14px rgba(0, 0, 0, .3); }
+  .tab-btn { position: relative; flex-direction: column; gap: 1px; min-width: 0; min-height: 48px; padding: 4px 0; font-size: .6rem; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; }
+  .tab-btn.tab-board { display: inline-flex; }
+  .tab-btn .tab-ico { font-size: 1.2rem; line-height: 1.2; }
+  .tab-btn .streak-badge { position: absolute; top: 1px; right: 1px; margin: 0; font-size: .56rem; }
+  body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus, textarea:focus) .mode-tabs { display: none; }   /* no tapa lo que se escribe */
+  body.editing .mode-tabs { display: none; }
+  .toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+  .tab-pane { scroll-margin-top: 8px; }
+  #navControls { grid-template-columns: repeat(7, 1fr); }
+  #navControls #playBtn, #navControls #flipBtn { font-size: .72rem; white-space: nowrap; }
+  #navControls #undoBtn { grid-column: span 4; }
+  .more-btn { display: inline-flex; }
+  .more-btn[aria-expanded="true"] { background: var(--panel3); border-color: var(--accent); }
+  .board-side:not(.more-open) :is(#editPosBtn, #undoBtn, #varControls, #exportControls) { display: none; }
+  .board-side:not(.more-open) #drawBar:not(:has([aria-pressed="true"])) { display: none; }
+  .board-panel:not(:has(.board.blind)) .board-side:not(.more-open) #typeMoveRow { display: none; }
 }
 </style>
 </head>
@@ -839,6 +862,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <button id="forwardBtn" title="Adelante (→)" aria-label="Adelante">▶</button>
       <button id="endBtn" title="Final (Fin)" aria-label="Ir al final">▶|</button>
       <button id="flipBtn" title="Girar tablero (F)">⇅ Girar</button>
+      <button id="moreBtn" class="more-btn" type="button" aria-expanded="false" aria-label="Más acciones" title="Más acciones: colocar piezas, cortar, flechas, variantes, escribir la jugada, imagen, imprimir y enlace">⋯</button>
       <button id="editPosBtn" class="warn-btn" title="Colocar las piezas libremente y empezar desde esa posición">✏ Colocar piezas</button>
       <button id="undoBtn" class="danger" title="Borrar esta jugada y todo lo que sigue">✂ Cortar</button>
     </div>
@@ -950,12 +974,13 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     </div>
 
     <div class="mode-tabs" role="tablist">
-      <button class="tab-btn active" data-tab="study" role="tab">📖 Estudio</button>
-      <button class="tab-btn" data-tab="courses" role="tab">📘 Cursos</button>
-      <button class="tab-btn" data-tab="explorer" role="tab">🌍 Aperturas</button>
-      <button class="tab-btn" data-tab="library" role="tab">📚 Biblioteca</button>
-      <button class="tab-btn" data-tab="endgames" role="tab">👑 Finales</button>
-      <button class="tab-btn" data-tab="tools" role="tab">🎯 Entrenar <span id="streakBadge" class="streak-badge" hidden></span></button>
+      <button class="tab-btn tab-board" id="tabBoardBtn" type="button" title="Volver al tablero"><span class="tab-ico" aria-hidden="true">♟</span><span class="tab-lbl">Tablero</span></button>
+      <button class="tab-btn active" data-tab="study" role="tab"><span class="tab-ico" aria-hidden="true">📖</span><span class="tab-lbl">Estudio</span></button>
+      <button class="tab-btn" data-tab="courses" role="tab"><span class="tab-ico" aria-hidden="true">📘</span><span class="tab-lbl">Cursos</span></button>
+      <button class="tab-btn" data-tab="explorer" role="tab"><span class="tab-ico" aria-hidden="true">🌍</span><span class="tab-lbl">Aperturas</span></button>
+      <button class="tab-btn" data-tab="library" role="tab"><span class="tab-ico" aria-hidden="true">📚</span><span class="tab-lbl">Biblioteca</span></button>
+      <button class="tab-btn" data-tab="endgames" role="tab"><span class="tab-ico" aria-hidden="true">👑</span><span class="tab-lbl">Finales</span></button>
+      <button class="tab-btn" data-tab="tools" role="tab"><span class="tab-ico" aria-hidden="true">🎯</span><span class="tab-lbl">Entrenar</span><span id="streakBadge" class="streak-badge" hidden></span></button>
     </div>
 
     <!-- ===== PESTAÑA 1: ESTUDIO ===== -->
@@ -1505,7 +1530,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.26.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.27.0 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
 </footer>
@@ -1669,6 +1694,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li><b>Columna izquierda</b>: el tablero con la <b>barra de evaluación</b> (a su izquierda), los nombres de los jugadores con el material capturado, el <b>panel del motor</b>, el <b>gráfico de la partida</b>, los botones de navegación y la <b>lista de jugadas</b> con sus variantes.</li>
           <li><b>Columna derecha</b>, arriba: la <b>barra de la partida actual</b> (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, seis pestañas:
             <b>📖 Estudio</b> (importar, comentar, analizar), <b>📘 Cursos</b> (lecciones paso a paso), <b>🌍 Aperturas</b>, <b>📚 Biblioteca</b> (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), <b>👑 Finales</b> y <b>🎯 Entrenar</b> (el plan de hoy y un menú con cada actividad: problemas, repertorios, errores de tus partidas, tarjetas, adivina la jugada y visualización; cada tarjeta abre la suya y <b>← Todas las actividades</b> vuelve al menú).</li>
+          <li><b>En el móvil</b> (en vertical) las pestañas son una barra fija abajo, siempre a mano; <b>♟ Tablero</b> te devuelve arriba. Bajo el tablero quedan la navegación, las jugadas y el motor; el botón <b>⋯</b> despliega lo demás: colocar piezas, cortar, dibujar flechas, promover variantes, escribir la jugada, imagen, imprimir y enlace.</li>
           <li><b>Barra superior</b>: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.</li>
           <li><b>En el móvil y la tableta</b>, en vertical: debajo del tablero tienes los botones para avanzar y retroceder y la lista de jugadas, y más abajo el motor, el gráfico y las pestañas (deslízalas a los lados). Las piezas, la notación, los colores y el sonido están en el botón <b>☰</b> de arriba. En horizontal (también en tabletas), el tablero ocupa la izquierda, siempre entero, y las jugadas, la lección y el motor la derecha. Si lo quieres más pequeño, cambia el <b>tamaño del tablero</b> en ⚙ Ajustes.</li>
         </ul>
@@ -2227,7 +2253,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.26.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.27.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -9995,10 +10021,18 @@ function switchTab(name) {
   if (name === "courses") renderCourses();
   if (name === "endgames" && pieceCount(cur().state) <= 7) querySyzygy();
 }
-document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
+/* En el móvil en vertical las pestañas son una barra fija abajo: al pulsar una se lleva su contenido a la vista, y «♟ Tablero» vuelve arriba */
+const phoneLayout = matchMedia("(max-width: 640px) and (orientation: portrait)");
+document.querySelectorAll(".tab-btn[data-tab]").forEach(btn => btn.addEventListener("click", () => {
   if (btn.dataset.tab === "tools" && ui.activeTab === "tools") openTrainSection(null);   // pulsar «Entrenar» estando ya en ella vuelve al menú
   switchTab(btn.dataset.tab);
+  if (phoneLayout.matches) $("tab-" + btn.dataset.tab).scrollIntoView({ block: "start" });
 }));
+$("tabBoardBtn").onclick = () => scrollTo({ top: 0 });
+$("moreBtn").onclick = () => {
+  const open = document.querySelector(".board-side").classList.toggle("more-open");
+  $("moreBtn").setAttribute("aria-expanded", open);
+};
 
 /* ---------- 27a. Pestaña «Entrenar»: menú de actividades; cada tarjeta abre sólo su sección ---------- */
 function openTrainSection(id) {

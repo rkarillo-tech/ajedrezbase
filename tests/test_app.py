@@ -256,6 +256,31 @@ def prueba_ayuda_y_movil(browser):
     pg.click("#menuBtn")
     comprobar(pg.is_visible("#pieceStyleSelect") and pg.is_visible("#themeSelect"), "☰ muestra las opciones de la cabecera")
     pg.click("#menuBtn")
+    barra = pg.evaluate("""() => { const r = document.querySelector('.mode-tabs').getBoundingClientRect(); const b = [...document.querySelectorAll('.mode-tabs .tab-btn')];
+      return { abajo: r.bottom, alto: r.height, fija: getComputedStyle(document.querySelector('.mode-tabs')).position, n: b.filter(e => e.offsetParent !== null || getComputedStyle(e).display !== 'none').length,
+               caben: b.every(e => e.getBoundingClientRect().right <= innerWidth + 0.5 && e.getBoundingClientRect().left >= -0.5) }; }""")
+    comprobar(barra["fija"] == "fixed" and abs(barra["abajo"] - 844) < 1 and barra["alto"] < 70 and barra["n"] == 7 and barra["caben"],
+              "en el móvil las pestañas son una barra fija abajo y caben todas (con «Tablero»)")
+    pg.click('.tab-btn[data-tab="library"]')
+    arriba = pg.evaluate("document.getElementById('tab-library').getBoundingClientRect().top")
+    comprobar(pg.is_visible("#tab-library") and 0 <= arriba < 200 and pg.evaluate("scrollY") > 200, "al pulsar una pestaña en el móvil su contenido queda a la vista")
+    pg.click("#tabBoardBtn")
+    pg.wait_for_function("scrollY === 0", timeout=3000)
+    comprobar(pg.evaluate("ui.activeTab") == "library", "«♟ Tablero» vuelve al tablero sin cambiar de pestaña")
+    pg.click('.tab-btn[data-tab="study"]')
+    pg.click("#tabBoardBtn")
+    comprobar(pg.is_visible("#moreBtn") and not any(pg.is_visible(s) for s in ("#exportControls", "#varControls", "#undoBtn", "#editPosBtn", "#drawBar", "#typeMoveRow")),
+              "en el móvil las acciones secundarias están recogidas tras «⋯»")
+    pg.click("#moreBtn")
+    comprobar(all(pg.is_visible(s) for s in ("#pngBtn", "#promoteVarBtn", "#undoBtn", "#editPosBtn", "#drawToggle", "#moveTyped")) and pg.get_attribute("#moreBtn", "aria-expanded") == "true"
+              and pg.evaluate("document.documentElement.scrollWidth") <= 390, "«⋯» las despliega")
+    pg.click("#drawToggle"); pg.click("#moreBtn")
+    comprobar(pg.is_visible("#drawToggle") and not pg.is_visible("#pngBtn"), "con el modo dibujo activado su barra sigue visible aunque se cierre «⋯»")
+    pg.click("#drawToggle")
+    comprobar(not pg.is_visible("#drawToggle"), "y se recoge al desactivarlo")
+    pg.keyboard.press("b")
+    comprobar(pg.is_visible("#moveTyped"), "con las piezas ocultas se puede escribir la jugada sin abrir «⋯»")
+    pg.keyboard.press("b")
     pos = pg.evaluate("""() => { const y = id => document.getElementById(id).getBoundingClientRect().top;
       return { tablero: document.getElementById('bottomBar').getBoundingClientRect().bottom, nav: y('navControls'), jugadas: y('moves'), motor: y('engineBox') }; }""")
     comprobar(pos["tablero"] <= pos["nav"] < pos["jugadas"] < pos["motor"], "en vertical, bajo el tablero van la navegación y las jugadas, y después el motor")

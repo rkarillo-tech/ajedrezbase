@@ -6369,10 +6369,18 @@ function switchTab(name) {
   if (name === "courses") renderCourses();
   if (name === "endgames" && pieceCount(cur().state) <= 7) querySyzygy();
 }
-document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => {
+/* En el móvil en vertical las pestañas son una barra fija abajo: al pulsar una se lleva su contenido a la vista, y «♟ Tablero» vuelve arriba */
+const phoneLayout = matchMedia("(max-width: 640px) and (orientation: portrait)");
+document.querySelectorAll(".tab-btn[data-tab]").forEach(btn => btn.addEventListener("click", () => {
   if (btn.dataset.tab === "tools" && ui.activeTab === "tools") openTrainSection(null);   // pulsar «Entrenar» estando ya en ella vuelve al menú
   switchTab(btn.dataset.tab);
+  if (phoneLayout.matches) $("tab-" + btn.dataset.tab).scrollIntoView({ block: "start" });
 }));
+$("tabBoardBtn").onclick = () => scrollTo({ top: 0 });
+$("moreBtn").onclick = () => {
+  const open = document.querySelector(".board-side").classList.toggle("more-open");
+  $("moreBtn").setAttribute("aria-expanded", open);
+};
 
 /* ---------- 27a. Pestaña «Entrenar»: menú de actividades; cada tarjeta abre sólo su sección ---------- */
 function openTrainSection(id) {
