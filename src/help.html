@@ -19,8 +19,8 @@
             <b>📖 Estudio</b> (importar, comentar, analizar), <b>📘 Cursos</b> (lecciones paso a paso), <b>🌍 Aperturas</b>, <b>📚 Biblioteca</b> (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), <b>👑 Finales</b> y <b>🎯 Entrenar</b> (el plan de hoy y un menú con cada actividad: problemas, repertorios, errores de tus partidas, tarjetas, adivina la jugada y visualización; cada tarjeta abre la suya y <b>← Todas las actividades</b> vuelve al menú).</li>
           <li><b>👋 Primeros pasos</b>: la primera vez que abres la aplicación, un panel sobre el tablero te ofrece cinco accesos directos (analizar una partida tuya, traer tus partidas de Lichess, resolver problemas, hacer un curso o jugar). Se cierra al usarlo y vuelve con <b>Primeros pasos</b>, al pie de la página.</li>
           <li><b>En el móvil</b> (en vertical) las pestañas son una barra fija abajo, siempre a mano; <b>♟ Tablero</b> te devuelve arriba. Bajo el tablero quedan la navegación, las jugadas y el motor; el botón <b>⋯</b> despliega lo demás: colocar piezas, cortar, dibujar flechas, promover variantes, escribir la jugada, imagen, imprimir y enlace.</li>
-          <li><b>Barra superior</b>: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.</li>
-          <li><b>En el móvil y la tableta</b>, en vertical: debajo del tablero tienes los botones para avanzar y retroceder y la lista de jugadas, y más abajo el motor, el gráfico y las pestañas (deslízalas a los lados). Las piezas, la notación, los colores y el sonido están en el botón <b>☰</b> de arriba. En horizontal (también en tabletas), el tablero ocupa la izquierda, siempre entero, y las jugadas, la lección y el motor la derecha. Si lo quieres más pequeño, cambia el <b>tamaño del tablero</b> en ⚙ Ajustes.</li>
+          <li><b>Barra superior</b>: jugar contra la CPU, sonido 🔊, ajustes ⚙ (donde están también el diseño de las piezas, la notación en pantalla y los colores del tablero), esta ayuda ❓ y «Nueva» partida.</li>
+          <li><b>En el móvil y la tableta</b>, en vertical: debajo del tablero tienes los botones para avanzar y retroceder y la lista de jugadas, y más abajo el motor y el gráfico. El diseño de las piezas, la notación y los colores están en <b>⚙ Ajustes</b>. En horizontal (también en tabletas), el tablero ocupa la izquierda, siempre entero, y las jugadas, la lección y el motor la derecha. Si lo quieres más pequeño, cambia el <b>tamaño del tablero</b> en ⚙ Ajustes.</li>
         </ul>
         <div class="example"><b>Ejemplo rápido (2 minutos):</b> pega una partida en «📖 Estudio» → pulsa <b>Importar</b> → recórrela con las flechas <kbd>←</kbd> <kbd>→</kbd> → pulsa <b>🤖 Analizar y comentar</b> → si te gusta, <b>💾 Guardar en biblioteca</b>.</div>
       </details>
@@ -50,7 +50,7 @@
           <li><b>PGN completo</b> con cabeceras <code>[White "…"]</code>, variantes entre paréntesis, comentarios entre llaves <code>{…}</code> y símbolos (<code>!?</code>, <code>$14</code>…). Es el formato que exportan Lichess, Chess.com y ChessBase.</li>
           <li><b>FEN</b>: una posición suelta, por ejemplo <code>8/8/1KP5/3r4/8/8/8/k7 w - - 0 1</code>. Se detecta sola al importar, o usa <b>Cargar FEN</b>.</li>
         </ul>
-        <p><b>«Notación de entrada»</b> indica cómo está escrito lo que pegas; con «Automática» la aplicación lo deduce. Es distinto de <b>«Notación» de la barra superior</b>, que sólo decide cómo se <i>muestran</i> las jugadas. Por eso puedes pegar en inglés y verlo en español (Nf3 → Cf3). El PGN que copias o descargas siempre sale en inglés, que es el estándar.</p>
+        <p><b>«Notación de entrada»</b> indica cómo está escrito lo que pegas; con «Automática» la aplicación lo deduce. Es distinto de <b>«Notación en pantalla» de ⚙ Ajustes</b>, que sólo decide cómo se <i>muestran</i> las jugadas. Por eso puedes pegar en inglés y verlo en español (Nf3 → Cf3). El PGN que copias o descargas siempre sale en inglés, que es el estándar.</p>
         <ul>
           <li><b>Añadir desde aquí</b>: añade las jugadas del recuadro a partir de la posición actual del tablero (útil para meter una variante escrita a mano).</li>
           <li><b>📋 Copiar PGN</b> / <b>⬇ Descargar .pgn</b> / <b>📋 Copiar FEN</b>: para llevarte la partida o la posición a otro programa.</li>
@@ -398,7 +398,7 @@
       <details id="help-ajustes">
         <summary>🛠 22. Ajustes y personalización</summary>
         <ul>
-          <li><b>Barra superior</b>: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.</li>
+          <li><b>⚙ Ajustes</b>, arriba del todo: diseño de las piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.</li>
           <li><b>⚙ Ajustes</b>: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, <b>estado del motor</b> (qué motor se usa, por qué y si hay una copia guardada, con el botón <b>🔄 Reintentar Stockfish 19</b>), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón, recordar la partida al recargar, la <b>velocidad del modo Auto</b>, el <b>aspecto</b> (🌙 oscuro, ☀ claro o 🌓 automático, que sigue el modo claro u oscuro del sistema) y el <b>tamaño del tablero</b> (de 60 % a 130 %: «Automático» es el más grande que cabe en la pantalla; más pequeño deja sitio a las jugadas y la lección, y por encima del 100 % sólo crece en pantallas grandes del ordenador; se guarda en cada dispositivo).</li>
           <li><b>🔊</b> activa o silencia los sonidos.</li>
           <li>Todos los ajustes se recuerdan en este navegador.</li>
@@ -465,7 +465,7 @@
           <dt>«No hay ejercicios» en «Errores de tus partidas»</dt>
           <dd>Los ejercicios salen de las partidas analizadas de tu biblioteca. Analízalas con «🤖 Analizar y comentar» y guárdalas, o pulsa «🤖 Analizarlas ahora» en Estadísticas. Prueba también a desmarcar «Sólo mis jugadas» o a elegir «Todos los errores».</dd>
           <dt>Importo en inglés y veo las jugadas en español</dt>
-          <dd>Es normal: la «Notación» de la barra superior sólo cambia cómo se muestran. Elige «Inglesa» si prefieres verlas como en el PGN.</dd>
+          <dd>Es normal: la «Notación en pantalla» de ⚙ Ajustes sólo cambia cómo se muestran. Elige «Inglesa» si prefieres verlas como en el PGN.</dd>
           <dt>«No aparece mi biblioteca»</dt>
           <dd>La biblioteca depende del navegador y de la dirección desde la que abres la página. Ábrela siempre igual, o usa ⬇ Copia de seguridad / ⬆ Restaurar copia para pasarla.</dd>
           <dt>El gráfico sale casi vacío</dt>

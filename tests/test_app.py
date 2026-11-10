@@ -266,10 +266,14 @@ def prueba_ayuda_y_movil(browser):
     pg.click('.tab-btn[data-tab="tools"]')
     comprobar(pg.is_visible("#trainMenu") and not pg.is_visible("#repNewBtn"), "pulsar la pestaña Entrenar estando en una actividad también vuelve al menú")
     pg.click('.tab-btn[data-tab="study"]')
-    comprobar(not pg.is_visible("#pieceStyleSelect") and pg.is_visible("#menuBtn"), "en el móvil la cabecera es compacta (piezas, notación y colores en ☰)")
-    pg.click("#menuBtn")
-    comprobar(pg.is_visible("#pieceStyleSelect") and pg.is_visible("#themeSelect"), "☰ muestra las opciones de la cabecera")
-    pg.click("#menuBtn")
+    cab = pg.evaluate("document.querySelector('header').getBoundingClientRect().height")
+    comprobar(not pg.is_visible("#pieceStyleSelect") and pg.is_visible("#soundToggle") and cab < 100, "en el móvil la cabecera es compacta (piezas, notación y colores están en ⚙ Ajustes)")
+    pg.click("#settingsBtn")
+    comprobar(pg.is_visible("#pieceStyleSelect") and pg.is_visible("#displayLang") and pg.is_visible("#themeSelect"), "⚙ Ajustes reúne el diseño de las piezas, la notación y los colores del tablero")
+    pg.select_option("#themeSelect", "green"); pg.select_option("#pieceStyleSelect", "neo"); pg.select_option("#displayLang", "en")
+    comprobar(pg.evaluate("document.body.dataset.theme === 'green' && settings.pieceStyle === 'neo'") and "Nf3" in pg.inner_text("#moves"), "y los cambios se aplican al momento")
+    pg.select_option("#themeSelect", "wood"); pg.select_option("#pieceStyleSelect", "staunton"); pg.select_option("#displayLang", "es")
+    pg.keyboard.press("Escape")
     barra = pg.evaluate("""() => { const r = document.querySelector('.mode-tabs').getBoundingClientRect(); const b = [...document.querySelectorAll('.mode-tabs .tab-btn')];
       return { abajo: r.bottom, alto: r.height, fija: getComputedStyle(document.querySelector('.mode-tabs')).position, n: b.filter(e => e.offsetParent !== null || getComputedStyle(e).display !== 'none').length,
                caben: b.every(e => e.getBoundingClientRect().right <= innerWidth + 0.5 && e.getBoundingClientRect().left >= -0.5) }; }""")

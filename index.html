@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.28.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.29.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -618,7 +618,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 }
 
 /* ---------- Móvil en vertical: cabecera compacta y, bajo el tablero, navegación y jugadas ---------- */
-.menu-btn, .more-btn, .tab-btn.tab-board { display: none; }
+.more-btn, .tab-btn.tab-board { display: none; }
 @media (max-width: 640px) {
   header { padding: 6px 8px; gap: 5px; }
   .brand-title { width: 100%; justify-content: space-between; }
@@ -626,10 +626,6 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   .eco-banner { max-width: 62vw; font-size: .74rem; }
   .header-actions { width: 100%; gap: 4px; }
   .header-actions > button { padding: 6px 9px; font-size: .82rem; }
-  .menu-btn { display: inline-flex; margin-left: auto; }
-  .menu-btn[aria-expanded="true"] { background: var(--panel3); }
-  header:not(.menu-open) .hdr-extra { display: none; }
-  header.menu-open .header-actions select { flex: 1 1 30%; min-width: 0; font-size: .8rem; }
   main { padding: 6px; gap: 8px; }
   .panel { padding: 7px; }
   .board-panel .board-side { display: flex; flex-direction: column; }
@@ -672,8 +668,6 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   .eco-banner { max-width: 30vw; font-size: .72rem; }
   .header-actions { flex-wrap: nowrap; overflow-x: auto; gap: 4px; scrollbar-width: none; }
   .header-actions > * { flex: none; padding: 4px 8px; font-size: .78rem; }
-  .menu-btn { display: inline-flex; }
-  header:not(.menu-open) .hdr-extra { display: none; }
   .hide-sm { display: none; }
   main { grid-template-columns: 1fr; padding: 4px 6px; gap: 8px; }
   .panel { padding: 6px; }
@@ -740,31 +734,12 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     <span id="ecoBanner" class="eco-banner" title="Apertura detectada (reconoce transposiciones)">Posición inicial</span>
   </div>
   <div class="header-actions">
-    <select id="pieceStyleSelect" class="hdr-extra" title="Diseño de las piezas" aria-label="Diseño de las piezas">
-      <option value="staunton">Piezas: Clásicas</option>
-      <option value="neo">Piezas: Minimalistas</option>
-      <option value="disc">Piezas: Diagrama</option>
-      <option value="unicode">Piezas: Unicode</option>
-    </select>
-    <select id="displayLang" class="hdr-extra" title="Notación en pantalla" aria-label="Notación en pantalla">
-      <option value="es">Notación: Española (Cf3)</option>
-      <option value="fig">Notación: Figurines (♘f3)</option>
-      <option value="en">Notación: Inglesa (Nf3)</option>
-    </select>
-    <select id="themeSelect" class="hdr-extra" title="Colores del tablero" aria-label="Colores del tablero">
-      <option value="wood">Madera</option>
-      <option value="green">Verde torneo</option>
-      <option value="blue">Azul</option>
-      <option value="slate">Pizarra</option>
-      <option value="coral">Coral</option>
-    </select>
     <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor (nivel, estilo, ventaja y reloj) o contra otra persona en este dispositivo">🤖 Jugar vs CPU</button>
-    <button id="soundToggle" class="hdr-extra" title="Sonido de las jugadas" aria-label="Sonido">🔊</button>
+    <button id="soundToggle" title="Sonido de las jugadas" aria-label="Sonido">🔊</button>
     <button id="settingsBtn" title="Ajustes (motor, token de Lichess, análisis)" aria-label="Ajustes">⚙</button>
     <button id="installBtn" class="primary" hidden title="Instalar AjedrezBase como aplicación (funciona sin conexión)">⬇ Instalar</button>
     <button id="helpBtn" title="Guía completa y atajos (?)" aria-label="Ayuda">❓ Ayuda</button>
     <button id="newGame" class="danger" title="Empezar una partida nueva">Nueva</button>
-    <button id="menuBtn" class="menu-btn" title="Piezas, notación, colores y sonido" aria-label="Más opciones" aria-expanded="false">☰</button>
   </div>
 </header>
 
@@ -1551,7 +1526,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.28.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.29.0 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="welcomeBtn" type="button">Primeros pasos</button> ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
@@ -1561,6 +1536,29 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="modal">
     <h2 id="settingsTitle"><span>⚙ Ajustes</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div class="grid3">
+      <div><label for="pieceStyleSelect">Diseño de las piezas</label>
+        <select id="pieceStyleSelect">
+          <option value="staunton">Clásicas</option>
+          <option value="neo">Minimalistas</option>
+          <option value="disc">Diagrama</option>
+          <option value="unicode">Unicode</option>
+        </select></div>
+      <div><label for="displayLang">Notación en pantalla</label>
+        <select id="displayLang">
+          <option value="es">Española (Cf3)</option>
+          <option value="fig">Figurines (♘f3)</option>
+          <option value="en">Inglesa (Nf3)</option>
+        </select></div>
+      <div><label for="themeSelect">Colores del tablero</label>
+        <select id="themeSelect">
+          <option value="wood">Madera</option>
+          <option value="green">Verde torneo</option>
+          <option value="blue">Azul</option>
+          <option value="slate">Pizarra</option>
+          <option value="coral">Coral</option>
+        </select></div>
+    </div>
     <label for="setEngine">Motor de análisis</label>
     <select id="setEngine">
       <option value="auto">Automático: Stockfish 19 Lite (recomendado; descarga 1,9 MB la primera vez), con Stockfish 10 y el motor interno de respaldo</option>
@@ -1718,8 +1716,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
             <b>📖 Estudio</b> (importar, comentar, analizar), <b>📘 Cursos</b> (lecciones paso a paso), <b>🌍 Aperturas</b>, <b>📚 Biblioteca</b> (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), <b>👑 Finales</b> y <b>🎯 Entrenar</b> (el plan de hoy y un menú con cada actividad: problemas, repertorios, errores de tus partidas, tarjetas, adivina la jugada y visualización; cada tarjeta abre la suya y <b>← Todas las actividades</b> vuelve al menú).</li>
           <li><b>👋 Primeros pasos</b>: la primera vez que abres la aplicación, un panel sobre el tablero te ofrece cinco accesos directos (analizar una partida tuya, traer tus partidas de Lichess, resolver problemas, hacer un curso o jugar). Se cierra al usarlo y vuelve con <b>Primeros pasos</b>, al pie de la página.</li>
           <li><b>En el móvil</b> (en vertical) las pestañas son una barra fija abajo, siempre a mano; <b>♟ Tablero</b> te devuelve arriba. Bajo el tablero quedan la navegación, las jugadas y el motor; el botón <b>⋯</b> despliega lo demás: colocar piezas, cortar, dibujar flechas, promover variantes, escribir la jugada, imagen, imprimir y enlace.</li>
-          <li><b>Barra superior</b>: estilo de piezas, notación en pantalla, colores del tablero, jugar contra la CPU, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.</li>
-          <li><b>En el móvil y la tableta</b>, en vertical: debajo del tablero tienes los botones para avanzar y retroceder y la lista de jugadas, y más abajo el motor, el gráfico y las pestañas (deslízalas a los lados). Las piezas, la notación, los colores y el sonido están en el botón <b>☰</b> de arriba. En horizontal (también en tabletas), el tablero ocupa la izquierda, siempre entero, y las jugadas, la lección y el motor la derecha. Si lo quieres más pequeño, cambia el <b>tamaño del tablero</b> en ⚙ Ajustes.</li>
+          <li><b>Barra superior</b>: jugar contra la CPU, sonido 🔊, ajustes ⚙ (donde están también el diseño de las piezas, la notación en pantalla y los colores del tablero), esta ayuda ❓ y «Nueva» partida.</li>
+          <li><b>En el móvil y la tableta</b>, en vertical: debajo del tablero tienes los botones para avanzar y retroceder y la lista de jugadas, y más abajo el motor y el gráfico. El diseño de las piezas, la notación y los colores están en <b>⚙ Ajustes</b>. En horizontal (también en tabletas), el tablero ocupa la izquierda, siempre entero, y las jugadas, la lección y el motor la derecha. Si lo quieres más pequeño, cambia el <b>tamaño del tablero</b> en ⚙ Ajustes.</li>
         </ul>
         <div class="example"><b>Ejemplo rápido (2 minutos):</b> pega una partida en «📖 Estudio» → pulsa <b>Importar</b> → recórrela con las flechas <kbd>←</kbd> <kbd>→</kbd> → pulsa <b>🤖 Analizar y comentar</b> → si te gusta, <b>💾 Guardar en biblioteca</b>.</div>
       </details>
@@ -1749,7 +1747,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li><b>PGN completo</b> con cabeceras <code>[White "…"]</code>, variantes entre paréntesis, comentarios entre llaves <code>{…}</code> y símbolos (<code>!?</code>, <code>$14</code>…). Es el formato que exportan Lichess, Chess.com y ChessBase.</li>
           <li><b>FEN</b>: una posición suelta, por ejemplo <code>8/8/1KP5/3r4/8/8/8/k7 w - - 0 1</code>. Se detecta sola al importar, o usa <b>Cargar FEN</b>.</li>
         </ul>
-        <p><b>«Notación de entrada»</b> indica cómo está escrito lo que pegas; con «Automática» la aplicación lo deduce. Es distinto de <b>«Notación» de la barra superior</b>, que sólo decide cómo se <i>muestran</i> las jugadas. Por eso puedes pegar en inglés y verlo en español (Nf3 → Cf3). El PGN que copias o descargas siempre sale en inglés, que es el estándar.</p>
+        <p><b>«Notación de entrada»</b> indica cómo está escrito lo que pegas; con «Automática» la aplicación lo deduce. Es distinto de <b>«Notación en pantalla» de ⚙ Ajustes</b>, que sólo decide cómo se <i>muestran</i> las jugadas. Por eso puedes pegar en inglés y verlo en español (Nf3 → Cf3). El PGN que copias o descargas siempre sale en inglés, que es el estándar.</p>
         <ul>
           <li><b>Añadir desde aquí</b>: añade las jugadas del recuadro a partir de la posición actual del tablero (útil para meter una variante escrita a mano).</li>
           <li><b>📋 Copiar PGN</b> / <b>⬇ Descargar .pgn</b> / <b>📋 Copiar FEN</b>: para llevarte la partida o la posición a otro programa.</li>
@@ -2097,7 +2095,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <details id="help-ajustes">
         <summary>🛠 22. Ajustes y personalización</summary>
         <ul>
-          <li><b>Barra superior</b>: estilo de piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.</li>
+          <li><b>⚙ Ajustes</b>, arriba del todo: diseño de las piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.</li>
           <li><b>⚙ Ajustes</b>: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, <b>estado del motor</b> (qué motor se usa, por qué y si hay una copia guardada, con el botón <b>🔄 Reintentar Stockfish 19</b>), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón, recordar la partida al recargar, la <b>velocidad del modo Auto</b>, el <b>aspecto</b> (🌙 oscuro, ☀ claro o 🌓 automático, que sigue el modo claro u oscuro del sistema) y el <b>tamaño del tablero</b> (de 60 % a 130 %: «Automático» es el más grande que cabe en la pantalla; más pequeño deja sitio a las jugadas y la lección, y por encima del 100 % sólo crece en pantallas grandes del ordenador; se guarda en cada dispositivo).</li>
           <li><b>🔊</b> activa o silencia los sonidos.</li>
           <li>Todos los ajustes se recuerdan en este navegador.</li>
@@ -2164,7 +2162,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <dt>«No hay ejercicios» en «Errores de tus partidas»</dt>
           <dd>Los ejercicios salen de las partidas analizadas de tu biblioteca. Analízalas con «🤖 Analizar y comentar» y guárdalas, o pulsa «🤖 Analizarlas ahora» en Estadísticas. Prueba también a desmarcar «Sólo mis jugadas» o a elegir «Todos los errores».</dd>
           <dt>Importo en inglés y veo las jugadas en español</dt>
-          <dd>Es normal: la «Notación» de la barra superior sólo cambia cómo se muestran. Elige «Inglesa» si prefieres verlas como en el PGN.</dd>
+          <dd>Es normal: la «Notación en pantalla» de ⚙ Ajustes sólo cambia cómo se muestran. Elige «Inglesa» si prefieres verlas como en el PGN.</dd>
           <dt>«No aparece mi biblioteca»</dt>
           <dd>La biblioteca depende del navegador y de la dirección desde la que abres la página. Ábrela siempre igual, o usa ⬇ Copia de seguridad / ⬆ Restaurar copia para pasarla.</dd>
           <dt>El gráfico sale casi vacío</dt>
@@ -2276,7 +2274,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.28.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.29.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -10130,10 +10128,6 @@ $("engineHelpBtn").onclick = () => { const h = $("engineHelp"); h.hidden = !h.hi
 $("retryEngineBtn").onclick = () => { if (settings.engine !== "auto") { settings.engine = "auto"; saveSettings(); $("setEngine").value = "auto"; } Engine.init(); renderEngineStatus(); toast("🔄 Cargando Stockfish 19…"); };
 $("versionsBtn").onclick = openVersions;
 $("copyGameBtn").onclick = () => saveToLibrary({ copy: true, force: true });
-$("menuBtn").onclick = () => {
-  const open = document.querySelector("header").classList.toggle("menu-open");
-  $("menuBtn").setAttribute("aria-expanded", open);
-};
 $("licBtn").onclick = () => openModal("licModal");
 $("helpBtn").onclick = () => openHelp();
 $("setEngine").onchange = e => { settings.engine = e.target.value; saveSettings(); Engine.init(); };

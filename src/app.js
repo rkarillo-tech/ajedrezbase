@@ -6455,10 +6455,6 @@ $("engineHelpBtn").onclick = () => { const h = $("engineHelp"); h.hidden = !h.hi
 $("retryEngineBtn").onclick = () => { if (settings.engine !== "auto") { settings.engine = "auto"; saveSettings(); $("setEngine").value = "auto"; } Engine.init(); renderEngineStatus(); toast("🔄 Cargando Stockfish 19…"); };
 $("versionsBtn").onclick = openVersions;
 $("copyGameBtn").onclick = () => saveToLibrary({ copy: true, force: true });
-$("menuBtn").onclick = () => {
-  const open = document.querySelector("header").classList.toggle("menu-open");
-  $("menuBtn").setAttribute("aria-expanded", open);
-};
 $("licBtn").onclick = () => openModal("licModal");
 $("helpBtn").onclick = () => openHelp();
 $("setEngine").onchange = e => { settings.engine = e.target.value; saveSettings(); Engine.init(); };
