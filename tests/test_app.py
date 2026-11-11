@@ -1475,6 +1475,45 @@ def prueba_paquetes_de_problemas(browser):
     ctx.close()
 
 
+def prueba_tu_semana(browser):
+    print("Novedades 1.31: «Tu semana»")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.click('.tab-btn[data-tab="tools"]')
+    comprobar("aún sin actividad" in pg.inner_text("#weekSummary"), "sin actividad, «Tu semana» lo dice")
+    pg.locator("#weekBox").evaluate("e => e.open = true")
+    comprobar("plan de hoy" in pg.inner_text("#weekBody") and pg.locator("#weekBody [data-week]").count() == 1, "y propone empezar por el plan de hoy")
+    # Actividad simulada: ayer y anteayer con problemas (la horquilla, floja), y dos días de la semana anterior
+    pg.evaluate("""() => {
+      const key = n => { const d = new Date(); d.setDate(d.getDate() - n); return dayKey(d); };
+      const a = {};
+      a[key(1)] = { puzzle: 6, lesson: 1, pzOk: 3, pzFail: 3, pzTh: { fork: [4, 3], mate: [2, 0] }, nivel: 1260 };
+      a[key(2)] = { puzzle: 4, pzOk: 4, pzFail: 0, pzTh: { pin: [4, 0] }, nivel: 1290 };
+      a[key(8)] = { puzzle: 2, nivel: 1210 };
+      a[key(9)] = { puzzle: 1, nivel: 1200 };
+      localStorage.setItem('ajedrezActividad', JSON.stringify(a));
+      localStorage.setItem('ajedrezNivelProblemas', JSON.stringify({ r: 1260, n: 13 }));
+      renderToday();
+    }""")
+    txt = pg.inner_text("#weekSummary")
+    comprobar("2 de 7 días" in txt and "11 actividades" in txt and "↗" in txt, "el titular resume los días entrenados y la actividad, y dice si sube")
+    cuerpo = pg.inner_text("#weekBody")
+    comprobar("10 problemas" in cuerpo and "1 lección" in cuerpo and "2 días y 3 actividades" in cuerpo, "detalla lo hecho y lo compara con los 7 días anteriores")
+    comprobar("7 de 10 a la primera (70 %)" in cuerpo and "nivel 1260" in cuerpo and "+50 en la semana" in cuerpo, "acierto en los problemas y cuánto ha cambiado el nivel")
+    comprobar("Horquilla" in cuerpo and "1 de 4 a la primera" in cuerpo, "señala el tema que más se ha resistido en la semana")
+    pg.click('#weekBody [data-week="theme:fork"]')
+    pg.wait_for_function("trainer.active && trainer.puzzle && trainerUserTurn() && !trainer.busy", timeout=10000)
+    comprobar(pg.evaluate("Puz.cur.themes.includes('fork')"), "«Practicarlo» abre problemas de ese tema")
+    jugar_lo_que_toca(pg)
+    pg.wait_for_function("document.getElementById('trainFeedback').textContent.includes('Tu nivel')", timeout=10000)
+    hoy = pg.evaluate("actDays()[dayKey()]")
+    comprobar(hoy["puzzle"] == 1 and hoy["pzOk"] + hoy["pzFail"] == 1 and "fork" in hoy["pzTh"] and hoy["nivel"] > 0, "cada problema resuelto anota el acierto, sus temas y el nivel del día")
+    comprobar("3 de 7 días" in pg.inner_text("#weekSummary") and pg.evaluate("streakInfo().cur") == 3, "y el resumen se actualiza (sin que esos datos alteren la racha)")
+    pg.click("#stopPuzzlesBtn")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_geometria_y_ciegas(browser):
     print("Novedades 1.25: ruta del caballo, rebotes del alfil y problemas a ciegas")
     ctx = contexto(browser)
@@ -1707,7 +1746,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_geometria_y_ciegas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

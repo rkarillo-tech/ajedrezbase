@@ -174,6 +174,14 @@ main {
 .train-card .tc-badge { grid-column: 2; justify-self: start; }
 #trainBack { margin: 0 0 4px; }
 #trainBack + .section, #trainBack ~ .section[data-train]:not([hidden]):first-of-type { border-top: 0; }
+.week-box { margin-top: 8px; background: var(--deep); border: 1px solid var(--border); border-radius: 9px; padding: 7px 11px; }
+.week-box summary { cursor: pointer; font-size: .86rem; font-weight: 600; }
+.week-row { display: grid; grid-template-columns: 84px 1fr; gap: 8px; font-size: .84rem; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.week-row:first-child { margin-top: 4px; }
+.week-k { color: var(--muted); }
+.week-tips { font-size: .84rem; padding-top: 7px; }
+.week-tip { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 5px; }
+.week-tip > span { flex: 1 1 220px; }
 .today-box { background: var(--deep); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; }
 .today-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .streak { font-size: 1.05rem; }
@@ -1338,6 +1346,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <span>📅 Hoy</span>
       </h2>
       <div id="todayBox" class="today-box"></div>
+      <details id="weekBox" class="week-box"><summary id="weekSummary">📈 Tu semana</summary><div id="weekBody"></div></details>
       <h2 class="train-menu-title"><span>🎯 ¿Qué quieres entrenar?</span></h2>
       <div id="trainMenu" class="train-menu">
         <button type="button" class="train-card" data-train-open="puzzles"><span class="tc-ico" aria-hidden="true">🧩</span><span class="tc-body"><b>Problemas de táctica</b><span class="small">Por temas y dificultad, con repaso espaciado y examen de nivel</span></span><span class="srs-pill tc-badge" data-badge-of="puzzleBadge" hidden></span></button>

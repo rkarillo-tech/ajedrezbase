@@ -182,6 +182,12 @@ function puzzlePool() {
   const th = $("puzzleTheme").value, lv = $("puzzleLevel").value, weak = th === "weak" ? weakThemes().map(x => x.k) : null;
   return PUZZLES.filter(p => (!th || (weak ? p.themes.some(x => weak.includes(x.startsWith("mateIn") ? "mate" : x)) : p.themes.includes(th) || (th === "mate" && p.themes.some(x => x.startsWith("mateIn"))))) && (lv === "" || puzzleLevelOf(p.rating) === +lv));
 }
+/* Temas de un problema para las estadísticas: los mates van juntos y «una sola jugada» no cuenta como tema */
+function puzzleThemeKeys(p) {
+  const keys = [...new Set(p.themes.map(x => (x.startsWith("mateIn") ? "mate" : x)))].filter(k => k === "mate" || (PUZZLE_THEMES[k] && k !== "short"));
+  return keys.length ? keys : ["other"];
+}
+const puzzleThemeName = k => (k === "mate" ? "Mates" : k === "other" ? "Otros temas" : PUZZLE_THEMES[k] || k);
 /* Aciertos por tema, a partir de todos los intentos guardados */
 function themeStats() {
   const s = puzSrs(), byId = new Map(PUZZLES.map(p => [p.id, p])), out = {};
@@ -189,8 +195,7 @@ function themeStats() {
     const p = byId.get(id);
     if (!p) continue;
     const tries = st.tries || st.reps || 0, fails = st.fails != null ? st.fails : st.ok ? 0 : 1;
-    const keys = [...new Set(p.themes.map(x => (x.startsWith("mateIn") ? "mate" : x)))].filter(k => k === "mate" || (PUZZLE_THEMES[k] && k !== "short"));
-    for (const k of keys.length ? keys : ["other"]) {
+    for (const k of puzzleThemeKeys(p)) {
       out[k] = out[k] || { k, tries: 0, fails: 0 };
       out[k].tries += tries; out[k].fails += fails;
     }
@@ -391,6 +396,7 @@ function finishPuzzle(perfect) {
   R.r = Math.max(400, R.r + d); R.n++;
   LS.set("ajedrezNivelProblemas", R);
   Puz.done++; if (perfect) Puz.ok++; Puz.delta += d;
+  logPuzzleResult(p, perfect);
   logActivity("puzzle");
   Sound.play(perfect ? "ok" : "end");
   const left = Puz.queue.length;
