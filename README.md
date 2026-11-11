@@ -113,14 +113,16 @@ Stockfish (GPL v3) **no** forma parte de este repositorio: el navegador lo desca
 ## Para desarrolladores
 
 `index.html` se genera a partir de `src/` con un script sin dependencias. No hay compilación ni paquetes npm.
+Los ficheros generados de la aplicación (`index.html`, `sw.js` y `sf-worker.js`) **no se guardan en el repositorio**:
+la integración continua los construye, publica la web en GitHub Pages cuando pasan las pruebas en `main` y adjunta el HTML a cada Release.
 
 ```
-build.py              Une src/ en index.html y genera sw.js, sf-worker.js y GUIA.md
+build.py              Une src/ en index.html y genera sw.js, sf-worker.js y GUIA.md (--site monta la web de GitHub Pages)
 VERSION               Número de versión
-index.html            La aplicación completa (generada: no editar a mano)
+index.html            La aplicación completa (generada con build.py; no está en el repositorio)
 manifest.webmanifest  Datos para instalarla como aplicación
-sw.js                 Service worker: uso sin conexión (generado desde src/sw.js)
-sf-worker.js          Lanzador de Stockfish (19 o 10) desde el mismo origen, para poder guardarlo sin conexión
+sw.js                 Service worker: uso sin conexión (generado desde src/sw.js; no está en el repositorio)
+sf-worker.js          Lanzador de Stockfish (19 o 10) desde el mismo origen (generado desde src/sf-worker.js; no está en el repositorio)
 src/template.html     Plantilla con estilos y marcadores {{...}}
 src/core.js           Reglas (tablero 0x88), SAN multilingüe, evaluación y motor alfa-beta propio (también corre en un Worker)
 src/pgn.js            Árbol de variantes y lector/escritor PGN ([%cal], [%csl], [%eval], NAG)
@@ -152,7 +154,7 @@ problemas/            Paquetes de problemas descargables (generados con tools/pa
 cursos/               Cursos en PGN (aperturas, táctica, estrategia, finales y partidas), incluidos en la aplicación al construirla
 assets/               Icono (icon.svg y sus PNG, generados con tools/gen_icons.py) y captura
 notas/                Notas de cada versión
-tests/                Pruebas del núcleo (Node) y de extremo a extremo (Playwright)
+tests/                Pruebas del núcleo y de la lógica (Node, segundos) y de extremo a extremo (Playwright, minutos)
 tools/                Iconos, revisor de los cursos, generadores de las partidas comentadas, los repertorios y los problemas
 ```
 
@@ -161,9 +163,10 @@ que el usuario pide; nada se guarda sin que el usuario lo pida; reglas verificad
 
 ```bash
 python3 build.py                                   # genera index.html, sw.js, sf-worker.js y GUIA.md
+tests/run_all.sh rapidas                           # pruebas sin navegador: núcleo y lógica (unos segundos)
 python3 -m pip install playwright
 python3 -m playwright install chromium
-tests/run_all.sh                                   # todas las pruebas
+tests/run_all.sh                                   # todas las pruebas (también en el navegador)
 
 # Opcional: probar también con el Stockfish 19 real (sin depender de la red durante la prueba)
 npm pack stockfish@19.0.1 && mkdir -p /tmp/sf && tar xzf stockfish-19.0.1.tgz -C /tmp/sf
@@ -188,5 +191,11 @@ NIVEL_MIN=6 NIVEL_MAX=14 DIFICULTAD_MIN=1300 SF=/tmp/sf/package/bin/stockfish-19
 SF=/tmp/sf/package/bin/stockfish-19-lite-single.js node tools/depurar_problemas.js       # revisión más profunda y equilibrio
 ```
 
-Para publicar una versión: sube `VERSION`, añade `notas/vX.Y.Z.md`, ejecuta `python3 build.py` y crea una
-Release `vX.Y.Z` en GitHub; la acción adjunta `ajedrezbase.html` y su huella SHA-256.
+Las pruebas de la lógica (`tests/test_logica.js`) cargan el código real de `src/app/` en Node con un DOM simulado
+(`tests/entorno_app.js`): son el sitio para probar lo que no necesita la pantalla (repasos, estadísticas, filtros,
+informe, sincronización…). `tests/test_app.py` queda para lo que sí necesita el navegador.
+
+La web se publica sola: cada cambio que llega a `main` y pasa las pruebas se despliega en GitHub Pages
+(requiere, una sola vez, *Settings › Pages › Source: GitHub Actions*). Para publicar una versión descargable:
+sube `VERSION`, añade `notas/vX.Y.Z.md` y crea una Release `vX.Y.Z` en GitHub; la acción construye
+y adjunta `ajedrezbase.html` y su huella SHA-256.

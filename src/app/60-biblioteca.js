@@ -833,7 +833,8 @@ function nextCard() {
   startTraining({ side: g.root.state.t, markId: m.id, card: true });
 }
 function endCards() {
-  trainFeedback(`🧠 Repaso terminado: ${Cards.ok} de ${Cards.done} a la primera.<br><span class="small">Pulsa «↩ Volver a la partida» para seguir donde estabas.</span>`, Cards.ok === Cards.done ? "ok" : "");
+  trainFeedback(`🧠 Repaso terminado: ${Cards.ok} de ${Cards.done} a la primera.<br><button id="cardsDoneBackBtn" class="sm-btn" style="margin-top:6px">↩ Volver a tu partida</button>`, Cards.ok === Cards.done ? "ok" : "");
+  $("cardsDoneBackBtn").onclick = restoreStash;
 }
 function restoreStash() {
   const st = Cards.stash;
@@ -848,6 +849,7 @@ function restoreStash() {
   ui.flipped = !!st.flipped;
   setGame(st.game, { noConfirm: true, libId: st.libId && Lib.games.has(st.libId) ? st.libId : null, name: st.name, fav: st.fav, tags: st.tags, current: st.current });
   if (st.dirty) { ui.dirty = true; updateSaveState(); }
+  $("trainFeedback").hidden = true;   // el resumen del entrenamiento ya no hace falta
 }
 async function finishCard(perfect) {
   const m = Lib.marks.get(trainer.markId);
@@ -856,10 +858,7 @@ async function finishCard(perfect) {
   if (perfect) Cards.ok++;
   let msg = perfect ? "🏆 ¡Correcto a la primera!" : "✔ Tarjeta resuelta.";
   if (m) {
-    m.srs = m.srs || { box: 0, due: Date.now(), reps: 0 };
-    m.srs.reps++;
-    m.srs.box = perfect ? Math.min(SRS_DAYS.length - 1, m.srs.box + 1) : 1;
-    m.srs.due = Date.now() + SRS_DAYS[m.srs.box] * 864e5;
+    m.srs = srsStep(m.srs || { box: 0, due: Date.now(), reps: 0 }, perfect);
     try { await DB.put("marks", m); } catch {}
     const g = Lib.games.get(m.gameId);
     msg += ` ${CATS[m.cat].icon} ${esc(g ? g.title : "")}, ${esc(markLabel(m))}.`;

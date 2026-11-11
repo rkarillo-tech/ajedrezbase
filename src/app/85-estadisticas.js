@@ -404,9 +404,7 @@ async function drillRecord(node, ok) {
   if (!rec) return;
   rec.drills = rec.drills || {};
   const s = rec.drills[d.key] || { box: 0, reps: 0 };
-  s.reps++;
-  s.box = ok ? Math.min(SRS_DAYS.length - 1, s.box + 1) : 1;
-  s.due = Date.now() + SRS_DAYS[s.box] * 864e5;
+  srsStep(s, ok);
   s.ok = ok;
   rec.drills[d.key] = s;
   try { await DB.put("games", rec); } catch (e) { console.warn("No se pudo guardar el repaso:", e); }

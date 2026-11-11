@@ -4,7 +4,7 @@
 Uso:
     python3 -m pip install playwright
     python3 -m playwright install chromium
-    python3 tests/test_app.py
+    python3 tests/test_app.py        (construye antes index.html con build.py)
 
 Las conexiones a Lichess y a los CDN de Stockfish se bloquean para que las pruebas no dependan
 de la red: se usa el motor interno, que es el respaldo sin conexión.
@@ -78,7 +78,8 @@ def nueva_pagina(ctx, url=URL):
 
 
 def contexto(browser, **kw):
-    ctx = browser.new_context(viewport={"width": 1400, "height": 1000}, **kw)
+    kw.setdefault("viewport", {"width": 1400, "height": 1000})
+    ctx = browser.new_context(**kw)
     ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
     ctx.route("**/unpkg.com/**", lambda r: r.abort())
     ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
@@ -1766,6 +1767,56 @@ def prueba_fiabilidad(browser):
     ctx.close()
 
 
+def prueba_salir_del_entrenamiento(browser):
+    print("Salir de cada entrenamiento con los botones de la sesión")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    jugadas = pg.evaluate("Pgn.mainlineFrom(game.root).length")
+    entrenar(pg, "puzzles")
+    pg.click("#puzzleStartBtn")
+    pg.wait_for_function("trainer.active && trainer.puzzle && trainerUserTurn() && !trainer.busy", timeout=10000)
+    comprobar(not pg.is_visible("#trainSessionBtns") and pg.locator("#trainFeedback [data-pz]").count() == 2, "en los problemas sólo están sus botones (sin «Pista» y «Salir» repetidos)")
+    pg.evaluate("$('stopTrainBtn').click()")
+    comprobar("Sesión terminada" in pg.inner_text("#trainFeedback") and not pg.evaluate("Puz.queue.length"), "«Salir» termina la sesión de problemas con su resumen")
+    pg.click("#puzzlesBackBtn")
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).length") == jugadas and not pg.is_visible("#trainFeedback"), "y se vuelve a la partida que había en el tablero")
+    pg.click("#examStartBtn")
+    pg.wait_for_function("trainer.active && Puz.exam", timeout=10000)
+    pg.evaluate("$('stopTrainBtn').click()")
+    comprobar(not pg.evaluate("Puz.exam") and pg.evaluate("Pgn.mainlineFrom(game.root).length") == jugadas, "«Salir» abandona el examen (sin dejar el reloj en marcha) y devuelve tu partida")
+    pg.evaluate("""async () => { const r = Pgn.parseGame('1. e4 e5 2. Nf3 *'); await importRecords([recordFromGame(r.game, { title: 'Marcas' })], []);
+      const g = [...Lib.games.values()].find(x => x.title === 'Marcas');
+      for (const [fen, ans] of [['rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1', 'e7e5'], ['rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2', 'g1f3']]) {
+        const m = { gameId: g.id, path: [], cat: 'fav', train: 'best', fenBefore: fen, answer: ans, num: '1.', san: 'e4', color: 1, created: Date.now() };
+        m.id = await DB.put('marks', m); Lib.marks.set(m.id, m); }
+      refreshLibraryViews(); }""")
+    pg.click("#trainBackBtn")
+    entrenar(pg, "cards")
+    pg.click("#cardsAllBtn")
+    pg.wait_for_function("trainer.active && trainer.card", timeout=10000)
+    comprobar(pg.is_visible("#stopTrainBtn") and pg.evaluate("$('trainFeedback').nextElementSibling === $('trainSessionBtns')"), "en las tarjetas «Pista» y «Salir» van junto al mensaje")
+    pg.click("#stopTrainBtn")
+    comprobar("Repaso terminado" in pg.inner_text("#trainFeedback") and not pg.evaluate("Cards.queue.length"), "«Salir» termina el repaso de tarjetas")
+    pg.click("#cardsDoneBackBtn")
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).length") == jugadas and pg.evaluate("game.headers.Event") != "Tarjeta", "y «Volver a tu partida» la recupera")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_salir_movil(browser):
+    print("En el móvil, «Pista» y «Salir» bajan con el mensaje del entrenador")
+    ctx = contexto(browser, viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    pg, errores = nueva_pagina(ctx)
+    pg.click('.tab-btn[data-tab="tools"]')
+    pg.click('#trainMenu [data-train-open="rep"]')
+    pg.click("#startTrainBtn")
+    pg.wait_for_function("trainer.active", timeout=10000)
+    caja = pg.evaluate("(() => { const a = $('trainFeedback').getBoundingClientRect(), b = $('stopTrainBtn').getBoundingClientRect(); return [a.bottom, b.top, $('trainFeedback').closest('.board-side') !== null]; })()")
+    comprobar(caja[2] and 0 <= caja[1] - caja[0] < 40, "los botones de la sesión quedan justo debajo del mensaje, bajo el tablero")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_stockfish19(browser):
     sf = os.environ.get("STOCKFISH_DIR")
     if not sf:
@@ -1872,9 +1923,12 @@ def prueba_stockfish19(browser):
 
 
 def main():
+    # index.html no se guarda en el repositorio: se construye ahora para no probar uno viejo
+    import subprocess
+    subprocess.run([sys.executable, str(ROOT / "build.py")], check=True)
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

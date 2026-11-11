@@ -167,11 +167,12 @@ function placeLessonBox() {
   box.classList.toggle("side", side);
 }
 /* En el móvil, los mensajes del entrenador (repertorio, problemas, tarjetas) van debajo del tablero */
-const trainFeedbackHome = { parent: $("trainFeedback").parentElement, next: $("trainFeedback").nextElementSibling };
+const trainFeedbackHome = { parent: $("trainFeedback").parentElement };
 function placeTrainFeedback() {
-  const el = $("trainFeedback");
+  const el = $("trainFeedback"), btns = $("trainSessionBtns");   // «Pista» y «Salir» van siempre con el mensaje
   if (!wideLayout.matches) { if (el.parentElement === trainFeedbackHome.parent) $("lessonBox").after(el); }
-  else if (el.parentElement !== trainFeedbackHome.parent) trainFeedbackHome.parent.insertBefore(el, trainFeedbackHome.next);
+  else if (el.parentElement !== trainFeedbackHome.parent) trainFeedbackHome.parent.prepend(el);
+  if (el.nextElementSibling !== btns) el.after(btns);
   el.classList.toggle("under-board", !wideLayout.matches);
 }
 const onLayout = () => { placeLessonBox(); placeTrainFeedback(); };

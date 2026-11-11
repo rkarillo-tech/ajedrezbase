@@ -1,5 +1,19 @@
 /* ---------- 25. Entrenador con repetición espaciada ---------- */
 const SRS_DAYS = [0, 1, 3, 7, 16, 35, 75];
+/* Un repaso más: si sale bien sube de caja (cada caja espera más días: SRS_DAYS); si sale mal vuelve a la caja 1 (mañana) */
+function srsStep(s, ok, now = Date.now()) {
+  s.reps = (s.reps || 0) + 1;
+  s.box = ok ? Math.min(SRS_DAYS.length - 1, (s.box || 0) + 1) : 1;
+  s.due = now + SRS_DAYS[s.box] * 864e5;
+  return s;
+}
+/* Nivel de problemas al estilo Elo: sube si resuelves problemas de tu nivel o superiores. Devuelve cuánto ha cambiado */
+function puzzleRatingStep(R, rating, ok) {
+  const K = R.n < 20 ? 48 : 24;
+  const exp = 1 / (1 + Math.pow(10, (rating - R.r) / 400)), d = Math.round(K * ((ok ? 1 : 0) - exp));
+  R.r = Math.max(400, R.r + d); R.n++;
+  return d;
+}
 function trainerUserTurn() { return trainer.side === 0 || cur().state.t === trainer.side; }
 function trainFeedback(html, kind) {
   const el = $("trainFeedback");
@@ -108,9 +122,7 @@ function finishTraining() {
     const l = courseLessons(L.course)[L.i];
     if (l.repertoire) {
       const all = repSrs(), key = L.course + ":" + l.round, s = all[key] || { box: 0, reps: 0 };
-      s.reps++;
-      s.box = perfect ? Math.min(SRS_DAYS.length - 1, s.box + 1) : 1;
-      s.due = Date.now() + SRS_DAYS[s.box] * 864e5;
+      srsStep(s, perfect);
       all[key] = s;
       LS.set("ajedrezRepasos", all);
       logActivity("rep");
@@ -132,10 +144,7 @@ function finishTraining() {
   let srsMsg = "";
   const it = trainer.libId && Lib.games.get(trainer.libId);
   if (it) {
-    it.srs = it.srs || { box: 0, due: Date.now(), reps: 0 };
-    it.srs.reps++;
-    it.srs.box = perfect ? Math.min(SRS_DAYS.length - 1, it.srs.box + 1) : 1;
-    it.srs.due = Date.now() + SRS_DAYS[it.srs.box] * 864e5;
+    it.srs = srsStep(it.srs || { box: 0, due: Date.now(), reps: 0 }, perfect);
     DB.put("games", it).catch(() => {});
     refreshLibraryViews();
     srsMsg = `<br>Próximo repaso de «${esc(it.title)}»: ${SRS_DAYS[it.srs.box] === 1 ? "mañana" : "en " + SRS_DAYS[it.srs.box] + " días"}.`;
@@ -159,6 +168,13 @@ function stopTraining(silent) {
   $("startTrainBtn").disabled = false;
   if (silent) $("trainFeedback").hidden = true;
   render();
+}
+/* «⏹ Salir»: cada entrenamiento se cierra a su manera (resumen y vuelta a tu partida en problemas, examen y tarjetas) */
+function exitTraining() {
+  if (trainer.puzzle || Puz.exam) { endPuzzles(); return; }
+  if (trainer.card) { Cards.queue = []; stopTraining(false); endCards(); return; }
+  stopTraining(false);
+  trainFeedback("Entrenamiento detenido.");
 }
 
 /* ---------- 26. Problemas de táctica (cursos/problemas.json, generados con Stockfish) ---------- */
@@ -384,16 +400,11 @@ function finishPuzzle(perfect) {
   const p = Puz.cur, all = puzSrs(), st = all[p.id] || { box: 0, reps: 0 };
   st.tries = (st.tries || 0) + 1;
   st.fails = (st.fails || 0) + (perfect ? 0 : 1);
-  st.reps++;
-  st.box = perfect ? Math.min(SRS_DAYS.length - 1, st.box + 1) : 1;
-  st.due = Date.now() + SRS_DAYS[st.box] * 864e5;
+  srsStep(st, perfect);
   st.ok = perfect;
   all[p.id] = st;
   LS.set("ajedrezProblemas", all);
-  // Nivel aproximado al estilo Elo: sube si resuelves problemas de tu nivel o superiores
-  const R = puzRating(), K = R.n < 20 ? 48 : 24;
-  const exp = 1 / (1 + Math.pow(10, (p.rating - R.r) / 400)), d = Math.round(K * ((perfect ? 1 : 0) - exp));
-  R.r = Math.max(400, R.r + d); R.n++;
+  const R = puzRating(), d = puzzleRatingStep(R, p.rating, perfect);
   LS.set("ajedrezNivelProblemas", R);
   Puz.done++; if (perfect) Puz.ok++; Puz.delta += d;
   logPuzzleResult(p, perfect);

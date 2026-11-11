@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """Construye AjedrezBase a partir de src/ (sin dependencias, sólo Python 3).
 
-  python3 build.py            genera index.html, sw.js, sf-worker.js y GUIA.md
-  python3 build.py --check    comprueba que esos ficheros están al día con src/ (para la CI)
+  python3 build.py               genera index.html, sw.js, sf-worker.js y GUIA.md
+  python3 build.py --check       construye sin escribir nada y comprueba que GUIA.md está al día con src/help.html
+  python3 build.py --site _site  monta en _site/ la web completa que se publica en GitHub Pages
 
 index.html es la aplicación completa en un único archivo: se puede abrir con doble clic
 o publicar tal cual. sw.js y sf-worker.js sólo se usan cuando se sirve por http(s)
 (GitHub Pages) para instalarla y usarla sin conexión.
+
+index.html, sw.js y sf-worker.js no se guardan en el repositorio (.gitignore): los genera la CI,
+que publica la web en GitHub Pages y adjunta el HTML a cada Release. GUIA.md sí se guarda,
+para poder leer la guía en GitHub.
 """
 import base64
+import shutil
 import html
 import json
 import re
@@ -239,14 +245,53 @@ def build():
     }
 
 
+# Ficheros generados que sí se guardan en el repositorio (el resto los genera la CI)
+TRACKED = ["GUIA.md"]
+# Lo que forma la web publicada, además de los ficheros generados (debe incluir lo que sw.js guarda para usarla sin conexión)
+SITE_FILES = ["index.html", "sw.js", "sf-worker.js", "manifest.webmanifest", "LICENSE", "THIRD_PARTY_NOTICES.md"]
+SITE_DIRS = ["assets", "problemas"]
+
+
+def site(files, out):
+    """Monta la web en la carpeta out: los ficheros generados más los estáticos (iconos, manifiesto, paquetes de problemas)."""
+    out = Path(out).resolve()
+    if out == ROOT or ROOT.is_relative_to(out):
+        raise SystemExit(f"--site: {out} no puede ser la carpeta del proyecto")
+    if out.exists():
+        if any(out.iterdir()) and not (out / "index.html").exists():
+            raise SystemExit(f"--site: {out} ya existe y no parece una web montada antes; elige una carpeta nueva")
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+    for name in SITE_FILES:
+        if name in files:
+            (out / name).write_text(files[name], encoding="utf-8")
+        else:
+            shutil.copy2(ROOT / name, out / name)
+    for d in SITE_DIRS:
+        shutil.copytree(ROOT / d, out / d)
+    (out / ".nojekyll").write_text("", encoding="utf-8")
+    shell = re.search(r"const SHELL = \[(.*?)\];", files["sw.js"], re.S)
+    missing = [u for u in re.findall(r'"([^"]+)"', shell.group(1) if shell else "") if u != "./" and not (out / u).exists()]
+    if missing:
+        raise SystemExit("--site: falta lo que sw.js necesita para funcionar sin conexión: " + ", ".join(missing))
+    total = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
+    print(f"Web montada en {out} ({total // 1024} KB).")
+
+
 def main():
     files = build()
     if "--check" in sys.argv:
-        stale = [n for n, c in files.items() if not (ROOT / n).exists() or (ROOT / n).read_text(encoding="utf-8") != c]
+        stale = [n for n in TRACKED if not (ROOT / n).exists() or (ROOT / n).read_text(encoding="utf-8") != files[n]]
         if stale:
             print("No están al día con src/: " + ", ".join(stale) + ". Ejecuta: python3 build.py")
             sys.exit(1)
-        print("Todo al día.")
+        print("La aplicación se construye sin errores y " + ", ".join(TRACKED) + " está al día.")
+        return
+    if "--site" in sys.argv:
+        i = sys.argv.index("--site")
+        if i + 1 >= len(sys.argv):
+            raise SystemExit("Uso: python3 build.py --site CARPETA")
+        site(files, sys.argv[i + 1])
         return
     for name, content in files.items():
         (ROOT / name).write_text(content, encoding="utf-8")

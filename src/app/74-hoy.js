@@ -114,6 +114,8 @@ function weekStats(back) {
   }
   return W;
 }
+/* El tema de problemas que más se ha resistido en la semana W (al menos 3 intentos y menos del 80 % a la primera) */
+const weakestTheme = W => Object.values(W.th).filter(x => x.k !== "other" && x.tries >= 3 && (x.tries - x.fails) / x.tries < 0.8).sort((x, y) => (x.tries - x.fails) / x.tries - (y.tries - y.fails) / y.tries)[0] || null;
 /* Nivel de problemas con el que se llegó a esta semana (el último anotado antes de los 7 días) */
 function levelBeforeWeek() {
   const a = actDays();
@@ -147,7 +149,7 @@ function renderWeek() {
   // Qué practicar: como mucho tres propuestas, de la más urgente a la menos
   const tips = [];
   if (due.total) tips.push({ txt: `Tienes <b>${plural(due.total, "repaso pendiente", "repasos pendientes")}</b>: lo que no se repasa a tiempo se olvida.`, btn: "▶ Repasar", act: "due" });
-  const weakWeek = Object.values(W.th).filter(x => x.k !== "other" && x.tries >= 3 && (x.tries - x.fails) / x.tries < 0.8).sort((x, y) => (x.tries - x.fails) / x.tries - (y.tries - y.fails) / y.tries)[0];
+  const weakWeek = weakestTheme(W);
   const weakAll = weakWeek ? null : weakThemes()[0];
   const hasTheme = k => [...$("puzzleTheme").options].some(o => o.value === k);
   if (weakWeek && hasTheme(weakWeek.k)) tips.push({ txt: `Esta semana lo que más se te ha resistido en los problemas es <b>${esc(puzzleThemeName(weakWeek.k))}</b> (${weakWeek.tries - weakWeek.fails} de ${weakWeek.tries} a la primera).`, btn: "🧩 Practicarlo", act: "theme:" + weakWeek.k });
