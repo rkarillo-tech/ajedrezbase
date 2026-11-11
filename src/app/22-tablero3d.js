@@ -59,6 +59,8 @@ function board3dInit() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = T.PCFSoftShadowMap;
+  renderer.toneMapping = T.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
   B3.renderer = renderer;
   B3.canvas = renderer.domElement;
   B3.canvas.setAttribute("aria-label", "Tablero de ajedrez en 3D: pulsa la pieza y después la casilla de destino. Arrastra para girar la vista.");
@@ -72,11 +74,13 @@ function board3dInit() {
 
   const scene = B3.scene = new T.Scene();
   B3.camera = new T.PerspectiveCamera(38, 1, 0.1, 100);
-  scene.add(new T.HemisphereLight(0xfff7ea, 0x3a3f4a, 1.7));
-  const sun = new T.DirectionalLight(0xffffff, 2.4);
+  scene.environment = board3dEnvironment(renderer);   // reflejos suaves, como en una habitación con ventanas
+  scene.environmentIntensity = 0.75;
+  scene.add(new T.HemisphereLight(0xfff4e2, 0x2e3340, 0.55));
+  const sun = new T.DirectionalLight(0xfff1dc, 2.6);
   sun.position.set(-4, 11, 6);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 1, far: 30 });
   sun.shadow.bias = -0.0008;
   scene.add(sun);
@@ -88,19 +92,33 @@ function board3dInit() {
   B3.tex = new T.CanvasTexture(cv);
   B3.tex.colorSpace = T.SRGBColorSpace;
   B3.tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  const frameMat = B3.mat.frame = new T.MeshStandardMaterial({ color: 0x4a3426, roughness: 0.7 });
-  const base = new T.Mesh(new T.BoxGeometry(B3_SIZE, 0.36, B3_SIZE), frameMat);
-  base.position.y = -0.18;
+  const walnut = board3dGrain("#5a3c29", "#3a2518", "#6e4a33", 512, 7);
+  walnut.colorSpace = T.SRGBColorSpace;
+  walnut.wrapS = walnut.wrapT = T.RepeatWrapping;
+  walnut.repeat.set(2, 2);
+  const frameMat = B3.mat.frame = new T.MeshPhysicalMaterial({ map: walnut, roughness: 0.48, clearcoat: 0.6, clearcoatRoughness: 0.3 });
+  const half = B3_SIZE / 2 + 0.12, rr = 0.22, rect = new T.Shape();
+  rect.moveTo(-half + rr, -half); rect.lineTo(half - rr, -half); rect.quadraticCurveTo(half, -half, half, -half + rr);
+  rect.lineTo(half, half - rr); rect.quadraticCurveTo(half, half, half - rr, half); rect.lineTo(-half + rr, half);
+  rect.quadraticCurveTo(-half, half, -half, half - rr); rect.lineTo(-half, -half + rr); rect.quadraticCurveTo(-half, -half, -half + rr, -half);
+  const frameGeo = new T.ExtrudeGeometry(rect, { depth: 0.3, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.06, bevelSegments: 4, curveSegments: 6 });
+  frameGeo.rotateX(-Math.PI / 2);
+  frameGeo.translate(0, -0.352, 0);
+  const base = new T.Mesh(frameGeo, frameMat);
   base.receiveShadow = true;
   scene.add(base);
-  B3.plane = new T.Mesh(new T.PlaneGeometry(B3_SIZE, B3_SIZE), new T.MeshStandardMaterial({ map: B3.tex, roughness: 0.62 }));
+  B3.plane = new T.Mesh(new T.PlaneGeometry(B3_SIZE, B3_SIZE), new T.MeshPhysicalMaterial({ map: B3.tex, roughness: 0.5, clearcoat: 0.45, clearcoatRoughness: 0.35 }));
   B3.plane.rotation.x = -Math.PI / 2;
   B3.plane.position.y = 0.002;
   B3.plane.receiveShadow = true;
   scene.add(B3.plane);
 
-  B3.mat.w = new T.MeshStandardMaterial({ color: 0xf1e7d3, roughness: 0.42, metalness: 0.04 });
-  B3.mat.b = new T.MeshStandardMaterial({ color: 0x2c2b30, roughness: 0.32, metalness: 0.08 });
+  const grain = (a, b, c, seed) => { const g = board3dGrain(a, b, c, 256, seed); g.colorSpace = T.SRGBColorSpace; g.wrapS = g.wrapT = T.RepeatWrapping; return g; };
+  B3.mat.w = new T.MeshPhysicalMaterial({ map: grain("#efe1c3", "#d8c197", "#f7ecd6", 3), roughness: 0.38, clearcoat: 0.7, clearcoatRoughness: 0.22, sheen: 0.2, sheenColor: new T.Color(0xfff3dd) });
+  B3.mat.b = new T.MeshPhysicalMaterial({ map: grain("#2b211b", "#140e0a", "#3b2e25", 5), roughness: 0.3, clearcoat: 0.85, clearcoatRoughness: 0.18 });
+  B3.mat.felt = new T.MeshStandardMaterial({ color: 0x1f4a2c, roughness: 1 });
+  B3.mat.slitW = new T.MeshStandardMaterial({ color: 0x6b5a40, roughness: 0.8 });
+  B3.mat.slitB = new T.MeshStandardMaterial({ color: 0x060404, roughness: 0.8 });
   board3dGeometries();
   board3dEvents();
   new ResizeObserver(() => board3dResize()).observe($("boardWrap"));
@@ -108,43 +126,116 @@ function board3dInit() {
   board3dResize();
 }
 
-/* --- Piezas: perfiles de revolución (radio, altura) y detalles añadidos --- */
+/* --- Madera: una textura con veta (líneas onduladas a lo largo, como en una pieza torneada) --- */
+function board3dGrain(base, dark, light, size, seed) {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = size;
+  const c = cv.getContext("2d");
+  let x = seed * 9973;
+  const rnd = () => { x = (x * 16807) % 2147483647; return (x & 0xffff) / 0xffff; };
+  c.fillStyle = base; c.fillRect(0, 0, size, size);
+  for (let i = 0; i < size * 0.6; i++) {
+    const x0 = rnd() * size, w = 0.6 + rnd() * 2.2, amp = 2 + rnd() * 6, freq = 1 + Math.floor(rnd() * 3), ph = rnd() * 6.28;
+    c.strokeStyle = rnd() < 0.7 ? dark : light;
+    c.globalAlpha = 0.05 + rnd() * 0.16;
+    c.lineWidth = w;
+    c.beginPath();
+    for (let y = 0; y <= size; y += 8) { const xx = x0 + Math.sin(y / size * 6.283 * freq + ph) * amp; y ? c.lineTo(xx, y) : c.moveTo(xx, y); }
+    c.stroke();
+  }
+  c.globalAlpha = 1;
+  return new B3.T.CanvasTexture(cv);
+}
+/* Un «estudio» sencillo para los reflejos: paredes oscuras y unas ventanas luminosas (como RoomEnvironment de Three.js) */
+function board3dEnvironment(renderer) {
+  const T = B3.T, env = new T.Scene(), pmrem = new T.PMREMGenerator(renderer);
+  const room = new T.Mesh(new T.BoxGeometry(24, 14, 24), new T.MeshBasicMaterial({ color: 0x25262b, side: T.BackSide }));
+  room.position.y = 5;
+  env.add(room);
+  const panel = (w, h, pos, rot, s) => { const m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ color: new T.Color(s, s * 0.97, s * 0.9), side: T.DoubleSide })); m.position.set(...pos); m.rotation.set(...rot); env.add(m); };
+  panel(10, 6, [0, 11.8, 0], [Math.PI / 2, 0, 0], 3.2);        // techo
+  panel(7, 5, [-11.8, 6, 3], [0, Math.PI / 2, 0], 4.5);        // ventana a la izquierda
+  panel(5, 3, [11.8, 5, -4], [0, -Math.PI / 2, 0], 1.6);       // otra, más tenue, a la derecha
+  panel(14, 3, [0, 3, -11.8], [0, 0, 0], 0.9);                  // al fondo
+  const tex = pmrem.fromScene(env, 0.035).texture;
+  pmrem.dispose();
+  return tex;
+}
+/* --- Piezas: perfiles de revolución suavizados (radio, altura) y detalles añadidos --- */
 function board3dGeometries() {
   const T = B3.T, V = (x, y) => new T.Vector2(x, y);
   const arc = (cx, cy, r, a0, a1, n = 10) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; return V(Math.max(0, cx + r * Math.cos(a)), cy + r * Math.sin(a)); });
-  const base = [V(0, 0), V(0.37, 0), V(0.37, 0.06), V(0.33, 0.09), V(0.34, 0.12), V(0.27, 0.17)];
-  const lathe = pts => new T.LatheGeometry(pts, 40);
-  B3.geo.p = lathe([...base, V(0.2, 0.21), V(0.13, 0.4), V(0.19, 0.45), V(0.19, 0.48), V(0.11, 0.5), ...arc(0, 0.62, 0.15, -Math.PI / 2 + 0.6, Math.PI / 2)]);
-  B3.geo.r = lathe([...base, V(0.25, 0.22), V(0.21, 0.58), V(0.28, 0.63), V(0.28, 0.82), V(0.2, 0.82), V(0.2, 0.74), V(0, 0.74)]);
-  B3.geo.merlon = new T.BoxGeometry(0.1, 0.1, 0.13);
-  B3.geo.b = lathe([...base, V(0.22, 0.22), V(0.13, 0.52), V(0.21, 0.56), V(0.21, 0.59), V(0.12, 0.62), ...arc(0, 0.82, 0.17, -Math.PI / 2 + 0.3, Math.PI / 2 - 0.25, 12), ...arc(0, 1.03, 0.055, -Math.PI / 2, Math.PI / 2, 6)]);
-  B3.geo.q = lathe([...base, V(0.25, 0.22), V(0.14, 0.72), V(0.24, 0.77), V(0.24, 0.8), V(0.15, 0.83), V(0.25, 1.06), V(0.18, 1.08), ...arc(0, 1.09, 0.1, -0.2, Math.PI / 2, 6)]);
-  B3.geo.ball = new T.SphereGeometry(0.045, 12, 8);
-  B3.geo.k = lathe([...base, V(0.26, 0.22), V(0.15, 0.8), V(0.25, 0.85), V(0.25, 0.88), V(0.16, 0.91), V(0.24, 1.1), V(0.19, 1.13), V(0.1, 1.15), V(0, 1.15)]);
-  B3.geo.crossV = new T.BoxGeometry(0.07, 0.26, 0.07);
-  B3.geo.crossH = new T.BoxGeometry(0.2, 0.07, 0.07);
-  B3.geo.nBase = lathe([...base, V(0.25, 0.22), V(0.25, 0.27), V(0, 0.27)]);
-  // Caballo: silueta de perfil (mirando hacia +x) extruida, sobre una base redonda
+  const smooth = (pts, n = 14) => new T.SplineCurve(pts.map(([a, b]) => V(a, b))).getPoints(n);   // tramo curvo que pasa por esos puntos
+  const lathe = pts => { const g = new T.LatheGeometry(pts, 56); g.computeVertexNormals(); return g; };
+  // Peana común: canto redondeado, garganta y un toro (como las piezas Staunton)
+  const base = [V(0, 0), V(0.375, 0), ...arc(0.355, 0.035, 0.03, -Math.PI / 2, Math.PI / 2, 5).slice(1), V(0.35, 0.075), V(0.315, 0.09),
+    ...arc(0.315, 0.115, 0.03, -Math.PI / 2, Math.PI / 2, 7), V(0.29, 0.15), V(0.265, 0.17)];
+  B3.geo.p = lathe([...base, ...smooth([[0.25, 0.19], [0.19, 0.25], [0.14, 0.34], [0.115, 0.41]]), V(0.19, 0.43), ...arc(0.19, 0.445, 0.017, -Math.PI / 2, Math.PI / 2, 4).slice(1),
+    V(0.12, 0.47), V(0.1, 0.49), ...arc(0, 0.6, 0.155, -Math.PI / 2 + 0.72, Math.PI / 2, 16)]);
+  B3.geo.r = lathe([...base, ...smooth([[0.26, 0.19], [0.235, 0.32], [0.215, 0.48], [0.225, 0.56]]), V(0.28, 0.585), ...arc(0.28, 0.6, 0.016, -Math.PI / 2, Math.PI / 2, 4).slice(1),
+    V(0.265, 0.625), V(0.265, 0.84), V(0.19, 0.84), V(0.19, 0.78), V(0, 0.78)]);
+  // Almenas: seis sectores de corona, extruidos hacia arriba
+  const merlon = new T.Shape(), a = Math.PI / 6 * 0.62;
+  merlon.absarc(0, 0, 0.265, -a, a, false); merlon.absarc(0, 0, 0.19, a, -a, true);
+  const mg = new T.ExtrudeGeometry(merlon, { depth: 0.1, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.01, bevelSegments: 2, curveSegments: 8 });
+  mg.rotateX(-Math.PI / 2);
+  mg.translate(0, 0.84, 0);
+  B3.geo.merlon = mg;
+  B3.geo.b = lathe([...base, ...smooth([[0.25, 0.19], [0.19, 0.3], [0.135, 0.45], [0.12, 0.55]]), V(0.205, 0.575), ...arc(0.205, 0.59, 0.016, -Math.PI / 2, Math.PI / 2, 4).slice(1),
+    V(0.12, 0.62), ...smooth([[0.13, 0.65], [0.185, 0.74], [0.19, 0.82], [0.15, 0.92], [0.07, 1.0], [0.035, 1.025]], 18), ...arc(0, 1.07, 0.048, -Math.PI / 2, Math.PI / 2, 8)]);
+  B3.geo.slit = new T.BoxGeometry(0.02, 0.2, 0.42);
+  B3.geo.q = lathe([...base, ...smooth([[0.26, 0.19], [0.2, 0.36], [0.14, 0.58], [0.13, 0.72]]), V(0.225, 0.75), ...arc(0.225, 0.765, 0.016, -Math.PI / 2, Math.PI / 2, 4).slice(1),
+    V(0.15, 0.8), ...smooth([[0.155, 0.84], [0.19, 0.93], [0.25, 1.04]]), V(0.255, 1.07), V(0.2, 1.075), ...smooth([[0.19, 1.08], [0.15, 1.12], [0.08, 1.16], [0, 1.175]], 10)]);
+  B3.geo.ball = new T.SphereGeometry(0.042, 16, 12);
+  B3.geo.topBall = new T.SphereGeometry(0.06, 20, 14);
+  B3.geo.k = lathe([...base, ...smooth([[0.27, 0.19], [0.21, 0.38], [0.15, 0.62], [0.14, 0.8]]), V(0.245, 0.83), ...arc(0.245, 0.845, 0.016, -Math.PI / 2, Math.PI / 2, 4).slice(1),
+    V(0.16, 0.88), ...smooth([[0.165, 0.92], [0.2, 1.0], [0.26, 1.11]]), V(0.262, 1.14), V(0.2, 1.15), ...smooth([[0.19, 1.155], [0.14, 1.2], [0.06, 1.235], [0, 1.24]], 10)]);
+  // Cruz del rey, con bisel
+  const cr = new T.Shape(), w = 0.035, l = 0.1;
+  [[-w, 0], [w, 0], [w, 0.13], [l, 0.13], [l, 0.2], [w, 0.2], [w, 0.27], [-w, 0.27], [-w, 0.2], [-l, 0.2], [-l, 0.13], [-w, 0.13]].forEach(([x, y], i) => (i ? cr.lineTo(x, y) : cr.moveTo(x, y)));
+  const cg = new T.ExtrudeGeometry(cr, { depth: 0.04, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.012, bevelSegments: 3 });
+  cg.translate(0, 1.225, -0.02);
+  B3.geo.cross = cg;
+  B3.geo.nBase = lathe([...base, ...smooth([[0.26, 0.19], [0.25, 0.23], [0.24, 0.26]]), V(0.2, 0.275), V(0, 0.275)]);
+  // Caballo: cabeza de perfil (mirando hacia +x) con hocico, oreja y crin, extruida con un bisel amplio para que quede redondeada
   const s = new T.Shape();
-  [[-0.2, 0], [0.22, 0], [0.18, 0.18], [0.1, 0.32], [0.24, 0.42], [0.34, 0.5], [0.33, 0.6], [0.2, 0.62], [0.12, 0.72], [0.02, 0.8], [-0.02, 0.9],
-    [-0.08, 0.8], [-0.18, 0.72], [-0.24, 0.52], [-0.24, 0.3]].forEach(([x, y], i) => (i ? s.lineTo(x, y) : s.moveTo(x, y)));
-  s.closePath();
-  const g = new T.ExtrudeGeometry(s, { depth: 0.22, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.035, bevelSegments: 3 });
-  g.translate(0, 0.25, -0.11);
+  s.moveTo(-0.2, 0);
+  s.lineTo(0.19, 0);
+  s.quadraticCurveTo(0.22, 0.12, 0.13, 0.22);       // pecho
+  s.quadraticCurveTo(0.11, 0.3, 0.17, 0.35);        // garganta
+  s.quadraticCurveTo(0.27, 0.4, 0.33, 0.45);        // mandíbula
+  s.quadraticCurveTo(0.385, 0.5, 0.35, 0.56);       // hocico
+  s.quadraticCurveTo(0.27, 0.62, 0.18, 0.66);       // frente
+  s.quadraticCurveTo(0.12, 0.7, 0.1, 0.78);         // hacia la oreja
+  s.lineTo(0.06, 0.9);                              // punta de la oreja
+  s.quadraticCurveTo(0.0, 0.84, -0.04, 0.78);
+  s.quadraticCurveTo(-0.17, 0.72, -0.22, 0.56);     // crin
+  s.quadraticCurveTo(-0.26, 0.42, -0.24, 0.26);
+  s.quadraticCurveTo(-0.27, 0.12, -0.2, 0);
+  const g = new T.ExtrudeGeometry(s, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.055, bevelSize: 0.04, bevelSegments: 5, curveSegments: 14 });
+  g.translate(0, 0.25, -0.04);
+  g.computeVertexNormals();
   B3.geo.nHead = g;
+  B3.geo.eye = new T.SphereGeometry(0.022, 10, 8);
+  B3.geo.felt = new T.CylinderGeometry(0.345, 0.345, 0.012, 40);
 }
 function board3dPiece(p) {
   const T = B3.T, white = p === p.toUpperCase(), mat = white ? B3.mat.w : B3.mat.b, type = p.toLowerCase();
   const g = new T.Group();
-  const add = (geo, x = 0, y = 0, z = 0) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; g.add(m); return m; };
+  const add = (geo, x = 0, y = 0, z = 0, m2 = mat) => { const m = new T.Mesh(geo, m2); m.position.set(x, y, z); m.castShadow = m2 === mat; m.receiveShadow = true; g.add(m); return m; };
+  add(B3.geo.felt, 0, -0.004, 0, B3.mat.felt);
   if (type === "n") {
     add(B3.geo.nBase);
-    const h = add(B3.geo.nHead);
-    h.rotation.y = white ? Math.PI / 2 - 0.75 : -Math.PI / 2 - 0.75;   // hacia el rival, algo girado para que se vea su perfil
+    const head = new T.Group();
+    head.add(Object.assign(new T.Mesh(B3.geo.nHead, mat), { castShadow: true, receiveShadow: true }));
+    for (const z of [-0.093, 0.093]) { const e = new T.Mesh(B3.geo.eye, white ? B3.mat.slitW : B3.mat.slitB); e.position.set(0.2, 0.83, z); head.add(e); }
+    head.rotation.y = white ? Math.PI / 2 - 1.15 : -Math.PI / 2 - 1.15;   // hacia el rival, pero girado para que desde tu lado se vea su perfil
+    g.add(head);
   } else add(B3.geo[type]);
-  if (type === "r") for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4, m = add(B3.geo.merlon, Math.cos(a) * 0.22, 0.87, Math.sin(a) * 0.22); m.rotation.y = -a; }
-  if (type === "q") for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; add(B3.geo.ball, Math.cos(a) * 0.22, 1.09, Math.sin(a) * 0.22); }
-  if (type === "k") { add(B3.geo.crossV, 0, 1.27); add(B3.geo.crossH, 0, 1.3); }
+  if (type === "r") for (let i = 0; i < 6; i++) { const m = add(B3.geo.merlon); m.rotation.y = i * Math.PI / 3; }
+  if (type === "b") { const m = add(B3.geo.slit, 0, 0.86, 0, white ? B3.mat.slitW : B3.mat.slitB); m.rotation.set(0, white ? 0.5 : -0.5 + Math.PI, 0.55); m.position.x = 0.08 * (white ? 1 : -1); }
+  if (type === "q") { for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; add(B3.geo.ball, Math.cos(a) * 0.235, 1.085, Math.sin(a) * 0.235); } add(B3.geo.topBall, 0, 1.215); }
+  if (type === "k") { const c = add(B3.geo.cross); c.rotation.y = white ? 0 : Math.PI; }
   g.userData.p = p;
   return g;
 }
@@ -192,8 +283,18 @@ function board3dDraw() {
   const c = B3.ctx, W = B3_TEX, sq = W / B3_SIZE, off = B3_BORDER * sq, s = viewState(), node = cur();
   const css = getComputedStyle(document.body), light = css.getPropertyValue("--light").trim() || "#f0d9b5", dark = css.getPropertyValue("--dark").trim() || "#b58863";
   const at = i => [off + (i & 7) * sq, off + (i >> 4) * sq];
-  c.fillStyle = "#3d2b20"; c.fillRect(0, 0, W, W);
-  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) { c.fillStyle = (r + f) % 2 ? dark : light; c.fillRect(off + f * sq, off + r * sq, sq + 0.5, sq + 0.5); }
+  if (!B3.grain) { const g = board3dGrain("#808080", "#3a3a3a", "#c8c8c8", 256, 11).image, h = document.createElement("canvas"); h.width = h.height = 256; const hc = h.getContext("2d"); hc.translate(256, 0); hc.rotate(Math.PI / 2); hc.drawImage(g, 0, 0); B3.grain = [g, h]; }
+  c.fillStyle = "#4a3122"; c.fillRect(0, 0, W, W);
+  c.globalCompositeOperation = "overlay"; c.globalAlpha = 0.5; c.drawImage(B3.grain[1], 0, 0, W, W); c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+    const x = off + f * sq, y = off + r * sq;
+    c.fillStyle = (r + f) % 2 ? dark : light; c.fillRect(x, y, sq + 0.5, sq + 0.5);
+    // veta: cada casilla con un trozo distinto y la dirección alternada, como un tablero de marquetería
+    c.globalCompositeOperation = "multiply"; c.globalAlpha = 0.28;
+    c.drawImage(B3.grain[(r + f) % 2], ((r * 37 + f * 61) % 5) * 40, ((r * 53 + f * 29) % 5) * 40, 56, 56, x, y, sq + 0.5, sq + 0.5);
+    c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+  }
+  c.strokeStyle = "rgba(0,0,0,.35)"; c.lineWidth = 3; c.strokeRect(off - 1.5, off - 1.5, 8 * sq + 3, 8 * sq + 3);
   const fill = (i, col) => { const [x, y] = at(i); c.fillStyle = col; c.fillRect(x, y, sq, sq); };
   const last = !ui.visBoard && node.move ? node.move : null;
   if (last) { fill(last.from, "rgba(255,213,79,.42)"); fill(last.to, "rgba(255,213,79,.55)"); }
