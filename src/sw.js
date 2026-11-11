@@ -6,7 +6,7 @@
 const VERSION = "{{VERSION}}";
 const CACHE = "ajedrezbase-app-" + VERSION;
 const ENGINE_CACHE = "ajedrezbase-motor";
-const ENGINES = ["{{SF19_JS}}", "{{SF19_WASM}}", "{{SF19B_JS}}", "{{SF19B_WASM}}", "{{SF10_JS}}"];
+const ENGINES = ["{{SF19_JS}}", "{{SF19_WASM}}", "{{SF19B_JS}}", "{{SF19B_WASM}}", "{{SF10_JS}}", "{{THREE_JS}}", "{{THREE_JS_B}}"];   // también Three.js (tablero 3D)
 const SF19_WASMS = ["{{SF19_WASM}}", "{{SF19B_WASM}}"];   // el mismo fichero en jsDelivr y en unpkg
 const PRECACHE_ENGINES = ["{{SF19_JS}}", "{{SF19_WASM}}"];   // el 10 sólo se guarda si llega a usarse
 const SHELL = [

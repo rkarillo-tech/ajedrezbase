@@ -1817,6 +1817,68 @@ def prueba_salir_movil(browser):
     ctx.close()
 
 
+def prueba_tablero3d(browser):
+    print("Novedades 1.33: tablero en 3D")
+    tres = os.environ.get("THREE_DIR")
+    if not tres or not (pathlib.Path(tres) / "three.module.min.js").exists():
+        print("  (se omite: define THREE_DIR con la carpeta build/ del paquete npm «three@0.170.0»)")
+        return
+    codigo = (pathlib.Path(tres) / "three.module.min.js").read_bytes()
+    def con_three(ctx):
+        ctx.route("**/three@*/build/three.module.min.js", lambda r: r.fulfill(status=200, body=codigo, headers={"Content-Type": "application/javascript", "Access-Control-Allow-Origin": "*"}))
+    ctx = contexto(browser)
+    con_three(ctx)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true; setGame(Pgn.newGame(), { noConfirm: true })")
+    pg.click("#settingsBtn")
+    pg.check("#setBoard3d")
+    pg.keyboard.press("Escape")
+    pg.wait_for_function("B3.active", timeout=20000)
+    comprobar(pg.is_visible("#board3d canvas") and pg.evaluate("getComputedStyle($('board')).visibility") == "hidden" and pg.evaluate("B3.meshes.size") == 32,
+              "al activarlo se descarga Three.js y se ve el tablero en 3D con las 32 piezas")
+    def pulsar(sq):
+        xy = pg.evaluate("""sq => { const p = cur().state.b[Chess.sqIdx(sq)], y = p === "." ? 0 : "pP".includes(p) ? 0.6 : 0.85;
+          const [x, z] = b3Pos(Chess.sqIdx(sq)), v = new B3.T.Vector3(x, y, z).project(B3.camera), r = B3.canvas.getBoundingClientRect();
+          return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }""", sq)
+        pg.mouse.click(xy[0], xy[1])
+        pg.wait_for_timeout(150)
+    pulsar("e2")
+    comprobar(pg.evaluate("ui.selected === Chess.sqIdx('e2')"), "pulsar una pieza la elige")
+    pulsar("e4")
+    pg.wait_for_timeout(400)
+    comprobar(pg.evaluate("cur().san") == "e4" and pg.evaluate("B3.meshes.get(Chess.sqIdx('e4')).userData.p") == "P", "y pulsar el destino juega la jugada (e4)")
+    antes = pg.evaluate("B3.view.theta")
+    caja = pg.locator("#board3d canvas").bounding_box()
+    pg.mouse.move(caja["x"] + caja["width"] / 2, caja["y"] + caja["height"] / 2)
+    pg.mouse.down(); pg.mouse.move(caja["x"] + caja["width"] / 2 + 120, caja["y"] + caja["height"] / 2, steps=6); pg.mouse.up()
+    comprobar(pg.evaluate("B3.view.theta") != antes and pg.evaluate("cur().san") == "e4", "arrastrar gira la vista sin mover piezas")
+    pg.click("#board3d [data-b3=reset]")
+    pg.click("#flipBtn")
+    comprobar(pg.evaluate("B3.active && ui.flipped"), "«Girar» sigue en 3D, desde el lado de las negras")
+    pg.evaluate("setBlind(true)")
+    comprobar(pg.evaluate("[...B3.meshes.values()].every(m => !m.visible)"), "con las piezas ocultas no se ven en 3D")
+    pg.evaluate("setBlind(false)")
+    pg.click('.tab-btn[data-tab="tools"]')
+    pg.click("#toggleEditorModeBtn")
+    comprobar(not pg.evaluate("B3.active") and pg.evaluate("getComputedStyle($('board')).visibility") == "visible", "el editor de posición usa el tablero plano")
+    pg.evaluate("closeEditor()")
+    comprobar(pg.evaluate("B3.active"), "y al cerrarlo vuelve el 3D")
+    pg.click("#settingsBtn")
+    pg.uncheck("#setBoard3d")
+    pg.keyboard.press("Escape")
+    comprobar(not pg.evaluate("B3.active") and pg.is_visible(".square"), "al desactivarlo vuelve el tablero plano")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+    # Sin conexión (no se puede descargar Three.js): se avisa y sigue el tablero plano
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("settings.board3d = true; renderBoard()")
+    pg.wait_for_function("B3.failed", timeout=20000)
+    comprobar(not pg.evaluate("B3.active") and pg.is_visible(".square") and "tablero 3D" in pg.inner_text("#toast"), "si no se puede descargar, se avisa y se sigue con el tablero plano")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_stockfish19(browser):
     sf = os.environ.get("STOCKFISH_DIR")
     if not sf:
@@ -1927,8 +1989,9 @@ def main():
     import subprocess
     subprocess.run([sys.executable, str(ROOT / "build.py")], check=True)
     with sync_playwright() as p:
-        browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
+        browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_tablero3d, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

@@ -25,6 +25,7 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 - Las piezas se deslizan al avanzar y retroceder; si lo prefieres, desactiva «Animar las piezas» o «Rueda del ratón» en ⚙ Ajustes.
 - **▶ Auto** (o `Espacio`) reproduce la partida sola. Mientras se reproduce aparece **⏱ Velocidad del modo Auto**: muy rápida (½ s por jugada), rápida (1 s), normal (2 s), lenta (3,5 s) o muy lenta (6 s). La que elijas se recuerda (también se cambia en ⚙ Ajustes).
 - **⇅ Girar** (o `F`) da la vuelta al tablero.
+- **🧊 Tablero en 3D** (en ⚙ Ajustes): piezas en relieve que puedes mirar desde cualquier ángulo. Se mueve **pulsando la pieza y después la casilla** (en 3D no se arrastran piezas). **Arrastra** sobre el tablero para girar la vista; acerca o aleja con **＋ －**, pellizcando con dos dedos o con `Ctrl` + rueda. **⬒** lo pone visto desde arriba y **⟲** (o un doble clic) vuelve a la vista inicial. La primera vez descarga 0,7 MB (Three.js); la versión instalada lo guarda para usarlo sin conexión. Se ven la última jugada, las jugadas legales, el jaque, las pistas y las flechas; para dibujar flechas, colocar piezas o los ejercicios de visualización se usa el tablero plano.
 - La aplicación detecta jaque mate, ahogado, triple repetición, regla de 50 jugadas y material insuficiente; lo verás en la línea de estado bajo los botones.
 
 ## 📥 3. Importar partidas, PGN y posiciones FEN
@@ -322,7 +323,7 @@ AjedrezBase no tiene servidor ni cuentas: tus datos viven en tu navegador. Para 
 - Para liberar espacio: borra partidas que no uses, cierra el fichero .pgn al terminar y guarda copias de seguridad de vez en cuando.
 
 ## 🛠 22. Ajustes y personalización
-- **⚙ Ajustes**, arriba del todo: diseño de las piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa) y colores del tablero.
+- **⚙ Ajustes**, arriba del todo: diseño de las piezas (clásicas, minimalistas, diagrama, unicode), notación en pantalla (española, figurines, inglesa), colores del tablero y **🧊 Tablero en 3D**.
 - **⚙ Ajustes**: motor (automático, Stockfish 10 o sólo el interno), tiempo por jugada al analizar, número de líneas del motor, tiempo del análisis continuo, token de Lichess, **estado del motor** (qué motor se usa, por qué y si hay una copia guardada, con el botón **🔄 Reintentar Stockfish 19**), coordenadas, mostrar jugadas legales, animar las piezas, rueda del ratón, recordar la partida al recargar, la **velocidad del modo Auto**, el **aspecto** (🌙 oscuro, ☀ claro o 🌓 automático, que sigue el modo claro u oscuro del sistema) y el **tamaño del tablero** (de 60 % a 130 %: «Automático» es el más grande que cabe en la pantalla; más pequeño deja sitio a las jugadas y la lección, y por encima del 100 % sólo crece en pantallas grandes del ordenador; se guarda en cada dispositivo).
 - **🔊** activa o silencia los sonidos.
 - Todos los ajustes se recuerdan en este navegador.

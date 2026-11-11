@@ -57,6 +57,7 @@ function openModal(id) {
     $("setToken").value = settings.token;
     $("tokenResult").textContent = "";
     $("setCoords").checked = settings.coords;
+    $("setBoard3d").checked = !!settings.board3d;
     $("setLegal").checked = settings.showLegal;
     $("setAutosave").checked = settings.autosave;
     $("setAnimate").checked = settings.animate;
@@ -103,6 +104,7 @@ $("setMultipv").onchange = e => { settings.multipv = +e.target.value; saveSettin
 $("setLiveMs").onchange = e => { settings.liveMs = Math.max(500, Math.min(30000, +e.target.value || 4000)); saveSettings(); };
 $("setToken").onchange = e => { settings.token = e.target.value.trim(); saveSettings(); explorerCache.clear(); refreshExplorer(); };
 $("setCoords").onchange = e => { settings.coords = e.target.checked; saveSettings(); renderBoard(); };
+$("setBoard3d").onchange = e => { settings.board3d = e.target.checked; B3.failed = false; saveSettings(); renderBoard(); };
 $("setLegal").onchange = e => { settings.showLegal = e.target.checked; saveSettings(); renderBoard(); };
 $("setAnimate").onchange = e => { settings.animate = e.target.checked; saveSettings(); };
 $("setWheel").onchange = e => { settings.wheel = e.target.checked; saveSettings(); };
@@ -137,7 +139,7 @@ $("setAutosave").onchange = e => { settings.autosave = e.target.checked; saveSet
 
 $("pieceStyleSelect").onchange = e => { settings.pieceStyle = e.target.value; saveSettings(); buildEditorPalettes(); render(); };
 $("displayLang").onchange = e => { settings.lang = e.target.value; saveSettings(); render(); renderLocalEcoList(); };
-$("themeSelect").onchange = e => { settings.theme = e.target.value; saveSettings(); document.body.dataset.theme = settings.theme; };
+$("themeSelect").onchange = e => { settings.theme = e.target.value; saveSettings(); document.body.dataset.theme = settings.theme; if (B3.active) board3dDraw(); };
 $("soundToggle").onclick = () => { settings.sound = !settings.sound; saveSettings(); $("soundToggle").textContent = settings.sound ? "🔊" : "🔇"; if (settings.sound) Sound.play("move"); };
 $("cpuLevel").onchange = e => { settings.cpuLevel = parseCpuLevel(e.target.value); saveSettings(); cpuDialogSync(); };
 $("cpuOpponent").onchange = () => cpuDialogSync();
