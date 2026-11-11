@@ -25,7 +25,7 @@ jobs:
           node tests/test_reglas.js
           node tests/test_logica.js
           python3 -m pip install --quiet playwright
-          python3 -m playwright install --with-deps chromium
+          for i in 1 2 3; do python3 -m playwright install --with-deps chromium && break; [ $i = 3 ] && exit 1; echo "Reintento $i…"; sleep 30; done
           npm pack stockfish@19.0.1 --silent
           mkdir -p /tmp/sf && tar xzf stockfish-19.0.1.tgz -C /tmp/sf package/bin/stockfish-19-lite-single.js package/bin/stockfish-19-lite-single.wasm
           STOCKFISH_DIR=/tmp/sf/package/bin python3 tests/test_app.py

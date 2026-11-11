@@ -169,6 +169,13 @@ function stopTraining(silent) {
   if (silent) $("trainFeedback").hidden = true;
   render();
 }
+/* «⏹ Salir»: cada entrenamiento se cierra a su manera (resumen y vuelta a tu partida en problemas, examen y tarjetas) */
+function exitTraining() {
+  if (trainer.puzzle || Puz.exam) { endPuzzles(); return; }
+  if (trainer.card) { Cards.queue = []; stopTraining(false); endCards(); return; }
+  stopTraining(false);
+  trainFeedback("Entrenamiento detenido.");
+}
 
 /* ---------- 26. Problemas de táctica (cursos/problemas.json, generados con Stockfish) ---------- */
 const PUZZLES = /*__PUZZLES__*/[];

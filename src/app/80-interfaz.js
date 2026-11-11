@@ -44,7 +44,7 @@ document.querySelectorAll("#trainMenu [data-badge-of]").forEach(card => {
 });
 $("trainBackBtn").onclick = () => openTrainSection(null);
 // «Pista» y «Salir» sirven para cualquier entrenamiento: sólo se ven mientras hay uno en marcha
-new MutationObserver(() => { $("trainSessionBtns").hidden = $("stopTrainBtn").disabled && $("hintTrainBtn").disabled; })
+new MutationObserver(() => { $("trainSessionBtns").hidden = ($("stopTrainBtn").disabled && $("hintTrainBtn").disabled) || trainer.puzzle; })
   .observe($("trainSessionBtns"), { attributes: true, attributeFilter: ["disabled"], subtree: true });
 openTrainSection(null);
 
@@ -487,7 +487,7 @@ $("visMode").onchange = () => { $("visPlies").hidden = $("visMode").value !== "l
 $("blindBtn").onclick = () => setBlind(!ui.blind);
 $("peekBtn").onclick = peekPieces;
 $("blindCpuBtn").onclick = () => openCpuDialog(true);
-$("stopTrainBtn").onclick = () => { stopTraining(false); trainFeedback("Entrenamiento detenido."); };
+$("stopTrainBtn").onclick = exitTraining;
 $("hintTrainBtn").onclick = trainerHint;
 $("repNewBtn").onclick = () => createMyRep(null);
 $("repNewName").onkeydown = e => { if (e.key === "Enter") createMyRep(null); };

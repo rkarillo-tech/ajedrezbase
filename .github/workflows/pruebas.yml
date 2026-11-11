@@ -26,9 +26,10 @@ jobs:
       - name: Lógica de la aplicación (repasos, estadísticas, filtros, informe, sincronización)
         run: node tests/test_logica.js
       - name: Instalar Playwright
+        # Con reintentos: a veces los servidores de paquetes de Ubuntu no responden desde GitHub
         run: |
           python3 -m pip install --quiet playwright
-          python3 -m playwright install --with-deps chromium
+          for i in 1 2 3; do python3 -m playwright install --with-deps chromium && break; [ $i = 3 ] && exit 1; echo "Reintento $i…"; sleep 30; done
       - name: Descargar Stockfish 19 (para probarlo sin depender del CDN)
         run: |
           npm pack stockfish@19.0.1 --silent

@@ -165,7 +165,7 @@ main {
 #toolsPanel > .welcome { margin-bottom: 12px; background: var(--deep); }
 .train-session:not(:has(> :not([hidden]))) { display: none; }
 .train-session { margin-bottom: 10px; }
-.train-session .controls { margin-top: 6px; }
+.train-session .controls, #trainSessionBtns { margin-top: 6px; }
 .train-menu-title { margin-top: 14px; }
 .train-menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
 .train-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; text-align: left; padding: 10px 12px; min-height: 64px; background: var(--deep); border: 1px solid var(--border); border-radius: 9px; color: var(--text); cursor: pointer; }
@@ -645,7 +645,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #navControls { order: 1; }
   #drawBar { order: 1; }
   #statusText { order: 2; }
-  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback { order: 3; }
+  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns { order: 3; }
   #moves { order: 4; max-height: 32vh; }
   #varControls { order: 5; }
   #gameMarksBox { order: 5; }
@@ -698,7 +698,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #playBtn { font-size: .74rem; }
   #drawBar { order: 1; margin-top: 3px; }
   #statusText { order: 2; margin-top: 3px; }
-  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback { order: 3; }
+  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns { order: 3; }
   #moves { order: 4; max-height: 52vh; max-height: 52dvh; min-height: 90px; margin-top: 4px; }
   #varControls { order: 5; }
   #gameMarksBox { order: 5; }
