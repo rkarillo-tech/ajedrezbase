@@ -856,10 +856,7 @@ async function finishCard(perfect) {
   if (perfect) Cards.ok++;
   let msg = perfect ? "🏆 ¡Correcto a la primera!" : "✔ Tarjeta resuelta.";
   if (m) {
-    m.srs = m.srs || { box: 0, due: Date.now(), reps: 0 };
-    m.srs.reps++;
-    m.srs.box = perfect ? Math.min(SRS_DAYS.length - 1, m.srs.box + 1) : 1;
-    m.srs.due = Date.now() + SRS_DAYS[m.srs.box] * 864e5;
+    m.srs = srsStep(m.srs || { box: 0, due: Date.now(), reps: 0 }, perfect);
     try { await DB.put("marks", m); } catch {}
     const g = Lib.games.get(m.gameId);
     msg += ` ${CATS[m.cat].icon} ${esc(g ? g.title : "")}, ${esc(markLabel(m))}.`;

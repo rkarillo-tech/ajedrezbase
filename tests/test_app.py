@@ -4,7 +4,7 @@
 Uso:
     python3 -m pip install playwright
     python3 -m playwright install chromium
-    python3 tests/test_app.py
+    python3 tests/test_app.py        (construye antes index.html con build.py)
 
 Las conexiones a Lichess y a los CDN de Stockfish se bloquean para que las pruebas no dependan
 de la red: se usa el motor interno, que es el respaldo sin conexión.
@@ -1872,6 +1872,9 @@ def prueba_stockfish19(browser):
 
 
 def main():
+    # index.html no se guarda en el repositorio: se construye ahora para no probar uno viejo
+    import subprocess
+    subprocess.run([sys.executable, str(ROOT / "build.py")], check=True)
     with sync_playwright() as p:
         browser = p.chromium.launch()
         for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):

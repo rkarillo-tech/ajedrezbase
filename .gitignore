@@ -3,3 +3,8 @@ __pycache__/
 .DS_Store
 Thumbs.db
 node_modules/
+# Generados por build.py: los construye la CI (GitHub Pages y Releases)
+/index.html
+/sw.js
+/sf-worker.js
+/_site/

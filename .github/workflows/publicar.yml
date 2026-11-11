@@ -23,6 +23,7 @@ jobs:
       - name: Probar
         run: |
           node tests/test_reglas.js
+          node tests/test_logica.js
           python3 -m pip install --quiet playwright
           python3 -m playwright install --with-deps chromium
           npm pack stockfish@19.0.1 --silent

@@ -1,9 +1,14 @@
-# Ejecuta todas las pruebas en cada cambio y comprueba que index.html, sw.js y GUIA.md están al día con src/.
-name: Pruebas
+# Ejecuta todas las pruebas en cada cambio y, si pasan en main, publica la web en GitHub Pages.
+# index.html, sw.js y sf-worker.js no se guardan en el repositorio: se generan aquí con build.py.
+# Requisito (una sola vez): Settings → Pages → Build and deployment → Source: «GitHub Actions».
+name: Pruebas y publicación
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   pruebas:
     runs-on: ubuntu-latest
@@ -12,10 +17,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Los ficheros generados coinciden con el código fuente
+      - name: La aplicación se construye y GUIA.md está al día con src/help.html
         run: python3 build.py --check
+      - name: Construir
+        run: python3 build.py
       - name: Núcleo (reglas, motor interno, PGN)
         run: node tests/test_reglas.js
+      - name: Lógica de la aplicación (repasos, estadísticas, filtros, informe, sincronización)
+        run: node tests/test_logica.js
       - name: Instalar Playwright
         run: |
           python3 -m pip install --quiet playwright
@@ -28,3 +37,29 @@ jobs:
         env:
           STOCKFISH_DIR: /tmp/sf/package/bin
         run: python3 tests/test_app.py
+      - name: Montar la web
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: python3 build.py --site _site
+      - name: Preparar la web para GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  publicar:
+    needs: pruebas
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Publicar en GitHub Pages
+        id: despliegue
+        uses: actions/deploy-pages@v4
