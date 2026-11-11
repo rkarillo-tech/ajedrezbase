@@ -122,7 +122,26 @@ src/core.js           Reglas (tablero 0x88), SAN multilingüe, evaluación y mot
 src/pgn.js            Árbol de variantes y lector/escritor PGN ([%cal], [%csl], [%eval], NAG)
 src/eco.js            Libro ECO en español, finales clásicos y antología de partidas
 src/pieces.js         Dibujo de las piezas
-src/app.js            Interfaz, motor, análisis, biblioteca (IndexedDB), marcadores, entrenador
+src/app/              La aplicación, repartida en ficheros que build.py une por orden de nombre (comparten ámbito: el número fija el orden)
+  00-base.js            Utilidades, ajustes, notación, sonido, libro ECO y estado
+  10-motor.js           Stockfish 19 → Stockfish 10 → motor interno, y evaluaciones guardadas
+  20-tablero.js         Dibujo del tablero, interacción (clic, arrastre, flechas), navegación y barras de jugadores
+  25-jugadas.js         Lista de jugadas y variantes, comentario, gráfico, panel del motor y carga de partidas
+  30-analisis.js        Análisis completo, informe, amenaza, «Piensa conmigo», «Habla con tus piezas» y «Aprende de tus errores»
+  40-jugar.js           Jugar contra la CPU (niveles, estilos, reloj) y rival humano
+  45-adivina-ciegas.js  «Adivina la jugada», a ciegas y visualización
+  50-aperturas.js       Consultas a Lichess y explorador de aperturas
+  60-biblioteca.js      Biblioteca (IndexedDB), filtros, .pgn abierto, marcadores, tarjetas y copias de seguridad
+  65-finales-editor.js  Tablas Syzygy y editor de posición
+  70-entrenar.js        Entrenador con repetición espaciada, problemas, examen y comparación con el repertorio
+  72-repertorios.js     Mis repertorios: crearlos, entrenarlos y revisarlos
+  74-hoy.js             Plan de hoy, racha y calendario
+  80-interfaz.js        Pestañas, menú de «Entrenar», modales, botones y atajos
+  85-estadisticas.js    Análisis por lotes, estadísticas, ejercicios con tus errores y búsqueda de posiciones
+  88-cursos.js          Cursos en PGN
+  90-imagen-impresion.js  Tablero en SVG: imagen PNG, impresión y minitablero
+  92-ayuda-instalar.js  Ayuda y aplicación instalable
+  99-arranque.js        Primeros pasos y arranque
 src/help.html         Guía de uso (también se exporta a GUIA.md)
 cursos/               Cursos en PGN (aperturas, táctica, estrategia, finales y partidas), incluidos en la aplicación al construirla
 assets/               Icono (icon.svg y sus PNG, generados con tools/gen_icons.py) y captura
