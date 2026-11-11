@@ -92,5 +92,26 @@ const malos = problemas.filter(p => {
 });
 comprobar(problemas.length >= 100 && !malos.length && new Set(problemas.map(p => p.id)).size === problemas.length, `los ${problemas.length} problemas de táctica son legales, con tema, dificultad e identificador único`);
 
+// Paquetes descargables (problemas/*.json): mismos requisitos, y sin repetir identificadores entre paquetes ni con el banco
+const dirPaquetes = path.join(__dirname, "..", "problemas");
+const indice = JSON.parse(fs.readFileSync(path.join(dirPaquetes, "indice.json"), "utf8"));
+const idsVistos = new Set(problemas.map(p => p.id));
+let totalPaquetes = 0, malosPaquetes = 0, repetidos = 0, indiceMal = 0;
+for (const k of indice) {
+  const pk = JSON.parse(fs.readFileSync(path.join(dirPaquetes, k.id + ".json"), "utf8"));
+  if (pk.id !== k.id || pk.puzzles.length !== k.count) indiceMal++;
+  for (const p of pk.puzzles) {
+    totalPaquetes++;
+    if (idsVistos.has(p.id)) repetidos++;
+    idsVistos.add(p.id);
+    try {
+      let s = Chess.parseFen(p.fen), ok = p.moves.length >= 2 && p.moves.length % 2 === 0 && Array.isArray(p.themes) && p.themes.length && p.rating >= k.min && p.rating < k.max;
+      for (const u of p.moves) { const m = Chess.moveFromUci(s, u); if (!m) { ok = false; break; } s = Chess.apply(s, m); }
+      if (!ok) malosPaquetes++;
+    } catch { malosPaquetes++; }
+  }
+}
+comprobar(indice.length >= 3 && totalPaquetes >= 3000 && !malosPaquetes && !repetidos && !indiceMal, `los ${totalPaquetes} problemas de los ${indice.length} paquetes descargables son legales, de su nivel y sin repetir`);
+
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log("\nTodas las pruebas del núcleo superadas.");

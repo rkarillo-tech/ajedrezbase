@@ -1,0 +1,42 @@
+[
+ {
+  "id": "iniciacion",
+  "name": "Iniciación",
+  "min": 600,
+  "max": 1000,
+  "count": 1500,
+  "kb": 250
+ },
+ {
+  "id": "basico",
+  "name": "Básico",
+  "min": 1000,
+  "max": 1400,
+  "count": 1500,
+  "kb": 260
+ },
+ {
+  "id": "intermedio",
+  "name": "Intermedio",
+  "min": 1400,
+  "max": 1800,
+  "count": 1500,
+  "kb": 263
+ },
+ {
+  "id": "avanzado",
+  "name": "Avanzado",
+  "min": 1800,
+  "max": 2200,
+  "count": 1500,
+  "kb": 270
+ },
+ {
+  "id": "experto",
+  "name": "Experto",
+  "min": 2200,
+  "max": 2800,
+  "count": 1500,
+  "kb": 278
+ }
+]

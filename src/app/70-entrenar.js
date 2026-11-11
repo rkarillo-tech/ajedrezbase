@@ -166,7 +166,11 @@ const PUZZLES = /*__PUZZLES__*/[];
 const PUZZLE_THEMES = {
   mateIn1: "Mate en 1", mateIn2: "Mate en 2", mateIn3: "Mate en 3", mateIn4: "Mate en 4", fork: "Horquilla", pin: "Clavada",
   discoveredAttack: "Ataque a la descubierta", doubleCheck: "Jaque doble", hangingPiece: "Pieza colgada", sacrifice: "Sacrificio",
-  backRankMate: "Mate del pasillo", smotheredMate: "Mate de la coz", promotion: "Coronación", endgame: "Final", short: "Una sola jugada"
+  backRankMate: "Mate del pasillo", smotheredMate: "Mate de la coz", promotion: "Coronación", endgame: "Final", short: "Una sola jugada",
+  // Temas que sólo traen los paquetes descargables (base de problemas de Lichess)
+  mateIn5: "Mate en 5", skewer: "Enfilada", deflection: "Desviación", attraction: "Atracción", capturingDefender: "Eliminar al defensor",
+  trappedPiece: "Pieza atrapada", intermezzo: "Jugada intermedia", clearance: "Despeje", interference: "Interferencia",
+  quietMove: "Jugada tranquila", defensiveMove: "Jugada defensiva", zugzwang: "Zugzwang"
 };
 const PUZZLE_LEVELS = [[0, 1100, "Fácil"], [1100, 1500, "Medio"], [1500, 1900, "Difícil"], [1900, 9999, "Muy difícil"]];
 const puzzleLevelOf = r => PUZZLE_LEVELS.findIndex(([a, b]) => r >= a && r < b);
@@ -213,6 +217,103 @@ function initPuzzleFilters() {
   $("puzzleTheme").innerHTML = opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
   $("puzzleLevel").innerHTML = `<option value="">Todas las dificultades</option>` + PUZZLE_LEVELS.map(([a, b, n], i) => `<option value="${i}">${n} (${b > 3000 ? "más de " + a : a + "–" + b})</option>`).join("");
 }
+/* ---------- 26p. Paquetes de problemas descargables (problemas/*.json, de la base de Lichess, CC0) ----------
+   Se descargan a petición del usuario y se guardan en una base IndexedDB propia («ajedrezbase-problemas»),
+   aparte de la biblioteca, para no tocar su esquema. Al arrancar se añaden al banco PUZZLES. */
+const PUZZLE_PACKS = /*__PACKS__*/[];
+const PACKS_URL = "https://rkarillo-tech.github.io/ajedrezbase/problemas/";
+const Packs = {
+  db: null, have: new Set(), busy: "",
+  open() {
+    return new Promise(res => {
+      if (!window.indexedDB) { res(false); return; }
+      let req;
+      try { req = indexedDB.open("ajedrezbase-problemas", 1); } catch { res(false); return; }
+      req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains("packs")) req.result.createObjectStore("packs", { keyPath: "id" }); };
+      req.onsuccess = () => { this.db = req.result; res(true); };
+      req.onerror = req.onblocked = () => res(false);
+    });
+  },
+  tx(mode, fn) {
+    return new Promise((res, rej) => {
+      if (!this.db) { res(mode === "readonly" ? [] : undefined); return; }
+      const t = this.db.transaction("packs", mode), r = fn(t.objectStore("packs"));
+      t.oncomplete = () => res(r && r.result);
+      t.onerror = t.onabort = () => rej(t.error || Error("no se pudo guardar (¿sin espacio?)"));
+    });
+  }
+};
+/* Sólo entran problemas bien formados y que no estén ya en el banco */
+function addPackPuzzles(id, list) {
+  const ids = new Set(PUZZLES.map(p => p.id));
+  let n = 0;
+  for (const p of Array.isArray(list) ? list : []) {
+    if (!p || typeof p.id !== "string" || ids.has(p.id) || typeof p.fen !== "string" || !Array.isArray(p.moves) || p.moves.length < 2 || p.moves.length % 2 || !Array.isArray(p.themes) || !(p.rating > 0)) continue;
+    if (!p.moves.every(u => typeof u === "string" && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(u))) continue;
+    PUZZLES.push({ id: p.id, fen: p.fen, moves: p.moves, themes: p.themes.filter(x => typeof x === "string"), rating: +p.rating, pack: id });
+    ids.add(p.id); n++;
+  }
+  if (n) Packs.have.add(id);
+  return n;
+}
+function refreshPuzzleBank() {
+  const th = $("puzzleTheme").value, lv = $("puzzleLevel").value;
+  initPuzzleFilters();
+  if ([...$("puzzleTheme").options].some(o => o.value === th)) $("puzzleTheme").value = th;
+  $("puzzleLevel").value = lv;
+  renderPacks(); renderPuzzleInfo(); renderToday();
+}
+async function initPacks() {
+  renderPacks();
+  if (!(await Packs.open())) return;
+  try {
+    const recs = await Packs.tx("readonly", s => s.getAll());
+    (recs || []).forEach(r => addPackPuzzles(r.id, r.puzzles));
+  } catch (e) { console.warn("No se pudieron leer los paquetes de problemas:", e); }
+  if (Packs.have.size) refreshPuzzleBank();
+}
+async function downloadPack(id) {
+  if (Packs.busy) return;
+  Packs.busy = id; renderPacks();
+  try {
+    const res = await fetch((/^https?:$/.test(location.protocol) ? "problemas/" : PACKS_URL) + id + ".json", { cache: "no-cache" });
+    if (!res.ok) throw Error("el servidor respondió " + res.status);
+    const data = await res.json();
+    const n = addPackPuzzles(id, data && data.puzzles);
+    if (!n) throw Error("el paquete no trae problemas nuevos");
+    let saved = true;
+    try { await Packs.tx("readwrite", s => s.put({ id, puzzles: data.puzzles, date: Date.now() })); saved = !!Packs.db; } catch (e) { console.warn(e); saved = false; }
+    toast(saved ? `📦 ${n} problemas añadidos. Quedan guardados en este navegador y funcionan sin conexión.` : `📦 ${n} problemas añadidos, pero este navegador no ha podido guardarlos: habrá que descargarlos otra vez al volver.`, 6000);
+  } catch (e) {
+    toast(`No se pudo descargar el paquete (${e.message || e}). Hace falta conexión a internet.`, 6000);
+  }
+  Packs.busy = "";
+  refreshPuzzleBank();
+}
+async function removePack(id) {
+  if (trainer.active && trainer.puzzle) { toast("Termina antes la sesión de problemas."); return; }
+  for (let i = PUZZLES.length - 1; i >= 0; i--) if (PUZZLES[i].pack === id) PUZZLES.splice(i, 1);
+  Packs.have.delete(id);
+  try { await Packs.tx("readwrite", s => s.delete(id)); } catch (e) { console.warn(e); }
+  toast("Paquete quitado. Tu historial de aciertos se conserva por si lo vuelves a descargar.", 5000);
+  refreshPuzzleBank();
+}
+function renderPacks() {
+  const box = $("packList");
+  if (!box) return;
+  const extra = PUZZLES.filter(p => p.pack).length;
+  $("packBadge").textContent = extra ? `+${extra}` : "";
+  $("packBadge").hidden = !extra;
+  box.innerHTML = PUZZLE_PACKS.map(k => {
+    const have = Packs.have.has(k.id), busy = Packs.busy === k.id;
+    return `<div class="pack-row"><span><b>${esc(k.name)}</b> <span class="small">nivel ${k.min}–${k.max} · ${k.count} problemas · ${k.kb} KB</span></span>
+      ${have ? `<span class="srs-pill ok">✔ Descargado</span><button class="sm-btn danger" data-pack-del="${esc(k.id)}">Quitar</button>`
+             : `<button class="sm-btn primary" data-pack-get="${esc(k.id)}"${Packs.busy ? " disabled" : ""}>${busy ? "⏳ Descargando…" : "⬇ Descargar"}</button>`}</div>`;
+  }).join("");
+  box.querySelectorAll("[data-pack-get]").forEach(b => b.onclick = () => downloadPack(b.dataset.packGet));
+  box.querySelectorAll("[data-pack-del]").forEach(b => b.onclick = () => removePack(b.dataset.packDel));
+}
+
 function renderPuzzleInfo() {
   if (!$("puzzleInfo")) return;
   const pool = puzzlePool(), s = puzSrs(), now = Date.now(), R = puzRating();
