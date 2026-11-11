@@ -23,7 +23,7 @@ async function ensureSummaries(recs) {
     if (a) { rec.analysis = a; changed.push(rec); }
     if (++k % 15 === 0) await new Promise(r => setTimeout(r, 0));
   }
-  if (changed.length) { try { await DB.putMany("games", changed); } catch (e) { console.warn("No se pudieron guardar los resúmenes:", e); } }
+  if (changed.length) { try { await DB.putMany("games", changed, { raw: true }); } catch (e) { console.warn("No se pudieron guardar los resúmenes:", e); } }
   return changed.length;
 }
 const Batch = { running: false, cancel: false, done: 0, total: 0, status: "" };

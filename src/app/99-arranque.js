@@ -69,5 +69,5 @@ if (firstVisit) showWelcome(true);
   $("moveViewBtn").textContent = settings.moveView === "sheet" ? "📜 Ver como lista" : "📋 Ver como planilla";
   $("liUser").value = settings.lichessUser || "";
   Engine.init();
-  initLibrary().then(() => openSharedLink());
+  initLibrary().then(() => { initSync(); openSharedLink(); });
 })();

@@ -72,6 +72,7 @@ async function importCourseFile(file) {
 function removeUserCourse(id) {
   const c = COURSES.find(x => x.id === id);
   if (!c || !c.user || !confirm(`¿Quitar el curso «${c.name}»? Se borra de este navegador (tu fichero .pgn no se toca).`)) return;
+  syncTomb(["curso:" + id]);
   LS.set(USER_COURSES_KEY, userCourses().filter(x => x.id !== id));
   COURSES.splice(COURSES.indexOf(c), 1);
   delete COURSE_PGN[id]; delete courseCache[id];

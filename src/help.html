@@ -188,10 +188,33 @@
               <li>pulsa una fila para abrirla, ☆ para marcarla como favorita, 🎯 para entrenarla, 🗑 para borrarla;</li>
               <li>marca varias casillas y usa <b>🗑 Borrar seleccionadas</b> o <b>⬇ Exportar .pgn</b> (si no seleccionas nada, exporta las que estés viendo).</li>
             </ul></li>
-          <li><b>⬇ Copia de seguridad</b> descarga un archivo con todas tus partidas y marcadores; <b>⬆ Restaurar copia</b> lo vuelve a cargar (sin duplicar lo que ya tengas).</li>
+          <li><b>⬇ Copia de seguridad</b> descarga un archivo con todo lo tuyo: partidas, marcadores, progreso del entrenamiento (problemas, repasos, racha, cursos) y ajustes. <b>⬆ Restaurar copia</b> lo vuelve a cargar y lo <b>combina</b> con lo que ya tengas: no duplica ni borra nada.</li>
+          <li><b>🔄 Varios dispositivos</b>: para tener lo mismo en el ordenador y en el móvil sin copias a mano, mira <a href="#" class="help-link" data-help="help-sync">Sincronizar entre dispositivos</a>.</li>
         </ul>
         <div class="example"><b>Ejemplo:</b> tienes 30 partidas de Siciliana guardadas → escribe «siciliana» en el buscador → marca «Todas» → «⬇ Exportar .pgn» para llevarlas a ChessBase.</div>
-        <p class="warn-note">⚠ La biblioteca vive en <b>este navegador y en esta dirección</b>. No es la misma si abres la página desde GitHub Pages que desde el archivo de tu ordenador, ni en Chrome que en Firefox. Para pasarla de un sitio a otro, usa la copia de seguridad.</p>
+        <p class="warn-note">⚠ La biblioteca vive en <b>este navegador y en esta dirección</b>. No es la misma si abres la página desde GitHub Pages que desde el archivo de tu ordenador, ni en Chrome que en Firefox. Para pasarla de un sitio a otro, usa la copia de seguridad o la sincronización.</p>
+      </details>
+
+      <details id="help-sync">
+        <summary>🔄 Sincronizar entre dispositivos</summary>
+        <p>AjedrezBase no tiene servidor ni cuentas: tus datos viven en tu navegador. Para tener lo mismo en varios dispositivos se usa <b>un archivo tuyo</b>, guardado en una carpeta que ya se sincronice sola (Google Drive, OneDrive, Dropbox…). La aplicación escribe ahí cada cambio y lee lo que hayan escrito los demás.</p>
+        <div class="steps">
+          <ol>
+            <li><b>En el primer dispositivo</b>: ⚙ Ajustes → «🔄 Sincronizar entre dispositivos» → <b>🔗 Crear archivo nuevo</b> y guárdalo dentro de tu carpeta de Drive (por ejemplo <code>ajedrezbase-sync.json</code>).</li>
+            <li><b>En los demás</b>: ⚙ Ajustes → <b>📂 Usar un archivo que ya existe</b> y elige ese mismo archivo. Lo que hubiera en ese dispositivo se combina con lo del archivo.</li>
+            <li>Ya está. Arriba aparece <b>☁</b> cuando todo está al día (⏳ guardando, 🔄 sincronizando, ⚠ necesita tu atención). Púlsalo para sincronizar al momento.</li>
+          </ol>
+        </div>
+        <ul>
+          <li><b>Qué viaja</b>: la biblioteca (partidas, etiquetas, favoritas, versiones, repasos), los marcadores y tarjetas, el progreso de los problemas y tu nivel, los repasos del repertorio, las lecciones hechas, tus cursos añadidos, la racha y el calendario de actividad, y los ajustes.</li>
+          <li><b>Qué no viaja</b>: el token de Lichess, el motor elegido y el tamaño del tablero (son de cada dispositivo), la partida que tienes en el tablero sin guardar y los paquetes de problemas descargados (se vuelven a descargar en un momento).</li>
+          <li><b>Cómo se combina</b>: lo que sólo está en un lado se conserva; si la misma partida se cambió en los dos, queda la modificada más tarde; lo que borras en un dispositivo se borra en los demás. El progreso se suma entrada a entrada (nunca pierdes un problema resuelto).</li>
+          <li><b>Cuándo sincroniza</b>: al abrir la aplicación, al volver a su pestaña, unos segundos después de cada cambio y cada minuto si el archivo ha cambiado.</li>
+          <li><b>🟡 Reconectar</b>: por seguridad, el navegador puede pedirte que vuelvas a autorizar el archivo al abrir la aplicación. Pulsa ⚠ (arriba) o «Reconectar» en Ajustes; si eliges «Permitir en cada visita», no lo volverá a pedir.</li>
+          <li><b>Navegadores</b>: vincular un archivo funciona en <b>Chrome y Edge</b> (ordenador y Android). En Firefox, Safari y iPhone/iPad no se puede: usa <b>⬇ Copia de seguridad</b> y <b>⬆ Restaurar copia</b> (puedes guardar la copia en Drive y abrirla desde el otro dispositivo); al restaurar se combina igual.</li>
+          <li><b>En el ordenador</b> hace falta la aplicación de Drive/OneDrive/Dropbox para escritorio, que es la que mantiene la carpeta al día. Dale unos segundos para subir el archivo antes de abrir AjedrezBase en el otro dispositivo.</li>
+        </ul>
+        <p class="warn-note">⚠ El archivo guarda sólo la última versión. Tus datos siguen además en cada navegador, y Drive conserva versiones anteriores, pero conviene hacer una copia de seguridad de vez en cuando y guardarla en otro sitio.</p>
       </details>
 
       <details id="help-marcadores">
@@ -469,7 +492,7 @@
           <dt>Importo en inglés y veo las jugadas en español</dt>
           <dd>Es normal: la «Notación en pantalla» de ⚙ Ajustes sólo cambia cómo se muestran. Elige «Inglesa» si prefieres verlas como en el PGN.</dd>
           <dt>«No aparece mi biblioteca»</dt>
-          <dd>La biblioteca depende del navegador y de la dirección desde la que abres la página. Ábrela siempre igual, o usa ⬇ Copia de seguridad / ⬆ Restaurar copia para pasarla.</dd>
+          <dd>La biblioteca depende del navegador y de la dirección desde la que abres la página. Ábrela siempre igual, o usa ⬇ Copia de seguridad / ⬆ Restaurar copia para pasarla, o vincula un archivo de sincronización (⚙ Ajustes).</dd>
           <dt>El gráfico sale casi vacío</dt>
           <dd>Sólo se dibuja con las posiciones evaluadas. Pulsa 📈 Completar gráfico o 🤖 Analizar y comentar.</dd>
           <dt>«Jugada ilegal o no reconocida» al importar</dt>
