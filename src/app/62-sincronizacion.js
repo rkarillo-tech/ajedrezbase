@@ -13,7 +13,7 @@ let syncHandle = null, syncSeen = 0, syncBusy = false, syncAgain = false, syncDi
 const SYNC_OK = typeof window.showSaveFilePicker === "function" && typeof window.showOpenFilePicker === "function";
 const SYNC_TYPES = [{ description: "Archivo de sincronización de AjedrezBase", accept: { "application/json": [".json"] } }];
 const SYNC_TOMB_KEY = "ajedrezSyncBorrados";
-const SYNC_DEVICE_SETTINGS = ["token", "engine", "boardSize", "welcomed", "board3d", "board3dSet"];   // propios de cada dispositivo: no viajan
+const SYNC_DEVICE_SETTINGS = ["token", "engine", "boardSize", "welcomed", "board3d"];   // propios de cada dispositivo: no viajan
 const newUid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 function strHash(s) {
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;

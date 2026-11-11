@@ -17,7 +17,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 
 | | |
 | --- | --- |
-| **Tablero** | Arrastrar o clic-clic, coronación a elegir, flechas y círculos de colores (clic derecho, Ctrl + arrastrar o el botón ✏, que va bien con el dedo y con los paneles táctiles), 4 estilos de piezas, 5 colores de tablero, **🧊 tablero en 3D** opcional, con piezas realistas de mármol o sencillas (gira la vista con el dedo o el ratón), tamaño ajustable y aspecto oscuro, claro o automático |
+| **Tablero** | Arrastrar o clic-clic, coronación a elegir, flechas y círculos de colores (clic derecho, Ctrl + arrastrar o el botón ✏, que va bien con el dedo y con los paneles táctiles), 4 estilos de piezas, 5 colores de tablero, **🧊 tablero en 3D** opcional con piezas Staunton de torneo (gira la vista con el dedo o el ratón), tamaño ajustable y aspecto oscuro, claro o automático |
 | **Variantes** | Árbol completo: variantes anidadas, promover, hacer principal, cortar; comentarios y símbolos `!` `?` `±`… en cada jugada |
 | **PGN** | Importa notación española (`Cf3`), inglesa, figurines, coordenadas y PGN completos de Lichess, Chess.com o ChessBase; exporta PGN estándar; conserva los tiempos de reloj (`[%clk]`) y muestra cuánto se tardó en cada jugada |
 | **Motor** | Stockfish 19 (NNUE) en el navegador: hasta 3 líneas, flecha, barra de evaluación, **🧠 Piensa conmigo** (`T`: el razonamiento de la mejor jugada explicado en palabras, con la línea paso a paso, las alternativas y la jugada tentadora que falla) **🗣 Habla con tus piezas** (`H`: entrevista a cada pieza, la más infeliz cuenta su casilla soñada y la ruta para llegar, revisada por el motor; también con las piezas del rival, para la profilaxis) y **👁 Ver amenaza** (`X`); nube de Lichess y motor propio de respaldo sin conexión |
@@ -107,7 +107,7 @@ archivo en una vista previa). Usa la versión web o abre el archivo directamente
 Puedes usarlo, copiarlo, modificarlo y distribuirlo libremente, manteniendo el aviso de autoría.
 Componentes y servicios de terceros: ver [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 Stockfish (GPL v3) **no** forma parte de este repositorio: el navegador lo descarga de jsDelivr (o, si no responde, de unpkg o cdnjs) al usarlo.
-Tampoco Three.js (MIT), que sólo se descarga si se activa el tablero en 3D. Las piezas realistas del 3D (`assets/3d/piezas.bin`) son el modelo «A Beautiful Game» (CC BY 4.0), reducido con `tools/modelos_3d.js`.
+Tampoco Three.js (MIT), que sólo se descarga si se activa el tablero en 3D. Las piezas del 3D (`assets/3d/piezas.bin`) son el juego Staunton «Chess board & pieces» de OpenGameArt (CC0), reducido con `tools/modelos_3d.js`.
 
 ---
 
@@ -189,7 +189,7 @@ SF=/tmp/sf/package/bin/stockfish-19-lite-single.js node tools/revisar_cursos.js 
 ```
 
 Los repertorios y las partidas comentadas se generan con `node tools/repertorios.js` y `node tools/partidas_comentadas.js`.
-Las piezas realistas del tablero 3D (`assets/3d/piezas.bin`) se regeneran con `node tools/modelos_3d.js` (las instrucciones están al principio del fichero).
+Las piezas del tablero 3D (`assets/3d/piezas.bin`) se regeneran con `tools/modelos_3d_exportar.py` y `node tools/modelos_3d.js` (las instrucciones están al principio de este último).
 El banco de problemas (`cursos/problemas.json`) se genera y se depura con Stockfish:
 
 ```bash
