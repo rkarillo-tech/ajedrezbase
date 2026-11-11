@@ -67,7 +67,11 @@ rueda del ratón sobre el tablero para avanzar y retroceder.
 
 **¿Dónde se guardan mis partidas?** Sólo en tu navegador (IndexedDB). Nada se sube a ningún servidor.
 La biblioteca depende del navegador y de la dirección: no es la misma en la versión web que en el archivo descargado.
-Para pasarla de un sitio a otro, usa **⬇ Copia de seguridad** y **⬆ Restaurar copia**.
+Para pasarla de un sitio a otro, usa **⬇ Copia de seguridad** y **⬆ Restaurar copia** (llevan también el progreso y los ajustes).
+
+**¿Puedo tener lo mismo en el ordenador y en el móvil?** Sí. En ⚙ Ajustes → «🔄 Sincronizar entre dispositivos» vinculas un archivo `.json`
+de tu carpeta de Google Drive, OneDrive o Dropbox, y haces lo mismo en los demás dispositivos: cada cambio se guarda ahí y se combina solo
+(Chrome y Edge, en ordenador y Android). En otros navegadores, pasa la copia de seguridad: al restaurarla se combina igual.
 
 **¿Se guarda todo lo que importo?** No. Importar o abrir un `.pgn` no guarda nada; sólo lo que guardas con 💾.
 En **📚 Biblioteca** tienes un medidor de lo que ocupa todo.
@@ -132,6 +136,7 @@ src/app/              La aplicación, repartida en ficheros que build.py une por
   45-adivina-ciegas.js  «Adivina la jugada», a ciegas y visualización
   50-aperturas.js       Consultas a Lichess y explorador de aperturas
   60-biblioteca.js      Biblioteca (IndexedDB), filtros, .pgn abierto, marcadores, tarjetas y copias de seguridad
+  62-sincronizacion.js  Sincronización entre dispositivos con un archivo compartido y mezcla de copias
   65-finales-editor.js  Tablas Syzygy y editor de posición
   70-entrenar.js        Entrenador con repetición espaciada, problemas, examen y comparación con el repertorio
   72-repertorios.js     Mis repertorios: crearlos, entrenarlos y revisarlos

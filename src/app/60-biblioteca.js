@@ -43,13 +43,16 @@ const DB = {
     if (this.kind === "idb") return this._tx(store, "readonly", s => s.getAll());
     return this.mem[store].map(x => Object.assign({}, x));
   },
-  async putMany(store, recs) {
+  /* Cada cambio lleva su identificador estable y su fecha, para combinar dispositivos (opts.raw: se guarda tal cual) */
+  async putMany(store, recs, opts = {}) {
     if (!recs.length) return [];
+    if (!opts.raw) { const now = Date.now(); recs.forEach(r => { if (!r.uid) r.uid = newUid(); r._m = now; }); }
     if (this.kind === "idb") {
       const clean = recs.map(r => { const c = Object.assign({}, r); if (c.id == null) delete c.id; return c; });
       const ids = await this._tx(store, "readwrite", s => clean.map(r => s.put(r)));
       recs.forEach((r, i) => { r.id = ids[i]; });
       announceLibChange();
+      if (!opts.raw) syncTouch();
       return ids;
     }
     const arr = this.mem[store];
@@ -60,11 +63,13 @@ const DB = {
       return r.id;
     });
     if (!LS.set("ajedrezLibFallback", this.mem)) throw Error("no queda espacio en el almacén de este navegador");
+    if (!opts.raw) syncTouch();
     return ids;
   },
-  async put(store, rec) { return (await this.putMany(store, [rec]))[0]; },
-  async delMany(store, ids) {
+  async put(store, rec, opts) { return (await this.putMany(store, [rec], opts))[0]; },
+  async delMany(store, ids, opts = {}) {
     if (!ids.length) return;
+    if (!opts.raw) { syncTomb(ids.map(id => (Lib[store].get(id) || {}).uid).filter(Boolean)); setTimeout(syncTouch, 0); }
     if (this.kind === "idb") { await this._tx(store, "readwrite", s => { ids.forEach(id => s.delete(id)); return null; }); announceLibChange(); return; }
     const set = new Set(ids);
     this.mem[store] = this.mem[store].filter(x => !set.has(x.id));

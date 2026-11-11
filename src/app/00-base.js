@@ -8,7 +8,12 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
+  /* raw: no avisa a la sincronización (lo usa ella misma al aplicar lo que llega de otro dispositivo) */
+  set(k, v, raw) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch { return false; }
+    try { if (!raw && syncState === "ok" && SYNC_LS[k]) syncTouch(); } catch {}
+    return true;
+  }
 };
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 function throttle(fn, ms) {
@@ -59,7 +64,7 @@ const DEFAULTS = {
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
-const saveSettings = () => LS.set("ajedrezSettings", settings);
+const saveSettings = () => { settings._m = Date.now(); return LS.set("ajedrezSettings", settings); };
 
 /* ---------- 2. Notación y nombres ---------- */
 const PIECE_ART = { p: "el peón", n: "el caballo", b: "el alfil", r: "la torre", q: "la dama", k: "el rey" };

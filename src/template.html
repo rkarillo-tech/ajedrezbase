@@ -95,6 +95,7 @@ h1 { font-size: 1.12rem; margin: 0; white-space: nowrap; }
 }
 .header-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .header-actions select { width: auto; }
+@media (max-width: 640px) { #syncChip.quiet { display: none; } }
 
 main {
   max-width: 1600px; margin: auto; padding: 12px;
@@ -746,6 +747,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   </div>
   <div class="header-actions">
     <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor (nivel, estilo, ventaja y reloj) o contra otra persona en este dispositivo">🤖 Jugar vs CPU</button>
+    <button id="syncChip" hidden></button>
     <button id="soundToggle" title="Sonido de las jugadas" aria-label="Sonido">🔊</button>
     <button id="settingsBtn" title="Ajustes (motor, token de Lichess, análisis)" aria-label="Ajustes">⚙</button>
     <button id="installBtn" class="primary" hidden title="Instalar AjedrezBase como aplicación (funciona sin conexión)">⬇ Instalar</button>
@@ -1186,7 +1188,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <label class="switch"><input type="checkbox" id="libSelectAll"> Todas</label>
           <button id="libDeleteSel" class="sm-btn danger" disabled>🗑 Borrar seleccionadas</button>
           <button id="libExportPgn" class="sm-btn" title="Exporta las seleccionadas (o todas las visibles) a un .pgn">⬇ Exportar .pgn</button>
-          <button id="libBackup" class="sm-btn" title="Copia completa (partidas + marcadores) en un archivo">⬇ Copia de seguridad</button>
+          <button id="libBackup" class="sm-btn" title="Copia completa en un archivo: partidas, marcadores, progreso del entrenamiento y ajustes">⬇ Copia de seguridad</button>
           <button id="libRestore" class="sm-btn">⬆ Restaurar copia</button>
           <input type="file" id="jsonFileInput" accept=".json" hidden>
         </div>
@@ -1611,6 +1613,11 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <option value="light">☀ Claro</option>
       <option value="auto">🌓 Automático (como el sistema)</option>
     </select>
+    <label id="syncLabel">🔄 Sincronizar entre dispositivos</label>
+    <div class="note-box small" id="syncStatus" style="margin-top:2px" aria-labelledby="syncLabel"></div>
+    <div class="controls" id="syncBtns"></div>
+    <p class="small" style="margin-top:2px">Vincula un archivo <code>.json</code> que esté en una carpeta de <b>Google Drive, OneDrive o Dropbox</b> y haz lo mismo en tus otros dispositivos: partidas, marcadores, progreso y ajustes se guardan ahí solos y se combinan al abrir la aplicación
+      (<a href="#" class="help-link" data-help="help-sync">cómo se hace</a>). El token de Lichess, el motor y el tamaño del tablero son de cada dispositivo y no viajan.</p>
     <label for="setAutoSpeed">Velocidad del modo Auto (▶ Auto)</label>
     <select id="setAutoSpeed">
       <option value="500">Muy rápida (½ s por jugada)</option>

@@ -1475,6 +1475,134 @@ def prueba_paquetes_de_problemas(browser):
     ctx.close()
 
 
+def prueba_sincronizacion(browser):
+    print("Novedades 1.32: sincronizar entre dispositivos con un archivo compartido")
+    import json as _json, tempfile
+    archivo = {"txt": "", "m": 1000}
+    escrituras = []
+    # El archivo compartido vive aquí; cada «dispositivo» lo ve a través de un selector de archivos simulado
+    INIT = """
+      window.__mk = () => ({ name: 'ajedrezbase-sync.json',
+        getFile: async () => { const f = JSON.parse(await window.__rd()); return { lastModified: f.m, text: async () => f.txt }; },
+        createWritable: async () => { let pend = ''; return { write: async t => { pend = t; }, close: async () => { await window.__wr(pend); } }; },
+        queryPermission: async () => 'granted', requestPermission: async () => 'granted' });
+      window.showSaveFilePicker = async () => window.__mk();
+      window.showOpenFilePicker = async () => [window.__mk()];
+    """
+    def dispositivo(nombre):
+        ctx = contexto(browser)
+        ctx.expose_function("__rd", lambda: _json.dumps(archivo))
+        def wr(txt):
+            archivo["txt"] = txt; archivo["m"] += 1
+            escrituras.append(nombre)
+        ctx.expose_function("__wr", wr)
+        ctx.add_init_script(INIT)
+        pg, errores = nueva_pagina(ctx)
+        return ctx, pg, errores
+    guardar = "async (a) => { const r = Pgn.parseGame(a[1]); await importRecords([recordFromGame(r.game, { title: a[0] })], []); refreshLibraryViews(); }"
+    titulos = lambda pg: sorted(pg.evaluate("[...Lib.games.values()].map(r => r.title)"))
+    def al_dia(pg):
+        pg.evaluate("syncCheck()")
+        pg.wait_for_function("!syncBusy && !syncTimer && !syncDirty", timeout=10000)
+    ctxA, A, errA = dispositivo("A")
+    ctxB, B, errB = dispositivo("B")
+    comprobar(not A.is_visible("#syncChip"), "sin archivo vinculado no hay indicador en la cabecera")
+    A.evaluate(guardar, ["Uno", "1. e4 e5 2. Nf3 Nc6 *"])
+    A.click("#settingsBtn")
+    comprobar("Sin archivo vinculado" in A.inner_text("#syncStatus") and A.is_visible('[data-sync="new"]'), "Ajustes ofrece vincular un archivo")
+    A.click('[data-sync="new"]')
+    A.wait_for_function("syncState === 'ok' && !syncBusy && !syncDirty", timeout=10000)
+    datos = _json.loads(archivo["txt"])
+    comprobar(datos["app"] == "AjedrezBase" and datos["sync"] == 1 and [g["title"] for g in datos["games"]] == ["Uno"] and "id" not in datos["games"][0],
+              "crear el archivo guarda en él la biblioteca")
+    comprobar("Al día" in A.inner_text("#syncStatus") and A.is_visible('[data-sync="now"]') and A.inner_text("#syncChip") == "☁", "el estado pasa a «Al día» y aparece ☁ arriba")
+    A.keyboard.press("Escape")
+    # Segundo dispositivo, con cosas propias: se combinan
+    B.evaluate(guardar, ["Dos", "1. d4 d5 2. c4 e6 *"])
+    B.evaluate("LS.set('ajedrezProblemas', { p1: { reps: 3, due: 9, box: 2 }, p2: { reps: 1, due: 4, box: 1 } }); LS.set('ajedrezActividad', { '2026-11-01': { puzzle: 4 } })")
+    A.evaluate("LS.set('ajedrezProblemas', { p1: { reps: 1, due: 5, box: 1 } }); LS.set('ajedrezActividad', { '2026-11-01': { puzzle: 2, card: 1 } })")
+    al_dia(A)
+    B.click("#settingsBtn"); B.click('[data-sync="open"]')
+    B.wait_for_function("syncState === 'ok' && !syncBusy && !syncDirty && Lib.games.size === 2", timeout=10000)
+    B.keyboard.press("Escape")
+    comprobar(titulos(B) == ["Dos", "Uno"], "al vincular el archivo en otro dispositivo se combinan las dos bibliotecas")
+    comprobar(B.evaluate("LS.get('ajedrezProblemas', {})") == {"p1": {"reps": 3, "due": 9, "box": 2}, "p2": {"reps": 1, "due": 4, "box": 1}}
+              and B.evaluate("LS.get('ajedrezActividad', {})['2026-11-01']") == {"puzzle": 4, "card": 1}, "el progreso se une entrada a entrada, sin perder nada")
+    al_dia(A)
+    comprobar(titulos(A) == ["Dos", "Uno"] and A.evaluate("LS.get('ajedrezProblemas', {}).p1.reps") == 3, "el primer dispositivo recibe lo del segundo")
+    comprobar("Sincronizado" in A.inner_text(".toast"), "avisa de lo que ha llegado")
+    n = len(escrituras)
+    for pg in (A, B, A, B):
+        pg.evaluate("syncNow({ force: true })"); pg.wait_for_function("!syncBusy", timeout=10000)
+    comprobar(len(escrituras) == n, "cuando los dos tienen lo mismo, nadie vuelve a escribir el archivo")
+    # Un cambio se guarda solo, y gana el más reciente
+    B.evaluate("(async () => { const r = [...Lib.games.values()].find(x => x.title === 'Uno'); r.fav = true; await DB.put('games', r); })()")
+    B.wait_for_function("!syncBusy && !syncTimer && !syncDirty", timeout=10000)
+    comprobar(len(escrituras) == n + 1 and escrituras[-1] == "B", "un cambio se guarda solo en el archivo a los pocos segundos")
+    al_dia(A)
+    comprobar(A.evaluate("[...Lib.games.values()].find(x => x.title === 'Uno').fav") is True and A.evaluate("Lib.games.size") == 2, "el cambio llega al otro dispositivo sin duplicar la partida")
+    # Borrar en uno borra en el otro
+    A.evaluate("(async () => { const r = [...Lib.games.values()].find(x => x.title === 'Dos'); await DB.delMany('games', [r.id]); Lib.games.delete(r.id); refreshLibraryViews(); })()")
+    A.wait_for_function("!syncBusy && !syncTimer && !syncDirty", timeout=10000)
+    al_dia(B)
+    comprobar(titulos(B) == ["Uno"], "lo que se borra en un dispositivo se borra en el otro")
+    al_dia(A)
+    comprobar(titulos(A) == ["Uno"], "y no vuelve")
+    # La misma partida guardada por separado en los dos no se duplica
+    for pg in (A, B):
+        pg.evaluate(guardar, ["Tres", "1. c4 e5 2. Nc3 Nf6 *"])
+        pg.wait_for_function("!syncBusy && !syncTimer && !syncDirty", timeout=10000)
+    al_dia(A); al_dia(B); al_dia(A)
+    comprobar(titulos(A) == ["Tres", "Uno"] and titulos(B) == ["Tres", "Uno"] and len(_json.loads(archivo["txt"])["games"]) == 2, "la misma partida guardada en los dos queda una sola vez")
+    # Ajustes: viajan, salvo los propios de cada dispositivo
+    B.evaluate("settings.token = 'lip_secreto'; saveSettings()")
+    B.click("#settingsBtn"); B.select_option("#themeSelect", "coral"); B.keyboard.press("Escape")
+    B.wait_for_function("!syncBusy && !syncTimer && !syncDirty", timeout=10000)
+    al_dia(A)
+    comprobar(A.evaluate("settings.theme") == "coral" and A.evaluate("document.body.dataset.theme") == "coral" and A.evaluate("settings.token") == "", "los ajustes llegan y se aplican sin recargar")
+    comprobar("lip_secreto" not in archivo["txt"], "el token de Lichess no sale del dispositivo")
+    # Un archivo que no es de AjedrezBase no se pisa
+    bueno = archivo["txt"]
+    archivo["txt"] = '{"hola": 1}'; archivo["m"] += 1
+    A.evaluate("syncCheck()"); A.wait_for_function("!syncBusy && syncErr", timeout=10000)
+    A.click("#settingsBtn")
+    comprobar("no es un archivo de sincronización" in A.inner_text("#syncStatus") and archivo["txt"] == '{"hola": 1}' and A.inner_text("#syncChip") == "⚠", "un archivo ajeno no se sobrescribe y se avisa")
+    archivo["txt"] = bueno; archivo["m"] += 1
+    A.click('[data-sync="now"]'); A.wait_for_function("!syncBusy && !syncErr", timeout=10000)
+    A.click('[data-sync="unlink"]')
+    A.wait_for_function("syncState === 'none'", timeout=5000)
+    comprobar("Sin archivo vinculado" in A.inner_text("#syncStatus") and not A.is_visible("#syncChip") and A.evaluate("Lib.games.size") == 2, "desvincular deja los datos en el navegador")
+    A.keyboard.press("Escape")
+    comprobar(not errA and not errB, "sin errores de JavaScript" + (": " + "; ".join(errA + errB) if errA or errB else ""))
+    # Copia de seguridad completa: se restaura combinando, también donde no se puede vincular un archivo
+    ctxC = contexto(browser)
+    ctxC.add_init_script("delete window.showSaveFilePicker; delete window.showOpenFilePicker; try { delete Window.prototype.showSaveFilePicker; delete Window.prototype.showOpenFilePicker; } catch (e) {}")
+    C, errC = nueva_pagina(ctxC)
+    C.wait_for_function("syncState === 'unsupported'", timeout=10000)
+    C.click("#settingsBtn")
+    comprobar("Copia de seguridad" in C.inner_text("#syncStatus") and C.locator("#syncBtns button").count() == 0, "donde el navegador no puede vincular un archivo, se explica la alternativa")
+    C.keyboard.press("Escape")
+    C.evaluate(guardar, ["Cuatro", "1. Nf3 d5 *"])
+    copia = pathlib.Path(tempfile.mkdtemp()) / "copia.json"
+    copia.write_text(_json.dumps(B.evaluate("syncPayload()")), encoding="utf-8")
+    C.click('.tab-btn[data-tab="library"]')
+    C.set_input_files("#jsonFileInput", str(copia))
+    C.wait_for_function("Lib.games.size === 3", timeout=10000)
+    comprobar(titulos(C) == ["Cuatro", "Tres", "Uno"] and C.evaluate("LS.get('ajedrezProblemas', {}).p2.reps") == 1 and "Copia restaurada" in C.inner_text(".toast"),
+              "«Restaurar copia» trae partidas y progreso y los combina con lo que había")
+    C.evaluate("(async () => { const r = [...Lib.games.values()].find(x => x.title === 'Uno'); await DB.delMany('games', [r.id]); Lib.games.delete(r.id); })()")
+    C.set_input_files("#jsonFileInput", str(copia))
+    C.wait_for_function("Lib.games.size === 3", timeout=10000)
+    comprobar(titulos(C) == ["Cuatro", "Tres", "Uno"], "restaurar recupera también lo que se había borrado")
+    vieja = pathlib.Path(tempfile.mkdtemp()) / "vieja.json"
+    vieja.write_text(_json.dumps({"app": "AjedrezBase", "version": 3, "games": [{"id": 7, "title": "Antigua", "pgn": "1. b3 e5 *"}], "marks": []}), encoding="utf-8")
+    C.set_input_files("#jsonFileInput", str(vieja))
+    C.wait_for_function("Lib.games.size === 4", timeout=10000)
+    comprobar("Antigua" in titulos(C), "las copias de versiones anteriores se siguen pudiendo restaurar")
+    comprobar(not errC, "sin errores de JavaScript" + (": " + "; ".join(errC) if errC else ""))
+    ctxA.close(); ctxB.close(); ctxC.close()
+
+
 def prueba_tu_semana(browser):
     print("Novedades 1.31: «Tu semana»")
     ctx = contexto(browser)
@@ -1746,7 +1874,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

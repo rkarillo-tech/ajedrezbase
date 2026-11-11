@@ -416,8 +416,9 @@ $("libExportPgn").onclick = () => {
   if (!list.length) { toast("No hay partidas que exportar."); return; }
   download(`biblioteca_${list.length}_partidas.pgn`, list.map(r => r.pgn.trim()).join("\n\n") + "\n", "application/x-chess-pgn");
 };
-$("libBackup").onclick = () => {
-  const data = { app: "AjedrezBase", version: 3, exported: new Date().toISOString(), games: [...Lib.games.values()], marks: [...Lib.marks.values()] };
+$("libBackup").onclick = async () => {
+  await syncEnsureUids();
+  const data = syncPayload();   // partidas, marcadores, progreso y ajustes: lo mismo que viaja al sincronizar
   download(`ajedrezbase_copia_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data), "application/json");
 };
 $("libRestore").onclick = () => $("jsonFileInput").click();
@@ -431,6 +432,13 @@ $("jsonFileInput").onchange = async e => {
     if (Array.isArray(data)) {
       const recs = data.map(it => { const g = legacyStudyGame(it); return g && g.root.children.length ? recordFromGame(g, { title: it.name }) : null; }).filter(Boolean);
       res = await importRecords(recs, []);
+    } else if (data && data.sync && Array.isArray(data.games)) {
+      // Copia completa (1.32 o posterior): se combina con lo que hay, sin borrar nada
+      const r = await syncApply(data, { restore: true });
+      syncTouch();
+      const t = syncStatsText(r.stats);
+      toast(t ? "⬆ Copia restaurada: " + t + "." : "⬆ La copia no trae nada que no tengas ya.", 5000);
+      return;
     } else if (data && Array.isArray(data.games)) res = await importRecords(data.games, data.marks || []);
     else throw Error();
     refreshLibraryViews();
