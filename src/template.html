@@ -1614,6 +1614,11 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <label><input type="checkbox" id="setAnimate"> Animar las piezas</label>
       <label><input type="checkbox" id="setWheel"> Rueda del ratón para avanzar/retroceder</label>
     </div>
+    <label for="setBoard3dSet">Piezas del tablero en 3D</label>
+    <select id="setBoard3dSet">
+      <option value="real">Realistas (se descargan 1,2 MB la primera vez)</option>
+      <option value="simple">Sencillas (más ligeras, para equipos modestos)</option>
+    </select>
     <label for="setUiTheme">Aspecto de la aplicación</label>
     <select id="setUiTheme">
       <option value="dark">🌙 Oscuro</option>
@@ -1764,6 +1769,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <tbody>
         <tr><td><a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener noreferrer">Stockfish.js</a> 19 Lite (WebAssembly) de Chess.com / Nathan Rugg, basado en <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">Stockfish</a> (T. Romstad, M. Costalba, J. Kiiski, G. Linscott y colaboradores), con red NNUE de Chris Bao</td><td>Motor de análisis principal. <b>No va incluido</b>: el navegador lo descarga de jsDelivr (o de unpkg) al usarlo (y, si instalas la aplicación, lo guarda para usarlo sin conexión).</td><td>GPL v3 · <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener noreferrer">código fuente</a></td></tr>
         <tr><td><a href="https://threejs.org" target="_blank" rel="noopener noreferrer">Three.js</a> 0.170.0</td><td>Tablero en 3D (opcional). <b>No va incluido</b>: se descarga de jsDelivr (o de unpkg) sólo si activas el tablero en 3D.</td><td>MIT</td></tr>
+        <tr><td>«<a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ABeautifulGame" target="_blank" rel="noopener noreferrer">A Beautiful Game</a>» (Moeen y Mujtaba Sayed, MaterialX Project / ASWF; conversión de Ed Mackey)</td><td>Piezas realistas del tablero en 3D (simplificadas para la web). Se descargan sólo si las usas.</td><td>CC BY 4.0</td></tr>
         <tr><td><a href="https://github.com/niklasf/stockfish.js" target="_blank" rel="noopener noreferrer">stockfish.js</a> 10.0.2 (versión JavaScript de Niklas Fiekas)</td><td>Motor de respaldo para navegadores sin WebAssembly; se descarga de cdnjs sólo si hace falta</td><td>GPL v3</td></tr>
         <tr><td>Piezas «Clásicas», de <a href="https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces" target="_blank" rel="noopener noreferrer">Colin M. L. Burnett</a> (Wikimedia Commons)</td><td>Dibujo de las piezas y del icono</td><td>Licencia múltiple GPL / BSD / GFDL</td></tr>
         <tr><td>Servicios de <a href="https://lichess.org" target="_blank" rel="noopener noreferrer">Lichess</a>: explorador de aperturas, evaluación en la nube y tablas Syzygy</td><td>Sólo se consultan cuando los usas; el explorador necesita tu token personal</td><td>Servicio gratuito de lichess.org (<a href="https://lichess.org/api" target="_blank" rel="noopener noreferrer">API</a>)</td></tr>

@@ -60,7 +60,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, autoplayMs: 2000, board3d: false
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, autoplayMs: 2000, board3d: false, board3dSet: "real"
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -179,5 +179,19 @@ const editor = { active: false, state: null, tool: "MOVE", sel: null, origin: nu
 const cur = () => game.current;
 /* ¿Estamos en un ejercicio o jugando contra la CPU? Entonces se oculta el motor y no se navega por la partida */
 const quiz = () => trainer.active || Retry.active || Guess.active || Vis.active || ui.cpu.on;
+/* En una partida contra la CPU (sin otro ejercicio en marcha) se pueden pedir «Piensa conmigo» y «Habla con tus piezas» */
+const cpuHelpMode = () => ui.cpu.on && !trainer.active && !Retry.active && !Guess.active && !Vis.active;
+/* Por qué no se puede pedir ayuda ahora (o null si se puede) */
+function helpBlocked() {
+  if (editor.active) return "Cierra antes el editor de posición.";
+  if (cpuHelpMode()) {
+    if (ui.cpu.thinking) return "Espera a que juegue la CPU.";
+    if (!ui.cpu.two && cur().state.t === ui.cpu.side) return "Te ayudo cuando te toque mover.";
+    return null;
+  }
+  return quiz() ? "Termina antes el ejercicio o la partida." : null;
+}
+/* Apunta que en esta partida contra la CPU se ha pedido ayuda (entonces no cuenta para el nivel adaptativo) */
+function noteCpuHelp() { if (cpuHelpMode()) { ui.cpu.helped = (ui.cpu.helped || 0) + 1; cpuPanel(); } }
 const viewState = () => (editor.active ? editor.state : ui.visBoard || game.current.state);   // ui.visBoard: tablero propio de los ejercicios de geometría
 
