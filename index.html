@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.30.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.31.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -174,6 +174,14 @@ main {
 .train-card .tc-badge { grid-column: 2; justify-self: start; }
 #trainBack { margin: 0 0 4px; }
 #trainBack + .section, #trainBack ~ .section[data-train]:not([hidden]):first-of-type { border-top: 0; }
+.week-box { margin-top: 8px; background: var(--deep); border: 1px solid var(--border); border-radius: 9px; padding: 7px 11px; }
+.week-box summary { cursor: pointer; font-size: .86rem; font-weight: 600; }
+.week-row { display: grid; grid-template-columns: 84px 1fr; gap: 8px; font-size: .84rem; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.week-row:first-child { margin-top: 4px; }
+.week-k { color: var(--muted); }
+.week-tips { font-size: .84rem; padding-top: 7px; }
+.week-tip { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 5px; }
+.week-tip > span { flex: 1 1 220px; }
 .today-box { background: var(--deep); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; }
 .today-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .streak { font-size: 1.05rem; }
@@ -1338,6 +1346,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <span>📅 Hoy</span>
       </h2>
       <div id="todayBox" class="today-box"></div>
+      <details id="weekBox" class="week-box"><summary id="weekSummary">📈 Tu semana</summary><div id="weekBody"></div></details>
       <h2 class="train-menu-title"><span>🎯 ¿Qué quieres entrenar?</span></h2>
       <div id="trainMenu" class="train-menu">
         <button type="button" class="train-card" data-train-open="puzzles"><span class="tc-ico" aria-hidden="true">🧩</span><span class="tc-body"><b>Problemas de táctica</b><span class="small">Por temas y dificultad, con repaso espaciado y examen de nivel</span></span><span class="srs-pill tc-badge" data-badge-of="puzzleBadge" hidden></span></button>
@@ -1533,7 +1542,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.30.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.31.0 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="welcomeBtn" type="button">Primeros pasos</button> ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
@@ -2013,6 +2022,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <summary>🎯 17. Entrenar: plan de hoy, problemas, examen, mis repertorios, errores de tus partidas y tarjetas</summary>
         <ul>
           <li><b>📅 Hoy</b> (arriba de la pestaña): tu <b>racha</b> de días seguidos entrenando (también en la pestaña: 🔥), los <b>objetivos del día</b> (unos problemas, una lección y tener los repasos al día) y un <b>calendario</b> de las últimas 16 semanas (pasa el ratón por un día para ver qué hiciste). <b>▶ Siguiente tarea de hoy</b> te lleva a lo que toca: primero los repasos pendientes (repertorios, problemas, tarjetas, ejercicios) y después los problemas y la lección del día. Puedes elegir cuántos problemas al día quieres hacer. Cuenta todo: problemas, lecciones, repertorios, tarjetas, ejercicios, partidas contra la CPU, adivina la jugada y visualización.</li>
+          <li><b>📈 Tu semana</b> (debajo de «Hoy»; pulsa para desplegarlo): resumen de los últimos 7 días comparados con los 7 anteriores. Dice cuántos días has entrenado y qué has hecho, cuántos problemas te salieron a la primera y cuánto ha cambiado tu nivel, y cómo te fue en tus partidas de la semana (si has puesto tu nombre en <b>📊 Estadísticas</b>). Termina con <b>Qué practicar</b>: hasta tres propuestas con su botón, de la más urgente a la menos (repasos pendientes, el tema de problemas que más se te ha resistido, el error más repetido en tus partidas). El acierto por temas de la semana y el cambio de nivel empiezan a contarse desde esta versión.</li>
           <li><b>🗂 Mis repertorios</b>: tus propios repertorios, con repaso espaciado.
             <ul>
               <li><b>Crear</b>: escribe un nombre, elige el bando y pulsa <b>➕ Crear</b>. Se abre en el tablero: juega las jugadas de tu repertorio. Para preparar otra respuesta del rival, vuelve atrás y juega otra jugada: se añade como variante. Se guarda solo en tu biblioteca, con la etiqueta «repertorio» (cualquier partida con esa etiqueta cuenta como repertorio).</li>
@@ -2282,7 +2292,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.30.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.31.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -9032,6 +9042,12 @@ function puzzlePool() {
   const th = $("puzzleTheme").value, lv = $("puzzleLevel").value, weak = th === "weak" ? weakThemes().map(x => x.k) : null;
   return PUZZLES.filter(p => (!th || (weak ? p.themes.some(x => weak.includes(x.startsWith("mateIn") ? "mate" : x)) : p.themes.includes(th) || (th === "mate" && p.themes.some(x => x.startsWith("mateIn"))))) && (lv === "" || puzzleLevelOf(p.rating) === +lv));
 }
+/* Temas de un problema para las estadísticas: los mates van juntos y «una sola jugada» no cuenta como tema */
+function puzzleThemeKeys(p) {
+  const keys = [...new Set(p.themes.map(x => (x.startsWith("mateIn") ? "mate" : x)))].filter(k => k === "mate" || (PUZZLE_THEMES[k] && k !== "short"));
+  return keys.length ? keys : ["other"];
+}
+const puzzleThemeName = k => (k === "mate" ? "Mates" : k === "other" ? "Otros temas" : PUZZLE_THEMES[k] || k);
 /* Aciertos por tema, a partir de todos los intentos guardados */
 function themeStats() {
   const s = puzSrs(), byId = new Map(PUZZLES.map(p => [p.id, p])), out = {};
@@ -9039,8 +9055,7 @@ function themeStats() {
     const p = byId.get(id);
     if (!p) continue;
     const tries = st.tries || st.reps || 0, fails = st.fails != null ? st.fails : st.ok ? 0 : 1;
-    const keys = [...new Set(p.themes.map(x => (x.startsWith("mateIn") ? "mate" : x)))].filter(k => k === "mate" || (PUZZLE_THEMES[k] && k !== "short"));
-    for (const k of keys.length ? keys : ["other"]) {
+    for (const k of puzzleThemeKeys(p)) {
       out[k] = out[k] || { k, tries: 0, fails: 0 };
       out[k].tries += tries; out[k].fails += fails;
     }
@@ -9241,6 +9256,7 @@ function finishPuzzle(perfect) {
   R.r = Math.max(400, R.r + d); R.n++;
   LS.set("ajedrezNivelProblemas", R);
   Puz.done++; if (perfect) Puz.ok++; Puz.delta += d;
+  logPuzzleResult(p, perfect);
   logActivity("puzzle");
   Sound.play(perfect ? "ok" : "end");
   const left = Puz.queue.length;
@@ -10041,6 +10057,8 @@ async function reviewRepertoire(tree) {
 /* ---------- 26b. Plan de hoy: objetivos diarios, racha y calendario de actividad ---------- */
 const ACT_KEY = "ajedrezActividad";
 const ACT_LABEL = { puzzle: "problemas", lesson: "lecciones", rep: "líneas de repertorio", card: "tarjetas", drill: "ejercicios", cpu: "partidas contra la CPU", exam: "exámenes", guess: "partidas adivinadas", vis: "ejercicios de visualización" };
+const ACT_ONE = { puzzle: "problema", lesson: "lección", rep: "línea de repertorio", card: "tarjeta", drill: "ejercicio", cpu: "partida contra la CPU", exam: "examen", guess: "partida adivinada", vis: "ejercicio de visualización" };
+const actText = (k, v) => `${v} ${v === 1 ? ACT_ONE[k] : ACT_LABEL[k]}`;
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const actDays = () => LS.get(ACT_KEY, {});
 const dayTotal = d => (d ? Object.entries(d).filter(([k]) => ACT_LABEL[k]).reduce((s, [, v]) => s + v, 0) : 0);
@@ -10104,7 +10122,7 @@ function renderToday() {
   for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const k = dayKey(d), n = dayTotal(a[k]);
     const lvl = !n ? 0 : n < 3 ? 1 : n < 8 ? 2 : n < 15 ? 3 : 4;
-    const det = a[k] ? Object.entries(a[k]).filter(([x]) => ACT_LABEL[x]).map(([x, v]) => `${v} ${ACT_LABEL[x]}`).join(", ") : "sin actividad";
+    const det = a[k] ? Object.entries(a[k]).filter(([x]) => ACT_LABEL[x]).map(([x, v]) => actText(x, v)).join(", ") : "sin actividad";
     cells.push(`<i class="cal-d l${lvl}" title="${esc(d.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }))}: ${esc(det)}"></i>`);
   }
   box.innerHTML = `<div class="today-head"><span class="streak" title="Días seguidos entrenando">🔥 <b>${st.cur}</b> día${st.cur === 1 ? "" : "s"} seguido${st.cur === 1 ? "" : "s"}</span><span class="small">Mejor racha: ${st.best} · ${st.days} día${st.days === 1 ? "" : "s"} entrenando</span></div>
@@ -10117,6 +10135,92 @@ function renderToday() {
   $("goalPuzzlesSel").onchange = e => { settings.goalPuzzles = +e.target.value; saveSettings(); renderToday(); };
   const badge = $("streakBadge");
   if (badge) { badge.textContent = st.cur ? `🔥${st.cur}` : ""; badge.hidden = !st.cur; }
+  renderWeek();
+}
+
+/* ---------- 26w. Tu semana: resumen de los últimos 7 días y qué practicar ----------
+   Sale del registro de actividad. Cada día guarda además (en claves que no cuentan como actividad) cuántos
+   problemas salieron a la primera, el acierto por tema y el nivel al acabar el día. */
+function logPuzzleResult(p, perfect) {
+  const a = actDays(), k = dayKey(), d = a[k] = a[k] || {};
+  d.pzOk = (d.pzOk || 0) + (perfect ? 1 : 0);
+  d.pzFail = (d.pzFail || 0) + (perfect ? 0 : 1);
+  d.pzTh = d.pzTh || {};
+  for (const t of puzzleThemeKeys(p)) { const x = d.pzTh[t] = d.pzTh[t] || [0, 0]; x[0]++; if (!perfect) x[1]++; }
+  d.nivel = Math.round(puzRating().r);
+  // El detalle por temas sólo hace falta para las últimas semanas
+  const old = new Date(); old.setDate(old.getDate() - 60);
+  const limit = dayKey(old);
+  for (const key of Object.keys(a)) if (key < limit && a[key].pzTh) delete a[key].pzTh;
+  LS.set(ACT_KEY, a);
+}
+/* back = 0: los últimos 7 días (hoy incluido); back = 1: los 7 anteriores */
+function weekStats(back) {
+  const a = actDays(), W = { days: 0, total: 0, kinds: {}, ok: 0, fail: 0, th: {} };
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i - 7 * back);
+    const r = a[dayKey(d)];
+    if (!r) continue;
+    const n = dayTotal(r);
+    if (n) W.days++;
+    W.total += n;
+    for (const [k, v] of Object.entries(r)) if (ACT_LABEL[k]) W.kinds[k] = (W.kinds[k] || 0) + v;
+    W.ok += r.pzOk || 0; W.fail += r.pzFail || 0;
+    for (const [k, v] of Object.entries(r.pzTh || {})) { const x = W.th[k] = W.th[k] || { k, tries: 0, fails: 0 }; x.tries += v[0] || 0; x.fails += v[1] || 0; }
+  }
+  return W;
+}
+/* Nivel de problemas con el que se llegó a esta semana (el último anotado antes de los 7 días) */
+function levelBeforeWeek() {
+  const a = actDays();
+  for (let i = 7; i < 120; i++) { const d = new Date(); d.setDate(d.getDate() - i); const r = a[dayKey(d)]; if (r && r.nivel) return r.nivel; }
+  return null;
+}
+function renderWeek() {
+  const body = $("weekBody");
+  if (!body) return;
+  const W = weekStats(0), P = weekStats(1), due = dueCounts(), R = puzRating();
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const trend = W.total > P.total ? " ↗" : W.total < P.total && P.total ? " ↘" : "";
+  $("weekSummary").textContent = W.total ? `📈 Tu semana: ${W.days} de 7 días · ${plural(W.total, "actividad", "actividades")}${trend}` : "📈 Tu semana: aún sin actividad";
+  const rows = [];
+  if (W.total) {
+    const kinds = Object.entries(W.kinds).sort((x, y) => y[1] - x[1]).map(([k, v]) => `<b>${v}</b> ${esc(v === 1 ? ACT_ONE[k] : ACT_LABEL[k])}`).join(" · ");
+    rows.push(`<div class="week-row"><span class="week-k">Has hecho</span><span>${kinds}<br><span class="small">${P.total ? `Los 7 días anteriores: ${P.days} ${P.days === 1 ? "día" : "días"} y ${plural(P.total, "actividad", "actividades")}.` : "Los 7 días anteriores no entrenaste."}</span></span></div>`);
+  }
+  const tried = W.ok + W.fail;
+  if (tried || R.n) {
+    const before = levelBeforeWeek(), delta = before != null && R.n ? Math.round(R.r) - before : null;
+    rows.push(`<div class="week-row"><span class="week-k">Problemas</span><span>${tried ? `<b>${W.ok}</b> de ${tried} a la primera (${Math.round(100 * W.ok / tried)} %)` : "ninguno esta semana"}${R.n ? ` · nivel <b>${Math.round(R.r)}</b>${delta != null && tried ? ` (${delta >= 0 ? "+" : "−"}${Math.abs(delta)} en la semana)` : ""}` : ""}</span></div>`);
+  }
+  // Partidas propias de los últimos 7 días (hace falta tu nombre en Estadísticas)
+  let S = null;
+  if (Lib.ready && myNameList().length) { S = computeStats({ period: 7 }); if (!S.games) S = null; }
+  if (S) {
+    const acc = avg(S.accs);
+    rows.push(`<div class="week-row"><span class="week-k">Partidas</span><span><b>${S.games}</b> jugada${S.games === 1 ? "" : "s"}: +${S.w} =${S.d} −${S.l}${acc != null ? ` · precisión media <b>${Math.round(acc)} %</b>` : ""}${S.pending.length ? ` <span class="small">(${S.pending.length} sin analizar)</span>` : ""}</span></div>`);
+  }
+  // Qué practicar: como mucho tres propuestas, de la más urgente a la menos
+  const tips = [];
+  if (due.total) tips.push({ txt: `Tienes <b>${plural(due.total, "repaso pendiente", "repasos pendientes")}</b>: lo que no se repasa a tiempo se olvida.`, btn: "▶ Repasar", act: "due" });
+  const weakWeek = Object.values(W.th).filter(x => x.k !== "other" && x.tries >= 3 && (x.tries - x.fails) / x.tries < 0.8).sort((x, y) => (x.tries - x.fails) / x.tries - (y.tries - y.fails) / y.tries)[0];
+  const weakAll = weakWeek ? null : weakThemes()[0];
+  const hasTheme = k => [...$("puzzleTheme").options].some(o => o.value === k);
+  if (weakWeek && hasTheme(weakWeek.k)) tips.push({ txt: `Esta semana lo que más se te ha resistido en los problemas es <b>${esc(puzzleThemeName(weakWeek.k))}</b> (${weakWeek.tries - weakWeek.fails} de ${weakWeek.tries} a la primera).`, btn: "🧩 Practicarlo", act: "theme:" + weakWeek.k });
+  else if (weakAll && hasTheme(weakAll.k)) tips.push({ txt: `Tu tema más flojo en los problemas es <b>${esc(weakAll.name)}</b> (${weakAll.pct} % de acierto).`, btn: "🧩 Practicarlo", act: "theme:" + weakAll.k });
+  const topErr = S ? Object.entries(S.th).filter(([k]) => THEMES[k]).sort((x, y) => y[1] - x[1])[0] : null;
+  if (topErr) tips.push({ txt: `En tus partidas de la semana, el error más repetido: <b>${esc(THEMES[topErr[0]].name.toLowerCase())}</b> (${plural(topErr[1], "vez", "veces")}).`, btn: "🎯 Entrenarlo", act: "drill:" + THEMES[topErr[0]].drill });
+  if (S && S.pending.length && tips.length < 3) tips.push({ txt: `Hay <b>${plural(S.pending.length, "partida", "partidas")}</b> de esta semana sin analizar: analízalas para ver en qué fallaste.`, btn: "📊 Ir a Estadísticas", act: "stats" });
+  if (!tips.length) tips.push(W.days >= 4 ? { txt: "Buena semana: vas al día y sin un punto flojo claro. Sigue con el plan de hoy.", btn: "▶ Siguiente tarea", act: "due" }
+    : { txt: W.total ? `Has entrenado ${plural(W.days, "día", "días")} de 7. Mejor poco cada día que mucho de golpe: prueba con el plan de hoy.` : "Empieza por el plan de hoy: unos problemas y una lección.", btn: "▶ Siguiente tarea", act: "due" });
+  body.innerHTML = rows.join("") + `<div class="week-tips"><b>Qué practicar</b>${tips.slice(0, 3).map(t => `<div class="week-tip"><span>${t.txt}</span><button class="sm-btn primary" data-week="${esc(t.act)}">${t.btn}</button></div>`).join("")}</div>`;
+  body.querySelectorAll("[data-week]").forEach(b => b.onclick = () => {
+    const [act, arg] = b.dataset.week.split(":");
+    if (act === "due") nextTask();
+    else if (act === "theme") { $("puzzleTheme").value = arg; $("puzzleLevel").value = ""; $("puzzleCount").value = "10"; startPuzzles(); }
+    else if (act === "drill") { $("drillType").value = arg; startDrills("due"); }
+    else if (act === "stats") { switchTab("library"); switchSub("stats"); }
+  });
 }
 /* «Siguiente tarea»: primero los repasos que tocan, después el objetivo de problemas y la lección del día */
 function nextTask() {
