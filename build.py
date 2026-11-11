@@ -25,13 +25,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 
-# Motores Stockfish (GPL v3): no se incluyen en el repositorio; el navegador los descarga de estos CDN.
+# Motores Stockfish (GPL v3) y Three.js (MIT): no se incluyen en el repositorio; el navegador los descarga de estos CDN.
 ENGINES = {
     "SF19_JS": "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js",
     "SF19_WASM": "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm",
     "SF19B_JS": "https://unpkg.com/stockfish@19.0.1/bin/stockfish-19-lite-single.js",
     "SF19B_WASM": "https://unpkg.com/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm",
     "SF10_JS": "https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js",
+    # Tablero 3D (opcional): Three.js (MIT), sólo si el usuario lo activa
+    "THREE_JS": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "THREE_JS_B": "https://unpkg.com/three@0.170.0/build/three.module.min.js",
 }
 
 

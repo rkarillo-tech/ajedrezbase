@@ -30,13 +30,16 @@ jobs:
         run: |
           python3 -m pip install --quiet playwright
           for i in 1 2 3; do python3 -m playwright install --with-deps chromium && break; [ $i = 3 ] && exit 1; echo "Reintento $i…"; sleep 30; done
-      - name: Descargar Stockfish 19 (para probarlo sin depender del CDN)
+      - name: Descargar Stockfish 19 y Three.js (para probarlos sin depender del CDN)
         run: |
           npm pack stockfish@19.0.1 --silent
           mkdir -p /tmp/sf && tar xzf stockfish-19.0.1.tgz -C /tmp/sf package/bin/stockfish-19-lite-single.js package/bin/stockfish-19-lite-single.wasm
+          npm pack three@0.170.0 --silent
+          mkdir -p /tmp/three && tar xzf three-0.170.0.tgz -C /tmp/three package/build/three.module.min.js
       - name: Aplicación en el navegador
         env:
           STOCKFISH_DIR: /tmp/sf/package/bin
+          THREE_DIR: /tmp/three/package/build
         run: python3 tests/test_app.py
       - name: Montar la web
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

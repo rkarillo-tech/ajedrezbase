@@ -61,6 +61,7 @@ function renderBoard() {
     const sq = boardEl.querySelector(`.square[data-sq="${last.to}"]`);
     if (sq) sq.insertAdjacentHTML("beforeend", `<span class="sq-badge ${NAG_CLASS[node.nag] || ""}-bg" title="${esc(NAG_TITLE[node.nag] || "")}">${esc(node.nag)}</span>`);
   }
+  board3dSync();
   const prev = ui.prevRenderNode;
   ui.prevRenderNode = editor.active ? null : node;
   if (prev && prev !== node && !editor.active && settings.animate && !ui.noAnimOnce && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) {
@@ -90,13 +91,15 @@ function animateMove(mv, dir) {
     const rf = mv.to > mv.from ? mv.from + 3 : mv.from - 4, rt = mv.to > mv.from ? mv.from + 1 : mv.from - 1;
     slide(dir > 0 ? rf : rt, dir > 0 ? rt : rf);
   }
+  board3dAnimate(mv, dir);
 }
 function sqCenter(i) {
   const f = i & 7, r = i >> 4;
   return [(ui.flipped ? 7 - f : f) * 100 + 50, (ui.flipped ? 7 - r : r) * 100 + 50];
 }
 const SHAPE_COLORS = { green: "rgba(76,175,80,0.85)", red: "rgba(239,83,80,0.85)", blue: "rgba(41,182,246,0.85)", yellow: "rgba(255,202,40,0.9)", engine: "rgba(186,104,200,0.72)", threat: "rgba(239,83,80,0.8)" };
-function renderShapes() {
+/* Flechas y círculos que hay que dibujar ahora (en el tablero plano y en el 3D) */
+function shapeList() {
   const list = [];
   if (ui.visBoard) for (const sh of ui.visShapes || []) list.push(sh);
   else if (!editor.active) {
@@ -109,8 +112,11 @@ function renderShapes() {
     // Mientras se dibuja: la flecha (o el círculo) que va a quedar, para ver dónde se suelta
     if (ui.drawStart && ui.drawStart.over != null) list.push({ color: ui.drawStart.color, from: ui.drawStart.sq, to: ui.drawStart.over, preview: true });
   }
+  return list;
+}
+function renderShapes() {
   let html = "";
-  for (const sh of list) {
+  for (const sh of shapeList()) {
     const col = SHAPE_COLORS[sh.color] || SHAPE_COLORS.green;
     const [x1, y1] = sqCenter(sh.from), [x2, y2] = sqCenter(sh.to);
     const op = sh.preview ? ` opacity=".55"` : "";
@@ -123,6 +129,7 @@ function renderShapes() {
     html += `<line x1="${x1}" y1="${y1}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="${sw}" stroke-linecap="${dash ? "butt" : "round"}"${dash}${op} marker-end="url(#ah-${marker})"/>`;
   }
   $("arrowsGroup").innerHTML = html;
+  if (B3.active) board3dDraw();
 }
 function toggleShape(from, to, color) {
   const node = cur();
@@ -178,22 +185,26 @@ boardEl.addEventListener("pointerdown", e => {
     e.preventDefault();
     return;
   }
-  if (Vis.active) { visAnswer(i); return; }
+  const wasSelected = ui.selected === i;
+  if (pressSquare(i)) {
+    ui.drag = { from: i, x0: e.clientX, y0: e.clientY, ghost: null, moved: false, wasSelected };
+    e.preventDefault();
+  }
+});
+/* Pulsar una casilla (en el tablero plano o en el 3D): mover la pieza elegida o elegir otra. Devuelve true si queda una pieza elegida */
+function pressSquare(i) {
+  if (Vis.active) { visAnswer(i); return false; }
   const s = cur().state;
   if (!canUserMove()) {
     if (ui.cpu.thinking) toast("La CPU está pensando…");
     else if (trainer.active && !trainer.busy) toast("Espera la respuesta del rival.");
-    return;
+    return false;
   }
-  if (ui.selected != null && ui.selected !== i && tryMove(ui.selected, i)) return;
-  if (Chess.color(s.b[i]) === s.t) {
-    const wasSelected = ui.selected === i;
-    ui.selected = i;
-    renderBoard();
-    ui.drag = { from: i, x0: e.clientX, y0: e.clientY, ghost: null, moved: false, wasSelected };
-    e.preventDefault();
-  } else if (ui.selected != null) { ui.selected = null; renderBoard(); }
-});
+  if (ui.selected != null && ui.selected !== i && tryMove(ui.selected, i)) return false;
+  if (Chess.color(s.b[i]) === s.t) { ui.selected = i; renderBoard(); return true; }
+  if (ui.selected != null) { ui.selected = null; renderBoard(); }
+  return false;
+}
 window.addEventListener("pointermove", e => {
   if (ui.drawStart) {
     const over = sqFromPoint(e.clientX, e.clientY);

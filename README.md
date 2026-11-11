@@ -17,7 +17,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 
 | | |
 | --- | --- |
-| **Tablero** | Arrastrar o clic-clic, coronación a elegir, flechas y círculos de colores (clic derecho, Ctrl + arrastrar o el botón ✏, que va bien con el dedo y con los paneles táctiles), 4 estilos de piezas, 5 colores de tablero, tamaño ajustable y aspecto oscuro, claro o automático |
+| **Tablero** | Arrastrar o clic-clic, coronación a elegir, flechas y círculos de colores (clic derecho, Ctrl + arrastrar o el botón ✏, que va bien con el dedo y con los paneles táctiles), 4 estilos de piezas, 5 colores de tablero, **🧊 tablero en 3D** opcional (gira la vista con el dedo o el ratón), tamaño ajustable y aspecto oscuro, claro o automático |
 | **Variantes** | Árbol completo: variantes anidadas, promover, hacer principal, cortar; comentarios y símbolos `!` `?` `±`… en cada jugada |
 | **PGN** | Importa notación española (`Cf3`), inglesa, figurines, coordenadas y PGN completos de Lichess, Chess.com o ChessBase; exporta PGN estándar; conserva los tiempos de reloj (`[%clk]`) y muestra cuánto se tardó en cada jugada |
 | **Motor** | Stockfish 19 (NNUE) en el navegador: hasta 3 líneas, flecha, barra de evaluación, **🧠 Piensa conmigo** (`T`: el razonamiento de la mejor jugada explicado en palabras, con la línea paso a paso, las alternativas y la jugada tentadora que falla) **🗣 Habla con tus piezas** (`H`: entrevista a cada pieza, la más infeliz cuenta su casilla soñada y la ruta para llegar, revisada por el motor; también con las piezas del rival, para la profilaxis) y **👁 Ver amenaza** (`X`); nube de Lichess y motor propio de respaldo sin conexión |
@@ -107,6 +107,7 @@ archivo en una vista previa). Usa la versión web o abre el archivo directamente
 Puedes usarlo, copiarlo, modificarlo y distribuirlo libremente, manteniendo el aviso de autoría.
 Componentes y servicios de terceros: ver [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 Stockfish (GPL v3) **no** forma parte de este repositorio: el navegador lo descarga de jsDelivr (o, si no responde, de unpkg o cdnjs) al usarlo.
+Tampoco Three.js (MIT), que sólo se descarga si se activa el tablero en 3D.
 
 ---
 
@@ -132,6 +133,7 @@ src/app/              La aplicación, repartida en ficheros que build.py une por
   00-base.js            Utilidades, ajustes, notación, sonido, libro ECO y estado
   10-motor.js           Stockfish 19 → Stockfish 10 → motor interno, y evaluaciones guardadas
   20-tablero.js         Dibujo del tablero, interacción (clic, arrastre, flechas), navegación y barras de jugadores
+  22-tablero3d.js       Tablero en 3D (opcional) con Three.js: piezas generadas, cámara orbitable y textura con marcas y flechas
   25-jugadas.js         Lista de jugadas y variantes, comentario, gráfico, panel del motor y carga de partidas
   30-analisis.js        Análisis completo, informe, amenaza, «Piensa conmigo», «Habla con tus piezas» y «Aprende de tus errores»
   40-jugar.js           Jugar contra la CPU (niveles, estilos, reloj) y rival humano
@@ -171,6 +173,10 @@ tests/run_all.sh                                   # todas las pruebas (también
 # Opcional: probar también con el Stockfish 19 real (sin depender de la red durante la prueba)
 npm pack stockfish@19.0.1 && mkdir -p /tmp/sf && tar xzf stockfish-19.0.1.tgz -C /tmp/sf
 STOCKFISH_DIR=/tmp/sf/package/bin python3 tests/test_app.py
+
+# Opcional: probar también el tablero 3D con Three.js (sin depender de la red)
+npm pack three@0.170.0 && mkdir -p /tmp/three && tar xzf three-0.170.0.tgz -C /tmp/three
+THREE_DIR=/tmp/three/package/build python3 tests/test_app.py
 ```
 
 Los cursos son ficheros PGN normales en `cursos/` (una lección por partida, con las etiquetas `Title`, `Round`, `Level`
