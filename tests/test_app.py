@@ -945,6 +945,40 @@ def prueba_cpu_adaptativa(browser):
     ctx.close()
 
 
+def prueba_ayuda_contra_cpu(browser):
+    print("Novedades 1.34: «Piensa conmigo» y «Habla con tus piezas» en las partidas contra la CPU")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.click('.tab-btn[data-tab="study"]')
+    pg.fill("#moveInput", "1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. d3 Nf6")
+    pg.click("#importBtn")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuLevel", "a")
+    pg.select_option("#cpuClock", "")
+    pg.select_option("#cpuColor", "1")
+    pg.select_option("#cpuFrom", "here")
+    pg.click("#cpuStartBtn")
+    pg.wait_for_function("ui.cpu.on && !ui.cpu.thinking && cur().state.t === 1", timeout=20000)
+    comprobar(pg.locator("#cpuBox [data-c=think]").is_visible() and pg.locator("#cpuBox [data-c=talk]").is_visible(), "en la partida contra la CPU están los botones de ayuda")
+    pg.locator("#cpuBox [data-c=talk]").click()
+    comprobar(pg.is_visible("#talkBox") and pg.evaluate("shapeList().some(s => s.color === 'red')") and pg.evaluate("ui.cpu.helped") == 1, "«Habla con tus piezas» funciona en tu turno y dibuja sus flechas")
+    pg.locator("#cpuBox [data-c=think]").click()
+    pg.wait_for_function("!Think.busy", timeout=30000)
+    comprobar("Piensa conmigo" in pg.inner_text("#thinkBox") and pg.evaluate("ui.cpu.helped") == 2 and "ayuda pedida 2 veces" in pg.inner_text("#cpuBox"), "«Piensa conmigo» explica la posición y se cuenta la ayuda")
+    # En el turno de la CPU no se puede
+    pg.evaluate("$('thinkBox').hidden = true; Think.node = null; ui.cpu.thinking = true")
+    pg.evaluate("thinkWithMe()")
+    comprobar("Espera a que juegue la CPU" in pg.inner_text("#toast"), "mientras piensa la CPU, la ayuda espera")
+    pg.evaluate("ui.cpu.thinking = false")
+    pg.evaluate("ui.cpu.startNode = game.root")
+    pg.locator("#cpuBox [data-c=resign]").click()
+    comprobar("Partida con ayuda" in pg.inner_text("#cpuBox") and pg.evaluate("LS.get('ajedrezCpuAdaptativa', null)") is None, "una partida con ayuda no cambia el nivel adaptativo")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_mis_repertorios(browser):
     print("Novedades 1.14: mis repertorios, su revisión y el tamaño del tablero")
     ctx = contexto(browser)
@@ -1824,8 +1858,10 @@ def prueba_tablero3d(browser):
         print("  (se omite: define THREE_DIR con la carpeta build/ del paquete npm «three@0.170.0»)")
         return
     codigo = (pathlib.Path(tres) / "three.module.min.js").read_bytes()
+    piezas = (ROOT / "assets" / "3d" / "piezas.bin").read_bytes()
     def con_three(ctx):
         ctx.route("**/three@*/build/three.module.min.js", lambda r: r.fulfill(status=200, body=codigo, headers={"Content-Type": "application/javascript", "Access-Control-Allow-Origin": "*"}))
+        ctx.route("**/assets/3d/piezas.bin", lambda r: r.fulfill(status=200, body=piezas, headers={"Content-Type": "application/octet-stream", "Access-Control-Allow-Origin": "*"}))
     ctx = contexto(browser)
     con_three(ctx)
     pg, errores = nueva_pagina(ctx)
@@ -1836,6 +1872,8 @@ def prueba_tablero3d(browser):
     pg.wait_for_function("B3.active", timeout=20000)
     comprobar(pg.is_visible("#board3d canvas") and pg.evaluate("getComputedStyle($('board')).visibility") == "hidden" and pg.evaluate("B3.meshes.size") == 32,
               "al activarlo se descarga Three.js y se ve el tablero en 3D con las 32 piezas")
+    pg.wait_for_function("B3.model && b3Real() && [...B3.meshes.values()].every(m => m.children[0].isGroup)", timeout=20000)
+    comprobar(pg.evaluate("Object.keys(B3.model).sort().join()") == "b,k,n,p,q,r" and pg.evaluate("B3.meshes.size") == 32, "después llegan las piezas realistas (las seis, de los dos colores)")
     def pulsar(sq):
         xy = pg.evaluate("""sq => { const p = cur().state.b[Chess.sqIdx(sq)], y = p === "." ? 0 : "pP".includes(p) ? 0.6 : 0.85;
           const [x, z] = b3Pos(Chess.sqIdx(sq)), v = new B3.T.Vector3(x, y, z).project(B3.camera), r = B3.canvas.getBoundingClientRect();
@@ -1864,10 +1902,23 @@ def prueba_tablero3d(browser):
     pg.evaluate("closeEditor()")
     comprobar(pg.evaluate("B3.active"), "y al cerrarlo vuelve el 3D")
     pg.click("#settingsBtn")
+    pg.select_option("#setBoard3dSet", "simple")
+    comprobar(not pg.evaluate("b3Real()") and pg.evaluate("B3.meshes.size") == 32 and not pg.evaluate("[...B3.meshes.values()].some(m => m.children[0].isGroup)"), "se puede cambiar a las piezas sencillas")
+    pg.select_option("#setBoard3dSet", "real")
+    comprobar(pg.evaluate("b3Real()"), "y volver a las realistas sin descargarlas otra vez")
     pg.uncheck("#setBoard3d")
     pg.keyboard.press("Escape")
     comprobar(not pg.evaluate("B3.active") and pg.is_visible(".square"), "al desactivarlo vuelve el tablero plano")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+    # Si no llegan las piezas realistas, se usan las sencillas
+    ctx = contexto(browser)
+    ctx.route("**/three@*/build/three.module.min.js", lambda r: r.fulfill(status=200, body=codigo, headers={"Content-Type": "application/javascript", "Access-Control-Allow-Origin": "*"}))
+    ctx.route("**/assets/3d/piezas.bin", lambda r: r.abort())
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("settings.board3d = true; renderBoard()")
+    pg.wait_for_function("B3.active && B3.model === null", timeout=20000)
+    comprobar(pg.evaluate("B3.meshes.size") == 32 and not pg.evaluate("b3Real()") and "piezas realistas" in pg.inner_text("#toast"), "si no llegan las piezas realistas, se avisa y se juega con las sencillas")
     ctx.close()
     # Sin conexión (no se puede descargar Three.js): se avisa y sigue el tablero plano
     ctx = contexto(browser)
@@ -1991,7 +2042,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_tablero3d, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_tablero3d, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

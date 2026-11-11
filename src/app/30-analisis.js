@@ -523,10 +523,12 @@ async function thinkWithMe() {
   const node = cur(), s = node.state, me = s.t, box = $("thinkBox");
   if (Think.busy) return;
   if (Think.node === node && !box.hidden) { box.hidden = true; Think.node = null; return; }
-  if (quiz() || editor.active) { toast("Termina antes el ejercicio o la partida."); return; }
+  const blocked = helpBlocked();
+  if (blocked) { toast(blocked); return; }
   if (!Engine.ready) { toast("El motor aún se está cargando."); return; }
   if (gameStatus(node).over) { toast("La partida ha terminado en esta posición."); return; }
   Think.busy = true; Think.node = node;
+  noteCpuHelp();
   $("thinkBtn").disabled = true;
   box.hidden = false;
   const say = t => { box.innerHTML = `<div class="retry-head">🧠 Piensa conmigo</div><div class="small">⏳ ${esc(t)}</div>`; };
@@ -795,7 +797,9 @@ async function talkToPieces(opts = {}) {
   const node = cur(), st = node.state, box = $("talkBox");
   if (Talk.busy) return;
   if (!opts.keep && Talk.node === node && !box.hidden && opts.side == null && opts.sel == null) { closeTalk(); return; }
-  if (quiz() || editor.active) { toast("Termina antes el ejercicio o la partida."); return; }
+  const blocked = helpBlocked();
+  if (blocked) { toast(blocked); return; }
+  if (!opts.keep) noteCpuHelp();
   const side = opts.side != null ? opts.side : opts.keep ? Talk.side : st.t;
   const c = side;
   Talk.node = node; Talk.side = side;

@@ -12,6 +12,10 @@ const B3 = {
   view: { theta: 0, phi: 0.74, zoom: 1 }, ptrs: new Map(), pinch: 0, moved: false, down: null
 };
 const B3_TEX = 1024, B3_SIZE = 9.2, B3_BORDER = (B3_SIZE - 8) / 2;
+/* Piezas realistas: «A Beautiful Game» (Khronos glTF Sample Assets, CC BY 4.0), preparadas con tools/modelos_3d.js */
+const B3_MODEL = "assets/3d/piezas.bin", B3_MODEL_WEB = "https://rkarillo-tech.github.io/ajedrezbase/";
+const B3_REAL_SCALE = 0.7;   // en el original el rey mide 2,4 casillas: así queda en proporción con el tablero
+const b3Real = () => settings.board3dSet !== "simple" && !!B3.model;
 /* ¿Debe verse el 3D ahora? En el editor y en la visualización hace falta el tablero plano */
 const board3dWanted = () => !!settings.board3d && !B3.failed && !editor.active && !Vis.active && !ui.visBoard;
 
@@ -37,7 +41,76 @@ function board3dSync() {
     board3dInit();
   }
   board3dShow(want && B3.ready);
+  if (B3.active && settings.board3dSet !== "simple" && B3.model === undefined && !B3.modelLoading) board3dLoadModel().then(() => { if (B3.active) { board3dRebuild(); renderBoard(); } });
   if (B3.active) board3dUpdate();
+}
+/* Las piezas «realistas»: un fichero con mallas cuantizadas y texturas JPEG (ver tools/modelos_3d.js) */
+function board3dLoadModel() {
+  if (B3.modelLoading) return B3.modelLoading;
+  B3.modelLoading = (async () => {
+    try {
+      const res = await fetch((/^https?:$/.test(location.protocol) ? "" : B3_MODEL_WEB) + B3_MODEL);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      B3.model = await board3dParseModel(await res.arrayBuffer());
+    } catch (e) {
+      console.warn("Tablero 3D: no se pudieron cargar las piezas realistas", e);
+      B3.model = null;
+      toast("No se pudieron descargar las piezas realistas: se usan las sencillas.", 4500);
+    }
+    B3.modelLoading = null;
+    return B3.model;
+  })();
+  return B3.modelLoading;
+}
+async function board3dParseModel(buf) {
+  const T = B3.T, hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl))), data = 4 + hl;
+  const geo = g => {
+    const qp = new Uint16Array(buf, data + g.pos, g.n * 3), qn = new Int8Array(buf, data + g.nrm, g.n * 3), qu = new Uint16Array(buf, data + g.uv, g.n * 2);
+    const pos = new Float32Array(g.n * 3), nrm = new Float32Array(g.n * 3), uv = new Float32Array(g.n * 2);
+    for (let k = 0; k < g.n * 3; k++) { const c = k % 3; pos[k] = g.min[c] + qp[k] / 65535 * g.ext[c]; nrm[k] = qn[k] / 127; }
+    for (let k = 0; k < g.n * 2; k++) { const c = k % 2; uv[k] = g.umin[c] + qu[k] / 65535 * g.uext[c]; }
+    const geom = new T.BufferGeometry();
+    geom.setAttribute("position", new T.BufferAttribute(pos, 3));
+    geom.setAttribute("normal", new T.BufferAttribute(nrm, 3));
+    geom.setAttribute("uv", new T.BufferAttribute(uv, 2));
+    geom.setIndex(new T.BufferAttribute(new Uint16Array(buf.slice(data + g.idx, data + g.idx + g.i * 2)), 1));
+    geom.computeBoundingSphere();
+    return geom;
+  };
+  const tex = async ([off, len], srgb) => {
+    const url = URL.createObjectURL(new Blob([new Uint8Array(buf, data + off, len)], { type: "image/jpeg" }));
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    URL.revokeObjectURL(url);
+    const t = new T.Texture(img);
+    t.flipY = false;   // como en glTF
+    if (srgb) t.colorSpace = T.SRGBColorSpace;
+    t.anisotropy = 4;
+    t.needsUpdate = true;
+    return t;
+  };
+  const mat = async (m, light) => {
+    if (m.glass) return new T.MeshPhysicalMaterial({ color: new T.Color(...(m.color || [1, 1, 1])), transmission: 1, thickness: 0.35, roughness: 0.06, ior: 1.5, metalness: 0 });
+    const o = { roughness: m.rough, metalness: m.metal, clearcoat: 0.2, clearcoatRoughness: 0.3, envMapIntensity: 2.2 };   // más reflejo: el mármol y los dorados lo necesitan
+    if (m.map) o.map = await tex(m.map, true);
+    if (m.color) o.color = new T.Color(...m.color);
+    if (light) o.color = new T.Color(1.32, 1.28, 1.22);   // el mármol «blanco» del original es gris: algo más claro, como marfil
+    if (m.orm) { const t = await tex(m.orm, false); o.roughnessMap = o.metalnessMap = t; if (m.ao) { o.aoMap = t; o.aoMapIntensity = 0.55; } }
+    return new T.MeshPhysicalMaterial(o);
+  };
+  const out = {};
+  for (const [t, e] of Object.entries(head.pieces)) {
+    out[t] = { geo: geo(e.geo), w: await mat(e.w, true), b: await mat(e.b) };
+    if (e.top) Object.assign(out[t], { top: geo(e.top), topW: await mat(e.topW), topB: await mat(e.topB) });
+  }
+  return out;
+}
+/* Vuelve a crear todas las piezas (al cambiar de juego de piezas o cuando llegan las realistas) */
+function board3dRebuild() {
+  if (!B3.ready) return;
+  for (const m of B3.meshes.values()) B3.scene.remove(m);
+  B3.meshes = new Map();
 }
 function board3dLoading(on) {
   let el = $("board3dLoading");
@@ -149,7 +222,7 @@ function board3dGrain(base, dark, light, size, seed) {
 /* Un «estudio» sencillo para los reflejos: paredes oscuras y unas ventanas luminosas (como RoomEnvironment de Three.js) */
 function board3dEnvironment(renderer) {
   const T = B3.T, env = new T.Scene(), pmrem = new T.PMREMGenerator(renderer);
-  const room = new T.Mesh(new T.BoxGeometry(24, 14, 24), new T.MeshBasicMaterial({ color: 0x25262b, side: T.BackSide }));
+  const room = new T.Mesh(new T.BoxGeometry(24, 14, 24), new T.MeshBasicMaterial({ color: 0x4a4b52, side: T.BackSide }));
   room.position.y = 5;
   env.add(room);
   const panel = (w, h, pos, rot, s) => { const m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ color: new T.Color(s, s * 0.97, s * 0.9), side: T.DoubleSide })); m.position.set(...pos); m.rotation.set(...rot); env.add(m); };
@@ -222,6 +295,18 @@ function board3dGeometries() {
 function board3dPiece(p) {
   const T = B3.T, white = p === p.toUpperCase(), mat = white ? B3.mat.w : B3.mat.b, type = p.toLowerCase();
   const g = new T.Group();
+  if (b3Real()) {
+    const md = B3.model[type], inner = new T.Group();
+    const add = (geo, m) => { const mesh = new T.Mesh(geo, m); mesh.castShadow = mesh.receiveShadow = true; inner.add(mesh); };
+    add(md.geo, white ? md.w : md.b);
+    if (md.top) add(md.top, white ? md.topW : md.topB);
+    inner.scale.setScalar(B3_REAL_SCALE);
+    // El modelo mira hacia las negras: las negras, al revés. El caballo, algo girado para que se vea su perfil desde tu lado
+    inner.rotation.y = (white ? 0 : Math.PI) + (type === "n" ? (white ? -0.9 : -0.9) : 0);
+    g.add(inner);
+    g.userData.p = p;
+    return g;
+  }
   const add = (geo, x = 0, y = 0, z = 0, m2 = mat) => { const m = new T.Mesh(geo, m2); m.position.set(x, y, z); m.castShadow = m2 === mat; m.receiveShadow = true; g.add(m); return m; };
   add(B3.geo.felt, 0, -0.004, 0, B3.mat.felt);
   if (type === "n") {
@@ -355,7 +440,7 @@ function board3dFit() {
   // Las casillas y lo alto de las piezas de las esquinas; el marco de madera puede quedar algo recortado
   const T = B3.T, pts = [];
   const e = B3.view.phi < 0.3 ? B3_SIZE / 2 : 4.05;   // desde arriba, con el marco y las coordenadas
-  for (const x of [-1, 1]) for (const z of [-1, 1]) { pts.push(new T.Vector3(x * e, 0, z * e)); pts.push(new T.Vector3(x * 3.5, 1.3, z * 3.5)); }
+  for (const x of [-1, 1]) for (const z of [-1, 1]) { pts.push(new T.Vector3(x * e, 0, z * e)); pts.push(new T.Vector3(x * 3.5, b3Real() ? 1.75 : 1.3, z * 3.5)); }
   let lo = 4, hi = 60;
   for (let n = 0; n < 22; n++) {
     const mid = (lo + hi) / 2;

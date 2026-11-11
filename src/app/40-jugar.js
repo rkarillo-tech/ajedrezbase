@@ -463,7 +463,7 @@ function startCpuGame(opts = {}) {
   ui.flipped = user === -1;
   const tc = parseTc(settings.cpuClock);
   const adaptive = settings.cpuLevel === "a", human = humanElo(settings.cpuLevel);
-  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, two, odds, autoFlip: two && settings.cpuAutoFlip, adaptive: adaptive && !two, human: two ? 0 : human, level: adaptive ? Math.round(adaptiveState().a) : human ? Math.max(0, Math.min(20, Math.round((human - 700) / 75))) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
+  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, helped: 0, two, odds, autoFlip: two && settings.cpuAutoFlip, adaptive: adaptive && !two, human: two ? 0 : human, level: adaptive ? Math.round(adaptiveState().a) : human ? Math.max(0, Math.min(20, Math.round((human - 700) / 75))) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
   settings.live = false;
   if (!game.root.children.length && game.headers.Event === "Estudio") {
     const d = new Date();
@@ -501,7 +501,8 @@ function cpuGameOver(result, text) {
   const user = -ui.cpu.side;
   if (ui.cpu.adaptive) {
     const plies = Pgn.pathTo(cur()).length - Pgn.pathTo(ui.cpu.startNode).length, sc = scoreOf(result, user);
-    if (sc != null && plies >= 6) {
+    if (sc != null && ui.cpu.helped) text += ` 🎯 Partida con ayuda (${ui.cpu.helped} ${ui.cpu.helped === 1 ? "vez" : "veces"}): no cambia el nivel adaptativo.`;
+    else if (sc != null && plies >= 6) {
       const { before, after } = adaptiveUpdate(sc);
       const d = Math.round((after - before) * 10) / 10;
       text += ` 🎯 Nivel adaptativo: ${fmtAdaptive(before)} → ${fmtAdaptive(after)}${d > 0 ? " (sube: la próxima será más difícil)" : d < 0 ? " (baja: la próxima será más asequible)" : ""}.`;
@@ -603,13 +604,16 @@ function cpuPanel(head, text) {
     box.innerHTML = `<div class="retry-head">🏁 ${esc(head || "Partida terminada")}</div><div>${esc(text || "")} <span class="small">(CPU ${esc(desc)})</span></div>
       <div class="controls"><button class="sm-btn primary" data-c="coach" title="El motor analiza la partida y te enseña tus errores más caros, para practicarlos">📋 Informe del entrenador</button><button class="sm-btn" data-c="save">💾 Guardar</button><button class="sm-btn info-btn" data-c="rematch">🔁 Revancha</button><button class="sm-btn" data-c="close">Cerrar</button></div>`;
   } else {
-    box.innerHTML = `<div class="retry-head">🤖 Partida contra la CPU</div><div class="small">${esc(desc)}</div>
+    box.innerHTML = `<div class="retry-head">🤖 Partida contra la CPU</div><div class="small">${esc(desc)}${ui.cpu.helped ? ` · 💡 ayuda pedida ${ui.cpu.helped} ${ui.cpu.helped === 1 ? "vez" : "veces"}${ui.cpu.adaptive ? " (no cuenta para el nivel adaptativo)" : ""}` : ""}</div>
+      <div class="controls"><button class="sm-btn primary" data-c="think" title="Cuando te toca: el motor explica la mejor jugada, las alternativas, qué amenaza el rival y por qué (tecla T)">🧠 Piensa conmigo</button><button class="sm-btn info-btn" data-c="talk" title="Cuando te toca: qué pieza está más a disgusto y adónde querría ir (tecla H)">🗣 Habla con tus piezas</button></div>
       <div class="controls">${ui.cpu.tc ? "" : `<button class="sm-btn" data-c="undo" title="Deshace tu última jugada y la respuesta de la CPU">↶ Deshacer</button>`}<button class="sm-btn" data-c="draw">½ Ofrecer tablas</button><button class="sm-btn danger" data-c="resign">🏳 Rendirse</button><button class="sm-btn" data-c="stop" title="Deja la partida sin resultado y vuelve al análisis">⏹ Terminar</button></div>`;
   }
   box.querySelectorAll("[data-c]").forEach(b => b.onclick = () => cpuAction(b.dataset.c));
 }
 function cpuAction(a) {
-  if (a === "undo") cpuUndo();
+  if (a === "think") thinkWithMe();
+  else if (a === "talk") talkToPieces();
+  else if (a === "undo") cpuUndo();
   else if (a === "draw") cpuOfferDraw();
   else if (a === "resign") {
     if (ui.cpu.two) { const t = cur().state.t, w = t === 1 ? "blancas" : "negras"; if (confirm(`¿Se rinden las ${w}?`)) cpuGameOver(t === 1 ? "0-1" : "1-0", `Se rinden las ${w}.`); }

@@ -58,6 +58,7 @@ function openModal(id) {
     $("tokenResult").textContent = "";
     $("setCoords").checked = settings.coords;
     $("setBoard3d").checked = !!settings.board3d;
+    $("setBoard3dSet").value = settings.board3dSet === "simple" ? "simple" : "real";
     $("setLegal").checked = settings.showLegal;
     $("setAutosave").checked = settings.autosave;
     $("setAnimate").checked = settings.animate;
@@ -105,6 +106,7 @@ $("setLiveMs").onchange = e => { settings.liveMs = Math.max(500, Math.min(30000,
 $("setToken").onchange = e => { settings.token = e.target.value.trim(); saveSettings(); explorerCache.clear(); refreshExplorer(); };
 $("setCoords").onchange = e => { settings.coords = e.target.checked; saveSettings(); renderBoard(); };
 $("setBoard3d").onchange = e => { settings.board3d = e.target.checked; B3.failed = false; saveSettings(); renderBoard(); };
+$("setBoard3dSet").onchange = e => { settings.board3dSet = e.target.value; if (e.target.value === "real" && B3.model === null) B3.model = undefined; saveSettings(); board3dRebuild(); renderBoard(); };
 $("setLegal").onchange = e => { settings.showLegal = e.target.checked; saveSettings(); renderBoard(); };
 $("setAnimate").onchange = e => { settings.animate = e.target.checked; saveSettings(); };
 $("setWheel").onchange = e => { settings.wheel = e.target.checked; saveSettings(); };
