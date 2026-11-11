@@ -149,6 +149,9 @@ main {
 .lesson-num { min-width: 1.6em; text-align: center; color: var(--accent); font-weight: 700; }
 .lesson-title { flex: 1; }
 .puzzle-stats { margin-top: 6px; }
+.pack-list { display: grid; gap: 5px; margin-top: 6px; }
+.pack-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 9px; background: var(--deep); border: 1px solid var(--border); border-radius: 7px; }
+.pack-row > span:first-child { flex: 1 1 200px; }
 .puzzle-stats summary { cursor: pointer; font-size: .84rem; }
 .theme-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 4px; }
 .theme-table td { padding: 2px 6px; }
@@ -1383,6 +1386,10 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <span id="puzzleInfo" class="small"></span>
         </div>
         <details class="puzzle-stats"><summary>📊 Tus temas: acierto en cada tipo de problema</summary><div id="puzzleStats"></div></details>
+        <details class="puzzle-stats" id="packBox"><summary>📦 Más problemas: paquetes para descargar <span id="packBadge" class="srs-pill ok" hidden></span></summary>
+          <p class="small">Miles de problemas más, elegidos entre los mejor valorados de la base de <a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener noreferrer">Lichess</a> (dominio público) y repartidos por nivel y por temas. Descarga los que quieras: se guardan en este navegador, funcionan sin conexión y se mezclan con los de la aplicación en los filtros, el repaso y tu nivel.</p>
+          <div id="packList" class="pack-list"></div>
+        </details>
         <div class="controls">
           <button id="examStartBtn" class="sm-btn info-btn" title="15 problemas que se adaptan a ti, con 90 segundos cada uno y sin pistas">📏 Mide tu nivel (examen)</button>
           <span id="examInfo" class="small"></span>
@@ -1736,6 +1743,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
         <tr><td><a href="https://github.com/niklasf/stockfish.js" target="_blank" rel="noopener noreferrer">stockfish.js</a> 10.0.2 (versión JavaScript de Niklas Fiekas)</td><td>Motor de respaldo para navegadores sin WebAssembly; se descarga de cdnjs sólo si hace falta</td><td>GPL v3</td></tr>
         <tr><td>Piezas «Clásicas», de <a href="https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces" target="_blank" rel="noopener noreferrer">Colin M. L. Burnett</a> (Wikimedia Commons)</td><td>Dibujo de las piezas y del icono</td><td>Licencia múltiple GPL / BSD / GFDL</td></tr>
         <tr><td>Servicios de <a href="https://lichess.org" target="_blank" rel="noopener noreferrer">Lichess</a>: explorador de aperturas, evaluación en la nube y tablas Syzygy</td><td>Sólo se consultan cuando los usas; el explorador necesita tu token personal</td><td>Servicio gratuito de lichess.org (<a href="https://lichess.org/api" target="_blank" rel="noopener noreferrer">API</a>)</td></tr>
+        <tr><td><a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener noreferrer">Base de problemas de Lichess</a>: los paquetes de «📦 Más problemas»</td><td>Dominio público (CC0). Sólo se descargan si lo pides</td></tr>
         <tr><td>Partidas de la antología y finales clásicos</td><td>Ejemplos</td><td>Partidas históricas</td></tr>
       </tbody>
     </table>

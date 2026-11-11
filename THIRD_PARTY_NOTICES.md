@@ -18,5 +18,6 @@ Sólo se consultan cuando el usuario los usa, directamente desde su navegador:
 | [Lichess](https://lichess.org) — explorador de aperturas (`explorer.lichess.ovh`) | Estadísticas de maestros y de partidas online | Requiere un token personal gratuito del usuario, que se guarda sólo en su navegador |
 | Lichess — evaluación en la nube (`lichess.org/api/cloud-eval`) | Análisis profundo ya calculado | Sólo al pulsar «☁ Nube» |
 | Lichess — tablas Syzygy (`tablebase.lichess.ovh`) | Resultado exacto de finales de hasta 7 piezas | Sólo en la pestaña Finales |
+| Lichess — [base de problemas](https://database.lichess.org/#puzzles) | Los paquetes de problemas descargables (`problemas/*.json`) son una selección de esa base | Dominio público (CC0). Se descargan del sitio de AjedrezBase, no de Lichess, y sólo al pulsar «⬇ Descargar» |
 
 Las partidas de la antología y de los finales clásicos son partidas y posiciones históricas.

@@ -1433,6 +1433,48 @@ def prueba_habla_con_tus_piezas(browser):
     ctx.close()
 
 
+def prueba_paquetes_de_problemas(browser):
+    print("Paquetes de problemas descargables")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    entrenar(pg, "puzzles")
+    # Paquetes descargables: se sirven desde la carpeta problemas/ del repositorio (sin red)
+    base = pg.evaluate("PUZZLES.length")
+    pg.locator("#packBox").evaluate("e => e.open = true")
+    comprobar(pg.locator("#packList .pack-row").count() == 5 and "1500 problemas" in pg.inner_text("#packList"), "«Más problemas» ofrece los paquetes por nivel")
+    pg.route("**/problemas/*.json", lambda r: r.abort())
+    pg.click('[data-pack-get="basico"]')
+    pg.wait_for_function("document.querySelector('.toast.show') && document.querySelector('.toast').textContent.includes('No se pudo descargar')", timeout=10000)
+    comprobar(pg.evaluate("PUZZLES.length") == base and pg.is_visible('[data-pack-get="basico"]'), "sin conexión avisa y no cambia nada")
+    pg.unroute("**/problemas/*.json")
+    pg.route("**/problemas/*.json", lambda r: r.fulfill(path=str(ROOT / "problemas" / r.request.url.rsplit("/", 1)[1]), content_type="application/json"))
+    pg.click('[data-pack-get="basico"]')
+    pg.wait_for_function(f"PUZZLES.length === {base + 1500}", timeout=15000)
+    pg.wait_for_selector('[data-pack-del="basico"]', timeout=5000)
+    comprobar(pg.is_visible('[data-pack-del="basico"]') and "+1500" in pg.inner_text("#packBadge") and "Enfilada" in pg.inner_text("#puzzleTheme")
+              and f"({base + 1500})" in pg.inner_text("#puzzleTheme"), "descargar un paquete añade sus problemas y sus temas al banco")
+    pg.reload(); pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+    pg.wait_for_function(f"PUZZLES.length === {base + 1500}", timeout=10000)
+    comprobar(True, "el paquete queda guardado en el navegador y vuelve al recargar")
+    entrenar(pg, "puzzles")
+    pg.select_option("#puzzleTheme", "skewer"); pg.select_option("#puzzleCount", "5")
+    pg.click("#puzzleStartBtn")
+    pg.wait_for_function("trainer.active && trainer.puzzle && trainerUserTurn() && !trainer.busy", timeout=10000)
+    comprobar(pg.evaluate("Puz.cur.pack === 'basico' && Puz.cur.themes.includes('skewer')") and "Enfilada" not in pg.inner_text("#trainFeedback"), "los problemas del paquete se entrenan igual que los demás (y no se chiva el tema antes de resolver)")
+    jugar_lo_que_toca(pg)
+    pg.wait_for_function("document.getElementById('trainFeedback').textContent.includes('Enfilada')", timeout=10000)
+    comprobar(True, "al resolverlo dice su tema")
+    pg.click("#stopPuzzlesBtn")
+    entrenar(pg, "puzzles")
+    pg.locator("#packBox").evaluate("e => e.open = true")
+    pg.click('[data-pack-del="basico"]')
+    pg.wait_for_function(f"PUZZLES.length === {base}", timeout=5000)
+    pg.wait_for_selector('[data-pack-get="basico"]', timeout=5000)
+    comprobar(pg.is_visible('[data-pack-get="basico"]') and not pg.is_visible("#packBadge"), "«Quitar» lo retira del banco")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_geometria_y_ciegas(browser):
     print("Novedades 1.25: ruta del caballo, rebotes del alfil y problemas a ciegas")
     ctx = contexto(browser)
@@ -1665,7 +1707,7 @@ def prueba_stockfish19(browser):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_geometria_y_ciegas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_geometria_y_ciegas, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

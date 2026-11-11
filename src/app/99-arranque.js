@@ -42,6 +42,7 @@ if (firstVisit) showWelcome(true);
   $("explorerDbSelect").value = settings.explorerDb;
   buildEditorPalettes();
   initPuzzleFilters();
+  initPacks();
   renderToday();
   renderLocalEcoList();
   initEndgamePresets();

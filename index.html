@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  AjedrezBase 1.29.0 · https://github.com/rkarillo-tech/ajedrezbase
+  AjedrezBase 1.30.0 · https://github.com/rkarillo-tech/ajedrezbase
 
   MIT License
   
@@ -149,6 +149,9 @@ main {
 .lesson-num { min-width: 1.6em; text-align: center; color: var(--accent); font-weight: 700; }
 .lesson-title { flex: 1; }
 .puzzle-stats { margin-top: 6px; }
+.pack-list { display: grid; gap: 5px; margin-top: 6px; }
+.pack-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 9px; background: var(--deep); border: 1px solid var(--border); border-radius: 7px; }
+.pack-row > span:first-child { flex: 1 1 200px; }
 .puzzle-stats summary { cursor: pointer; font-size: .84rem; }
 .theme-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 4px; }
 .theme-table td { padding: 2px 6px; }
@@ -1383,6 +1386,10 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <span id="puzzleInfo" class="small"></span>
         </div>
         <details class="puzzle-stats"><summary>📊 Tus temas: acierto en cada tipo de problema</summary><div id="puzzleStats"></div></details>
+        <details class="puzzle-stats" id="packBox"><summary>📦 Más problemas: paquetes para descargar <span id="packBadge" class="srs-pill ok" hidden></span></summary>
+          <p class="small">Miles de problemas más, elegidos entre los mejor valorados de la base de <a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener noreferrer">Lichess</a> (dominio público) y repartidos por nivel y por temas. Descarga los que quieras: se guardan en este navegador, funcionan sin conexión y se mezclan con los de la aplicación en los filtros, el repaso y tu nivel.</p>
+          <div id="packList" class="pack-list"></div>
+        </details>
         <div class="controls">
           <button id="examStartBtn" class="sm-btn info-btn" title="15 problemas que se adaptan a ti, con 90 segundos cada uno y sin pistas">📏 Mide tu nivel (examen)</button>
           <span id="examInfo" class="small"></span>
@@ -1526,7 +1533,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 </main>
 
 <footer class="app-footer">
-  AjedrezBase 1.29.0 · © 2026 Rafael Karino Arillo ·
+  AjedrezBase 1.30.0 · © 2026 Rafael Karino Arillo ·
   <button class="link-inline" id="welcomeBtn" type="button">Primeros pasos</button> ·
   <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
   <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
@@ -2017,6 +2024,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <li><b>Entrenar una partida o repertorio</b>: carga una partida con tus líneas y variantes → pestaña <b>🎯 Entrenar</b> → <b>🗂 Repertorios</b> → elige con qué bando entrenas → <b>▶ Empezar</b>. Tú haces tus jugadas; el rival responde eligiendo al azar entre tus variantes. <b>💡 Pista</b> marca la pieza y, si la pulsas otra vez, la jugada.</li>
           <li>Si la partida está en la biblioteca, se programa su repaso: si fallas, vuelve mañana; si la haces perfecta, se espacia (1, 3, 7, 16, 35, 75 días). <b>📅 Entrenar la siguiente partida pendiente</b> te pone la que toca.</li>
           <li><b>🎯 Errores de tus partidas</b>: ejercicios con las posiciones de los <code>?</code> y <code>??</code> de las partidas analizadas de tu biblioteca. Elige el tipo (táctica, encuentra el mate, defensa, convertir la ventaja, planteamiento, apertura o final) y cuántos, y pulsa <b>▶ Pendientes</b>, o <b>Al azar</b> para repasar aunque no toque. Con <b>Sólo mis jugadas</b> marcado salen sólo tus errores; para eso tienes que poner tu nombre en Estadísticas. Los que fallas vuelven al día siguiente y los que aciertas se espacian. Al terminar, <b>↩ Volver a tu partida</b>.</li>
+          <li><b>📦 Más problemas</b>: dentro de «Problemas de táctica», <b>📦 Más problemas: paquetes para descargar</b> ofrece cinco paquetes de 1.500 problemas cada uno, por nivel (Iniciación, Básico, Intermedio, Avanzado y Experto), elegidos entre los mejor valorados de la base de Lichess. Pulsa <b>⬇ Descargar</b> en los que quieras (hace falta conexión sólo ese momento): quedan guardados en el navegador, funcionan sin conexión y se mezclan con los de la aplicación en los filtros por tema y dificultad, el repaso espaciado, el examen y tu nivel. Traen temas nuevos (enfilada, desviación, atracción, pieza atrapada, jugada intermedia, zugzwang…). <b>Quitar</b> los retira; tu historial de aciertos se conserva.</li>
           <li><b>🧩 Problemas de táctica</b>: posiciones en las que una jugada gana, sacadas de partidas y comprobadas con Stockfish (en cada paso, la solución es claramente la mejor). Elige el tema (mates, horquilla, clavada, descubierta, sacrificio, final…), la dificultad y cuántos, y pulsa <b>▶ Empezar</b>. El rival hace primero su jugada (el error que vas a castigar) y después te toca a ti; si la solución tiene varias jugadas, el rival responde solo. En los mates vale cualquier jugada que dé mate. Los que fallas vuelven al día siguiente y los que aciertas se espacian. Tu <b>nivel aproximado</b> (como el Elo de los problemas de Lichess) sube o baja con cada problema, y te propone problemas cercanos a tu nivel.</li>
           <li><b>📊 Tus temas</b>: tu porcentaje de acierto en cada tipo de problema. Los tres más flojos se marcan, y en el tema puedes elegir <b>⚠ Mis temas flojos</b> para entrenarlos.</li>
           <li><b>📏 Mide tu nivel (examen)</b>: 15 problemas que se adaptan a ti (si aciertas, el siguiente es más difícil; si fallas, más fácil), con 90 segundos cada uno, sin pistas y con un solo intento. Al final te da tu <b>nivel estimado</b> en táctica, tus puntos fuertes y los temas que debes trabajar, y la evolución respecto a exámenes anteriores. Repítelo cada una o dos semanas.</li>
@@ -2274,7 +2282,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 <div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
   <div class="modal wide">
     <h2 id="licTitle"><span>📜 Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
-    <p class="lic-p"><b>AjedrezBase 1.29.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
+    <p class="lic-p"><b>AjedrezBase 1.30.0</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>).</p>
     <p class="lic-p">Software libre con licencia MIT: puedes usarlo, copiarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves este aviso de copyright y el texto de la licencia. Se ofrece tal cual, sin garantía de ningún tipo.</p>
     <details class="lic-det"><summary>Ver el texto de la licencia</summary><pre class="lic-text">MIT License
 
@@ -2305,6 +2313,7 @@ SOFTWARE.</pre></details>
         <tr><td><a href="https://github.com/niklasf/stockfish.js" target="_blank" rel="noopener noreferrer">stockfish.js</a> 10.0.2 (versión JavaScript de Niklas Fiekas)</td><td>Motor de respaldo para navegadores sin WebAssembly; se descarga de cdnjs sólo si hace falta</td><td>GPL v3</td></tr>
         <tr><td>Piezas «Clásicas», de <a href="https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces" target="_blank" rel="noopener noreferrer">Colin M. L. Burnett</a> (Wikimedia Commons)</td><td>Dibujo de las piezas y del icono</td><td>Licencia múltiple GPL / BSD / GFDL</td></tr>
         <tr><td>Servicios de <a href="https://lichess.org" target="_blank" rel="noopener noreferrer">Lichess</a>: explorador de aperturas, evaluación en la nube y tablas Syzygy</td><td>Sólo se consultan cuando los usas; el explorador necesita tu token personal</td><td>Servicio gratuito de lichess.org (<a href="https://lichess.org/api" target="_blank" rel="noopener noreferrer">API</a>)</td></tr>
+        <tr><td><a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener noreferrer">Base de problemas de Lichess</a>: los paquetes de «📦 Más problemas»</td><td>Dominio público (CC0). Sólo se descargan si lo pides</td></tr>
         <tr><td>Partidas de la antología y finales clásicos</td><td>Ejemplos</td><td>Partidas históricas</td></tr>
       </tbody>
     </table>
@@ -9007,7 +9016,11 @@ const PUZZLES = [{"id":"p1osnj4o","fen":"rbb1r1k1/pp3ppp/8/1N1pq1n1/8/P2BQ3/1P3P
 const PUZZLE_THEMES = {
   mateIn1: "Mate en 1", mateIn2: "Mate en 2", mateIn3: "Mate en 3", mateIn4: "Mate en 4", fork: "Horquilla", pin: "Clavada",
   discoveredAttack: "Ataque a la descubierta", doubleCheck: "Jaque doble", hangingPiece: "Pieza colgada", sacrifice: "Sacrificio",
-  backRankMate: "Mate del pasillo", smotheredMate: "Mate de la coz", promotion: "Coronación", endgame: "Final", short: "Una sola jugada"
+  backRankMate: "Mate del pasillo", smotheredMate: "Mate de la coz", promotion: "Coronación", endgame: "Final", short: "Una sola jugada",
+  // Temas que sólo traen los paquetes descargables (base de problemas de Lichess)
+  mateIn5: "Mate en 5", skewer: "Enfilada", deflection: "Desviación", attraction: "Atracción", capturingDefender: "Eliminar al defensor",
+  trappedPiece: "Pieza atrapada", intermezzo: "Jugada intermedia", clearance: "Despeje", interference: "Interferencia",
+  quietMove: "Jugada tranquila", defensiveMove: "Jugada defensiva", zugzwang: "Zugzwang"
 };
 const PUZZLE_LEVELS = [[0, 1100, "Fácil"], [1100, 1500, "Medio"], [1500, 1900, "Difícil"], [1900, 9999, "Muy difícil"]];
 const puzzleLevelOf = r => PUZZLE_LEVELS.findIndex(([a, b]) => r >= a && r < b);
@@ -9054,6 +9067,103 @@ function initPuzzleFilters() {
   $("puzzleTheme").innerHTML = opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
   $("puzzleLevel").innerHTML = `<option value="">Todas las dificultades</option>` + PUZZLE_LEVELS.map(([a, b, n], i) => `<option value="${i}">${n} (${b > 3000 ? "más de " + a : a + "–" + b})</option>`).join("");
 }
+/* ---------- 26p. Paquetes de problemas descargables (problemas/*.json, de la base de Lichess, CC0) ----------
+   Se descargan a petición del usuario y se guardan en una base IndexedDB propia («ajedrezbase-problemas»),
+   aparte de la biblioteca, para no tocar su esquema. Al arrancar se añaden al banco PUZZLES. */
+const PUZZLE_PACKS = [{"id":"iniciacion","name":"Iniciación","min":600,"max":1000,"count":1500,"kb":250},{"id":"basico","name":"Básico","min":1000,"max":1400,"count":1500,"kb":260},{"id":"intermedio","name":"Intermedio","min":1400,"max":1800,"count":1500,"kb":263},{"id":"avanzado","name":"Avanzado","min":1800,"max":2200,"count":1500,"kb":270},{"id":"experto","name":"Experto","min":2200,"max":2800,"count":1500,"kb":278}];
+const PACKS_URL = "https://rkarillo-tech.github.io/ajedrezbase/problemas/";
+const Packs = {
+  db: null, have: new Set(), busy: "",
+  open() {
+    return new Promise(res => {
+      if (!window.indexedDB) { res(false); return; }
+      let req;
+      try { req = indexedDB.open("ajedrezbase-problemas", 1); } catch { res(false); return; }
+      req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains("packs")) req.result.createObjectStore("packs", { keyPath: "id" }); };
+      req.onsuccess = () => { this.db = req.result; res(true); };
+      req.onerror = req.onblocked = () => res(false);
+    });
+  },
+  tx(mode, fn) {
+    return new Promise((res, rej) => {
+      if (!this.db) { res(mode === "readonly" ? [] : undefined); return; }
+      const t = this.db.transaction("packs", mode), r = fn(t.objectStore("packs"));
+      t.oncomplete = () => res(r && r.result);
+      t.onerror = t.onabort = () => rej(t.error || Error("no se pudo guardar (¿sin espacio?)"));
+    });
+  }
+};
+/* Sólo entran problemas bien formados y que no estén ya en el banco */
+function addPackPuzzles(id, list) {
+  const ids = new Set(PUZZLES.map(p => p.id));
+  let n = 0;
+  for (const p of Array.isArray(list) ? list : []) {
+    if (!p || typeof p.id !== "string" || ids.has(p.id) || typeof p.fen !== "string" || !Array.isArray(p.moves) || p.moves.length < 2 || p.moves.length % 2 || !Array.isArray(p.themes) || !(p.rating > 0)) continue;
+    if (!p.moves.every(u => typeof u === "string" && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(u))) continue;
+    PUZZLES.push({ id: p.id, fen: p.fen, moves: p.moves, themes: p.themes.filter(x => typeof x === "string"), rating: +p.rating, pack: id });
+    ids.add(p.id); n++;
+  }
+  if (n) Packs.have.add(id);
+  return n;
+}
+function refreshPuzzleBank() {
+  const th = $("puzzleTheme").value, lv = $("puzzleLevel").value;
+  initPuzzleFilters();
+  if ([...$("puzzleTheme").options].some(o => o.value === th)) $("puzzleTheme").value = th;
+  $("puzzleLevel").value = lv;
+  renderPacks(); renderPuzzleInfo(); renderToday();
+}
+async function initPacks() {
+  renderPacks();
+  if (!(await Packs.open())) return;
+  try {
+    const recs = await Packs.tx("readonly", s => s.getAll());
+    (recs || []).forEach(r => addPackPuzzles(r.id, r.puzzles));
+  } catch (e) { console.warn("No se pudieron leer los paquetes de problemas:", e); }
+  if (Packs.have.size) refreshPuzzleBank();
+}
+async function downloadPack(id) {
+  if (Packs.busy) return;
+  Packs.busy = id; renderPacks();
+  try {
+    const res = await fetch((/^https?:$/.test(location.protocol) ? "problemas/" : PACKS_URL) + id + ".json", { cache: "no-cache" });
+    if (!res.ok) throw Error("el servidor respondió " + res.status);
+    const data = await res.json();
+    const n = addPackPuzzles(id, data && data.puzzles);
+    if (!n) throw Error("el paquete no trae problemas nuevos");
+    let saved = true;
+    try { await Packs.tx("readwrite", s => s.put({ id, puzzles: data.puzzles, date: Date.now() })); saved = !!Packs.db; } catch (e) { console.warn(e); saved = false; }
+    toast(saved ? `📦 ${n} problemas añadidos. Quedan guardados en este navegador y funcionan sin conexión.` : `📦 ${n} problemas añadidos, pero este navegador no ha podido guardarlos: habrá que descargarlos otra vez al volver.`, 6000);
+  } catch (e) {
+    toast(`No se pudo descargar el paquete (${e.message || e}). Hace falta conexión a internet.`, 6000);
+  }
+  Packs.busy = "";
+  refreshPuzzleBank();
+}
+async function removePack(id) {
+  if (trainer.active && trainer.puzzle) { toast("Termina antes la sesión de problemas."); return; }
+  for (let i = PUZZLES.length - 1; i >= 0; i--) if (PUZZLES[i].pack === id) PUZZLES.splice(i, 1);
+  Packs.have.delete(id);
+  try { await Packs.tx("readwrite", s => s.delete(id)); } catch (e) { console.warn(e); }
+  toast("Paquete quitado. Tu historial de aciertos se conserva por si lo vuelves a descargar.", 5000);
+  refreshPuzzleBank();
+}
+function renderPacks() {
+  const box = $("packList");
+  if (!box) return;
+  const extra = PUZZLES.filter(p => p.pack).length;
+  $("packBadge").textContent = extra ? `+${extra}` : "";
+  $("packBadge").hidden = !extra;
+  box.innerHTML = PUZZLE_PACKS.map(k => {
+    const have = Packs.have.has(k.id), busy = Packs.busy === k.id;
+    return `<div class="pack-row"><span><b>${esc(k.name)}</b> <span class="small">nivel ${k.min}–${k.max} · ${k.count} problemas · ${k.kb} KB</span></span>
+      ${have ? `<span class="srs-pill ok">✔ Descargado</span><button class="sm-btn danger" data-pack-del="${esc(k.id)}">Quitar</button>`
+             : `<button class="sm-btn primary" data-pack-get="${esc(k.id)}"${Packs.busy ? " disabled" : ""}>${busy ? "⏳ Descargando…" : "⬇ Descargar"}</button>`}</div>`;
+  }).join("");
+  box.querySelectorAll("[data-pack-get]").forEach(b => b.onclick = () => downloadPack(b.dataset.packGet));
+  box.querySelectorAll("[data-pack-del]").forEach(b => b.onclick = () => removePack(b.dataset.packDel));
+}
+
 function renderPuzzleInfo() {
   if (!$("puzzleInfo")) return;
   const pool = puzzlePool(), s = puzSrs(), now = Date.now(), R = puzRating();
@@ -11645,6 +11755,7 @@ if (firstVisit) showWelcome(true);
   $("explorerDbSelect").value = settings.explorerDb;
   buildEditorPalettes();
   initPuzzleFilters();
+  initPacks();
   renderToday();
   renderLocalEcoList();
   initEndgamePresets();

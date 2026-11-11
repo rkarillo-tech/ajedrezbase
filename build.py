@@ -212,6 +212,9 @@ def build():
     if "/*__PUZZLES__*/[]" not in app:
         raise SystemExit("src/app/: falta el marcador de los problemas")
     app = app.replace("/*__PUZZLES__*/[]", puzzles_js())
+    if "/*__PACKS__*/[]" not in app:
+        raise SystemExit("src/app/: falta el marcador de los paquetes de problemas")
+    app = app.replace("/*__PACKS__*/[]", json.dumps(json.loads((ROOT / "problemas" / "indice.json").read_text(encoding="utf-8")), ensure_ascii=False, separators=(",", ":")))
     parts = {"CORE": read("core.js"), "PGN": read("pgn.js"), "ECO": read("eco.js"), "APP": app}
     for name, code in parts.items():
         if "</script" in code.lower():
