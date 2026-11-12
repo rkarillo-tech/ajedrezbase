@@ -108,7 +108,11 @@ function shapeList() {
     if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
     if (Talk.node === cur() && (!quiz() || cpuHelpMode())) for (const sh of Talk.shapes) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
-    if (Retry.active) for (const a of Retry.arrows) list.push(a);
+    if (Retry.active) {
+      // La jugada que se hizo en la partida (el error), como referencia mientras se busca la buena
+      if (Retry.played && ["ask", "wrong", "checking", "preparing"].includes(Retry.state)) list.push(Retry.played);
+      for (const a of Retry.arrows) list.push(a);
+    }
     // Mientras se dibuja: la flecha (o el círculo) que va a quedar, para ver dónde se suelta
     if (ui.drawStart && ui.drawStart.over != null) list.push({ color: ui.drawStart.color, from: ui.drawStart.sq, to: ui.drawStart.over, preview: true });
   }
