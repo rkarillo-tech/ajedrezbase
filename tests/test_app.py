@@ -1872,8 +1872,9 @@ def prueba_tablero3d(browser):
     pg.wait_for_function("B3.active", timeout=20000)
     comprobar(pg.is_visible("#board3d canvas") and pg.evaluate("getComputedStyle($('board')).visibility") == "hidden" and pg.evaluate("B3.meshes.size") == 32,
               "al activarlo se descarga Three.js y se ve el tablero en 3D con las 32 piezas")
-    pg.wait_for_function("B3.model && b3Real() && [...B3.meshes.values()].every(m => m.children[0].isGroup)", timeout=20000)
-    comprobar(pg.evaluate("Object.keys(B3.model).sort().join()") == "b,k,n,p,q,r" and pg.evaluate("B3.meshes.size") == 32, "después llegan las piezas realistas (las seis, de los dos colores)")
+    pg.wait_for_function("B3.model && b3Real() && [...B3.meshes.values()].every(m => m.children.length === 1)", timeout=20000)
+    comprobar(all(pg.evaluate(f"!!(B3.model['{x}'] && B3.model['{x}'].geo)") for x in "kqrbnp") and pg.evaluate("B3.meshes.size") == 32
+              and pg.evaluate("B3.meshes.get(Chess.sqIdx('c1')).children[0].geometry === B3.model.b.geo"), "después llegan las piezas Staunton (las seis, también el alfil)")
     def pulsar(sq):
         xy = pg.evaluate("""sq => { const p = cur().state.b[Chess.sqIdx(sq)], y = p === "." ? 0 : "pP".includes(p) ? 0.6 : 0.85;
           const [x, z] = b3Pos(Chess.sqIdx(sq)), v = new B3.T.Vector3(x, y, z).project(B3.camera), r = B3.canvas.getBoundingClientRect();
@@ -1902,10 +1903,6 @@ def prueba_tablero3d(browser):
     pg.evaluate("closeEditor()")
     comprobar(pg.evaluate("B3.active"), "y al cerrarlo vuelve el 3D")
     pg.click("#settingsBtn")
-    pg.select_option("#setBoard3dSet", "simple")
-    comprobar(not pg.evaluate("b3Real()") and pg.evaluate("B3.meshes.size") == 32 and not pg.evaluate("[...B3.meshes.values()].some(m => m.children[0].isGroup)"), "se puede cambiar a las piezas sencillas")
-    pg.select_option("#setBoard3dSet", "real")
-    comprobar(pg.evaluate("b3Real()"), "y volver a las realistas sin descargarlas otra vez")
     pg.uncheck("#setBoard3d")
     pg.keyboard.press("Escape")
     comprobar(not pg.evaluate("B3.active") and pg.is_visible(".square"), "al desactivarlo vuelve el tablero plano")
@@ -1918,7 +1915,7 @@ def prueba_tablero3d(browser):
     pg, errores = nueva_pagina(ctx)
     pg.evaluate("settings.board3d = true; renderBoard()")
     pg.wait_for_function("B3.active && B3.model === null", timeout=20000)
-    comprobar(pg.evaluate("B3.meshes.size") == 32 and not pg.evaluate("b3Real()") and "piezas realistas" in pg.inner_text("#toast"), "si no llegan las piezas realistas, se avisa y se juega con las sencillas")
+    comprobar(pg.evaluate("B3.meshes.size") == 32 and not pg.evaluate("b3Real()") and "piezas Staunton" in pg.inner_text("#toast"), "si no llegan las piezas Staunton, se avisa y se juega con unas más sencillas")
     ctx.close()
     # Sin conexión (no se puede descargar Three.js): se avisa y sigue el tablero plano
     ctx = contexto(browser)
