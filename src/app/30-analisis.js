@@ -926,7 +926,7 @@ async function retryShow() {
     setGame(node.__game, { noConfirm: true, name: `🎯 Ejercicio · ${node.__drill.title}` });
     Retry.active = true;
   }
-  Object.assign(Retry, { attempts: 0, hint: 0, hintSq: -1, state: "ask", arrows: [], msg: "" });
+  Object.assign(Retry, { attempts: 0, hint: 0, hintSq: -1, state: "ask", arrows: [], msg: "", played: node.move ? { color: "threat", from: node.move.from, to: node.move.to } : null });
   if (node.__drill && !(node.parent.eval && node.parent.eval.best)) {
     game.current = node.parent;
     ui.flipped = node.parent.state.t === -1;
@@ -950,7 +950,7 @@ function retryPanel() {
   const node = retryNode(), n = Retry.queue.length;
   const who = node.parent.state.t === 1 ? "las blancas" : "las negras";
   let html = `<div class="retry-head">🎯 ${node.__drill ? "Ejercicio" : "Error"} ${Retry.i + 1} de ${n}</div><div>${retryDesc(node)}</div>`;
-  if (Retry.state === "ask" || Retry.state === "wrong") html += `<div class="retry-q">¿Qué era mejor para ${who}? Haz la jugada en el tablero.</div>`;
+  if (Retry.state === "ask" || Retry.state === "wrong") html += `<div class="retry-q">¿Qué era mejor para ${who}? Haz la jugada en el tablero.${Retry.played ? ` <span class="small">(La flecha roja discontinua es la jugada de la partida.)</span>` : ""}</div>`;
   if (Retry.msg) html += `<div class="retry-msg">${Retry.msg}</div>`;
   const open = Retry.state === "ask" || Retry.state === "wrong";
   html += `<div class="controls">`;

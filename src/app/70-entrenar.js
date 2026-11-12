@@ -385,12 +385,13 @@ function puzzlePrompt() {
   trainFeedback(`🧩 Problema ${Puz.done + 1} de ${Puz.total} · ${PUZZLE_LEVELS[puzzleLevelOf(p.rating)][2]} (${p.rating}) · juegan las <b>${side}</b>.<br>El rival acaba de jugar ${esc(numPrefix(cur().parent.state) + dispSan(cur()))}: encuentra la mejor jugada.${trainer.correct ? " ¡Bien! Sigue." : ""}` + puzzleButtons());
   wirePuzzleButtons();
 }
-const puzzleButtons = () => `<div class="controls">${Puz.blind && Puz.blindPhase === "hidden" ? `<button class="sm-btn" data-pz="peek">👁 Ojear 2 s</button>` : ""}<button class="sm-btn" data-pz="hint">💡 Pista</button><button class="sm-btn danger" data-pz="end">⏹ Terminar</button></div>`;
+const puzzleButtons = () => `<div class="controls">${Puz.blind && Puz.blindPhase === "hidden" ? `<button class="sm-btn" data-pz="peek">👁 Ojear 2 s</button>` : ""}${Puz.blind ? "" : `<button class="sm-btn" data-pz="scan" title="Recorre el método antes de calcular (cuenta como pista)">🔎 Lee el tablero</button>`}<button class="sm-btn" data-pz="hint">💡 Pista</button><button class="sm-btn danger" data-pz="end">⏹ Terminar</button></div>`;
 function wirePuzzleButtons() {
   $("trainFeedback").querySelectorAll("[data-pz]").forEach(b => b.onclick = () => {
     if (b.dataset.pz === "end") endPuzzles();
     else if (b.dataset.pz === "peek") peekPieces();
     else if (b.dataset.pz === "hide") { Puz.blindLeft = 0; blindPuzzleTick(); }
+    else if (b.dataset.pz === "scan") readBoard();
     else { trainerHint(); $("trainFeedback").insertAdjacentHTML("beforeend", puzzleButtons()); wirePuzzleButtons(); }
   });
 }

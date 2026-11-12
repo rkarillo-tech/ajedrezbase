@@ -605,7 +605,7 @@ function cpuPanel(head, text) {
       <div class="controls"><button class="sm-btn primary" data-c="coach" title="El motor analiza la partida y te enseña tus errores más caros, para practicarlos">📋 Informe del entrenador</button><button class="sm-btn" data-c="save">💾 Guardar</button><button class="sm-btn info-btn" data-c="rematch">🔁 Revancha</button><button class="sm-btn" data-c="close">Cerrar</button></div>`;
   } else {
     box.innerHTML = `<div class="retry-head">🤖 Partida contra la CPU</div><div class="small">${esc(desc)}${ui.cpu.helped ? ` · 💡 ayuda pedida ${ui.cpu.helped} ${ui.cpu.helped === 1 ? "vez" : "veces"}${ui.cpu.adaptive ? " (no cuenta para el nivel adaptativo)" : ""}` : ""}</div>
-      <div class="controls"><button class="sm-btn primary" data-c="think" title="Cuando te toca: el motor explica la mejor jugada, las alternativas, qué amenaza el rival y por qué (tecla T)">🧠 Piensa conmigo</button><button class="sm-btn info-btn" data-c="talk" title="Cuando te toca: qué pieza está más a disgusto y adónde querría ir (tecla H)">🗣 Habla con tus piezas</button></div>
+      <div class="controls"><button class="sm-btn primary" data-c="think" title="Cuando te toca: el motor explica la mejor jugada, las alternativas, qué amenaza el rival y por qué (tecla T)">🧠 Piensa conmigo</button><button class="sm-btn" data-c="scan" title="Cuando te toca: lee el tablero antes de calcular (tecla L)">🔎 Lee el tablero</button><button class="sm-btn info-btn" data-c="talk" title="Cuando te toca: qué pieza está más a disgusto y adónde querría ir (tecla H)">🗣 Habla con tus piezas</button></div>
       <div class="controls">${ui.cpu.tc ? "" : `<button class="sm-btn" data-c="undo" title="Deshace tu última jugada y la respuesta de la CPU">↶ Deshacer</button>`}<button class="sm-btn" data-c="draw">½ Ofrecer tablas</button><button class="sm-btn danger" data-c="resign">🏳 Rendirse</button><button class="sm-btn" data-c="stop" title="Deja la partida sin resultado y vuelve al análisis">⏹ Terminar</button></div>`;
   }
   box.querySelectorAll("[data-c]").forEach(b => b.onclick = () => cpuAction(b.dataset.c));
@@ -613,6 +613,7 @@ function cpuPanel(head, text) {
 function cpuAction(a) {
   if (a === "think") thinkWithMe();
   else if (a === "talk") talkToPieces();
+  else if (a === "scan") readBoard();
   else if (a === "undo") cpuUndo();
   else if (a === "draw") cpuOfferDraw();
   else if (a === "resign") {

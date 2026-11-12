@@ -258,6 +258,15 @@ main {
 .eval-bar-outer.flipped .eval-score-text.bot { color: #e2e8f0; }
 
 .board-wrap { position: relative; touch-action: none; }
+/* Los recuadros de lo que se está haciendo (ejercicio, partida contra la CPU, Adivina, visualización) van justo debajo del tablero, antes del motor */
+.board-side { display: flex; flex-direction: column; }
+.board-side > * { order: 20; }
+.board-side > :is(#retryBox, #cpuBox, #guessBox, #visBox, #scanBox) { order: 3; }
+.scan-steps { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.scan-steps .sm-btn { padding: 3px 7px; font-size: .78rem; }
+.scan-body { line-height: 1.45; }
+.scan-list { margin: 6px 0 4px 18px; padding: 0; }
+.scan-list li { margin: 2px 0; }
 .board {
   display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1;
   border: 3px solid var(--border); border-radius: 4px; overflow: hidden; position: relative; user-select: none; -webkit-user-select: none;
@@ -332,7 +341,8 @@ kbd { background: var(--panel3); border: 1px solid var(--border); border-bottom-
 /* Motor */
 .engine-box { margin-top: 8px; background: var(--deep); border: 1px solid var(--border); border-radius: 7px; font-size: 0.83rem; }
 .engine-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 9px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.engine-head .left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.engine-head .left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 260px; }
+.engine-head .engine-meta { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .engine-badge { color: var(--accent); font-weight: 700; white-space: nowrap; }
 .engine-meta { color: var(--muted); font-size: .76rem; white-space: nowrap; }
 .engine-lines { padding: 3px 0; min-height: 26px; }
@@ -651,7 +661,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #navControls { order: 1; }
   #drawBar { order: 1; }
   #statusText { order: 2; }
-  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns { order: 3; }
+  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox { order: 3; }
   #moves { order: 4; max-height: 32vh; }
   #varControls { order: 5; }
   #gameMarksBox { order: 5; }
@@ -704,7 +714,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #playBtn { font-size: .74rem; }
   #drawBar { order: 1; margin-top: 3px; }
   #statusText { order: 2; margin-top: 3px; }
-  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns { order: 3; }
+  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox { order: 3; }
   #moves { order: 4; max-height: 52vh; max-height: 52dvh; min-height: 90px; margin-top: 4px; }
   #varControls { order: 5; }
   #gameMarksBox { order: 5; }
@@ -835,6 +845,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <label class="switch" title="Análisis continuo de la posición (tecla E)"><input type="checkbox" id="liveToggle"> Analizar</label>
           <label class="switch" title="Flecha con la mejor jugada"><input type="checkbox" id="arrowToggle"> Flecha</label>
           <button id="playBestMoveBtn" class="sm-btn" title="Jugar la mejor jugada del motor">⚡ Jugar</button>
+          <button id="scanBtn" class="sm-btn info-btn" title="Lee el tablero antes de calcular: material, reyes, amenazas del rival, tus oportunidades y las jugadas forzadas (tecla L)">🔎 Lee el tablero</button>
           <button id="talkBtn" class="sm-btn info-btn" title="Habla con tus piezas: cuál está contenta, cuál es la más infeliz, cuál sería su casilla soñada y la ruta para llegar (tecla H)">🗣 Habla con tus piezas</button>
           <button id="thinkBtn" class="sm-btn primary" title="El motor explica su razonamiento: la situación, la mejor jugada y por qué, qué responderá el rival, las alternativas y las trampas (tecla T)">🧠 Piensa conmigo</button>
           <button id="threatBtn" class="sm-btn" title="Ver qué amenaza el rival: qué jugaría si le tocara mover (tecla X)">👁 Amenaza</button>
@@ -861,6 +872,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 
     <div id="thinkBox" class="retry-box think-box" hidden aria-live="polite"></div>
     <div id="talkBox" class="retry-box think-box talk-box" hidden aria-live="polite"></div>
+    <div id="scanBox" class="retry-box think-box scan-box" hidden aria-live="polite"></div>
     <div class="eval-chart-wrap" id="evalChartWrap" title="Probabilidad de ganar a lo largo de la línea principal: arriba ventaja blanca, abajo negra. Clic para saltar a esa jugada.">
       <svg id="evalChartSvg" viewBox="0 0 600 64" preserveAspectRatio="none"></svg>
       <div id="chartMsg" class="chart-msg" hidden></div>
@@ -1505,7 +1517,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
           <span>🙈 A ciegas y visualización</span>
           <span id="blindBadge" class="srs-pill">Piezas visibles</span>
         </h2>
-        <p class="small">Juega sin ver las piezas (escribe o pulsa las casillas) y entrena la visión del tablero: seguir una línea de memoria, el color de las casillas y sus coordenadas, la ruta del caballo, los rebotes del alfil y problemas a ciegas.</p>
+        <p class="small">Juega sin ver las piezas (escribe o pulsa las casillas) y entrena la visión del tablero: seguir una línea de memoria, el color de las casillas y sus coordenadas, la ruta del caballo, los rebotes del alfil, problemas a ciegas, encontrar todos los jaques y capturas de una posición y la casilla de la horquilla (doble ataque).</p>
         <div class="controls">
           <button id="blindBtn" class="sm-btn warn-btn" title="Oculta las piezas del tablero (tecla B)">🙈 Ocultar piezas</button>
           <button id="peekBtn" class="sm-btn" hidden title="Muestra las piezas un par de segundos">👁 Ojear</button>
@@ -1519,6 +1531,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
             <option value="knight">🐴 Ruta del caballo</option>
             <option value="bishop">🔁 Rebotes del alfil</option>
             <option value="dodge">🐴 Caballo esquivando al alfil</option>
+            <option value="forcing">⚡ Jaques y capturas: encuéntralas todas</option>
+            <option value="fork">🍴 Doble ataque: la casilla de la horquilla</option>
             <option value="blindpz">🧩 Problemas a ciegas</option>
           </select>
           <select id="visPlies" aria-label="Dificultad">

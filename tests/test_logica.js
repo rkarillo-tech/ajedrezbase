@@ -260,6 +260,23 @@ seccion("Sincronización entre dispositivos", () => {
   comprobar(A.canon({ b: 1, a: [1, { d: 2, c: 3 }] }) === A.canon({ a: [1, { c: 3, d: 2 }], b: 1 }) && A.strHash("abc") === A.strHash("abc") && A.strHash("abc") !== A.strHash("abd"), "comparación sin importar el orden de las claves y huella de texto");
 });
 
+seccion("«Lee el tablero»: la lectura previa al cálculo", () => {
+  // La posición de un problema de ejemplo: juegan blancas, con la calidad de menos
+  const S = A.boardScan(A.Chess.parseFen("2r1r1k1/bb3p1p/p3p2p/P1q3N1/1pN2P2/1P1B1P2/2P4P/Q5RK w - - 0 1")), N = A.Chess.sqName;
+  const lines = L => L.map(x => `${x.kind} ${N(x.from)} ${N(x.a)}${x.z != null ? " " + N(x.z) : ""}${x.target != null ? " " + N(x.target) : ""}`).sort();
+  comprobar(S.me === 1 && S.material.diff === -2 && S.material.pair[-1] && !S.material.pair[1], "material: las blancas van 2 puntos por detrás y las negras tienen la pareja de alfiles");
+  comprobar(igual(lines(S.rival.lines), ["battery a7 c5 g1", "battery c8 c5 c4", "pin b7 f3 h1"]), "el rival: clavada del peón de f3 contra el rey y dos baterías (contra c4 y contra g1)");
+  comprobar(S.rival.danger.some(x => N(x.sq) === "g5" && x.att.map(N).includes("h6")), "el rival: el caballo de g5 está atacado por el peón de h6");
+  comprobar(igual(lines(S.you.lines), ["discovery g1 g5 g8"]), "tú: sólo el caballo de g5 separa la torre del rey: jaque a la descubierta");
+  comprobar(S.you.danger.some(x => N(x.sq) === "h7" && x.att.length === 2 && x.def.length === 1), "tú: el peón de h7 está atacado dos veces y defendido una");
+  comprobar(S.forcing.checks.some(x => x.san === "Qh8+") && S.forcing.checks.length === 8, "las jugadas forzadas incluyen 1.Dh8+, la solución");
+  comprobar(S.kings[-1].esc.length === 1 && S.kings[-1].hit.length >= 3, "el rey negro tiene una sola casilla de escape y varias casillas vecinas atacadas");
+  const S2 = A.boardScan(A.Chess.parseFen("6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1"));
+  comprobar(S2.forcing.checks.some(x => x.san === "Rd8#" && x.mate) && S2.kings[-1].shield === 3, "detecta el mate del pasillo entre los jaques (rey con sus tres peones delante, sin salida)");
+  const S3 = A.boardScan(A.Chess.parseFen("4k3/8/8/8/4r3/8/8/4K2R w - - 0 1"));
+  comprobar(S3.rival.lines.length === 0 || S3.rival.lines.every(x => x.kind !== "pin"), "sin clavadas inventadas (una torre que da jaque no es una clavada)");
+});
+
 seccion("Notación, valoraciones y material", () => {
   comprobar(A.formatSan("Nf3", "es") === "Cf3" && A.formatSan("exd8=Q+", "es") === "exd8=D+" && A.formatSan("O-O", "es") === "O-O" && A.formatSan("Kxe2", "en") === "Kxe2", "notación española");
   comprobar(A.formatSan("Qh5", "fig", 1) === "♕h5" && A.formatSan("Bb4", "fig", -1) === "♝b4", "figurines de cada color");

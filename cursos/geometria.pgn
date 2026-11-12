@@ -49,3 +49,29 @@
 [Result "1-0"]
 
 { [%csl Ga5,Gf5,Rb5,Rg5] Uno de los finales de peones más famosos, de Emanuel Lasker y Gustavus Reichhelm. Los peones están bloqueados; las blancas ganan si su rey entra por b5 (y se come a5) o por el flanco de rey (por g5, para comerse f5). El rey negro tiene que vigilar las dos entradas. La clave son las «casillas conjugadas»: para cada casilla del rey blanco hay una (o dos) casillas donde el rey negro tiene que estar para aguantar. Calculadas con el motor, son éstas: con el rey blanco en b1, el negro tiene que estar en a7 o c7; en c1 → b7; en d1 → c7; en c2 → b8; en d2 → c8; en c3 → b7; en d3 → c7; en e2 o e3 → d7 o d8; en c4 → b6. Ahora mismo el rey negro está en a7, que es la casilla conjugada de b1. ¿Qué juegas? } 1. Kb1 { [%csl Gb1,Ra7,Gc7] ¡La única jugada que gana! Ahora el rey negro debería estar en a7 o en c7… y está en a7, pero le toca mover y tiene que salir de ahí, y c7 está demasiado lejos. Es una oposición «a distancia» muy especial. } (1. Kb2 { ? } 1... Ka8 { [%csl Gb2,Ga8] Las negras encuentran la casilla conjugada (b2 ↔ a8) y aguantan. }) (1. Ka2 { ? } 1... Kb7 { Tablas: el rey negro siempre responde en la casilla conjugada. }) 1... Kb7 2. Kc1 { [%csl Gc1,Rb7] c1 es la pareja de b7: el rey negro tiene que volver a moverse y pierde la pareja. } 2... Kc7 3. Kd1 { d1 ↔ c7. Las blancas siempre van a la casilla cuya pareja es justo la que ocupa el rey negro. } 3... Kd7 4. Kc2 { c2 ↔ b8, y desde d7 el rey negro no llega a b8. } 4... Kc8 5. Kd2 { d2 ↔ c8. Otra vez le toca mover al negro y tiene que salir de la casilla buena. } 5... Kd7 6. Kc3 { c3 ↔ b7. } 6... Kc7 7. Kd3 { d3 ↔ c7. } 7... Kb7 (7... Kd7 { Si el negro se queda en el centro… } 8. Kc4 { [%cal Gc4b5] c4 ↔ b6, y el rey negro no llega: } 8... Kc7 9. Kb5 { y el rey blanco entra y se come a5. }) 8. Ke2 { [%cal Ge2f2,Gf2g3,Gg3h4] Ahora la otra entrada: el rey negro está lejos de d7 y d8, las parejas de e2. El rey blanco se va hacia g5. } 8... Kc8 9. Kf2 Kd7 10. Kg3 Ke7 11. Kh4 Kf6 12. Kh5 { [%cal Gh5g5] El rey negro defiende g5 y f5… } 12... Kf7 13. Kg5 Kg7 14. Kxf5 { [%csl Gf5] …pero no puede con todo: cae el peón de f5 y las blancas ganan (después cae también d6). Resumen: cuando los peones están bloqueados, cada casilla del rey atacante tiene su «pareja» para el rey defensor. Gana quien consigue que al rival le toque mover fuera de su pareja. La oposición que ya conoces es el caso más sencillo de casillas conjugadas. } 1-0
+
+[Event "Curso de geometría del tablero"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "La horquilla de caballo: colores y saltos"]
+[Level "Principiante"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "3q3k/6pp/8/6N1/8/8/6PP/6K1 w - - 0 1"]
+[Result "1-0"]
+
+{ [%csl Gg5,Rh8,Rd8] La horquilla de caballo tiene una geometría fija. El caballo salta siempre a una casilla de otro color: desde g5 (oscura) sólo puede ir a casillas claras, y desde una casilla clara sólo ataca casillas oscuras. Por eso, para atacar dos piezas a la vez, las dos tienen que estar en casillas del mismo color… y a «salto de caballo» de una casilla a la que puedas llegar. Aquí el rey negro (h8) y la dama (d8) están en casillas oscuras. ¿Desde qué casilla clara las atacas a las dos? } 1. Nf7+ { [%cal Gg5f7,Rf7h8,Rf7d8] ¡Horquilla! Desde f7 el caballo da jaque al rey y ataca la dama. Fíjate en la forma: h8 y d8 están en la misma fila, a cuatro columnas, y f7 queda en medio, una fila por debajo. Es la horquilla más típica de todas. } 1... Kg8 { El rey tiene que salir del jaque; nadie puede comerse el caballo. } 2. Nxd8 { [%csl Gd8] Las blancas ganan la dama. Cuando busques horquillas, mira primero el color de las casillas de las piezas del rival: si dos piezas valiosas están en el mismo color, busca la casilla a salto de caballo de las dos. } 1-0
+
+[Event "Curso de geometría del tablero"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "Rayos X: una sola pieza entre la torre y el rey"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "3q2k1/5p1p/8/6N1/8/8/5P1P/6RK w - - 0 1"]
+[Result "1-0"]
+
+{ [%cal Yg1g8] [%csl Yg5] Para leer bien el tablero, las piezas de largo alcance hay que mirarlas «con rayos X»: no hasta la primera pieza que tocan, sino hasta el borde del tablero. Aquí la torre de g1 mira por la columna g y lo único que la separa del rey negro de g8 es tu propio caballo de g5. Eso significa que cualquier salto del caballo es un jaque a la descubierta: el rival tendrá que ocuparse del jaque y no podrá defender lo que ataque el caballo. ¿Qué salto elegirías? } 1. Ne6+ { [%cal Gg5e6,Rg1g8,Re6d8] Jaque a la descubierta de la torre y, a la vez, el caballo ataca la dama. El peón de f7 no puede comerse el caballo: eso no tapa el jaque de la torre. } 1... Kh8 (1... Qg5 { Tapar con la dama tampoco salva nada: } 2. Rxg5+ { y las blancas ganan la dama igualmente. }) 2. Nxd8 { [%csl Gd8] Las blancas ganan la dama. Recuerda el hábito: en cada posición, sigue cada torre, alfil y dama hasta el borde del tablero. Si entre una pieza tuya de largo alcance y el rey rival sólo hay UNA pieza, ahí hay una clavada (si es del rival) o un jaque a la descubierta (si es tuya). En la aplicación, «🔎 Lee el tablero» te lo señala. } 1-0

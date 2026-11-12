@@ -78,8 +78,8 @@ async function board3dParseModel(buf) {
     out[t2] = { geo: geom };
   }
   // Como un juego de torneo: boj claro y madera ebonizada, barnizados
-  out.matW = new T.MeshPhysicalMaterial({ color: 0xeee2c8, roughness: 0.34, clearcoat: 0.65, clearcoatRoughness: 0.22, sheen: 0.15, sheenColor: new T.Color(0xfff4e0) });
-  out.matB = new T.MeshPhysicalMaterial({ color: 0x1d1a18, roughness: 0.3, clearcoat: 0.85, clearcoatRoughness: 0.16 });
+  out.matW = new T.MeshPhysicalMaterial({ color: 0xf8f2e6, roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.18, sheen: 0.2, sheenColor: new T.Color(0xffffff) });
+  out.matB = new T.MeshPhysicalMaterial({ color: 0x181514, roughness: 0.26, clearcoat: 1, clearcoatRoughness: 0.1 });
   return out;
 }
 /* Vuelve a crear todas las piezas (cuando llegan las Staunton) */
@@ -133,6 +133,8 @@ function board3dInit() {
   Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 1, far: 30 });
   sun.shadow.bias = -0.0008;
   scene.add(sun);
+  B3.rim = new T.DirectionalLight(0xdfe8ff, 1.5);   // casi a ras del tablero: da de lado a las piezas y apenas toca las casillas
+  scene.add(B3.rim, B3.rim.target);
 
   // Tablero: un marco con grosor y, encima, la textura con casillas, coordenadas, marcas y flechas
   const cv = document.createElement("canvas");
@@ -268,6 +270,22 @@ function board3dGeometries() {
   B3.geo.eye = new T.SphereGeometry(0.022, 10, 8);
   B3.geo.felt = new T.CylinderGeometry(0.345, 0.345, 0.012, 40);
 }
+/* Sombra de contacto: un disco difuminado bajo la pieza, que la «asienta» y la separa de la casilla */
+function board3dBlob() {
+  const T = B3.T;
+  if (!B3.blobMat) {
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const x = c.getContext("2d"), g = x.createRadialGradient(64, 64, 18, 64, 64, 64);
+    g.addColorStop(0, "rgba(0,0,0,.45)"); g.addColorStop(0.5, "rgba(0,0,0,.2)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+    B3.blobMat = new T.MeshBasicMaterial({ map: new T.CanvasTexture(c), transparent: true, depthWrite: false });
+    B3.blobGeo = new T.PlaneGeometry(0.86, 0.86).rotateX(-Math.PI / 2);
+  }
+  const m = new T.Mesh(B3.blobGeo, B3.blobMat);
+  m.position.y = 0.006;
+  m.renderOrder = 1;
+  return m;
+}
 function board3dPiece(p) {
   const T = B3.T, white = p === p.toUpperCase(), mat = white ? B3.mat.w : B3.mat.b, type = p.toLowerCase();
   const g = new T.Group();
@@ -276,7 +294,7 @@ function board3dPiece(p) {
     m.castShadow = m.receiveShadow = true;
     // El caballo mira hacia el rival, algo girado para que desde tu lado se vea su perfil (el resto son de revolución)
     if (type === "n") m.rotation.y = (white ? 0 : Math.PI) - 0.55;
-    g.add(m);
+    g.add(board3dBlob(), m);
     g.userData.p = p;
     return g;
   }
@@ -296,6 +314,12 @@ function board3dPiece(p) {
   if (type === "k") { const c = add(B3.geo.cross); c.rotation.y = white ? 0 : Math.PI; }
   g.userData.p = p;
   return g;
+}
+/* Mezcla dos colores CSS (#rrggbb): a + (b − a) × k */
+function b3Mix(a, b, k) {
+  const h = s => { const m = /^#?([0-9a-f]{6})$/i.exec(s); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : null; };
+  const x = h(a), y = h(b);
+  return x && y ? "#" + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, "0")).join("") : a;
 }
 const b3Pos = sq => [(sq & 7) - 3.5, (sq >> 4) - 3.5];   // columna a→h = x creciente; fila 8 al fondo (z negativa)
 
@@ -339,7 +363,8 @@ function board3dAnimate(mv, dir) {
 function board3dDraw() {
   if (!B3.active) return;
   const c = B3.ctx, W = B3_TEX, sq = W / B3_SIZE, off = B3_BORDER * sq, s = viewState(), node = cur();
-  const css = getComputedStyle(document.body), light = css.getPropertyValue("--light").trim() || "#f0d9b5", dark = css.getPropertyValue("--dark").trim() || "#b58863";
+  const css = getComputedStyle(document.body), dark = css.getPropertyValue("--dark").trim() || "#b58863";
+  const light = b3Mix(css.getPropertyValue("--light").trim() || "#f0d9b5", dark, 0.14);   // en 3D, algo más apagadas: las piezas blancas resaltan
   const at = i => [off + (i & 7) * sq, off + (i >> 4) * sq];
   if (!B3.grain) { const g = board3dGrain("#808080", "#3a3a3a", "#c8c8c8", 256, 11).image, h = document.createElement("canvas"); h.width = h.height = 256; const hc = h.getContext("2d"); hc.translate(256, 0); hc.rotate(Math.PI / 2); hc.drawImage(g, 0, 0); B3.grain = [g, h]; }
   c.fillStyle = "#4a3122"; c.fillRect(0, 0, W, W);
@@ -406,6 +431,7 @@ function board3dPlace(dist) {
   B3.camera.up.set(0, 1, 0);
   if (v.phi < 0.02) B3.camera.up.set(-Math.sin(th), 0, -Math.cos(th));   // desde arriba: las blancas (o las negras, girado) abajo
   B3.camera.lookAt(tx, -0.1, tz);
+  if (B3.rim) { B3.rim.position.set(-Math.sin(th) * 8, 1.1, -Math.cos(th) * 8); B3.rim.target.position.set(0, 0, 0); }
   B3.camera.updateMatrixWorld();
 }
 /* La distancia a la que cabe todo el tablero (con las piezas más altas) en el recuadro, para el ángulo actual */
