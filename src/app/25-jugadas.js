@@ -378,6 +378,7 @@ function renderGameMarks() {
 }
 function render() {
   if (Think.node && Think.node !== cur() && !Think.busy) { $("thinkBox").hidden = true; Think.node = null; }
+  if (Scan.node && Scan.node !== cur()) { $("scanBox").hidden = true; Scan.node = null; Scan.data = null; Scan.shapes = []; }
   if (Talk.node && Talk.node !== cur() && !Talk.busy) { $("talkBox").hidden = true; Talk.node = null; Talk.shapes = []; }
   renderGameMarks();
   renderBoard();

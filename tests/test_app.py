@@ -675,7 +675,7 @@ def prueba_cursos(browser):
     ctx = contexto(browser)
     pg, errores = nueva_pagina(ctx)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar(pg.locator("#courseList details.course").count() == 10 and "0 de 101" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los diez cursos y el progreso")
+    comprobar(pg.locator("#courseList details.course").count() == 10 and "0 de 103" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los diez cursos y el progreso")
     pg.locator('details[data-course="finales"] summary').click()
     pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").click()
     comprobar(pg.is_visible("#lessonBox") and "construir el puente" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("1K1k4/1P6"), "abrir una lección la pone en el tablero con su explicación")
@@ -714,7 +714,7 @@ def prueba_cursos(browser):
     pg.reload()
     pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar("2 de 101" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
+    comprobar("2 de 103" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
     pg.locator('details[data-course="aperturas"] summary').click()
     pg.locator('details[data-course="aperturas"] [data-coll]').click()
     comprobar(pg.inner_text("#collCount") == "12" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")
@@ -1752,7 +1752,7 @@ def prueba_geometria_y_ciegas(browser):
     # Curso de geometría: el estudio de Réti como ejercicio
     pg.click('.tab-btn[data-tab="courses"]')
     pg.locator('details[data-course="geometria"] summary').click()
-    comprobar(pg.locator('details[data-course="geometria"] .lesson-row').count() == 4, "el curso «📐 Geometría del tablero» tiene sus cuatro lecciones")
+    comprobar(pg.locator('details[data-course="geometria"] .lesson-row').count() == 6, "el curso «📐 Geometría del tablero» tiene sus seis lecciones")
     pg.locator('details[data-course="geometria"] .lesson-row', has_text="Réti").click()
     comprobar(pg.is_visible("#lessonBox") and "Réti" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("7K/8/k1P5/7p"), "la lección del estudio de Réti se abre en el tablero")
     casilla(pg, "h8").click(); casilla(pg, "g7").click()
@@ -1809,7 +1809,7 @@ def prueba_salir_del_entrenamiento(browser):
     entrenar(pg, "puzzles")
     pg.click("#puzzleStartBtn")
     pg.wait_for_function("trainer.active && trainer.puzzle && trainerUserTurn() && !trainer.busy", timeout=10000)
-    comprobar(not pg.is_visible("#trainSessionBtns") and pg.locator("#trainFeedback [data-pz]").count() == 2, "en los problemas sólo están sus botones (sin «Pista» y «Salir» repetidos)")
+    comprobar(not pg.is_visible("#trainSessionBtns") and pg.locator("#trainFeedback [data-pz]").count() == 3, "en los problemas sólo están sus botones (sin «Pista» y «Salir» repetidos)")
     pg.evaluate("$('stopTrainBtn').click()")
     comprobar("Sesión terminada" in pg.inner_text("#trainFeedback") and not pg.evaluate("Puz.queue.length"), "«Salir» termina la sesión de problemas con su resumen")
     pg.click("#puzzlesBackBtn")
@@ -1872,9 +1872,9 @@ def prueba_tablero3d(browser):
     pg.wait_for_function("B3.active", timeout=20000)
     comprobar(pg.is_visible("#board3d canvas") and pg.evaluate("getComputedStyle($('board')).visibility") == "hidden" and pg.evaluate("B3.meshes.size") == 32,
               "al activarlo se descarga Three.js y se ve el tablero en 3D con las 32 piezas")
-    pg.wait_for_function("B3.model && b3Real() && [...B3.meshes.values()].every(m => m.children.length === 1)", timeout=20000)
+    pg.wait_for_function("B3.model && b3Real() && [...B3.meshes.values()].every(m => m.children.length === 2)", timeout=20000)
     comprobar(all(pg.evaluate(f"!!(B3.model['{x}'] && B3.model['{x}'].geo)") for x in "kqrbnp") and pg.evaluate("B3.meshes.size") == 32
-              and pg.evaluate("B3.meshes.get(Chess.sqIdx('c1')).children[0].geometry === B3.model.b.geo"), "después llegan las piezas Staunton (las seis, también el alfil)")
+              and pg.evaluate("B3.meshes.get(Chess.sqIdx('c1')).children[1].geometry === B3.model.b.geo"), "después llegan las piezas Staunton (las seis, también el alfil)")
     def pulsar(sq):
         xy = pg.evaluate("""sq => { const p = cur().state.b[Chess.sqIdx(sq)], y = p === "." ? 0 : "pP".includes(p) ? 0.6 : 0.85;
           const [x, z] = b3Pos(Chess.sqIdx(sq)), v = new B3.T.Vector3(x, y, z).project(B3.camera), r = B3.canvas.getBoundingClientRect();
@@ -1923,6 +1923,58 @@ def prueba_tablero3d(browser):
     pg.evaluate("settings.board3d = true; renderBoard()")
     pg.wait_for_function("B3.failed", timeout=20000)
     comprobar(not pg.evaluate("B3.active") and pg.is_visible(".square") and "tablero 3D" in pg.inner_text("#toast"), "si no se puede descargar, se avisa y se sigue con el tablero plano")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_lee_el_tablero(browser):
+    print("Novedades 1.36: «Lee el tablero», ejercicios de jugadas forzadas y doble ataque, y el error de la partida en los ejercicios")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true; setGame(Pgn.newGame('2r1r1k1/bb3p1p/p3p2p/P1q3N1/1pN2P2/1P1B1P2/2P4P/Q5RK w - - 0 1'), { noConfirm: true })")
+    pg.click("#scanBtn")
+    comprobar(pg.is_visible("#scanBox") and "2 puntos por detrás" in pg.inner_text("#scanBox"), "«Lee el tablero» empieza por el material y dice qué buscar")
+    pg.click('#scanBox [data-scan="2"]')
+    txt = pg.inner_text("#scanBox")
+    comprobar("clava" in txt and "Batería" in txt and pg.evaluate("shapeList().some(s => s.color === 'threat')"), "paso 3: las amenazas del rival, con la clavada y las baterías dibujadas")
+    pg.click('#scanBox [data-scan="3"]')
+    comprobar("descubierta" in pg.inner_text("#scanBox"), "paso 4: tus oportunidades (jaque a la descubierta)")
+    pg.click('#scanBox [data-scan="next"]')
+    comprobar("Jaques (8)" in pg.inner_text("#scanBox") and "Dh8+" in pg.inner_text("#scanBox"), "paso 5: las jugadas forzadas, entre ellas la solución")
+    pg.keyboard.press("l")
+    comprobar(not pg.is_visible("#scanBox"), "la tecla L lo abre y lo cierra")
+    pg.keyboard.press("l")
+    pg.evaluate("playMove(Chess.legal(cur().state)[0])")
+    comprobar(not pg.is_visible("#scanBox"), "al cambiar de posición se cierra")
+    # En los problemas, cuenta como pista
+    entrenar(pg, "puzzles")
+    pg.click("#puzzleStartBtn")
+    pg.wait_for_function("trainer.active && trainer.puzzle && trainerUserTurn() && !trainer.busy", timeout=10000)
+    pg.locator("#trainFeedback [data-pz=scan]").click()
+    comprobar(pg.is_visible("#scanBox") and pg.evaluate("trainer.hints") == 1, "en los problemas está el botón y cuenta como pista")
+    pg.locator("#trainFeedback [data-pz=end]").click()
+    # Ejercicios nuevos de visualización
+    entrenar(pg, "blind")
+    pg.select_option("#visMode", "forcing")
+    pg.click("#visStartBtn")
+    u = pg.evaluate("Vis.q.want[0]")
+    casilla(pg, u[:2]).click(); casilla(pg, u[2:4]).click()
+    comprobar(pg.evaluate("Vis.q.found.length") == 1 and "llevas 1" in pg.inner_text("#visBox"), "⚡ Jaques y capturas: una jugada encontrada se apunta")
+    pg.locator("#visBox [data-v=done]").click()
+    comprobar(pg.evaluate("Vis.state") == "answered" and ("faltaron" in pg.inner_text("#visBox") or "todas" in pg.inner_text("#visBox")), "al terminar se enseñan las que faltaban")
+    pg.locator("#visBox [data-v=end]").click()
+    pg.select_option("#visMode", "fork")
+    pg.click("#visStartBtn")
+    g = pg.evaluate("Vis.q.good[0]")
+    pg.locator(f'.square[data-sq="{g}"]').click()
+    comprobar("Horquilla" in pg.inner_text("#visBox") and pg.evaluate("Vis.ok") == 1, "🍴 Doble ataque: la casilla de la horquilla")
+    pg.locator("#visBox [data-v=end]").click()
+    # Ejercicio de un error: la jugada de la partida como flecha y, en el ordenador, el recuadro bajo el tablero
+    pg.evaluate("""() => { const r = Pgn.parseGame('1. e4 { [%eval 0.2] } e5 { [%eval 0.3] } 2. Bc4 { [%eval 0.2] } Nc6 { [%eval 0.3] } 3. Qh5 { [%eval 0.0] } Nf6?? { [%eval #1] } 4. Qxf7# 1-0');
+      setGame(r.game, { noConfirm: true }); const n = Pgn.mainlineFrom(game.root)[5]; n.parent.eval.best = 'g7g6'; startRetry(-1, [n]); }""")
+    comprobar(pg.evaluate("shapeList().some(s => s.color === 'threat' && s.from === Chess.sqIdx('g8') && s.to === Chess.sqIdx('f6'))") and "discontinua" in pg.inner_text("#retryBox"), "el ejercicio dibuja la jugada de la partida (3...Cf6??) como referencia")
+    pos = pg.evaluate("(() => { const a = $('board').getBoundingClientRect(), b = $('retryBox').getBoundingClientRect(); return [a.bottom, b.top]; })()")
+    comprobar(0 < pos[1] - pos[0] < 120, "en el ordenador el recuadro del ejercicio queda justo debajo del tablero")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -2039,7 +2091,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_tablero3d, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

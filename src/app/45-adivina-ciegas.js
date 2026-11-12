@@ -398,7 +398,7 @@ function startVis() {
   if (mode === "blindpz") { startBlindPuzzles(+$("visSecs").value); return; }
   if (mode === "line" && !stashBoard()) return;
   leaveModes();
-  Object.assign(Vis, { active: true, mode, state: "", n: 0, ok: 0, bad: 0, total: mode === "line" || mode === "knight" || mode === "dodge" || mode === "bishop" ? 10 : mode === "color" ? 20 : 0, q: null, t0: Date.now(), msg: "", marks: {}, plies: +$("visPlies").value });
+  Object.assign(Vis, { active: true, mode, state: "", n: 0, ok: 0, bad: 0, total: mode === "line" || mode === "knight" || mode === "dodge" || mode === "bishop" || mode === "fork" ? 10 : mode === "forcing" ? 5 : mode === "color" ? 20 : 0, q: null, t0: Date.now(), msg: "", marks: {}, plies: +$("visPlies").value });
   clearInterval(Vis.timer);
   if (mode === "coords") { Vis.end = Date.now() + 30000; Vis.timer = setInterval(visTick, 200); }
   visNext();
@@ -428,6 +428,19 @@ function visNext() {
   } else if (Vis.mode === "bishop") {
     const q = Vis.q = visBishopQ();
     visSetBoard([[q.sq, "B"]], [{ color: "blue", from: q.sq, to: q.sq + q.d }]);
+    renderBoard(); renderStatus();
+  } else if (Vis.mode === "forcing") {
+    const q = Vis.q = visForcingQ();
+    if (!q) { visFinish(); return; }
+    ui.visBoard = Chess.clone(q.st);
+    ui.visShapes = [];
+    ui.flipped = q.st.t === -1;
+    renderBoard(); renderStatus();
+  } else if (Vis.mode === "fork") {
+    const q = Vis.q = visForkQ();
+    if (!q) { visFinish(); return; }
+    ui.flipped = false;
+    visSetBoard([[q.from, q.pc], [q.k, "k"], [q.o, q.other]], []);
     renderBoard(); renderStatus();
   } else {
     let sq;
@@ -477,6 +490,11 @@ function visPanel() {
       <div>El alfil de <b>${N(q.sq)}</b> sale hacia <b>${N(q.sq + q.d)}</b> (flecha azul) y rebota en los bordes como una bola de billar. Pulsa en orden las <b>${q.bounces.length} casillas donde rebota</b> hasta volver a ${N(q.sq)}.</div>
       <div class="vis-line">${[N(q.sq), ...q.got.map(N)].join(" → ")}${Vis.state === "ask" ? " → …" : ""}</div>`;
     if (Vis.state === "ask") extra = `<button class="sm-btn" data-v="give">🏳 Ver la solución</button>`;
+  } else if (Vis.mode === "forcing") {
+    html = visForcingPanel();
+    if (Vis.state === "ask") extra = `<button class="sm-btn" data-v="done" title="Muestra las que te faltan">✔ Ya están todas</button>`;
+  } else if (Vis.mode === "fork") {
+    html = visForkPanel();
   } else {
     html = `<div class="retry-head">🙈 Encuentra la casilla · ⏱ <span id="visClock">${Math.ceil((Vis.end - Date.now()) / 1000)} s</span> · ✔ ${Vis.ok} ✖ ${Vis.bad}</div>
       <div class="vis-big">${Chess.sqName(q.sq)}</div><div class="small" style="text-align:center">Pulsa esa casilla en el tablero (${ui.flipped ? "negras" : "blancas"} abajo).</div>`;
@@ -508,6 +526,8 @@ function visAnswer(v) {
   }
   if (Vis.mode === "knight" || Vis.mode === "dodge") { visKnightClick(v); return; }
   if (Vis.mode === "bishop") { visBishopClick(v); return; }
+  if (Vis.mode === "forcing") { if (v === "done") { visForcingEnd(); visPanel(); } else visForcingClick(v); return; }
+  if (Vis.mode === "fork") { visForkClick(v); return; }
   let ok, txt;
   if (Vis.mode === "color") {
     if (v !== "l" && v !== "d") return;

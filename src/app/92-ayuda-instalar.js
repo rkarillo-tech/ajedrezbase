@@ -69,6 +69,7 @@ document.addEventListener("keydown", e => {
   else if (k === "x" || k === "X") showThreat();
   else if (k === "t" || k === "T") thinkWithMe();
   else if (k === "h" || k === "H") talkToPieces();
+  else if (k === "l" || k === "L") readBoard();
   else if (k === "b" || k === "B") setBlind(!ui.blind);
   else return;
   e.preventDefault();

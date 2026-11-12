@@ -170,6 +170,7 @@ $("playBestMoveBtn").onclick = () => {
 };
 $("thinkBtn").onclick = () => thinkWithMe();
 $("talkBtn").onclick = () => talkToPieces();
+$("scanBtn").onclick = () => readBoard();
 $("cloudStockfishBtn").onclick = async () => {
   const node = cur();
   $("engineSourceBadge").textContent = "☁ Consultando la nube…";
