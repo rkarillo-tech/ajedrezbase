@@ -58,6 +58,9 @@ function openModal(id) {
     $("tokenResult").textContent = "";
     $("setCoords").checked = settings.coords;
     $("setBoard3d").checked = !!settings.board3d;
+    $("setBoard3dLook").value = B3_LOOKS[settings.board3dLook] || settings.board3dLook === "custom" ? settings.board3dLook : "wood";
+    { const L = b3Look(); for (const k of ["pw", "pb", "sl", "sd"]) $("b3c_" + k).value = L[k] || "#888888"; }
+    $("b3Custom").hidden = settings.board3dLook !== "custom";
     $("setLegal").checked = settings.showLegal;
     $("setAutosave").checked = settings.autosave;
     $("setAnimate").checked = settings.animate;
@@ -105,6 +108,15 @@ $("setLiveMs").onchange = e => { settings.liveMs = Math.max(500, Math.min(30000,
 $("setToken").onchange = e => { settings.token = e.target.value.trim(); saveSettings(); explorerCache.clear(); refreshExplorer(); };
 $("setCoords").onchange = e => { settings.coords = e.target.checked; saveSettings(); renderBoard(); };
 $("setBoard3d").onchange = e => { settings.board3d = e.target.checked; B3.failed = false; saveSettings(); renderBoard(); };
+$("setBoard3dLook").onchange = e => {
+  // Al pasar a «personalizado» se parte de los colores del aspecto que había
+  if (e.target.value === "custom" && settings.board3dLook !== "custom") { const L = b3Look(), css = getComputedStyle(document.body); settings.board3dColors = { pw: L.pw, pb: L.pb, sl: L.sl || css.getPropertyValue("--light").trim(), sd: L.sd || css.getPropertyValue("--dark").trim() }; }
+  settings.board3dLook = e.target.value; saveSettings();
+  { const L = b3Look(); for (const k of ["pw", "pb", "sl", "sd"]) $("b3c_" + k).value = L[k] || "#888888"; }
+  $("b3Custom").hidden = e.target.value !== "custom";
+  board3dApplyLook();
+};
+for (const k of ["pw", "pb", "sl", "sd"]) $("b3c_" + k).oninput = e => { settings.board3dColors = Object.assign({}, b3Look(), settings.board3dColors || {}, { [k]: e.target.value }); saveSettings(); board3dApplyLook(); };
 $("setLegal").onchange = e => { settings.showLegal = e.target.checked; saveSettings(); renderBoard(); };
 $("setAnimate").onchange = e => { settings.animate = e.target.checked; saveSettings(); };
 $("setWheel").onchange = e => { settings.wheel = e.target.checked; saveSettings(); };

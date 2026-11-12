@@ -16,6 +16,30 @@ const B3_TEX = 1024, B3_SIZE = 9.2, B3_BORDER = (B3_SIZE - 8) / 2;
    Si no se pueden descargar, se usan las piezas generadas aquí (más sencillas) */
 const B3_MODEL = "assets/3d/piezas.bin", B3_MODEL_WEB = "https://rkarillo-tech.github.io/ajedrezbase/";
 const b3Real = () => !!B3.model;
+/* Aspecto del 3D (⚙ Ajustes): colores de las piezas (pw, pb), de las casillas (sl, sd; null = los del tablero plano), del marco y de las coordenadas.
+   Lo importante para distinguir las piezas es que su color no se parezca al de las casillas: las piezas de madera sobre un
+   tablero casi blanco y negro (como muchos juegos de torneo) se leen sin tener que girar la vista */
+const B3_LOOKS = {
+  wood: { pw: "#ecd3a6", pb: "#7b4a28", sl: "#efece4", sd: "#33302d", frame: "#c9a273", coord: "#3b2a1a", grain: true },
+  classic: { pw: "#f8f2e6", pb: "#181514", sl: null, sd: null, frame: "#5a3c29", coord: "#e9dcc6", grain: false },
+  contrast: { pw: "#ffffff", pb: "#141414", sl: "#8f9b83", sd: "#5a7055", frame: "#3a3f45", coord: "#e8ecef", grain: false }
+};
+function b3Look() {
+  const L = B3_LOOKS[settings.board3dLook] || (settings.board3dLook === "custom" ? null : B3_LOOKS.wood);
+  if (L) return L;
+  const c = Object.assign({ pw: "#ecd3a6", pb: "#7b4a28", sl: "#efece4", sd: "#33302d" }, settings.board3dColors || {});
+  return { pw: c.pw, pb: c.pb, sl: c.sl, sd: c.sd, frame: "#b08a5e", coord: "#2a1d12", grain: true };
+}
+/* Aplica el aspecto a los materiales y a la textura del tablero */
+function board3dApplyLook() {
+  if (!B3.ready) return;
+  const T = B3.T, L = b3Look();
+  const set = (m, col, grain) => { if (!m) return; m.color = new T.Color(col); m.map = grain ? B3.grayGrain : null; m.needsUpdate = true; };
+  set(B3.mat.frame, L.frame, true);
+  set(B3.mat.w, L.pw, true); set(B3.mat.b, L.pb, true);
+  if (B3.model) { set(B3.model.matW, L.pw, L.grain); set(B3.model.matB, L.pb, L.grain); }
+  board3dDraw();
+}
 /* ¿Debe verse el 3D ahora? En el editor y en la visualización hace falta el tablero plano */
 const board3dWanted = () => !!settings.board3d && !B3.failed && !editor.active && !Vis.active && !ui.visBoard;
 
@@ -73,13 +97,18 @@ async function board3dParseModel(buf) {
     const geom = new T.BufferGeometry();
     geom.setAttribute("position", new T.BufferAttribute(pos, 3));
     geom.setAttribute("normal", new T.BufferAttribute(nrm, 3));
+    // Coordenadas de textura «de torno» (alrededor y a lo alto), para la veta de la madera
+    const uv = new Float32Array(g.n * 2);
+    for (let k = 0; k < g.n; k++) { uv[k * 2] = (Math.atan2(pos[k * 3 + 2], pos[k * 3]) / (2 * Math.PI) + 0.5) * 2; uv[k * 2 + 1] = pos[k * 3 + 1] * 1.2; }
+    geom.setAttribute("uv", new T.BufferAttribute(uv, 2));
     geom.setIndex(new T.BufferAttribute(new Uint16Array(buf.slice(data + g.idx, data + g.idx + g.i * 2)), 1));
     geom.computeBoundingSphere();
     out[t2] = { geo: geom };
   }
-  // Como un juego de torneo: boj claro y madera ebonizada, barnizados
-  out.matW = new T.MeshPhysicalMaterial({ color: 0xf8f2e6, roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.18, sheen: 0.2, sheenColor: new T.Color(0xffffff) });
-  out.matB = new T.MeshPhysicalMaterial({ color: 0x181514, roughness: 0.26, clearcoat: 1, clearcoatRoughness: 0.1 });
+  // Madera barnizada; el color (y si lleva veta) lo pone el aspecto elegido
+  const L = b3Look();
+  out.matW = new T.MeshPhysicalMaterial({ color: L.pw, map: L.grain ? B3.grayGrain : null, roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.18, sheen: 0.2, sheenColor: new T.Color(0xffffff) });
+  out.matB = new T.MeshPhysicalMaterial({ color: L.pb, map: L.grain ? B3.grayGrain : null, roughness: 0.28, clearcoat: 0.9, clearcoatRoughness: 0.12 });
   return out;
 }
 /* Vuelve a crear todas las piezas (cuando llegan las Staunton) */
@@ -143,11 +172,10 @@ function board3dInit() {
   B3.tex = new T.CanvasTexture(cv);
   B3.tex.colorSpace = T.SRGBColorSpace;
   B3.tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  const walnut = board3dGrain("#5a3c29", "#3a2518", "#6e4a33", 512, 7);
-  walnut.colorSpace = T.SRGBColorSpace;
-  walnut.wrapS = walnut.wrapT = T.RepeatWrapping;
-  walnut.repeat.set(2, 2);
-  const frameMat = B3.mat.frame = new T.MeshPhysicalMaterial({ map: walnut, roughness: 0.48, clearcoat: 0.6, clearcoatRoughness: 0.3 });
+  B3.grayGrain = board3dGrain("#ffffff", "#b9b2a8", "#ffffff", 512, 7);
+  B3.grayGrain.colorSpace = T.SRGBColorSpace;
+  B3.grayGrain.wrapS = B3.grayGrain.wrapT = T.RepeatWrapping;
+  const frameMat = B3.mat.frame = new T.MeshPhysicalMaterial({ color: b3Look().frame, map: B3.grayGrain, roughness: 0.48, clearcoat: 0.6, clearcoatRoughness: 0.3 });
   const half = B3_SIZE / 2 + 0.12, rr = 0.22, rect = new T.Shape();
   rect.moveTo(-half + rr, -half); rect.lineTo(half - rr, -half); rect.quadraticCurveTo(half, -half, half, -half + rr);
   rect.lineTo(half, half - rr); rect.quadraticCurveTo(half, half, half - rr, half); rect.lineTo(-half + rr, half);
@@ -164,9 +192,8 @@ function board3dInit() {
   B3.plane.receiveShadow = true;
   scene.add(B3.plane);
 
-  const grain = (a, b, c, seed) => { const g = board3dGrain(a, b, c, 256, seed); g.colorSpace = T.SRGBColorSpace; g.wrapS = g.wrapT = T.RepeatWrapping; return g; };
-  B3.mat.w = new T.MeshPhysicalMaterial({ map: grain("#efe1c3", "#d8c197", "#f7ecd6", 3), roughness: 0.38, clearcoat: 0.7, clearcoatRoughness: 0.22, sheen: 0.2, sheenColor: new T.Color(0xfff3dd) });
-  B3.mat.b = new T.MeshPhysicalMaterial({ map: grain("#2b211b", "#140e0a", "#3b2e25", 5), roughness: 0.3, clearcoat: 0.85, clearcoatRoughness: 0.18 });
+  B3.mat.w = new T.MeshPhysicalMaterial({ color: b3Look().pw, map: B3.grayGrain, roughness: 0.38, clearcoat: 0.7, clearcoatRoughness: 0.22, sheen: 0.2, sheenColor: new T.Color(0xfff3dd) });
+  B3.mat.b = new T.MeshPhysicalMaterial({ color: b3Look().pb, map: B3.grayGrain, roughness: 0.3, clearcoat: 0.85, clearcoatRoughness: 0.18 });
   B3.mat.felt = new T.MeshStandardMaterial({ color: 0x1f4a2c, roughness: 1 });
   B3.mat.slitW = new T.MeshStandardMaterial({ color: 0x6b5a40, roughness: 0.8 });
   B3.mat.slitB = new T.MeshStandardMaterial({ color: 0x060404, roughness: 0.8 });
@@ -363,11 +390,12 @@ function board3dAnimate(mv, dir) {
 function board3dDraw() {
   if (!B3.active) return;
   const c = B3.ctx, W = B3_TEX, sq = W / B3_SIZE, off = B3_BORDER * sq, s = viewState(), node = cur();
-  const css = getComputedStyle(document.body), dark = css.getPropertyValue("--dark").trim() || "#b58863";
-  const light = b3Mix(css.getPropertyValue("--light").trim() || "#f0d9b5", dark, 0.14);   // en 3D, algo más apagadas: las piezas blancas resaltan
+  const css = getComputedStyle(document.body), LK = b3Look();
+  const dark = LK.sd || css.getPropertyValue("--dark").trim() || "#b58863";
+  const light = LK.sl || b3Mix(css.getPropertyValue("--light").trim() || "#f0d9b5", dark, 0.14);   // con los colores del tablero plano, algo más apagadas
   const at = i => [off + (i & 7) * sq, off + (i >> 4) * sq];
   if (!B3.grain) { const g = board3dGrain("#808080", "#3a3a3a", "#c8c8c8", 256, 11).image, h = document.createElement("canvas"); h.width = h.height = 256; const hc = h.getContext("2d"); hc.translate(256, 0); hc.rotate(Math.PI / 2); hc.drawImage(g, 0, 0); B3.grain = [g, h]; }
-  c.fillStyle = "#4a3122"; c.fillRect(0, 0, W, W);
+  c.fillStyle = b3Mix(LK.frame, "#000000", 0.18); c.fillRect(0, 0, W, W);
   c.globalCompositeOperation = "overlay"; c.globalAlpha = 0.5; c.drawImage(B3.grain[1], 0, 0, W, W); c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
   for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
     const x = off + f * sq, y = off + r * sq;
@@ -410,7 +438,7 @@ function board3dDraw() {
     c.globalAlpha = 1;
   }
   if (settings.coords) {
-    c.fillStyle = "#e9dcc6"; c.font = `600 ${Math.round(sq * 0.3)}px system-ui, sans-serif`; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillStyle = LK.coord; c.font = `600 ${Math.round(sq * 0.3)}px system-ui, sans-serif`; c.textAlign = "center"; c.textBaseline = "middle";
     const text = (t, x, y) => { c.save(); c.translate(x, y); if (ui.flipped) c.rotate(Math.PI); c.fillText(t, 0, 0); c.restore(); };
     for (let k = 0; k < 8; k++) {
       const yb = ui.flipped ? off / 2 : W - off / 2, xl = ui.flipped ? W - off / 2 : off / 2;
