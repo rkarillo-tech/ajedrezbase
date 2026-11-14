@@ -1851,6 +1851,59 @@ def prueba_salir_movil(browser):
     ctx.close()
 
 
+def prueba_pantalla_completa(browser):
+    print("Novedades 1.38: tablero a pantalla completa")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true; setGame(Pgn.parseGame('1. e4 e5 2. Nf3 Nc6', { lang: 'en' }).game, { noConfirm: true })")
+    antes = pg.locator("#board").bounding_box()
+    pg.click("#fullBtn")
+    pg.wait_for_timeout(300)
+    b, panel = pg.locator("#board").bounding_box(), pg.locator(".board-panel").bounding_box()
+    comprobar(pg.evaluate("ui.full") and b["width"] > antes["width"] + 150 and abs(b["width"] - b["height"]) < 2 and b["y"] + b["height"] <= 1000 and panel["width"] == 1400 and panel["height"] == 1000,
+              "el botón de la barra pone el tablero a pantalla completa: ocupa la ventana y el tablero crece hasta la altura")
+    comprobar(pg.is_visible("#moves") and pg.is_visible("#backBtn") and pg.is_visible("#engineBox") and not pg.evaluate("(e => { const r = e.getBoundingClientRect(); return document.elementFromPoint(r.left + 5, r.top + 5) === e || e.contains(document.elementFromPoint(r.left + 5, r.top + 5)); })(document.querySelector('header'))"),
+              "al lado quedan la navegación, las jugadas y el motor; la cabecera queda tapada")
+    arrastrar(pg, casilla(pg, "d2"), casilla(pg, "d4"))
+    jugada = pg.evaluate("cur().san")
+    pg.click("#backBtn")
+    comprobar(jugada == "d4" and pg.evaluate("cur() === game.root"), "se mueve y se navega igual")
+    pg.evaluate("openModal('settingsModal')")
+    comprobar(pg.is_visible("#setBoard3d"), "los cuadros de diálogo se ven por encima")
+    pg.keyboard.press("Escape")
+    comprobar(pg.evaluate("ui.full") and not pg.is_visible("#setBoard3d"), "Esc cierra primero el cuadro")
+    pg.keyboard.press("Escape")
+    comprobar(not pg.evaluate("ui.full") and abs(pg.locator("#board").bounding_box()["width"] - antes["width"]) < 2, "y otro Esc sale de la pantalla completa: el tablero vuelve a su tamaño")
+    pg.keyboard.press("p")
+    comprobar(pg.evaluate("ui.full") and pg.get_attribute("#fullBtn", "aria-pressed") == "true", "la tecla P también la activa")
+    pg.evaluate("openEditor()")
+    comprobar(not pg.evaluate("ui.full") and pg.is_visible("#editorPanel"), "al abrir el editor de posición se sale sola")
+    pg.evaluate("closeEditor()")
+    # Las lecciones y los mensajes del entrenador van con el tablero
+    pg.evaluate("openLesson(COURSES[0].id, 0)")
+    pg.click("#fullBtn")
+    comprobar(pg.is_visible("#lessonBox") and pg.evaluate("$('lessonBox').closest('.board-side') !== null"), "a pantalla completa, el texto de la lección va junto al tablero")
+    pg.click("#fullBtn")
+    comprobar(pg.evaluate("$('lessonBox').parentElement.id") == "toolsPanel", "y al salir vuelve a su columna")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+    # Móvil en vertical y en horizontal
+    for (w, h, nombre) in ((390, 844, "vertical"), (844, 390, "horizontal")):
+        ctx = contexto(browser, viewport={"width": w, "height": h}, has_touch=True, is_mobile=True)
+        pg, errores = nueva_pagina(ctx)
+        pg.evaluate("$('welcomeBox').hidden = true; setGame(Pgn.newGame(), { noConfirm: true })")
+        pg.tap("#fullBtn")
+        pg.wait_for_timeout(300)
+        b = pg.locator("#board").bounding_box()
+        nav = pg.locator("#backBtn").bounding_box()
+        comprobar(pg.evaluate("ui.full") and b["x"] >= 0 and b["x"] + b["width"] <= w and b["y"] + b["height"] <= h and b["width"] >= min(w, h) - 90 and nav and nav["x"] + nav["width"] <= w and nav["y"] < h
+                  and not pg.evaluate("document.documentElement.scrollWidth > innerWidth"),
+                  f"móvil en {nombre}: el tablero llena la pantalla y la navegación queda a la vista")
+        pg.tap("#fullBtn")
+        comprobar(not pg.evaluate("ui.full") and not errores, f"móvil en {nombre}: se sale con el mismo botón, sin errores")
+        ctx.close()
+
+
 def prueba_tablero3d(browser):
     print("Novedades 1.33: tablero en 3D")
     tres = os.environ.get("THREE_DIR")
@@ -1891,7 +1944,34 @@ def prueba_tablero3d(browser):
     pg.mouse.move(caja["x"] + caja["width"] / 2, caja["y"] + caja["height"] / 2)
     pg.mouse.down(); pg.mouse.move(caja["x"] + caja["width"] / 2 + 120, caja["y"] + caja["height"] / 2, steps=6); pg.mouse.up()
     comprobar(pg.evaluate("B3.view.theta") != antes and pg.evaluate("cur().san") == "e4", "arrastrar gira la vista sin mover piezas")
+    # 1.38: la luz gira con la cámara y se regulan la luz y los reflejos
+    comprobar(abs(pg.evaluate("B3.rig.rotation.y") - pg.evaluate("B3.view.theta")) < 1e-6, "las luces giran con la vista (sin zonas deslumbradas al girar)")
     pg.click("#board3d [data-b3=reset]")
+    pg.click("#board3d [data-b3=light]")
+    comprobar(pg.is_visible(".board3d-light") and pg.evaluate("B3.plane.material.clearcoat") < 0.2, "☀ abre los deslizadores de luz y reflejos; por defecto las casillas brillan poco")
+    pg.evaluate("for (const [k, v] of [['light', 70], ['gloss', 0]]) { const i = document.querySelector(`.board3d-light [data-b3r=${k}]`); i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); }")
+    comprobar(pg.evaluate("B3.plane.material.clearcoat === 0 && B3.plane.material.specularIntensity === 0 && Math.abs(B3.renderer.toneMappingExposure - 1.05 * 0.7) < 1e-6 && settings.board3dLight === 70 && settings.board3dGloss === 0"),
+              "con los reflejos a 0 las casillas quedan mates, y la luz baja la exposición")
+    pg.click(".board3d-light [data-b3=lightReset]")
+    comprobar(pg.evaluate("settings.board3dLight === 100 && settings.board3dGloss === 30 && Math.abs(B3.renderer.toneMappingExposure - 1.05) < 1e-6"), "«Restablecer» vuelve a los valores iniciales")
+    pg.click("#board3d [data-b3=light]")
+    comprobar(not pg.is_visible(".board3d-light"), "y ☀ lo cierra")
+    # Flechas en 3D con el clic derecho
+    def punto(sq):
+        return pg.evaluate("""sq => { const [x, z] = b3Pos(Chess.sqIdx(sq)), v = new B3.T.Vector3(x, 0, z).project(B3.camera), r = B3.canvas.getBoundingClientRect();
+          return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }""", sq)
+    a, b = punto("d4"), punto("d6")
+    pg.mouse.move(*a); pg.mouse.down(button="right"); pg.mouse.move(*b, steps=6); pg.mouse.up(button="right")
+    comprobar(pg.evaluate("JSON.stringify(cur().shapes)") == '[{"color":"green","from":"d4","to":"d6"}]' and pg.evaluate("cur().san") == "e4", "con el clic derecho se dibuja una flecha en 3D (sin girar ni mover)")
+    pg.evaluate("cur().shapes = []; renderShapes()")
+    # Pantalla completa con el 3D
+    pg.click("#fullBtn")
+    pg.wait_for_timeout(300)
+    lado = pg.locator("#board3d canvas").bounding_box()
+    comprobar(pg.evaluate("document.body.classList.contains('board-full')") and lado["height"] > 800 and pg.evaluate("B3.active"), "a pantalla completa el tablero 3D crece hasta llenar la altura")
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(200)
+    comprobar(not pg.evaluate("ui.full"), "y Esc vuelve a la vista normal")
     pg.click("#flipBtn")
     comprobar(pg.evaluate("B3.active && ui.flipped"), "«Girar» sigue en 3D, desde el lado de las negras")
     pg.evaluate("setBlind(true)")
@@ -2098,7 +2178,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

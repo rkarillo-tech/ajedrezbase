@@ -48,12 +48,19 @@ $("testTokenBtn").onclick = async () => {
 };
 
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape") { closeModals(); if ($("promoModal").classList.contains("open")) $("cancelPromo").click(); return; }
+  if (e.key === "Escape") {
+    const busy = !!document.querySelector(".modal-back.open") || $("promoModal").classList.contains("open");
+    closeModals();
+    if ($("promoModal").classList.contains("open")) $("cancelPromo").click();
+    if (!busy && ui.full) fullBoard(false);
+    return;
+  }
   const tag = document.activeElement && document.activeElement.tagName;
   if (["INPUT", "TEXTAREA", "SELECT"].includes(tag) || e.ctrlKey || e.metaKey || e.altKey) return;
   if (document.querySelector(".modal-back.open")) return;
   const k = e.key;
   if (editor.active && !["f", "F", "?"].includes(k)) return;
+  if (e.repeat && "pPbBeEfF".includes(k)) return;
   if (quiz() && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", " ", "x", "X", "t", "T", "h", "H"].includes(k)) return;
   if (k === "ArrowLeft") { stopAutoplay(); goBack(); }
   else if (k === "ArrowRight") { stopAutoplay(); goForward(); }
@@ -71,6 +78,7 @@ document.addEventListener("keydown", e => {
   else if (k === "h" || k === "H") talkToPieces();
   else if (k === "l" || k === "L") readBoard();
   else if (k === "b" || k === "B") setBlind(!ui.blind);
+  else if (k === "p" || k === "P") fullBoard(!ui.full);
   else return;
   e.preventDefault();
 });

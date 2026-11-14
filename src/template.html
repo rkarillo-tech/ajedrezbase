@@ -280,7 +280,26 @@ main {
 .board3d { position: absolute; inset: 0; z-index: 7; border-radius: 4px; overflow: hidden; }
 .board3d canvas { width: 100%; height: 100%; display: block; cursor: pointer; }
 .board3d-tools { position: absolute; right: 6px; top: 6px; display: flex; gap: 4px; opacity: .8; }
-.board3d-tools .sm-btn { min-width: 30px; padding: 3px 6px; }
+.board3d-tools .sm-btn { min-width: 30px; padding: 3px 6px; justify-content: center; }
+/* En pantallas táctiles, botones más grandes y sin los de acercar y alejar (se pellizca) */
+@media (pointer: coarse) { .board3d-tools { gap: 6px; } .board3d-tools .sm-btn { min-width: 38px; min-height: 36px; font-size: .95rem; } .board3d-tools :is([data-b3=in], [data-b3=out]) { display: none; } }
+.board3d-light { position: absolute; right: 6px; top: 40px; z-index: 2; width: min(240px, 86%); display: flex; flex-direction: column; gap: 8px; padding: 9px 11px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px; box-shadow: 0 6px 18px rgba(0,0,0,.4); font-size: .82rem; }
+@media (pointer: coarse) { .board3d-light { top: 50px; } }
+.board3d-light[hidden] { display: none; }
+.board3d-light label, .b3-sliders label { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px; margin: 0; color: var(--text); font-weight: 400; }
+.board3d-light input[type=range], .b3-sliders input[type=range] { width: 100%; min-width: 0; padding: 0; border: 0; background: none; accent-color: var(--accent); }
+.board3d-light .sm-btn { align-self: flex-end; }
+.b3-sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 18px; margin: 8px 0 2px; font-size: .85rem; }
+.b3-sliders label { grid-template-columns: 130px 1fr; }
+/* Botón de pantalla completa (en la barra de arriba del tablero) */
+.bar-btn { margin-left: 8px; padding: 2px 6px; min-width: 30px; min-height: 24px; justify-content: center; flex: none; }
+.bar-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.bar-btn .fs-out, .bar-btn[aria-pressed="true"] .fs-in { display: none; }
+.bar-btn[aria-pressed="true"] .fs-out { display: inline; }
+.bar-btn[aria-pressed="true"] { border-color: var(--accent); }
+@media (pointer: coarse) { .bar-btn { min-width: 40px; min-height: 28px; } }
+body.editing .bar-btn { display: none; }
 .board3d-loading { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; background: var(--veil); font-weight: 600; border-radius: 4px; }
 .drawing-layer { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); pointer-events: none; z-index: 6; }
 .square { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer; }
@@ -293,7 +312,7 @@ main {
 .unicode-piece { font-size: clamp(26px, 4.6vw, 52px); line-height: 1; }
 .unicode-piece.w { color: #fff; text-shadow: 0 1px 2px #111, 1px 0 1px #111, -1px 0 1px #111; }
 .unicode-piece.b { color: #161616; text-shadow: 0 1px 1px rgba(255,255,255,0.45); }
-.drag-ghost { position: fixed; pointer-events: none; z-index: 100; transform: translate(-50%, -50%); }
+.drag-ghost { position: fixed; pointer-events: none; z-index: 160; transform: translate(-50%, -50%); }
 .drag-ghost .piece-svg { filter: drop-shadow(0 6px 6px rgba(0,0,0,0.45)); }
 
 .square.selected { box-shadow: inset 0 0 0 4px #f6e05e; }
@@ -344,7 +363,7 @@ kbd { background: var(--panel3); border: 1px solid var(--border); border-bottom-
 /* Motor */
 .engine-box { margin-top: 8px; background: var(--deep); border: 1px solid var(--border); border-radius: 7px; font-size: 0.83rem; }
 .engine-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 9px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.engine-head .left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 260px; }
+.engine-head .left { display: flex; align-items: center; gap: 2px 8px; min-width: 0; flex: 1 1 260px; flex-wrap: wrap; }
 .engine-head .engine-meta { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .engine-badge { color: var(--accent); font-weight: 700; white-space: nowrap; }
 .engine-meta { color: var(--muted); font-size: .76rem; white-space: nowrap; }
@@ -755,6 +774,40 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   .board-side:not(.more-open) #drawBar:not(:has([aria-pressed="true"])) { display: none; }
   .board-panel:not(:has(.board.blind)) .board-side:not(.more-open) #typeMoveRow { display: none; }
 }
+
+/* ---------- Tablero a pantalla completa (botón de la barra de arriba o tecla P) ----------
+   El panel del tablero ocupa toda la ventana (y, donde el navegador lo permite, toda la pantalla): el tablero se hace todo lo grande
+   que cabe y lo demás (navegación, jugadas, ejercicio en curso, motor) queda al lado en horizontal o debajo en vertical.
+   --fb es el lado del tablero */
+body.board-full { overflow: hidden; }
+body.board-full .board-panel { position: fixed; inset: 0; z-index: 150; margin: 0; border: 0; border-radius: 0; height: auto; overflow: hidden; display: flex; flex-direction: row; gap: 10px; align-items: flex-start;
+  padding: max(6px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(6px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  --fbh: 100vh; --fb: min(var(--fbh) - 80px, 100vw - 350px); }
+@supports (height: 100dvh) { body.board-full .board-panel { --fbh: 100dvh; } }
+body.board-full .board-main { flex: none; margin: 0; width: calc(var(--fb) + 19px); }
+body.board-full .board-stage { grid-template-columns: 14px 1fr; gap: 5px; }
+body.board-full .eval-score-text { display: none; }
+body.board-full .player-bar { padding: 2px 9px; min-height: 28px; margin-bottom: 4px; }
+body.board-full .player-bar.bottom { margin-top: 4px; }
+body.board-full .unicode-piece { font-size: calc(var(--fb) * .095); }
+body.board-full .board-side { flex: 1; min-width: 0; align-self: stretch; height: auto; overflow-y: auto; display: flex; flex-direction: column; padding-right: 2px; }
+body.board-full .board-side > * { order: 20; flex: none; }
+body.board-full :is(#navControls, #drawBar, #autoSpeedRow) { order: 1; }
+body.board-full #navControls { margin-top: 0; }
+body.board-full #statusText { order: 2; }
+body.board-full :is(#retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox) { order: 3; }
+body.board-full #moves { order: 4; }
+body.board-full :is(#varControls, #gameMarksBox) { order: 5; }
+body.board-full #typeMoveRow { order: 6; }
+body.board-full :is(#engineBox, #thinkBox, #talkBox) { order: 7; }
+body.board-full #evalChartWrap { order: 8; }
+body.board-full #chartLegend { order: 9; }
+body.board-full #exportControls { order: 10; }
+@media (orientation: portrait) {
+  body.board-full .board-panel { flex-direction: column; align-items: stretch; gap: 4px; --fb: min(100vw - 35px, var(--fbh) - 250px); }
+  body.board-full .board-main { margin-inline: auto; }
+  body.board-full .board-side { flex: 1; min-height: 0; }
+}
 </style>
 </head>
 <body data-theme="wood">
@@ -797,7 +850,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
     <div class="board-main">
     <div class="player-bar" id="topBar">
       <span class="player-name" id="topName">Negras</span>
-      <div class="bar-right"><span id="topCaptured" class="captured-pieces"></span><span id="topAdv" class="mat-badge" hidden></span><span id="topClock" class="clock" hidden></span></div>
+      <div class="bar-right"><span id="topCaptured" class="captured-pieces"></span><span id="topAdv" class="mat-badge" hidden></span><span id="topClock" class="clock" hidden></span><button id="fullBtn" type="button" class="sm-btn bar-btn" aria-pressed="false" title="Tablero a pantalla completa (tecla P)" aria-label="Tablero a pantalla completa"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="fs-in" d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/><path class="fs-out" d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/></svg></button></div>
     </div>
 
     <div class="board-stage">
@@ -1638,6 +1691,10 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
       <option value="contrast">Alto contraste (piezas blancas y negras sobre casillas de tono medio)</option>
       <option value="custom">Personalizado…</option>
     </select>
+    <div class="b3-sliders">
+      <label title="Más o menos luz en la escena del tablero 3D"><span>☀ Luz del 3D <span id="setB3LightVal" class="small"></span></span><input type="range" id="setB3Light" min="50" max="150" step="5"></label>
+      <label title="Brillo del barniz de las casillas: bájalo si los reflejos no dejan ver bien el tablero (0 = mate)"><span>✨ Reflejos <span id="setB3GlossVal" class="small"></span></span><input type="range" id="setB3Gloss" min="0" max="100" step="5"></label>
+    </div>
     <div id="b3Custom" class="b3-custom" hidden>
       <label>Piezas blancas <input type="color" id="b3c_pw"></label>
       <label>Piezas negras <input type="color" id="b3c_pb"></label>
