@@ -60,7 +60,7 @@ Todo está explicado con ejemplos en la **[guía de uso](GUIA.md)**, que tambié
 ## Atajos
 
 `←` `→` jugada anterior / siguiente · `↑` `↓` cambiar de variante · `Inicio` `Fin` · `Espacio` reproducir ·
-`F` girar el tablero · `E` análisis on/off · `X` ver amenaza · `M` marcar posición · `B` piezas ocultas · `?` ayuda · `Esc` cerrar ·
+`F` girar el tablero · `E` análisis on/off · `X` ver amenaza · `M` marcar posición · `B` piezas ocultas · `P` pantalla completa · `?` ayuda · `Esc` cerrar ·
 rueda del ratón sobre el tablero para avanzar y retroceder.
 
 ## Preguntas frecuentes

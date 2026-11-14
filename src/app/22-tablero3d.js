@@ -30,6 +30,31 @@ function b3Look() {
   const c = Object.assign({ pw: "#ecd3a6", pb: "#7b4a28", sl: "#efece4", sd: "#33302d" }, settings.board3dColors || {});
   return { pw: c.pw, pb: c.pb, sl: c.sl, sd: c.sd, frame: "#b08a5e", coord: "#2a1d12", grain: true };
 }
+/* Luz y reflejos del 3D (☀ sobre el tablero o ⚙ Ajustes): la luz es la exposición de la escena (50 a 150 %) y los reflejos,
+   el brillo del barniz de las casillas (0 = mate, sin destellos; 100 = muy pulido) */
+const B3_LIGHT_DEF = 100, B3_GLOSS_DEF = 30;
+const b3Num = (v, def, lo, hi) => (Number.isFinite(+v) && v !== null && v !== "" ? Math.max(lo, Math.min(hi, +v)) : def);
+const b3Light = () => b3Num(settings.board3dLight, B3_LIGHT_DEF, 50, 150);
+const b3Gloss = () => b3Num(settings.board3dGloss, B3_GLOSS_DEF, 0, 100);
+function board3dApplyLight() {
+  for (const [id, v] of [["setB3Light", b3Light()], ["setB3Gloss", b3Gloss()]]) { const el = $(id); if (el) el.value = v; }
+  if ($("setB3LightVal")) $("setB3LightVal").textContent = b3Light() + " %";
+  if ($("setB3GlossVal")) $("setB3GlossVal").textContent = b3Gloss() + " %";
+  if (!B3.ready) return;
+  const g = b3Gloss() / 100;
+  B3.renderer.toneMappingExposure = 1.05 * b3Light() / 100;
+  Object.assign(B3.plane.material, { clearcoat: 0.45 * g, roughness: 0.95 - 0.45 * g, specularIntensity: g });
+  Object.assign(B3.mat.frame, { clearcoat: 0.6 * (0.3 + 0.7 * g), roughness: 0.75 - 0.27 * g });
+  B3.rim.intensity = 0.9 + 0.6 * g;
+  B3.wrap.querySelectorAll("[data-b3r]").forEach(el => { el.value = el.dataset.b3r === "light" ? b3Light() : b3Gloss(); });
+  board3dRender();
+}
+function board3dSetLight(key, v) {
+  settings[key === "light" ? "board3dLight" : "board3dGloss"] = +v;
+  board3dApplyLight();
+  board3dSaveLight();
+}
+const board3dSaveLight = debounce(() => saveSettings(), 400);
 /* Aplica el aspecto a los materiales y a la textura del tablero */
 function board3dApplyLook() {
   if (!B3.ready) return;
@@ -134,6 +159,9 @@ function board3dInit() {
   let renderer;
   try { renderer = new T.WebGLRenderer({ antialias: true, alpha: true }); }
   catch (e) { console.warn("Tablero 3D: sin WebGL", e); B3.failed = true; toast("Este navegador no puede dibujar en 3D (WebGL). Sigue el tablero plano."); return; }
+  // Si el sistema retira el contexto gráfico (pasa en móviles al dejar la aplicación en segundo plano), se recupera en vez de quedarse en negro
+  renderer.domElement.addEventListener("webglcontextlost", e => e.preventDefault());
+  renderer.domElement.addEventListener("webglcontextrestored", () => { try { B3.scene.environment = board3dEnvironment(B3.renderer); } catch (e) { console.warn(e); } if (B3.tex) B3.tex.needsUpdate = true; board3dRender(); });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = T.PCFSoftShadowMap;
@@ -141,13 +169,14 @@ function board3dInit() {
   renderer.toneMappingExposure = 1.05;
   B3.renderer = renderer;
   B3.canvas = renderer.domElement;
-  B3.canvas.setAttribute("aria-label", "Tablero de ajedrez en 3D: pulsa la pieza y después la casilla de destino. Arrastra para girar la vista.");
+  B3.canvas.setAttribute("aria-label", "Tablero de ajedrez en 3D: pulsa la pieza y después la casilla de destino. Arrastra para girar la vista; con el clic derecho se dibujan flechas.");
   B3.canvas.setAttribute("role", "img");
   B3.wrap = document.createElement("div");
   B3.wrap.id = "board3d";
   B3.wrap.className = "board3d";
   B3.wrap.append(B3.canvas);
-  B3.wrap.insertAdjacentHTML("beforeend", `<div class="board3d-tools"><button type="button" class="sm-btn" data-b3="in" title="Acercar" aria-label="Acercar">＋</button><button type="button" class="sm-btn" data-b3="out" title="Alejar" aria-label="Alejar">－</button><button type="button" class="sm-btn" data-b3="top" title="Vista desde arriba" aria-label="Vista desde arriba">⬒</button><button type="button" class="sm-btn" data-b3="reset" title="Vista inicial" aria-label="Vista inicial">⟲</button></div>`);
+  B3.wrap.insertAdjacentHTML("beforeend", `<div class="board3d-tools"><button type="button" class="sm-btn" data-b3="light" title="Luz y reflejos del tablero" aria-label="Luz y reflejos del tablero" aria-expanded="false">☀</button><button type="button" class="sm-btn" data-b3="in" title="Acercar" aria-label="Acercar">＋</button><button type="button" class="sm-btn" data-b3="out" title="Alejar" aria-label="Alejar">－</button><button type="button" class="sm-btn" data-b3="top" title="Vista desde arriba" aria-label="Vista desde arriba">⬒</button><button type="button" class="sm-btn" data-b3="reset" title="Vista inicial" aria-label="Vista inicial">⟲</button></div>
+<div class="board3d-light" hidden><label><span>☀ Luz</span><input type="range" min="50" max="150" step="5" data-b3r="light" aria-label="Luz del tablero 3D"></label><label><span>✨ Reflejos</span><input type="range" min="0" max="100" step="5" data-b3r="gloss" aria-label="Reflejos del tablero 3D"></label><button type="button" class="sm-btn" data-b3="lightReset">Restablecer</button></div>`);
   $("boardWrap").append(B3.wrap);
 
   const scene = B3.scene = new T.Scene();
@@ -155,15 +184,19 @@ function board3dInit() {
   scene.environment = board3dEnvironment(renderer);   // reflejos suaves, como en una habitación con ventanas
   scene.environmentIntensity = 0.75;
   scene.add(new T.HemisphereLight(0xfff4e2, 0x2e3340, 0.55));
+  // Las luces (y los reflejos del entorno) giran con la cámara: el tablero se ve igual de iluminado desde cualquier lado,
+  // sin zonas deslumbradas al girar la vista
+  B3.rig = new T.Group();
+  scene.add(B3.rig);
   const sun = new T.DirectionalLight(0xfff1dc, 2.6);
   sun.position.set(-4, 11, 6);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 1, far: 30 });
   sun.shadow.bias = -0.0008;
-  scene.add(sun);
-  B3.rim = new T.DirectionalLight(0xdfe8ff, 1.5);   // casi a ras del tablero: da de lado a las piezas y apenas toca las casillas
-  scene.add(B3.rim, B3.rim.target);
+  B3.rim = new T.DirectionalLight(0xdfe8ff, 1.5);   // casi a ras del tablero, desde el fondo: da de lado a las piezas y apenas toca las casillas
+  B3.rim.position.set(0, 1.1, -8);
+  B3.rig.add(sun, B3.rim);
 
   // Tablero: un marco con grosor y, encima, la textura con casillas, coordenadas, marcas y flechas
   const cv = document.createElement("canvas");
@@ -201,6 +234,7 @@ function board3dInit() {
   board3dEvents();
   new ResizeObserver(() => board3dResize()).observe($("boardWrap"));
   B3.ready = true;
+  board3dApplyLight();
   board3dResize();
 }
 
@@ -459,7 +493,9 @@ function board3dPlace(dist) {
   B3.camera.up.set(0, 1, 0);
   if (v.phi < 0.02) B3.camera.up.set(-Math.sin(th), 0, -Math.cos(th));   // desde arriba: las blancas (o las negras, girado) abajo
   B3.camera.lookAt(tx, -0.1, tz);
-  if (B3.rim) { B3.rim.position.set(-Math.sin(th) * 8, 1.1, -Math.cos(th) * 8); B3.rim.target.position.set(0, 0, 0); }
+  B3.rig.rotation.y = th;
+  if (B3.scene.environmentRotation) B3.scene.environmentRotation.y = th;
+  B3.rig.updateMatrixWorld(true);
   B3.camera.updateMatrixWorld();
 }
 /* La distancia a la que cabe todo el tablero (con las piezas más altas) en el recuadro, para el ángulo actual */
@@ -526,6 +562,15 @@ function board3dEvents() {
   cv.addEventListener("pointerdown", e => {
     cv.setPointerCapture(e.pointerId);
     B3.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // Flechas y círculos, como en el tablero plano: clic derecho, Ctrl + arrastrar o el modo «✏ Dibujar flechas»
+    // (lo termina el pointerup general de la sección 10, con la casilla sobre la que se suelta)
+    if (B3.ptrs.size === 1 && (e.button === 2 || ui.drawMode || e.ctrlKey)) {
+      const i = board3dSquareAt(e.clientX, e.clientY);
+      B3.drawing = true;
+      if (i != null) { ui.drawStart = { sq: i, color: ui.drawMode && e.button !== 2 ? ui.drawColor || "green" : shapeColor(e), over: i, b3: true }; ui.drawAt = Date.now(); renderShapes(); }
+      e.preventDefault();
+      return;
+    }
     if (B3.ptrs.size === 1) { B3.down = { x: e.clientX, y: e.clientY }; B3.moved = false; }
     if (B3.ptrs.size === 2) { const [a, b] = [...B3.ptrs.values()]; B3.pinch = Math.hypot(a.x - b.x, a.y - b.y); B3.moved = true; }
     e.preventDefault();
@@ -535,6 +580,11 @@ function board3dEvents() {
     if (!prev) return;
     const cur2 = { x: e.clientX, y: e.clientY };
     B3.ptrs.set(e.pointerId, cur2);
+    if (B3.drawing) {
+      const over = ui.drawStart && ui.drawStart.b3 ? board3dSquareAt(e.clientX, e.clientY) : null;
+      if (over != null && over !== ui.drawStart.over) { ui.drawStart.over = over; renderShapes(); }
+      return;
+    }
     if (B3.ptrs.size === 2) {
       const [a, b] = [...B3.ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
       if (B3.pinch) board3dZoom(B3.pinch / d);
@@ -552,6 +602,7 @@ function board3dEvents() {
     B3.ptrs.delete(e.pointerId);
     if (B3.ptrs.size) return;
     B3.pinch = 0;
+    if (B3.drawing) { B3.drawing = false; if (e.type === "pointercancel" && ui.drawStart && ui.drawStart.b3) { ui.drawStart = null; renderShapes(); } return; }
     if (B3.moved || e.type === "pointercancel") return;
     const i = board3dSquareAt(e.clientX, e.clientY);
     if (i == null) return;
@@ -568,7 +619,13 @@ function board3dEvents() {
     const a = b.dataset.b3;
     if (a === "in") board3dZoom(1 / 1.15);
     else if (a === "out") board3dZoom(1.15);
+    else if (a === "light") { const box = B3.wrap.querySelector(".board3d-light"); box.hidden = !box.hidden; b.setAttribute("aria-expanded", !box.hidden); }
     else if (a === "top") { B3.view.phi = B3.view.phi < 0.05 ? 0.74 : 0.01; B3.view.theta = 0; board3dRender(); }
     else { B3.view = { theta: 0, phi: 0.74, zoom: 1 }; board3dRender(); }
   });
+  const lightBox = B3.wrap.querySelector(".board3d-light");
+  lightBox.addEventListener("input", e => { const k = e.target.dataset.b3r; if (k) board3dSetLight(k, e.target.value); });
+  lightBox.addEventListener("click", e => { if (e.target.closest("[data-b3=lightReset]")) { board3dSetLight("light", B3_LIGHT_DEF); board3dSetLight("gloss", B3_GLOSS_DEF); } });
+  // Al tocar el tablero se cierra el cuadro de la luz
+  cv.addEventListener("pointerdown", () => { if (!lightBox.hidden) { lightBox.hidden = true; B3.wrap.querySelector("[data-b3=light]").setAttribute("aria-expanded", "false"); } });
 }

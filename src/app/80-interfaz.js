@@ -1,5 +1,6 @@
 /* ---------- 27. Pestañas, modales y botones ---------- */
 function switchTab(name) {
+  if (ui.full && name !== ui.activeTab) fullBoard(false);   // lo que se abre está en el otro panel
   ui.activeTab = name;
   document.querySelectorAll(".tab-btn").forEach(b => { b.classList.toggle("active", b.dataset.tab === name); b.setAttribute("aria-selected", b.dataset.tab === name); });
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === "tab-" + name));
@@ -48,6 +49,58 @@ new MutationObserver(() => { $("trainSessionBtns").hidden = ($("stopTrainBtn").d
   .observe($("trainSessionBtns"), { attributes: true, attributeFilter: ["disabled"], subtree: true });
 openTrainSection(null);
 
+/* ---------- 27b. Tablero a pantalla completa ----------
+   Es una disposición propia (el panel del tablero ocupa toda la ventana) y, además, se pide al navegador la pantalla completa de verdad
+   donde existe (ordenador, Android, iPad). En el iPhone, que no la tiene, queda a ventana completa: instalada como aplicación ocupa toda la pantalla.
+   Mientras dura, la pantalla no se apaga sola. */
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+function fullBoard(on) {
+  on = !!on;
+  if (on === !!ui.full) return;
+  if (on && editor.active) { toast("Cierra antes el editor de posición."); return; }
+  ui.full = on;
+  document.body.classList.toggle("board-full", on);
+  const btn = $("fullBtn"), label = on ? "Salir de la pantalla completa (Esc o tecla P)" : "Tablero a pantalla completa (tecla P)";
+  btn.setAttribute("aria-pressed", String(on));
+  btn.title = label;
+  btn.setAttribute("aria-label", label);
+  if (typeof onLayout === "function") onLayout();
+  const root = document.documentElement;
+  try {
+    if (on) {
+      const req = root.requestFullscreen || root.webkitRequestFullscreen;
+      if (req && !fsElement()) { ui.fullNative = true; const p = req.call(root, { navigationUI: "hide" }); if (p && p.catch) p.catch(() => { ui.fullNative = false; }); }
+    } else if (ui.fullNative) {
+      ui.fullNative = false;
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit && fsElement()) { const p = exit.call(document); if (p && p.catch) p.catch(() => {}); }
+    }
+  } catch { ui.fullNative = false; }
+  fullWake(on);
+  if (on) document.querySelector(".board-side").scrollTop = 0; else scrollTo({ top: 0 });
+  if (B3.active) board3dResize();
+}
+async function fullWake(on) {
+  try {
+    if (on) { if (navigator.wakeLock && !ui.wake) { const w = await navigator.wakeLock.request("screen"); if (!ui.full) { w.release(); return; } ui.wake = w; w.addEventListener("release", () => { if (ui.wake === w) ui.wake = null; }); } }
+    else if (ui.wake) { const w = ui.wake; ui.wake = null; await w.release(); }
+  } catch {}
+}
+document.addEventListener("visibilitychange", () => { if (ui.full && document.visibilityState === "visible") fullWake(true); });
+/* Si se sale de la pantalla completa del navegador (Esc, gesto «atrás»), se vuelve a la vista normal; salvo que la haya cerrado
+   un cuadro de confirmación del propio navegador, que entonces se sigue con el tablero a ventana completa */
+for (const k of ["confirm", "alert", "prompt"]) {
+  const native = window[k];
+  if (typeof native !== "function") continue;
+  window[k] = function (...a) { ui.dialogAt = Infinity; try { return native.apply(window, a); } finally { ui.dialogAt = Date.now(); } };
+}
+for (const ev of ["fullscreenchange", "webkitfullscreenchange"]) document.addEventListener(ev, () => {
+  if (fsElement() || !ui.full || !ui.fullNative) return;
+  ui.fullNative = false;
+  if (Date.now() - (ui.dialogAt || 0) > 1500) fullBoard(false);
+});
+$("fullBtn").onclick = () => fullBoard(!ui.full);
+
 function openModal(id) {
   if (id === "settingsModal") {
     $("setEngine").value = settings.engine;
@@ -61,6 +114,7 @@ function openModal(id) {
     $("setBoard3dLook").value = B3_LOOKS[settings.board3dLook] || settings.board3dLook === "custom" ? settings.board3dLook : "wood";
     { const L = b3Look(); for (const k of ["pw", "pb", "sl", "sd"]) $("b3c_" + k).value = L[k] || "#888888"; }
     $("b3Custom").hidden = settings.board3dLook !== "custom";
+    board3dApplyLight();
     $("setLegal").checked = settings.showLegal;
     $("setAutosave").checked = settings.autosave;
     $("setAnimate").checked = settings.animate;
@@ -117,6 +171,8 @@ $("setBoard3dLook").onchange = e => {
   board3dApplyLook();
 };
 for (const k of ["pw", "pb", "sl", "sd"]) $("b3c_" + k).oninput = e => { settings.board3dColors = Object.assign({}, b3Look(), settings.board3dColors || {}, { [k]: e.target.value }); saveSettings(); board3dApplyLook(); };
+$("setB3Light").oninput = e => board3dSetLight("light", e.target.value);
+$("setB3Gloss").oninput = e => board3dSetLight("gloss", e.target.value);
 $("setLegal").onchange = e => { settings.showLegal = e.target.checked; saveSettings(); renderBoard(); };
 $("setAnimate").onchange = e => { settings.animate = e.target.checked; saveSettings(); };
 $("setWheel").onchange = e => { settings.wheel = e.target.checked; saveSettings(); };

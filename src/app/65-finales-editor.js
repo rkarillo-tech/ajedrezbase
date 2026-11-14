@@ -186,6 +186,7 @@ function openEditor() {
   setTimeout(() => { const r = $("topBar").getBoundingClientRect(); if (r.top < 60 || r.top > innerHeight * 0.6) $("topBar").scrollIntoView({ block: "start", behavior: "smooth" }); }, 50);
 }
 function setEditorUi(on) {
+  if (on && ui.full) fullBoard(false);   // el editor está en el otro panel
   document.body.classList.toggle("editing", on);
   $("editorPanel").hidden = !on;
   $("toggleEditorModeBtn").textContent = on ? "✖ Cerrar editor" : "✏ Colocar piezas";

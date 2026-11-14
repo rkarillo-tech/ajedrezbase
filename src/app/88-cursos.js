@@ -160,8 +160,9 @@ function openLesson(id, i) {
 /* En el ordenador el panel de la lección va en la columna derecha, junto al tablero; en el móvil, debajo del tablero */
 /* (en horizontal con poca altura se usa la disposición de móvil aunque haya ancho: ver el CSS) */
 const wideLayout = matchMedia("(min-width: 981px) and (min-height: 541px), (min-width: 981px) and (orientation: portrait)");
+const sideLayout = () => wideLayout.matches && !ui.full;   // a pantalla completa todo va con el tablero, como en el móvil
 function placeLessonBox() {
-  const box = $("lessonBox"), side = wideLayout.matches;
+  const box = $("lessonBox"), side = sideLayout();
   if (side && box.parentElement !== $("toolsPanel")) $("toolsPanel").prepend(box);
   if (!side && box.parentElement === $("toolsPanel")) $("visBox").after(box);
   box.classList.toggle("side", side);
@@ -170,10 +171,10 @@ function placeLessonBox() {
 const trainFeedbackHome = { parent: $("trainFeedback").parentElement };
 function placeTrainFeedback() {
   const el = $("trainFeedback"), btns = $("trainSessionBtns");   // «Pista» y «Salir» van siempre con el mensaje
-  if (!wideLayout.matches) { if (el.parentElement === trainFeedbackHome.parent) $("lessonBox").after(el); }
+  if (!sideLayout()) { if (el.parentElement === trainFeedbackHome.parent) $("lessonBox").after(el); }
   else if (el.parentElement !== trainFeedbackHome.parent) trainFeedbackHome.parent.prepend(el);
   if (el.nextElementSibling !== btns) el.after(btns);
-  el.classList.toggle("under-board", !wideLayout.matches);
+  el.classList.toggle("under-board", !sideLayout());
 }
 const onLayout = () => { placeLessonBox(); placeTrainFeedback(); };
 wideLayout.addEventListener ? wideLayout.addEventListener("change", onLayout) : wideLayout.addListener(onLayout);
