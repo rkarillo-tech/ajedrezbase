@@ -1797,6 +1797,17 @@ def prueba_fiabilidad(browser):
     casilla(pg, "c2").click(); casilla(pg, "c4").click()
     pg.wait_for_timeout(1800)
     comprobar("otra pestaña" in pg.inner_text("#saveState"), "no se sobrescriben a ciegas los cambios hechos en otra pestaña")
+    # 1.39: si el motor se cuelga en mitad de un cálculo, se pasa al interno y el cálculo se repite
+    pg.wait_for_function("Engine.ready && !Engine.running", timeout=20000)
+    res = pg.evaluate("""async () => {
+      settings.live = false; Engine.cancel(); await new Promise(r => setTimeout(r, 300));
+      Engine.watchMs = 500; Engine.kind = "stockfish"; Engine.name = "Stockfish 19"; Engine.w.postMessage = () => {};   // «Stockfish» sordo
+      const job = await Engine.analyse(cur(), { purpose: "prueba", movetime: 300 });
+      Engine.watchMs = 0;
+      return { ok: !!(job && job.best && job.lines.length), kind: Engine.kind, note: Engine.note, revived: Engine.revived, toast: $("toast").textContent };
+    }""")
+    comprobar(res["ok"] and res["kind"] == "internal" and res["revived"] == 1 and "dejó de responder" in res["note"] and "dejó de responder" in res["toast"],
+              "si Stockfish deja de responder, se sigue con el motor interno y el cálculo pendiente termina")
     comprobar(not errores and not err2, "sin errores de JavaScript" + (": " + "; ".join(errores + err2) if errores or err2 else ""))
     ctx.close()
 
@@ -1953,6 +1964,26 @@ def prueba_traer_partidas(browser):
     comprobar(pg.evaluate(pegar, "8/8/8/4k3/8/8/4P3/4K3 w - - 0 1") and pg.evaluate("Chess.toFen(cur().state)") == "8/8/8/4k3/8/8/4P3/4K3 w - - 0 1", "y una FEN copiada se carga como posición")
     pg.click("#moveInput")
     comprobar(not pg.evaluate("""t => { const e = new Event('paste', { bubbles: true, cancelable: true }); e.clipboardData = { getData: () => t }; document.dispatchEvent(e); return e.defaultPrevented; }""", "1. e4 e5 2. Nf3"), "dentro de un recuadro de texto se pega con normalidad")
+    # Enlaces de Lichess (partida y estudio)
+    pgn_cab = {"Content-Type": "application/x-chess-pgn", "Access-Control-Allow-Origin": "*"}
+    ctx.route("https://lichess.org/game/export/AbCd1234*", lambda r: r.fulfill(status=200, headers=pgn_cab, body='[Event "Rated Blitz game"]\n[White "uno"]\n[Black "dos"]\n[Result "0-1"]\n\n1. f3 { [%eval -0.5] [%clk 0:03:00] } e5 { [%clk 0:03:00] } 2. g4 Qh4# 0-1\n'))
+    ctx.route("https://lichess.org/api/study/EsTuDi01.pgn", lambda r: r.fulfill(status=200, headers=pgn_cab, body='[Event "Estudio: cap 1"]\n\n1. e4 *\n\n\n[Event "Estudio: cap 2"]\n\n1. d4 d5 *\n'))
+    ctx.route("https://lichess.org/game/export/NoExiste*", lambda r: r.fulfill(status=404, headers=pgn_cab, body=""))
+    comprobar(pg.evaluate("!!lichessLink('https://lichess.org/AbCd1234/black#12') && !!lichessLink('lichess.org/AbCd1234efgh') && !lichessLink('https://lichess.org/training') && !lichessLink('1. e4 e5 https://lichess.org/AbCd1234') && lichessLink('https://lichess.org/study/EsTuDi01/CaPiTu02').chapter === 'CaPiTu02'"),
+              "se reconocen los enlaces de Lichess a partidas y estudios (y nada más)")
+    pg.evaluate("switchTab('study')")
+    pg.fill("#moveInput", "https://lichess.org/AbCd1234/black")
+    pg.click("#importBtn")
+    pg.wait_for_function("game.headers.White === 'uno'")
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).map(n => n.san).join(' ')") == "f3 e5 g4 Qh4#" and pg.evaluate("ui.flipped") and pg.evaluate("game.root.children[0].clk") == 180 and pg.evaluate("game.root.children[0].eval.cp") == -50,
+              "un enlace a una partida de Lichess la descarga con relojes y evaluaciones, vista desde el lado del enlace")
+    pg.evaluate("ui.flipped = false")
+    comprobar(pg.evaluate(pegar, "https://lichess.org/study/EsTuDi01"), "pegar el enlace de un estudio…")
+    pg.wait_for_function("Coll.names.includes('Estudio de Lichess')")
+    comprobar(pg.evaluate("Coll.games.length") == 2 and pg.evaluate("ui.activeTab + '/' + ui.librarySub") == "library/collection", "…abre sus capítulos en «🗂 Abrir .pgn»")
+    pg.evaluate("importLichessLink('https://lichess.org/NoExiste')")
+    pg.wait_for_function("$('toast').textContent.includes('no existe')")
+    comprobar("esa partida no existe" in pg.inner_text("#toast"), "si la partida no existe, se dice")
     # Soltar ficheros
     soltar = """async ([nombre, texto]) => { const dt = new DataTransfer(); dt.items.add(new File([texto], nombre)); const ev = t => { const e = new DragEvent(t, { bubbles: true, cancelable: true, dataTransfer: dt }); window.dispatchEvent(e); return e; };
       ev('dragenter'); const velo = document.body.classList.contains('dropping'); ev('drop'); await new Promise(r => setTimeout(r, 400)); return velo && !document.body.classList.contains('dropping'); }"""

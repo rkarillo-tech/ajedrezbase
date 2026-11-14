@@ -303,6 +303,8 @@ main {
 .bar-btn[aria-pressed="true"] { border-color: var(--accent); }
 @media (pointer: coarse) { .bar-btn { min-width: 40px; min-height: 28px; } }
 body.editing .bar-btn { display: none; }
+/* Con el dedo (también en tabletas, donde no se usa la rejilla del móvil), botones de navegación más cómodos */
+@media (pointer: coarse) and (min-width: 641px) { #navControls button { min-height: 40px; padding-inline: 13px; justify-content: center; } }
 /* Al arrastrar un fichero sobre la página */
 body.dropping::after { content: "📄 Suelta aquí el fichero .pgn (o una copia .json)"; position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center;
   background: var(--veil); color: var(--text); font-size: 1.3rem; font-weight: 700; border: 3px dashed var(--accent); pointer-events: none; }
@@ -1137,7 +1139,7 @@ body.board-full #exportControls { order: 10; }
         </div>
       </div>
 
-      <label for="moveInput">Jugadas, PGN completo (con variantes y comentarios) o FEN</label>
+      <label for="moveInput">Jugadas, PGN completo (con variantes y comentarios), FEN o enlace de Lichess</label>
       <textarea id="moveInput" spellcheck="false">1. e4 e5 2. Cf3 Cc6 3. Ab5 a6 4. Aa4 Cf6 5. O-O Ae7 6. Te1 b5 7. Ab3 d6 8. c3 O-O</textarea>
       <div class="controls">
         <button id="importBtn" class="primary" title="Sustituye la partida actual">Importar</button>

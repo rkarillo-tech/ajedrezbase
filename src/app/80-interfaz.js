@@ -328,6 +328,7 @@ $("branchMode").onchange = e => { settings.branchMode = e.target.value; saveSett
 $("importBtn").onclick = () => {
   const text = $("moveInput").value;
   if (!text.trim()) { toast("Escribe o pega jugadas, un PGN o una FEN."); return; }
+  if (lichessLink(text)) { importLichessLink(text); return; }
   if (looksLikeFen(text)) { loadFen(text); return; }
   const parts = Pgn.splitGames(text);
   const r = Pgn.parseGame(parts[0] || text, { lang: $("notation").value });

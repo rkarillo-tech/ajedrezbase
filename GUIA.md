@@ -43,6 +43,7 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 - **Añadir desde aquí**: añade las jugadas del recuadro a partir de la posición actual del tablero (útil para meter una variante escrita a mano).
 - **📋 Copiar PGN** / **⬇ Descargar .pgn** / **📋 Copiar FEN**: para llevarte la partida o la posición a otro programa.
 - Si el texto tiene varias partidas, se muestra la primera y todas quedan en **📚 Biblioteca › 🗂 Abrir .pgn** (sin guardar).
+- **Un enlace de Lichess** a una partida (`https://lichess.org/AbCd1234`) o a un estudio (`https://lichess.org/study/…`): pégalo y pulsa **Importar** (o `Ctrl`+`V` fuera de los recuadros) y se descarga con sus relojes y evaluaciones. Un estudio con varios capítulos se abre en «🗂 Abrir .pgn».
 - **Sin pasar por el recuadro**: **arrastra un fichero .pgn** desde tu ordenador y suéltalo en cualquier parte de la página (con una partida se abre en el tablero; con varias, en «🗂 Abrir .pgn»; una copia de seguridad `.json` se restaura), o copia una partida o una FEN y pulsa `Ctrl`+`V` con el cursor fuera de los recuadros de texto. Con la aplicación instalada en el ordenador (Chrome o Edge), también puedes abrir un .pgn con «Abrir con › AjedrezBase».
 - El lector es tolerante: admite `0-0`, coronaciones sin `=`, «e.p.», números con «…» y las **jugadas nulas** (`--`) que ChessBase usa en algunas variantes: esas variantes se dejan fuera y el resto de la partida se lee igual.
 - Si hay una jugada ilegal o mal escrita, la importación se detiene ahí y te dice cuál es (por ejemplo «Detenido en 23. Axf7»).

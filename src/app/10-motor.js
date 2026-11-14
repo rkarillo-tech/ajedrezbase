@@ -49,10 +49,13 @@ const EngineCache = {
 const servedOverHttp = () => /^https?:$/.test(location.protocol);
 /* Se antepone al código de Stockfish en el Worker: el primer mensaje trae el .wasm y su descarga se sirve desde ahí */
 const WASM_FROM_MESSAGE = '(function(){var r;var p=new Promise(function(x){r=x;});self.addEventListener("message",function(e){if(e.data&&e.data.__wasm){r(e.data.__wasm);e.stopImmediatePropagation();}});var f=self.fetch;self.fetch=function(u,o){return /\\.wasm/.test(String(u))?p.then(function(b){return new Response(b,{headers:{"Content-Type":"application/wasm"}});}):f.call(self,u,o);};})();\n';
+document.addEventListener("visibilitychange", () => { if (!document.hidden) Engine.seenAt = Date.now(); });
 const Engine = {
+  watchTimer: null, watchMs: 0, seenAt: 0, revived: 0,
   w: null, kind: "", name: "", ready: false, running: null, pending: null, stopping: false, note: "", readyTimer: null, urls: [], cache: null, fromCache: false, skipCache: false,
   init() {
     this.shutdown();
+    this.revived = 0;
     this.note = "";
     this.fails = [];
     this.skipCache = false;
@@ -67,6 +70,7 @@ const Engine = {
   blobUrl(data, type) { const u = URL.createObjectURL(new Blob(Array.isArray(data) ? data : [data], { type })); this.urls.push(u); return u; },
   shutdown() {
     clearTimeout(this.readyTimer);
+    clearTimeout(this.watchTimer);
     if (this.w) { try { this.w.terminate(); } catch {} }
     this.urls.forEach(u => { try { URL.revokeObjectURL(u); } catch {} });
     this.urls = [];
@@ -161,6 +165,7 @@ const Engine = {
     }
     const job = this.running;
     if (!job) return;
+    job.heard = Date.now();
     if (line.startsWith("info ") && line.includes(" pv ") && line.includes(" score ")) {
       if (/ (lowerbound|upperbound) /.test(line)) return;
       const tk = line.split(" ");
@@ -180,6 +185,7 @@ const Engine = {
       return;
     }
     if (line.startsWith("bestmove")) {
+      clearTimeout(this.watchTimer);
       this.running = null;
       this.stopping = false;
       const b = line.split(/\s+/)[1];
@@ -208,6 +214,38 @@ const Engine = {
     this.send(`position fen ${job.fen}` + (job.moves && job.moves.length ? " moves " + job.moves.join(" ") : ""));
     const mt = this.kind === "internal" ? Math.min(job.movetime || 1000, job.purpose === "live" ? 2500 : 4000) : (job.movetime || 1000);
     this.send(job.depth ? `go depth ${job.depth}` : `go movetime ${mt}`);
+    job.heard = Date.now();
+    job.quiet = this.watchMs || (job.depth ? 60000 : Math.max(25000, mt * 2 + 15000));
+    this.watch(job);
+  },
+  /* Vigilante: si el motor pasa demasiado tiempo sin decir nada en mitad de un cálculo, es que se ha colgado
+     (en móviles, Stockfish se queda a veces sin memoria). Se pasa al motor interno y se repite el cálculo,
+     para que ni el análisis ni la partida contra la CPU se queden esperando para siempre. */
+  watch(job) {
+    clearTimeout(this.watchTimer);
+    this.watchTimer = setTimeout(() => {
+      if (this.running !== job) return;
+      const silent = Date.now() - job.heard;
+      // Con la página en segundo plano el navegador congela también al motor: no cuenta como silencio
+      if (document.hidden || Date.now() - (this.seenAt || 0) < job.quiet) { job.heard = Date.now(); this.watch(job); return; }
+      if (silent < job.quiet) { this.watch(job); return; }
+      this.revive(job);
+    }, Math.max(250, Math.min(job.quiet, 5000)));
+  },
+  revive(job) {
+    const stock = this.kind === "stockfish", pend = this.pending;
+    console.warn("El motor no responde: " + (stock ? "se pasa al motor interno" : "se reinicia"));
+    this.running = null;   // no se da por cancelado: se repite con el otro motor
+    this.pending = null;
+    this.shutdown();
+    const why = stock ? `${this.name || "Stockfish"} dejó de responder (suele ser falta de memoria en el dispositivo): se sigue con el motor interno. Para volver a intentarlo, ⚙ Ajustes › «🔄 Reintentar Stockfish 19»` : this.note;
+    if (stock) this.fails.push(why);
+    this.revived = (this.revived || 0) + 1;
+    this.startInternal(why);
+    if (pend) { job.cancelled = true; job.resolve && job.resolve(null); this.pending = pend; }
+    else if (!job.cancelled && this.revived <= 3) { job.lines = []; this.pending = job; }
+    else if (job.resolve) job.resolve(null);
+    if (stock) toast("⚠ Stockfish dejó de responder: se sigue con el motor interno.", 5000);
   },
   cancel(purpose) {
     if (this.pending && (!purpose || this.pending.purpose === purpose)) { const p = this.pending; this.pending = null; p.cancelled = true; p.resolve && p.resolve(null); }

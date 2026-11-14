@@ -60,8 +60,8 @@ document.addEventListener("paste", e => {
   if (document.querySelector(".modal-back.open")) return;
   const text = ((e.clipboardData && e.clipboardData.getData("text")) || "").trim();
   if (!text || text.length > 2000000) return;
-  const fen = looksLikeFen(text);
-  if (!fen) {
+  const fen = looksLikeFen(text), link = lichessLink(text);
+  if (!fen && !link) {
     // Sólo si de verdad parece una partida: con cabeceras PGN o con al menos dos jugadas legibles
     if (!/^\s*\[\w+\s+"/.test(text)) {
       let r = null;
@@ -72,11 +72,56 @@ document.addEventListener("paste", e => {
   e.preventDefault();
   if (editor.active || quiz()) { toast(editor.active ? "Cierra antes el editor de posición para pegar una partida." : "Termina antes el ejercicio o la partida para pegar otra."); return; }
   if (fen) { loadFen(text); return; }
+  if (link) { importLichessLink(text); return; }
   $("moveInput").value = text;
   if (ui.activeTab !== "study") switchTab("study");
   $("importBtn").click();
   toast("📋 Partida pegada.");
 });
+
+/* Enlace de Lichess a una partida (lichess.org/AbCd1234, con o sin /black y #jugada) o a un estudio (lichess.org/study/…):
+   se descarga su PGN, con relojes y evaluaciones si los tiene. Devuelve null si el texto no es (sólo) un enlace así */
+function lichessLink(text) {
+  const t = String(text || "").trim();
+  if (/\s/.test(t)) return null;
+  let m = /^(?:https?:\/\/)?(?:www\.)?lichess\.org\/study\/([A-Za-z0-9]{8})(?:\/([A-Za-z0-9]{8}))?(?:[?#].*)?$/.exec(t);
+  if (m) return { study: m[1], chapter: m[2] || null, url: `https://lichess.org/api/study/${m[1]}${m[2] ? "/" + m[2] : ""}.pgn` };
+  m = /^(?:https?:\/\/)?(?:www\.)?lichess\.org\/([A-Za-z0-9]{8})(?:[A-Za-z0-9]{4})?(?:\/(white|black))?(?:[?#].*)?$/.exec(t);
+  if (m && !/^(training|analysis|practice|learn|study|editor|tournament|broadcast)$/i.test(m[1])) return { game: m[1], black: m[2] === "black", url: `https://lichess.org/game/export/${m[1]}?clocks=true&evals=true&opening=true&literate=false` };
+  return null;
+}
+async function importLichessLink(text) {
+  const L = lichessLink(text);
+  if (!L) return false;
+  if (editor.active || quiz()) { toast(editor.active ? "Cierra antes el editor de posición." : "Termina antes el ejercicio o la partida."); return false; }
+  toast(L.study ? "☁ Descargando el estudio de Lichess…" : "☁ Descargando la partida de Lichess…", 8000);
+  try {
+    const res = await Lichess.fetch(L.url, { headers: Object.assign({ Accept: "application/x-chess-pgn" }, authHeaders()) });
+    if (res.status === 404) throw Error(L.study ? "ese estudio no existe" : "esa partida no existe");
+    if (res.status === 401 || res.status === 403) throw Error("es privado: Lichess no deja descargarlo");
+    if (res.status === 429) throw Error(`Lichess pide una pausa: inténtalo en ${Lichess.waitSeconds()} s`);
+    if (!res.ok) throw Error("Lichess respondió con un error " + res.status);
+    const pgn = await res.text();
+    const n = Pgn.splitGames(pgn).filter(g => g.movetext.trim() || g.headers.FEN).length;
+    if (!n) throw Error("no trae ninguna partida");
+    if (n > 1) {
+      setCollection(pgn, false, "Estudio de Lichess");
+      switchTab("library"); switchSub("collection");
+      toast(`☁ Estudio de Lichess: ${n} capítulos abiertos en «🗂 Abrir .pgn» (sin guardar).`, 5000);
+      return true;
+    }
+    const out = loadPgnText(pgn);
+    if (!out) return false;
+    if (L.black) { ui.flipped = true; render(); }
+    if (ui.activeTab !== "study") switchTab("study");
+    importResultMsg(out.r, " Si te interesa, pulsa «💾 Guardar en biblioteca».");
+    toast(L.study ? "☁ Capítulo del estudio de Lichess abierto." : "☁ Partida de Lichess abierta.");
+    return true;
+  } catch (e) {
+    toast("No se pudo abrir el enlace de Lichess: " + (e.message && !/fetch|network|load/i.test(e.message) ? e.message : "sin conexión con Lichess") + ".", 5000);
+    return false;
+  }
+}
 
 /* Chess.com: partidas públicas de un usuario, por meses, con su API pública (sin cuenta ni token) */
 const Chesscom = {
