@@ -56,6 +56,12 @@ r = Pgn.parseGame("1. e4 { [%csl Gd4][%cal Ge2e4,Rd7d5] buena [%eval 0.3] } e5")
 const n1 = r.game.root.children[0];
 comprobar(n1.shapes.length === 3 && n1.comment === "buena" && n1.eval.cp === 30, "flechas, círculos y [%eval] de Lichess");
 
+r = Pgn.parseGame("1. e4 e5 (1... c5 2. -- d6 3. Nf3) 2. Nf3 (2. Bc4 Nf6) Nc6");
+comprobar(!r.error && r.nullSkipped === 1 && Pgn.mainlineFrom(r.game.root).length === 4 && r.game.root.children[0].children.length === 2 && r.game.root.children[0].children[1].children.length === 0,
+  "una jugada nula («--», de ChessBase) en una variante deja fuera el resto de esa variante y la partida se lee entera");
+comprobar(!!Pgn.parseGame("1. e4 -- 2. d4").error, "en la línea principal, la jugada nula se avisa como error");
+comprobar(Pgn.parseGame("1. e4 a6 2. e5 d5 3. exd6 e.p. cxd6").count === 6 && Pgn.parseGame("1. e4 1… e5 2… Nc6").count === 2, "se ignoran «e.p.» y los números con «…»");
+
 console.log("Estructura y casillas fuertes");
 {
   const s1 = Chess.parseFen("4k3/8/8/3P4/8/2P5/2P1P3/4K3 w - - 0 1");

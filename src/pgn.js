@@ -128,8 +128,9 @@ var Pgn = (function (C) {
       else {
         let w = m[6];
         if (/^(1-0|0-1|1\/2-1\/2|½-½|\*)$/.test(w)) { out.push({ type: "result", v: w === "½-½" ? "1/2-1/2" : w }); continue; }
-        w = w.replace(/^\d+\s*\.+/, "");
-        if (!w || /^\.+$/.test(w)) continue;
+        w = w.replace(/^\d+\s*[.…]+/, "");
+        if (!w || /^[.…]+$/.test(w) || /^e\.?p\.?$/i.test(w)) continue;   // puntos sueltos y «e.p.» (al paso) de los libros antiguos
+        if (/^(--|Z0|0000|@@@@|null|pass)$/i.test(w)) { out.push({ type: "nullmove", v: w }); continue; }
         if (w in TEXT_POS_NAGS) { out.push({ type: "posnag", v: TEXT_POS_NAGS[w] }); continue; }
         if (/^(!!|\?\?|!\?|\?!|!|\?)$/.test(w)) { out.push({ type: "movenag", v: w }); continue; }
         out.push({ type: "move", v: w });
@@ -150,6 +151,7 @@ var Pgn = (function (C) {
     const tokens = tokenize(parts.movetext);
     let cur = game.root, count = 0, error = null, pending = "";
     const stack = [];
+    let nullSkipped = 0;
     let skip = 0; // profundidad de variante que se está saltando por error
     let justOpened = false;
     for (const tk of tokens) {
@@ -191,6 +193,13 @@ var Pgn = (function (C) {
         if (cur !== game.root) cur.posNag = tk.v;
       } else if (tk.type === "result") {
         if (!stack.length) { if (!headers.Result || headers.Result === "*") game.headers.Result = tk.v; break; }
+      } else if (tk.type === "nullmove") {
+        // «Jugada nula» (ChessBase la usa en variantes para enseñar una amenaza): no se puede representar,
+        // así que se deja lo que sigue de esa variante y se sigue leyendo la partida
+        if (stack.length) { skip = 1; nullSkipped++; continue; }
+        const ps = cur.state;
+        error = { token: tk.v, label: ps.full + (ps.t === 1 ? ". " : "... ") + tk.v, message: "Las jugadas nulas («" + tk.v + "») no se admiten en la línea principal." };
+        break;
       } else if (tk.type === "move") {
         let parsed;
         try {
@@ -212,7 +221,7 @@ var Pgn = (function (C) {
       }
     }
     game.current = game.root;
-    return { game, error, count };
+    return { game, error, count, nullSkipped };
   }
 
   /* ---------- Escribir PGN ---------- */

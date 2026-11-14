@@ -199,6 +199,12 @@ function shareLink() {
 }
 $("linkBtn").onclick = async () => {
   const url = shareLink();
+  // En el móvil y la tableta, el menú de compartir del sistema (WhatsApp, correo…); si no lo hay o se cancela con error, se copia
+  if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+    const h = game.headers, named = h.White && h.White !== "Blancas";
+    try { await navigator.share({ title: named ? `${h.White} – ${h.Black || "?"}` : "Partida de ajedrez", url }); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
   toast((await copyText(url)) ? `🔗 Enlace copiado (${url.length > 1800 ? "largo: " : ""}${Pgn.pathTo(cur()).length - 1 ? "abre la partida en esta jugada" : "abre la partida"}). Pégalo donde quieras.` : "No se pudo copiar el enlace.", 4500);
 };
 function openSharedLink() {

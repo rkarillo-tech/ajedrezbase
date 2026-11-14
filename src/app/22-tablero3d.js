@@ -169,7 +169,7 @@ function board3dInit() {
   renderer.toneMappingExposure = 1.05;
   B3.renderer = renderer;
   B3.canvas = renderer.domElement;
-  B3.canvas.setAttribute("aria-label", "Tablero de ajedrez en 3D: pulsa la pieza y después la casilla de destino. Arrastra para girar la vista; con el clic derecho se dibujan flechas.");
+  B3.canvas.setAttribute("aria-label", "Tablero de ajedrez en 3D: arrastra una pieza o púlsala y después la casilla de destino. Arrastra fuera de tus piezas para girar la vista; con el clic derecho se dibujan flechas.");
   B3.canvas.setAttribute("role", "img");
   B3.wrap = document.createElement("div");
   B3.wrap.id = "board3d";
@@ -395,7 +395,7 @@ function board3dUpdate() {
     let mesh = m && m.userData.p === p ? m : null;
     if (!mesh) { if (m) B3.scene.remove(m); mesh = board3dPiece(p); B3.scene.add(mesh); }
     const [x, z] = b3Pos(i);
-    mesh.position.set(x, 0, z);
+    if (!(B3.grab && B3.grab.mesh === mesh)) mesh.position.set(x, 0, z);   // la que se está arrastrando sigue al dedo
     mesh.visible = !hide;
     keep.set(i, mesh);
   }
@@ -555,6 +555,12 @@ function board3dSquareAt(x, y) {
   const f = Math.floor(p.x + 4), rw = Math.floor(p.z + 4);
   return f >= 0 && f < 8 && rw >= 0 && rw < 8 ? rw * 16 + f : null;
 }
+/* El punto del tablero (a media altura de las piezas) que hay bajo el puntero, y su casilla */
+function board3dPointAt(x, y) {
+  const T = B3.T, r = B3.canvas.getBoundingClientRect(), ray = new T.Raycaster(), p = new T.Vector3();
+  ray.setFromCamera(new T.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), B3.camera);
+  return ray.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), -0.35), p) ? p : null;
+}
 function board3dEvents() {
   const cv = B3.canvas;
   cv.style.touchAction = "none";
@@ -571,7 +577,15 @@ function board3dEvents() {
       e.preventDefault();
       return;
     }
-    if (B3.ptrs.size === 1) { B3.down = { x: e.clientX, y: e.clientY }; B3.moved = false; }
+    if (B3.ptrs.size === 1) {
+      B3.down = { x: e.clientX, y: e.clientY }; B3.moved = false; B3.grab = null;
+      // Sobre una pieza propia que puede mover: arrastrarla la mueve (en lo demás, arrastrar gira la vista)
+      if (e.button === 0 && canUserMove()) {
+        const i = board3dSquareAt(e.clientX, e.clientY), s = cur().state;
+        if (i != null && Chess.color(s.b[i]) === s.t && B3.meshes.get(i)) B3.grab = { from: i, mesh: null };
+      }
+    }
+    if (B3.ptrs.size === 2 && B3.grab) { const had = B3.grab.mesh; B3.grab = null; if (had) renderBoard(); }
     if (B3.ptrs.size === 2) { const [a, b] = [...B3.ptrs.values()]; B3.pinch = Math.hypot(a.x - b.x, a.y - b.y); B3.moved = true; }
     e.preventDefault();
   });
@@ -593,6 +607,17 @@ function board3dEvents() {
     }
     if (!B3.moved && Math.hypot(e.clientX - B3.down.x, e.clientY - B3.down.y) < 6) return;
     B3.moved = true;
+    if (B3.grab) {
+      const g = B3.grab;
+      if (!g.mesh) {
+        if (ui.selected !== g.from) { ui.selected = g.from; renderBoard(); }   // se ven sus destinos mientras se arrastra
+        g.mesh = B3.meshes.get(g.from) || null;
+        B3.canvas.style.cursor = "grabbing";
+      }
+      const p = board3dPointAt(e.clientX, e.clientY);
+      if (p && g.mesh) { g.mesh.position.set(Math.max(-4.6, Math.min(4.6, p.x)), 0.35, Math.max(-4.6, Math.min(4.6, p.z))); board3dRender(); }
+      return;
+    }
     B3.view.theta -= (cur2.x - prev.x) * 0.008;
     B3.view.phi = Math.max(0.01, Math.min(1.3, B3.view.phi - (cur2.y - prev.y) * 0.006));
     board3dRender();
@@ -603,6 +628,18 @@ function board3dEvents() {
     if (B3.ptrs.size) return;
     B3.pinch = 0;
     if (B3.drawing) { B3.drawing = false; if (e.type === "pointercancel" && ui.drawStart && ui.drawStart.b3) { ui.drawStart = null; renderShapes(); } return; }
+    const g = B3.grab;
+    B3.grab = null;
+    if (g && g.mesh) {
+      B3.canvas.style.cursor = "";
+      const p = e.type === "pointercancel" ? null : board3dPointAt(e.clientX, e.clientY);
+      const f = p ? Math.floor(p.x + 4) : -1, rw = p ? Math.floor(p.z + 4) : -1, to = f >= 0 && f < 8 && rw >= 0 && rw < 8 ? rw * 16 + f : null;
+      ui.noAnimOnce = true;
+      if (to != null && to !== g.from && tryMove(g.from, to)) return;
+      ui.noAnimOnce = false;
+      renderBoard();   // vuelve a su casilla (sigue elegida, por si se quiere pulsar el destino)
+      return;
+    }
     if (B3.moved || e.type === "pointercancel") return;
     const i = board3dSquareAt(e.clientX, e.clientY);
     if (i == null) return;

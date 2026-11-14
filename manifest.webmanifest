@@ -9,6 +9,9 @@
   "background_color": "#0b0e14",
   "theme_color": "#0b0e14",
   "categories": ["games", "education", "productivity"],
+  "file_handlers": [
+    { "action": "./", "accept": { "application/x-chess-pgn": [".pgn"] } }
+  ],
   "icons": [
     { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" },
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },

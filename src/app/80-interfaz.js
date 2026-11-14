@@ -72,6 +72,7 @@ function fullBoard(on) {
       if (req && !fsElement()) { ui.fullNative = true; const p = req.call(root, { navigationUI: "hide" }); if (p && p.catch) p.catch(() => { ui.fullNative = false; }); }
     } else if (ui.fullNative) {
       ui.fullNative = false;
+      ui.fullIn = false;
       const exit = document.exitFullscreen || document.webkitExitFullscreen;
       if (exit && fsElement()) { const p = exit.call(document); if (p && p.catch) p.catch(() => {}); }
     }
@@ -95,7 +96,11 @@ for (const k of ["confirm", "alert", "prompt"]) {
   window[k] = function (...a) { ui.dialogAt = Infinity; try { return native.apply(window, a); } finally { ui.dialogAt = Date.now(); } };
 }
 for (const ev of ["fullscreenchange", "webkitfullscreenchange"]) document.addEventListener(ev, () => {
-  if (fsElement() || !ui.full || !ui.fullNative) return;
+  // Sólo cuenta como «salir» si de verdad se había entrado (un cambio tardío de una salida anterior no debe cerrar la nueva)
+  if (fsElement()) { ui.fullIn = true; return; }
+  const was = ui.fullIn;
+  ui.fullIn = false;
+  if (!was || !ui.full || !ui.fullNative) return;
   ui.fullNative = false;
   if (Date.now() - (ui.dialogAt || 0) > 1500) fullBoard(false);
 });
@@ -323,6 +328,7 @@ $("branchMode").onchange = e => { settings.branchMode = e.target.value; saveSett
 $("importBtn").onclick = () => {
   const text = $("moveInput").value;
   if (!text.trim()) { toast("Escribe o pega jugadas, un PGN o una FEN."); return; }
+  if (lichessLink(text)) { importLichessLink(text); return; }
   if (looksLikeFen(text)) { loadFen(text); return; }
   const parts = Pgn.splitGames(text);
   const r = Pgn.parseGame(parts[0] || text, { lang: $("notation").value });
@@ -496,7 +502,9 @@ $("libRestore").onclick = () => $("jsonFileInput").click();
 $("jsonFileInput").onchange = async e => {
   const f = e.target.files[0];
   e.target.value = "";
-  if (!f) return;
+  if (f) await restoreBackupFile(f);
+};
+async function restoreBackupFile(f) {
   try {
     const data = JSON.parse(await f.text());
     let res;
