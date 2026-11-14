@@ -1904,6 +1904,69 @@ def prueba_pantalla_completa(browser):
         ctx.close()
 
 
+def prueba_traer_partidas(browser):
+    print("Novedades 1.39: Chess.com, soltar ficheros, pegar y navegación bajo el tablero")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    def partida(w, b, ritmo, fin, reglas="chess", rated=True):
+        return {"pgn": f'[Event "Live Chess"]\n[White "{w}"]\n[Black "{b}"]\n[Result "1-0"]\n[TimeControl "180"]\n\n1. e4 {{[%clk 0:02:59]}} e5 {{[%clk 0:02:58]}} 2. Nf3 {{[%clk 0:02:55]}} 1-0\n',
+                "time_class": ritmo, "rated": rated, "rules": reglas, "end_time": fin}
+    pedidos = []
+    def servir(cuerpo, estado=200):
+        return lambda r: (pedidos.append(r.request.url), r.fulfill(status=estado, body=json.dumps(cuerpo), headers=cab))
+    ctx.route("https://api.chess.com/pub/player/rafa/games/archives", servir({"archives": ["https://api.chess.com/pub/player/rafa/games/2026/09", "https://api.chess.com/pub/player/rafa/games/2026/10", "https://evil.example/pub/player/rafa/games/2026/11x"]}))
+    ctx.route("https://api.chess.com/pub/player/rafa/games/2026/10", servir({"games": [partida("rafa", "a", "blitz", 5), partida("b", "rafa", "rapid", 9), partida("x", "rafa", "blitz", 7, "chess960"), partida("rafa", "nopunt", "blitz", 6, rated=False)]}))
+    ctx.route("https://api.chess.com/pub/player/rafa/games/2026/09", servir({"games": [partida("rafa", "c", "blitz", 1)]}))
+    ctx.route("https://api.chess.com/pub/player/nadie/games/archives", servir({}, 404))
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true; setGame(Pgn.newGame(), { noConfirm: true })")
+    orden = pg.evaluate("[...document.querySelectorAll('.board-side > *')].filter(e => e.offsetParent).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top).map(e => e.id)")
+    comprobar(orden[0] == "navControls" and orden.index("statusText") < orden.index("engineBox") and pg.locator("#backBtn").bounding_box()["y"] < 900,
+              "en el ordenador, la navegación y el estado van justo debajo del tablero, antes del motor")
+    pg.click('.tab-btn[data-tab="library"]')
+    pg.click('.sub-btn[data-sub="collection"]')
+    pg.click("#chesscomImport summary")
+    pg.fill("#ccUser", "Rafa")
+    pg.check("#ccRated")
+    pg.click("#ccBtn")
+    pg.wait_for_function("Coll.games.length > 0")
+    comprobar(pg.evaluate("Coll.games.map(g => g.headers.White + '-' + g.headers.Black).join(' ')") == "b-rafa rafa-a rafa-c" and "Chess.com" in pg.inner_text("#toast") and pg.evaluate("settings.chesscomUser") == "Rafa",
+              "Chess.com: descarga las partidas del usuario, de la más reciente a la más antigua, sin las de otras variantes ni las no puntuables")
+    comprobar(all("api.chess.com/pub/player/rafa/" in u for u in pedidos) and len(pedidos) == 3, "sólo se piden direcciones de Chess.com con la forma esperada")
+    pg.select_option("#ccPerf", "rapid")
+    pg.click("#ccBtn")
+    pg.wait_for_function("!$('ccBtn').disabled")
+    pg.wait_for_timeout(100)
+    comprobar(pg.evaluate("Coll.games.filter(g => g.headers.White === 'b').length") == 2, "el filtro de ritmo se aplica (y se puede añadir a la lista abierta)")
+    pg.click("#pgnDbBody tr")
+    comprobar(pg.evaluate("cur() === game.root && game.root.children[0].clk") == 179, "las partidas traen los tiempos de reloj")
+    pg.evaluate("switchTab('library')")
+    pg.fill("#ccUser", "nadie")
+    pg.click("#ccBtn")
+    pg.wait_for_function("$('toast').textContent.includes('no existe')")
+    comprobar("no existe el usuario «nadie» en Chess.com" in pg.inner_text("#toast"), "si el usuario no existe, se dice")
+    # Pegar fuera de los recuadros de texto
+    pegar = """t => { if (document.activeElement) document.activeElement.blur(); const e = new Event('paste', { bubbles: true, cancelable: true }); e.clipboardData = { getData: () => t }; document.dispatchEvent(e); return e.defaultPrevented; }"""
+    comprobar(pg.evaluate(pegar, "1. d4 d5 2. c4 e6 3. Nc3") and pg.evaluate("Pgn.mainlineFrom(game.root).map(n => n.san).join(' ')") == "d4 d5 c4 e6 Nc3" and pg.evaluate("ui.activeTab") == "study",
+              "Ctrl + V fuera de un recuadro abre la partida copiada")
+    comprobar(not pg.evaluate(pegar, "hola, ¿qué tal estás?") and pg.evaluate("Pgn.mainlineFrom(game.root).length") == 5, "un texto cualquiera no toca la partida")
+    comprobar(pg.evaluate(pegar, "8/8/8/4k3/8/8/4P3/4K3 w - - 0 1") and pg.evaluate("Chess.toFen(cur().state)") == "8/8/8/4k3/8/8/4P3/4K3 w - - 0 1", "y una FEN copiada se carga como posición")
+    pg.click("#moveInput")
+    comprobar(not pg.evaluate("""t => { const e = new Event('paste', { bubbles: true, cancelable: true }); e.clipboardData = { getData: () => t }; document.dispatchEvent(e); return e.defaultPrevented; }""", "1. e4 e5 2. Nf3"), "dentro de un recuadro de texto se pega con normalidad")
+    # Soltar ficheros
+    soltar = """async ([nombre, texto]) => { const dt = new DataTransfer(); dt.items.add(new File([texto], nombre)); const ev = t => { const e = new DragEvent(t, { bubbles: true, cancelable: true, dataTransfer: dt }); window.dispatchEvent(e); return e; };
+      ev('dragenter'); const velo = document.body.classList.contains('dropping'); ev('drop'); await new Promise(r => setTimeout(r, 400)); return velo && !document.body.classList.contains('dropping'); }"""
+    ok = pg.evaluate(soltar, ["una.pgn", '[Event "x"]\n[White "Ana"]\n[Black "Luis"]\n\n1. c4 c5 (1... e5 2. -- d6) 2. Nc3 *'])
+    comprobar(ok and pg.evaluate("Pgn.mainlineFrom(game.root).map(n => n.san).join(' ')") == "c4 c5 Nc3" and "jugadas nulas" in pg.inner_text("#importResult") and pg.evaluate("game.headers.White") == "Ana",
+              "soltar un .pgn con una partida la abre en el tablero (y avisa de la variante con jugada nula)")
+    pg.evaluate(soltar, ["dos.pgn", '[Event "x"]\n\n1. c4 *\n\n[Event "y"]\n\n1. d4 *\n'])
+    comprobar(pg.evaluate("ui.activeTab + '/' + ui.librarySub") == "library/collection" and pg.evaluate("Coll.names.includes('dos.pgn')"), "con varias partidas, el fichero se abre en «🗂 Abrir .pgn»")
+    pg.evaluate(soltar, ["foto.png", "x"])
+    comprobar(".pgn" in pg.inner_text("#toast"), "un fichero que no es de partidas se rechaza con un aviso")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_tablero3d(browser):
     print("Novedades 1.33: tablero en 3D")
     tres = os.environ.get("THREE_DIR")
@@ -1956,6 +2019,22 @@ def prueba_tablero3d(browser):
     comprobar(pg.evaluate("settings.board3dLight === 100 && settings.board3dGloss === 30 && Math.abs(B3.renderer.toneMappingExposure - 1.05) < 1e-6"), "«Restablecer» vuelve a los valores iniciales")
     pg.click("#board3d [data-b3=light]")
     comprobar(not pg.is_visible(".board3d-light"), "y ☀ lo cierra")
+    # 1.39: las piezas se arrastran
+    def medio(sq):
+        return pg.evaluate("""sq => { const [x, z] = b3Pos(Chess.sqIdx(sq)), v = new B3.T.Vector3(x, 0.35, z).project(B3.camera), r = B3.canvas.getBoundingClientRect();
+          return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }""", sq)
+    giro = pg.evaluate("B3.view.theta")
+    o, d = medio("g8"), medio("f6")
+    pg.mouse.move(*o); pg.mouse.down(); pg.mouse.move((o[0] + d[0]) / 2, (o[1] + d[1]) / 2, steps=5)
+    alzada = pg.evaluate("!!B3.grab && !!B3.grab.mesh && B3.grab.mesh.position.y > 0.3 && ui.selected === Chess.sqIdx('g8')")
+    pg.mouse.move(*d, steps=5); pg.mouse.up()
+    pg.wait_for_timeout(200)
+    comprobar(alzada and pg.evaluate("cur().san") == "Nf6" and pg.evaluate("B3.view.theta") == giro and pg.evaluate("B3.meshes.get(Chess.sqIdx('f6')).position.y") == 0, "arrastrar una pieza propia la mueve (Cf6) sin girar la vista")
+    o, d = medio("d2"), medio("d6")
+    pg.mouse.move(*o); pg.mouse.down(); pg.mouse.move(*d, steps=6); pg.mouse.up()
+    pg.wait_for_timeout(150)
+    comprobar(pg.evaluate("cur().san") == "Nf6" and pg.evaluate("(m => m.position.y === 0 && Math.abs(m.position.z - 2.5) < 1e-9)(B3.meshes.get(Chess.sqIdx('d2')))"), "soltarla en una casilla ilegal la devuelve a su sitio")
+    pg.evaluate("goBack()")
     # Flechas en 3D con el clic derecho
     def punto(sq):
         return pg.evaluate("""sq => { const [x, z] = b3Pos(Chess.sqIdx(sq)), v = new B3.T.Vector3(x, 0, z).project(B3.camera), r = B3.canvas.getBoundingClientRect();
@@ -2178,7 +2257,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

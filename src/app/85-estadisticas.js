@@ -90,9 +90,11 @@ const THEMES = {
   wasted: { name: "Ventajas ganadoras desperdiciadas", icon: "🏁", drill: "wasted" },
   positional: { name: "Errores de planteamiento", icon: "🧭", drill: "positional" }
 };
+/* Si no se ha escrito el nombre, valen los usuarios con los que se han descargado partidas de Lichess y de Chess.com */
+const defaultMyNames = () => [settings.lichessUser, settings.chesscomUser].filter(Boolean).filter((x, i, a) => a.findIndex(y => y.toLowerCase() === x.toLowerCase()) === i).join("; ");
 function myNameList() {
   // Separados por «;»: los nombres de los PGN suelen llevar coma («Kasparov, Garry»)
-  return String(settings.myNames || settings.lichessUser || "").split(";").map(x => norm(x).trim()).filter(Boolean);
+  return String(settings.myNames || defaultMyNames()).split(";").map(x => norm(x).trim()).filter(Boolean);
 }
 function colorOfMe(rec, names) {
   if (!names.length) return 0;
@@ -264,7 +266,7 @@ let statsSeq = 0;
 async function renderStats() {
   if (!Lib.ready) return;
   const seq = ++statsSeq, out = $("statsOut");
-  if (document.activeElement !== $("myNames")) $("myNames").value = settings.myNames || settings.lichessUser || "";
+  if (document.activeElement !== $("myNames")) $("myNames").value = settings.myNames || defaultMyNames();
   renderNameChips();
   const names = myNameList();
   if (!names.length) {

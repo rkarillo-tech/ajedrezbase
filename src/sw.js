@@ -68,6 +68,19 @@ self.addEventListener("fetch", event => {
   }
   if (url.origin !== self.location.origin) return;
 
+  // Las piezas del tablero 3D no cambian con cada versión: se guardan aparte para que sigan disponibles sin conexión tras actualizar
+  if (url.pathname.includes("/assets/3d/")) {
+    event.respondWith((async () => {
+      const cache = await caches.open(ENGINE_CACHE);
+      try {
+        const res = await fetch(req);
+        if (res.ok) { cache.put(req, res.clone()); return res; }
+      } catch (e) { /* sin conexión: la copia guardada */ }
+      return (await cache.match(req)) || (await caches.match(req)) || Response.error();
+    })());
+    return;
+  }
+
   if (req.mode === "navigate") {
     event.respondWith((async () => {
       try {

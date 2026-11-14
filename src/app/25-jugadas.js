@@ -458,7 +458,7 @@ function importResultMsg(r, extra = "") {
     el.textContent = `⚠ Se importaron ${r.count} jugadas. ${r.error.inVariation ? "Variante descartada" : "Detenido"} en «${r.error.label}»: ${r.error.message}${extra}`;
   } else {
     el.className = "small msg-ok";
-    el.textContent = `✔ ${r.count} jugadas importadas.${extra}`;
+    el.textContent = `✔ ${r.count} jugadas importadas.${r.nullSkipped ? ` Se han dejado fuera ${r.nullSkipped === 1 ? "una variante" : r.nullSkipped + " variantes"} con jugadas nulas («--»).` : ""}${extra}`;
   }
 }
 function looksLikeFen(t) { return /^\s*[prnbqkPRNBQK1-8]+(\/[prnbqkPRNBQK1-8]+){7}\s+[wb]\b/.test(t); }
