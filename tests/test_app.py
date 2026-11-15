@@ -675,7 +675,7 @@ def prueba_cursos(browser):
     ctx = contexto(browser)
     pg, errores = nueva_pagina(ctx)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar(pg.locator("#courseList details.course").count() == 10 and "0 de 103" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los diez cursos y el progreso")
+    comprobar(pg.locator("#courseList details.course").count() == 11 and "0 de 119" in pg.inner_text("#courseProgress"), "la pestaña Cursos muestra los once cursos y el progreso")
     pg.locator('details[data-course="finales"] summary').click()
     pg.locator('details[data-course="finales"] .lesson-row', has_text="Lucena").click()
     comprobar(pg.is_visible("#lessonBox") and "construir el puente" in pg.inner_text("#lessonBox") and pg.evaluate("Chess.toFen(game.root.state)").startswith("1K1k4/1P6"), "abrir una lección la pone en el tablero con su explicación")
@@ -714,7 +714,7 @@ def prueba_cursos(browser):
     pg.reload()
     pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
     pg.click('.tab-btn[data-tab="courses"]')
-    comprobar("2 de 103" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
+    comprobar("2 de 119" in pg.inner_text("#courseProgress"), "el progreso de los cursos se conserva al recargar")
     pg.locator('details[data-course="aperturas"] summary').click()
     pg.locator('details[data-course="aperturas"] [data-coll]').click()
     comprobar(pg.inner_text("#collCount") == "12" and pg.evaluate("ui.activeTab") == "library", "un curso se puede abrir como .pgn para guardar sus lecciones")
@@ -1762,6 +1762,48 @@ def prueba_geometria_y_ciegas(browser):
     ctx.close()
 
 
+def prueba_que_hago_ahora(browser):
+    print("Novedades 1.40: curso «¿Qué hago ahora?» y «Practicar» explica los errores de la lección")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true; setGame(Pgn.newGame(), { noConfirm: true })")
+    pg.click('.tab-btn[data-tab="courses"]')
+    pg.locator('details[data-course="decisiones"] summary').click()
+    filas = pg.locator('details[data-course="decisiones"] .lesson-row')
+    comprobar(filas.count() == 16 and pg.evaluate("courseLessons('decisiones').every(l => l.exercise)"), "el curso «🤔 ¿Qué hago ahora?» tiene 16 situaciones, todas para resolver")
+    filas.filter(has_text="qué me amenaza").click()
+    comprobar(pg.is_visible("#lessonBox") and "amenaza" in pg.inner_text("#lessonBox") and pg.evaluate("ui.flipped"), "la lección se abre con su pregunta, desde el lado de quien mueve (negras)")
+    pg.locator("#lessonBox [data-l=practice]").click()
+    pg.wait_for_function("trainer.active && trainerUserTurn()")
+    casilla(pg, "g8").click(); casilla(pg, "f6").click()
+    pg.wait_for_timeout(200)
+    txt = pg.inner_text("#trainFeedback")
+    comprobar(pg.evaluate("cur() === game.root") and "error" in txt and "Qxf7#" in pg.evaluate("$('trainFeedback').textContent.replace('Dxf7#', 'Qxf7#')") and pg.evaluate("trainer.errors") == 1,
+              "en «Practicar», jugar el error de la lección (3...Cf6??) no cuenta como correcto: se explica la respuesta (Dxf7#)")
+    casilla(pg, "d8").click(); casilla(pg, "e7").click()
+    pg.wait_for_timeout(300)
+    comprobar(pg.evaluate("cur().parent === game.root && cur().san") == "Qe7" and "❌" not in pg.inner_text("#trainFeedback") and pg.evaluate("trainer.errors") == 1, "una alternativa válida de la lección (3...De7) sí se acepta")
+    pg.evaluate("if (trainer.active) exitTraining()")
+    pg.click('.tab-btn[data-tab="courses"]')
+    filas.filter(has_text="última fila").click()
+    pg.locator("#lessonBox [data-l=practice]").click()
+    pg.wait_for_function("trainer.active && trainerUserTurn()")
+    pg.click("#hintTrainBtn"); pg.click("#hintTrainBtn")
+    comprobar(pg.evaluate("trainer.hintArrow && Chess.sqName(trainer.hintArrow.from) + Chess.sqName(trainer.hintArrow.to)") == "g2g3", "la pista enseña la jugada buena, nunca la marcada como error")
+    pg.evaluate("if (trainer.active) exitTraining()")
+    # El curso de geometría ya no da por buenas las jugadas que explica como errores
+    pg.click('.tab-btn[data-tab="courses"]')
+    pg.locator('details[data-course="geometria"] summary').click()
+    pg.locator('details[data-course="geometria"] .lesson-row', has_text="Réti").click()
+    pg.locator("#lessonBox [data-l=practice]").click()
+    pg.wait_for_function("trainer.active && trainerUserTurn()")
+    casilla(pg, "h8").click(); casilla(pg, "h7").click()
+    pg.wait_for_timeout(200)
+    comprobar(pg.evaluate("cur() === game.root") and "error" in pg.inner_text("#trainFeedback"), "en el estudio de Réti, 1.Rh7? ya no cuenta como correcta")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -2288,7 +2330,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             try:
                 prueba(browser)
             except Exception:

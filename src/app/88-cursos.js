@@ -2,6 +2,7 @@
 const COURSE_PGN = /*__COURSES__*/{};
 const COURSES = [
   { id: "aperturas", icon: "📖", name: "Aperturas", desc: "Los principios, los errores típicos y las aperturas principales con blancas y con negras, explicando el porqué de cada jugada." },
+  { id: "decisiones", icon: "🤔", name: "¿Qué hago ahora?", desc: "Decidir qué tipo de jugada toca: comer o no comer, recapturar, cambiar piezas (para ganar o para salvarse), defender, retroceder, atacar, avanzar, mejorar una pieza o activar el rey. Situaciones para resolver tú, con el porqué de cada decisión y los errores tentadores explicados." },
   { id: "planes", icon: "💡", name: "Planes de apertura", desc: "Posiciones típicas que salen de las aperturas: ¿cuál es el plan? Encuentra tú las jugadas clave (ataque de minorías, cadenas de peones, rupturas, casillas fuertes, enroques opuestos, peones doblados, la pareja de alfiles…) y entiende por qué se juegan." },
   { id: "repertorios", icon: "🗂", name: "Repertorios para entrenar", desc: "Repertorios completos con blancas (1.e4, el Londres o el Gambito de Dama) y con negras (Caro-Kann, Siciliana, Gambito de Dama Declinado o India de Rey), con el porqué de cada jugada. Entrénalos con 🎯: los repasos se espacian solos." },
   { id: "tactica", icon: "⚔", name: "Táctica", desc: "Horquillas, clavadas, enfiladas, descubiertas, sobrecarga y mates típicos, con ejercicios para resolver." },

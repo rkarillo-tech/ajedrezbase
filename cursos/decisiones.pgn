@@ -1,0 +1,212 @@
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "1"]
+[Title "Comer: ¿me han dejado algo gratis?"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r2q1rk1/1bp1bppp/p1np4/1p2p3/4P1n1/1BPP1N1P/PP1N1PP1/R1BQR1K1 w - - 0 11"]
+[Result "*"]
+
+{ [%csl Rg4] En este curso, en cada posición tienes que decidir qué tipo de jugada toca: comer, no comer, recapturar, cambiar, defender, retroceder, atacar, avanzar, mejorar una pieza… Para decidir, hazte siempre estas preguntas, por este orden: 1) ¿Qué amenaza el rival? 2) ¿Hay algo gratis que comer, o jaques y capturas que funcionen? 3) ¿Me conviene cambiar piezas? 4) ¿Cuál es mi pieza peor colocada? 5) ¿Cuál es mi plan? Empezamos por la segunda pregunta. Las negras acaban de jugar ...Cg4, que ataca f2. Mira cada pieza negra: ¿quién la ataca y quién la defiende? ¿Qué haces? } 11. hxg4 { [%cal Gh3g4] ¡Comer! El caballo de g4 estaba atacado por el peón de h3 y no lo defendía nadie: el alfil negro está en b7, en la otra diagonal (sólo un alfil en c8 lo habría defendido). Las negras pierden una pieza entera a cambio de nada. Antes de comer, comprueba siempre qué pasa después: aquí no hay jaques ni amenazas negras, así que la pieza es tuya. Regla: si te dejan una pieza gratis y comerla no te cuesta nada, cómela. } (11. Nf1? { Sigue con su plan sin mirar lo que ha cambiado. } 11... Nf6 { El caballo vuelve a casa y la pieza gratis se ha esfumado. Cada vez que el rival mueve, pregúntate qué ha cambiado: qué ataca la pieza que ha movido y qué ha dejado sin defensa. }) *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "2"]
+[Title "No comer: la trampa del elefante"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r1bqkb1r/pppn1ppp/5n2/3p2B1/3P4/2N5/PP2PPPP/R2QKBNR w KQkq - 0 6"]
+[Result "*"]
+
+{ [%csl Rd5,Rf6] Gambito de Dama: 1.d4 d5 2.c4 e6 3.Cc3 Cf6 4.Ag5 Cbd7 5.cxd5 exd5. El caballo de c3 ataca el peón de d5, y su único defensor, el caballo de f6, parece clavado: si se mueve, el alfil de g5 se come la dama. Parece un peón gratis. ¿Te lo comes? } 6. e3 { ¡No comer! Lo correcto es seguir desarrollándose. El peón de d5 es una trampa muy conocida: la «trampa del elefante». } (6. Nxd5?? { Cae en la trampa. } 6... Nxd5! { ¡El caballo «clavado» se mueve! } 7. Bxd8 Bb4+ { Jaque: las blancas sólo pueden tapar con la dama. } 8. Qd2 Bxd2+ 9. Kxd2 Kxd8 { Haz la cuenta: las blancas han comido un peón, la dama y un alfil; las negras, un caballo, la dama y un alfil. Las negras tienen una pieza de más. La clavada no era de verdad: una pieza clavada a la dama (no al rey) sí puede moverse si a cambio gana algo. }) 6... c6 7. Bd3 Be7 { Las dos partes se desarrollan con normalidad. Regla: cuando algo parece demasiado fácil, busca la trampa. Antes de comer, mira cómo puede responder el rival, sobre todo con jaques. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "3"]
+[Title "Defiende antes de comer: el peón envenenado de b2"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "rnb1kbnr/pp2pppp/1q6/2pp4/3P1B2/2N1P3/PPP2PPP/R2QKBNR b KQkq - 2 4"]
+[Result "*"]
+
+{ [%cal Rb6b2,Rc3d5] Sistema Londres: 1.d4 d5 2.Af4 c5 3.e3 Db6 4.Cc3. Las blancas han dejado el peón de b2 sin defensa: la dama de b6 podría comérselo. Pero mira qué amenaza el caballo que acaba de salir. ¿Qué haces? } 4... e6 { [%cal Ge6d5] Defender. El caballo de c3 atacaba el peón de d5, que nadie defendía. Con ...e6 queda defendido y, además, se abre la diagonal del alfil de f8. } (4... Qxb2? { Come… pero se olvida de d5. } 5. Nxd5 { Ahora el caballo amenaza Cc7+, ganando la torre de a8, y las blancas pueden encerrar a la dama con Tb1. Las negras ya están perdidas: la dama está lejos y no ayuda a defender. }) 5. Nb5 { Las blancas amenazan Cc7+, con horquilla al rey y a la torre de a8. } 5... Na6 { Y el caballo negro defiende c7. Posición normal. Regla: antes de comer, mira qué amenaza el rival; y en la apertura, no saques la dama a comer peones lejanos dejando cosas sin defensa. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "4"]
+[Title "Recapturar: ¿con qué pieza?"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "r1bqkb1r/pppp1ppp/2N2n2/8/4P3/8/PPP2PPP/RNBQKB1R b KQkq - 0 5"]
+[Result "*"]
+
+{ [%csl Rc6] Escocesa: 1.e4 e5 2.Cf3 Cc6 3.d4 exd4 4.Cxd4 Cf6 5.Cxc6. Las blancas acaban de cambiar caballos y hay que recuperar la pieza. Puedes recapturar con el peón de b o con el de d. ¿Con cuál? } 5... bxc6 { [%cal Gb7c6] Recapturar hacia el centro: el peón de b pasa a c6, más cerca del centro, y apoyará el avance ...d5. Además, las negras conservan las damas y podrán enrocar. } (5... dxc6 { También se juega: abre la diagonal del alfil de c8 y la columna d. Pero tras el cambio de damas el rey negro pierde el enroque. No es un error, pero bxc6 es más sencillo. } 6. Qxd8+ Kxd8) (5... Bc5?? { ¡Se olvida de recapturar! } 6. Nxd8 { Las blancas se comen la dama. Cuando el rival te cambia una pieza, casi siempre hay que recuperarla en seguida: si no, sólo has perdido una pieza. }) 6. Bd3 d5 { [%cal Gd7d5] Y aquí está la idea: el peón de c6 apoya a d5 y las negras tienen un buen centro. Regla: recaptura casi siempre en seguida y, si puedes elegir, hacia el centro. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "5"]
+[Title "Defender: ¿qué me amenaza el rival?"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3"]
+[Result "*"]
+
+{ [%cal Rh5f7,Rc4f7] 1.e4 e5 2.Ac4 Cc6 3.Dh5. La dama y el alfil apuntan a f7, que sólo defiende el rey. Es el momento de la primera pregunta, la más importante de todas: ¿qué me amenaza el rival? ¿Qué haces? } 3... g6 { [%cal Gg6h5] Defender… y además atacar a la dama, que tendrá que moverse otra vez: defenderse ganando tiempo. } (3... Qe7 { También defiende f7, pero tapa al alfil de f8. Es peor que g6. }) (3... Nf6?? { Desarrolla una pieza… sin mirar la amenaza. } 4. Qxf7# { El mate del pastor. }) 4. Qf3 { Otra vez contra f7. } 4... Nf6 { El caballo cierra la columna f y se desarrolla. Las negras están mejor: la dama blanca salió demasiado pronto y ha perdido dos tiempos. Regla: antes de cada jugada, mira qué amenaza el rival; la mejor defensa es la que, además, desarrolla o ataca. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "6"]
+[Title "Atacar ganando tiempo: desarrollar con amenaza"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "rnb1kbnr/ppp1pppp/8/3q4/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3"]
+[Result "*"]
+
+{ [%csl Rd5] Escandinava: 1.e4 d5 2.exd5 Dxd5. La dama negra ha salido muy pronto al centro del tablero. ¿Qué jugada desarrolla una pieza y, a la vez, ataca algo? } 3. Nc3 { [%cal Gc3d5] ¡Atacar ganando tiempo! El caballo sale a su mejor casilla y ataca a la dama, que tendrá que moverse otra vez: las blancas se desarrollan y las negras pierden un tiempo. } 3... Qa5 4. d4 { Más centro, y el alfil de c1 ya puede salir. Regla: en la apertura, las mejores jugadas desarrollan una pieza amenazando algo; cada tiempo que el rival pierde moviendo su dama es un tiempo que tú ganas. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "7"]
+[Title "Retroceder sin soltar la presión"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4"]
+[Result "*"]
+
+{ [%cal Ra6b5] Española: 1.e4 e5 2.Cf3 Cc6 3.Ab5 a6. El peón ataca al alfil. Hay que decidir: ¿retirarlo (y adónde) o cambiarlo por el caballo? } 4. Ba4 { [%cal Ga4c6,Ga4e8] Retroceder sin soltar la presión: desde a4 el alfil sigue apuntando al caballo de c6, y detrás de él, al rey. Si las negras quieren quitárselo de encima del todo tendrán que jugar ...b5, adelantando peones. } (4. Bxc6 { También se juega (la variante del cambio): las negras se quedan con la pareja de alfiles y las blancas con mejor estructura de peones. Es otra decisión: cambiar en vez de retroceder. } 4... dxc6) 4... Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 { [%cal Gb3f7] Tras retroceder otra vez, el alfil queda en una diagonal magnífica, contra f7. Regla: cuando atacan una pieza, busca la casilla de retirada desde la que siga siendo útil; retroceder no es perder si la pieza conserva su trabajo. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "8"]
+[Title "No adelantes los peones de tu enroque"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "r1bq1rk1/ppp2pp1/2np1n1p/2b1p3/2B1P2B/2NP1N2/PPP2PPP/R2Q1RK1 b - - 1 8"]
+[Result "*"]
+
+{ [%csl Rf6,Rh4] Italiana: 1.e4 e5 2.Cf3 Cc6 3.Ac4 Ac5 4.O-O Cf6 5.d3 O-O 6.Ag5 h6 7.Ah4 d6 8.Cc3. El alfil de h4 clava el caballo de f6 contra la dama. Es tentador echarlo con ...g5, pero tu rey vive detrás de esos peones. ¿Qué haces? } 8... Be6 { [%cal Ge6c4] Desarrollar y ofrecer el cambio del alfil de c4, la pieza blanca más peligrosa. La clavada molesta, pero no hace daño mientras el enroque siga intacto. } (8... Bg4 { También buena: clava el caballo de f3 de la misma manera. }) (8... g5? { Echa al alfil… pero abre el propio enroque. } 9. Nxg5! hxg5 10. Bxg5 { Por un caballo, las blancas han destrozado el enroque: el caballo de f6 sigue clavado y vendrán Cd5 y Df3. }) 9. Nd5 Bxd5 10. Bxf6 Qxf6 11. Bxd5 { Posición igualada y el rey negro sigue a salvo. Regla: no adelantes los peones que protegen a tu rey enrocado sin un buen motivo; cada peón que avanza deja casillas débiles que ya no podrá volver a cubrir. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "9"]
+[Title "Cambiar cuando vas ganando"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r4rk1/ppp2ppp/3q4/4p3/4P3/2N5/PPPQ1PPP/R4RK1 w - - 0 22"]
+[Result "*"]
+
+{ Las blancas tienen un caballo de más: las negras ya no tienen piezas menores. La dama negra se ha plantado en d6, frente a la blanca. ¿Cambias damas o las mantienes? } 22. Qxd6 { ¡Cambiar! Con ventaja material, cada cambio de piezas acerca la victoria: cuantas menos piezas quedan, más pesa la pieza de más y menos posibilidades de contraataque tiene el rival. Sin damas, tu rey ya no corre ningún peligro. } (22. Rad1 { También gana: defiende la dama y la mantiene en el tablero. Con tanta ventaja casi todo gana, pero cambiar es lo más sencillo. }) (22. Nb5?? { Ataca a la dama… pero se olvida de que la suya también está atacada. } 22... Qxd2 { Antes de cada jugada, mira qué piezas tuyas están amenazadas. }) 22... cxd6 23. Nd5 { [%csl Gd5,Rd6] El caballo va a d5, una casilla fuerte, y el peón de d6 es débil. El final está ganado. Regla: cuando vas ganando, cambia piezas (no peones); cuando vas perdiendo, evita los cambios… salvo los que te acercan a las tablas, como verás en la lección siguiente. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "10"]
+[Title "Cambiar para salvarse: alfiles de distinto color"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "6k1/pp3ppp/2nb4/8/2BNP3/2P5/PP3PPP/6K1 b - - 0 30"]
+[Result "*"]
+
+{ [%csl Gc4,Gd6] Las negras tienen un peón menos. Con todas las piezas en el tablero, las blancas irán ganando poco a poco. Pero fíjate en los alfiles: el blanco va por casillas claras y el negro por oscuras. ¿Qué cambio te conviene? } 30... Nxd4 { ¡Cambiar caballos! Así quedan «alfiles de distinto color»: cada uno va por un color y nunca se pueden enfrentar. Estos finales son muy difíciles de ganar aunque se tenga un peón de más (a veces, incluso dos): el que defiende bloquea los peones rivales en casillas de su color, donde el otro alfil no los puede ayudar. } (30... Ne5? { Ataca al alfil, pero… } 31. Bb5 { …las blancas lo retiran y conservan todas sus piezas y su peón de más. Su ventaja seguirá creciendo. }) 31. cxd4 Bc7 32. Kf1 Bb6 { [%cal Gb6d4] El alfil presiona el peón de d4 y las negras tienen muchas posibilidades de hacer tablas. Regla: cuando vas perdiendo, busca los cambios que te acercan a las tablas: alfiles de distinto color, cambiar peones (cuantos menos peones queden, más difícil es ganar) y no las piezas que dejan al rival sus mejores bazas. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "11"]
+[Title "Una casilla fuerte para el caballo"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r1bqkb1r/5p1p/p1np1p2/1p2p3/4P3/N1N5/PPP2PPP/R2QKB1R w KQkq - 0 10"]
+[Result "*"]
+
+{ [%csl Gd5] Siciliana Sveshnikov: 1.e4 c5 2.Cf3 Cc6 3.d4 cxd4 4.Cxd4 Cf6 5.Cc3 e5 6.Cdb5 d6 7.Ag5 a6 8.Ca3 b5 9.Axf6 gxf6. Mira la casilla d5: ningún peón negro puede atacarla ya (el de c se cambió y el de e ya ha pasado). ¿Qué haces? } 10. Nd5 { [%cal Gc3d5] ¡El caballo a la casilla fuerte! Desde d5 controla c7, e7, f6 y b6, y no lo pueden echar con un peón: sólo cambiándolo por una pieza. } 10... Bg7 11. Bd3 { Las blancas completan el desarrollo con el caballo bien asentado. Regla: una casilla central que el rival ya no puede atacar con peones es ideal para un caballo; llévalo allí. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "12"]
+[Title "Mejora tu peor pieza"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r2qk2r/5pbp/p1np4/1p1Npb2/8/N1P5/PP3PPP/R2QKB1R w KQkq - 0 13"]
+[Result "*"]
+
+{ [%csl Ra3] La misma Siciliana unas jugadas después: 10.Cd5 f5 11.c3 Ag7 12.exf5 Axf5. No hay amenazas ni nada que comer. Cuando no pasa nada, mira tus piezas una a una: ¿cuál es la peor? ¿Qué haces? } 13. Nc2 { [%cal Ga3c2,Gc2e3] Mejorar la peor pieza: el caballo de a3 no hacía nada en la banda. Por c2 va a e3, desde donde ayudará al de d5 y atacará al alfil de f5. } 13... O-O 14. Nce3 { Ahora los dos caballos trabajan juntos en el centro. Regla: cuando no hay táctica ni amenazas, busca tu pieza peor colocada y llévala a una casilla mejor: es la forma más sencilla de mejorar la posición. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "13"]
+[Title "Atacar con los peones: enroques opuestos"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r2q1rk1/1p1nbppp/p2pbn2/4p3/4P3/1NN1BP2/PPPQ2PP/2KR1B1R w - - 5 11"]
+[Result "*"]
+
+{ Siciliana Najdorf, ataque inglés: las blancas han enrocado largo y las negras corto. En la lección 8 vimos que no hay que adelantar los peones del propio enroque… pero ahora tus peones del flanco de rey no protegen a tu rey. ¿Qué haces? } 11. g4 { [%cal Gg4g5,Gh2h4] ¡Avanzar! Con los reyes en lados opuestos, los peones que no protegen a tu rey son tu mejor arma de ataque: g4-g5 echa al caballo de f6, el gran defensor del enroque negro. } (11. Kb1 { Una jugada útil (el rey se aparta de la columna c), pero más lenta: aquí lo más fuerte es atacar ya. }) 11... b5 { Las negras hacen lo mismo en el otro flanco: es una carrera, y la gana el que llega antes. } 12. g5 b4 13. Na4 { El caballo se aparta y el ataque blanco sigue: el caballo de f6 tendrá que irse. Regla: con enroques en el mismo lado, no adelantes los peones de tu enroque; con enroques opuestos, lánzalos contra el rey rival, y rápido: la velocidad decide. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "14"]
+[Title "Antes de invadir, mira tu última fila"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "2r3k1/pp3ppp/4p3/8/8/4P3/PP3PPP/3R2K1 w - - 0 28"]
+[Result "*"]
+
+{ [%csl Gd7,Rg1] La columna d está abierta y la torre blanca puede entrar en d7, la séptima fila, donde atacaría los peones negros. Muy tentador… pero antes de atacar mira tu propia casa. ¿Qué haces? } 28. g3 { [%cal Gg1g2] Profilaxis: el rey tiene ahora una casilla de escape (g2), y la torre ya podrá entrar en d7 sin peligro. } (28. Kf1 { También buena: el rey sale de la esquina y se acerca al centro. }) (28. h3 { También sirve: abre la casilla h2 para el rey. }) (28. Rd7?? { Invade… y se olvida del rey. } 28... Rc1+ 29. Rd1 Rxd1# { ¡Mate en la última fila! El rey estaba encerrado por sus propios peones. }) 28... a5 29. Rd7 { [%cal Gd7b7] Ahora sí: la torre en séptima ataca b7 y encierra al rey negro. Regla: antes de lanzarte al ataque, comprueba que no te pueden dar mate en tu última fila; abrir un hueco para el rey (h3, g3 o subir el rey) cuesta una jugada y evita desastres. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "15"]
+[Title "En el final, el rey sale a jugar"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "8/5ppp/4k3/p7/8/1P6/P4PPP/6K1 w - - 0 32"]
+[Result "*"]
+
+{ [%csl Gd4,Ge4] Final de peones: las blancas tienen uno de más en el flanco de dama. Con las piezas fuera del tablero ya no hay peligro de mate, y el rey se convierte en una pieza fuerte. ¿Qué haces? } 32. Kf1 { [%cal Gg1f1,Gf1e2,Ge2d3] ¡El rey al centro! Hace falta para apoyar los peones del flanco de dama y para frenar al rey negro. } (32. a3? { Mueve un peón y olvida al rey. } 32... Kd5 { El rey negro llega antes al centro y a los peones blancos: las blancas ya no pueden ganar. }) 32... Kd5 33. Ke2 { [%cal Ge2d3] Las blancas llegan a tiempo: su rey frena al negro y su mayoría del flanco de dama decidirá. Regla: en el final, activa el rey cuanto antes; muchas veces gana quien lo centraliza primero. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "16"]
+[Title "Avanzar: los peones pasados se empujan"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "6k1/5ppp/8/1P6/8/8/r4PPP/1R4K1 w - - 0 35"]
+[Result "*"]
+
+{ [%csl Gb5] Las blancas tienen un peón pasado en b5: ningún peón negro puede frenarlo. La torre negra está activa en a2. ¿Qué haces? } 35. b6 { [%cal Gb5b8] ¡Avanzar! Los peones pasados se empujan: cada paso adelante obliga al rival a vigilarlo. La torre blanca, detrás del peón, lo empuja hasta la casilla de coronación. } (35. Rb4?? { Quiere defender el peón desde delante… y abandona la primera fila. } 35... Ra1+ 36. Rb1 Rxb1# { Mate en la última fila: recuerda la lección 14. }) 35... h5 36. b7 Kh7 37. b8=Q { Corona. Resumen del curso: antes de cada jugada, 1) ¿qué amenaza el rival?, 2) ¿hay algo que comer, o jaques y capturas que funcionen? (y cuidado con las trampas), 3) ¿me conviene cambiar?, 4) ¿qué pieza está peor?, 5) ¿cuál es mi plan: atacar, avanzar, activar el rey? Con estas preguntas sabrás qué hacer en cada momento de la partida. } *

@@ -49,6 +49,8 @@ function startTraining(opts = {}) {
 function trainerNext() {
   const node = cur();
   if (!node.children.length) { finishTraining(); return; }
+  // En una lección, si sólo quedan jugadas marcadas como error (la línea correcta ya terminó), se acaba aquí
+  if (trainerUserTurn() && node.children.every(isMistakeNag)) { finishTraining(); return; }
   if (trainerUserTurn()) {
     if (trainer.puzzle) { puzzlePrompt(); return; }
     if (trainer.card) {
@@ -70,9 +72,22 @@ function trainerNext() {
     trainerNext();
   }, 500);
 }
+/* Las jugadas que la propia lección marca como error (?, ?? o ?!) no se dan por buenas: se explica por qué son malas */
+const isMistakeNag = n => /^(\?\?|\?|\?!)$/.test(n.nag || "");
 function trainerUserMove(move) {
   const node = cur();
   let hit = node.children.find(c => Pgn.sameMove(c.move, move));
+  if (hit && isMistakeNag(hit) && !trainer.card) {
+    trainer.errors++;
+    Sound.play("error");
+    const why = hit.comment || (hit.children[0] && hit.children[0].comment) || "";
+    const reply = hit.children[0] ? ` La respuesta sería ${numPrefix(hit.state)}${dispSan(hit.children[0])}.` : "";
+    trainFeedback(`❌ ${esc(dispSan(hit))}${esc(hit.nag)} es justo el error que explica la lección.${esc(reply)}${why ? `<br><span class="small">${esc(why)}</span>` : ""}<br>Inténtalo otra vez o pulsa 💡 para una pista.`, "bad");
+    renderBoard();
+    const el = boardEl.querySelector(`.square[data-sq="${move.to}"]`);
+    if (el) el.classList.add("flash-bad");
+    return;
+  }
   // En los problemas vale cualquier jugada que dé mate
   if (!hit && trainer.puzzle) { const after = Chess.apply(node.state, move); if (!Chess.legal(after).length && Chess.inCheck(after)) { hit = Pgn.addMove(node, move); hit.children = []; } }
   if (hit) {
@@ -98,7 +113,7 @@ function trainerUserMove(move) {
 }
 function trainerHint() {
   if (!trainer.active || !trainerUserTurn() || (trainer.puzzle && Puz.exam)) return;
-  const target = cur().children[0];
+  const target = cur().children.find(c => !isMistakeNag(c)) || cur().children[0];
   if (!target) return;
   trainer.hints++;
   trainer.hintLevel++;
