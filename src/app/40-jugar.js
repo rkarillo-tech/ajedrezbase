@@ -423,7 +423,54 @@ function cpuAfterMove(child, who) {
   if (st.over) { cpuGameOver(st.result, st.text); return; }
   cpuPanel();
   if (ui.cpu.two) { if (ui.cpu.autoFlip) { ui.flipped = child.state.t === -1; render(); } return; }
-  if (who === "user") setTimeout(maybeCpuMove, 60);
+  if (who === "user") { if (coachOn()) coachCheck(child); else setTimeout(maybeCpuMove, 60); }
+}
+/* ---------- 20c. 🎓 Modo profesor: antes de que responda la CPU, el motor revisa tu jugada ----------
+   Si es un error (?) o un error grave (??), la partida se para y puedes repetirla (con o sin ver la buena, y entonces
+   cuenta como ayuda) o seguir así. No funciona con reloj: deshacer jugadas no tendría sentido. */
+const coachOn = () => !!settings.cpuCoach && ui.cpu.on && !ui.cpu.two && !ui.cpu.tc && !ui.cpu.over;
+async function coachCheck(child) {
+  const parent = child.parent, mover = parent.state.t;
+  if (ECO.byKey.has(child.key) || !Engine.ready) { setTimeout(maybeCpuMove, 60); return; }
+  ui.cpu.checking = true; ui.cpu.thinking = true;
+  renderStatus(); renderBoard();
+  const strong = Engine.kind === "stockfish";
+  const before = await evalState(parent.state, strong ? 700 : 900, 1);
+  const after = cur() === child && ui.cpu.on ? await evalState(child.state, strong ? 600 : 800, 1) : null;
+  ui.cpu.checking = false; ui.cpu.thinking = false;
+  if (cur() !== child || !ui.cpu.on || ui.cpu.over) { render(); return; }
+  const b = before && before.lines && before.lines[0], a = after && after.lines && after.lines[0];
+  if (!b || !a) { maybeCpuMove(); return; }
+  const w = l => (mover === 1 ? winPct(l) : 100 - winPct(l));
+  const loss = Math.max(0, w(b) - w(a)), best = b.pv[0];
+  if (loss < 10 || best === child.uci) { render(); maybeCpuMove(); return; }
+  ui.cpu.coach = { node: child, parent, loss, best, cls: loss >= 15 ? "??" : "?" };
+  Sound.play("error");
+  render();
+  cpuPanel();
+}
+function coachBanner() {
+  const C = ui.cpu.coach;
+  if (!C || C.node !== cur()) return "";
+  const san = numPrefix(C.parent.state) + dispSan(C.node);
+  return `<div class="coach-banner"><b>🎓 ${esc(san)}${C.cls} es ${C.cls === "??" ? "un error grave" : "un error"}:</b> pierdes unos ${Math.round(C.loss)} puntos de probabilidad de ganar. ¿Quieres intentarlo otra vez?
+    <div class="controls"><button class="sm-btn primary" data-c="tutorRetry" title="Deshaz tu jugada y busca otra (cuenta como ayuda)">↶ Intentarlo otra vez</button><button class="sm-btn info-btn" data-c="tutorShow" title="Deshaz tu jugada y mira la flecha de la mejor (cuenta como ayuda)">💡 Otra vez, viendo la buena</button><button class="sm-btn" data-c="tutorGo">Seguir así ▶</button></div></div>`;
+}
+function coachAction(a) {
+  const C = ui.cpu.coach;
+  if (!C || C.node !== cur()) { ui.cpu.coach = null; cpuPanel(); return; }
+  ui.cpu.coach = null;
+  cpuPanel();
+  if (a === "tutorGo") { render(); maybeCpuMove(); return; }
+  noteCpuHelp();
+  const p = C.parent;
+  Pgn.deleteNode(C.node);
+  game.current = p; ui.selected = null;
+  ui.cpu.coachArrow = a === "tutorShow" && /^[a-h][1-8][a-h][1-8]/.test(C.best) ? { node: p, from: Chess.sqIdx(C.best.slice(0, 2)), to: Chess.sqIdx(C.best.slice(2, 4)) } : null;
+  markDirty();
+  render();
+  cpuPanel();
+  toast(a === "tutorShow" ? "💡 La flecha azul es la mejor jugada." : "↶ Jugada deshecha: busca otra.");
 }
 function openCpuDialog(blind) {
   if (ui.cpu.on) { stopCpu(false); return; }
@@ -437,6 +484,7 @@ function openCpuDialog(blind) {
   if ($("cpuColor").selectedIndex < 0) $("cpuColor").value = "board";
   $("cpuFrom").value = editor.active ? "here" : settings.cpuFrom;
   $("cpuBlind").checked = blind != null ? blind : ui.blind;
+  $("cpuCoachChk").checked = !!settings.cpuCoach;
   $("cpuOpponent").value = settings.cpuOpponent === "two" ? "two" : "cpu";
   $("cpuOdds").value = settings.cpuOdds || "";
   if ($("cpuOdds").selectedIndex < 0) $("cpuOdds").value = "";
@@ -447,6 +495,7 @@ function openCpuDialog(blind) {
 function startCpuGame(opts = {}) {
   if (Batch.running) { toast("El motor está analizando tus partidas de la biblioteca: espera a que termine o detenlo en «📊 Estadísticas»."); return false; }
   Object.assign(settings, { cpuLevel: parseCpuLevel($("cpuLevel").value), cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value, cpuOpponent: $("cpuOpponent").value, cpuOdds: $("cpuOdds").value, cpuAutoFlip: $("cpuAutoFlip").checked });
+  settings.cpuCoach = $("cpuCoachChk").checked;
   saveSettings();
   const two = settings.cpuOpponent === "two";
   const c = settings.cpuColor;
@@ -463,7 +512,7 @@ function startCpuGame(opts = {}) {
   ui.flipped = user === -1;
   const tc = parseTc(settings.cpuClock);
   const adaptive = settings.cpuLevel === "a", human = humanElo(settings.cpuLevel);
-  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, helped: 0, two, odds, autoFlip: two && settings.cpuAutoFlip, adaptive: adaptive && !two, human: two ? 0 : human, level: adaptive ? Math.round(adaptiveState().a) : human ? Math.max(0, Math.min(20, Math.round((human - 700) / 75))) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
+  Object.assign(ui.cpu, { on: true, side: -user, thinking: false, over: false, helped: 0, helpKeys: new Set(), coach: null, coachArrow: null, checking: false, two, odds, autoFlip: two && settings.cpuAutoFlip, adaptive: adaptive && !two, human: two ? 0 : human, level: adaptive ? Math.round(adaptiveState().a) : human ? Math.max(0, Math.min(20, Math.round((human - 700) / 75))) : settings.cpuLevel, style: settings.cpuStyle, tc: settings.cpuClock, prevLive: settings.live, startNode: cur(), lastEval: null, blind: $("cpuBlind").checked });
   settings.live = false;
   if (!game.root.children.length && game.headers.Event === "Estudio") {
     const d = new Date();
@@ -605,7 +654,7 @@ function cpuPanel(head, text) {
       <div class="controls"><button class="sm-btn primary" data-c="coach" title="El motor analiza la partida y te enseña tus errores más caros, para practicarlos">📋 Informe del entrenador</button><button class="sm-btn" data-c="save">💾 Guardar</button><button class="sm-btn info-btn" data-c="rematch">🔁 Revancha</button><button class="sm-btn" data-c="close">Cerrar</button></div>`;
   } else {
     box.innerHTML = `<div class="retry-head">🤖 Partida contra la CPU</div><div class="small">${esc(desc)}${ui.cpu.helped ? ` · 💡 ayuda pedida ${ui.cpu.helped} ${ui.cpu.helped === 1 ? "vez" : "veces"}${ui.cpu.adaptive ? " (no cuenta para el nivel adaptativo)" : ""}` : ""}</div>
-      <div class="controls"><button class="sm-btn primary" data-c="think" title="Cuando te toca: el motor explica la mejor jugada, las alternativas, qué amenaza el rival y por qué (tecla T)">🧠 Piensa conmigo</button><button class="sm-btn${settings.moveColors ? " on" : ""}" data-c="colors" aria-pressed="${!!settings.moveColors}" title="Al elegir una pieza, sus jugadas se colorean según lo buenas que son (cuenta como ayuda; tecla C)">🎨 Colores</button><button class="sm-btn" data-c="scan" title="Cuando te toca: lee el tablero antes de calcular (tecla L)">🔎 Lee el tablero</button><button class="sm-btn info-btn" data-c="talk" title="Cuando te toca: qué pieza está más a disgusto y adónde querría ir (tecla H)">🗣 Habla con tus piezas</button></div>
+      ${coachBanner()}<div class="controls"><button class="sm-btn primary" data-c="think" title="Cuando te toca: el motor explica la mejor jugada, las alternativas, qué amenaza el rival y por qué (tecla T)">🧠 Piensa conmigo</button><button class="sm-btn${settings.moveColors ? " on" : ""}" data-c="colors" aria-pressed="${!!settings.moveColors}" title="Al elegir una pieza, sus jugadas se colorean según lo buenas que son (cuenta como ayuda; tecla C)">🎨 Colores</button><button class="sm-btn${settings.radar ? " on" : ""}" data-c="radar" aria-pressed="${!!settings.radar}" title="Marca tus piezas en peligro y las del rival que se pueden ganar (cuenta como ayuda; tecla R)">🛡 Radar</button><button class="sm-btn${settings.cpuCoach && !ui.cpu.tc ? " on" : ""}" data-c="tutor" aria-pressed="${!!settings.cpuCoach}" title="Modo profesor: antes de que responda la CPU, el motor revisa tu jugada y, si es un error, te deja repetirla${ui.cpu.tc ? " (no funciona con reloj)" : ""}"${ui.cpu.tc ? " disabled" : ""}>🎓 Profesor</button><button class="sm-btn" data-c="scan" title="Cuando te toca: lee el tablero antes de calcular (tecla L)">🔎 Lee el tablero</button><button class="sm-btn info-btn" data-c="talk" title="Cuando te toca: qué pieza está más a disgusto y adónde querría ir (tecla H)">🗣 Habla con tus piezas</button></div>
       <div class="controls">${ui.cpu.tc ? "" : `<button class="sm-btn" data-c="undo" title="Deshace tu última jugada y la respuesta de la CPU">↶ Deshacer</button>`}<button class="sm-btn" data-c="draw">½ Ofrecer tablas</button><button class="sm-btn danger" data-c="resign">🏳 Rendirse</button><button class="sm-btn" data-c="stop" title="Deja la partida sin resultado y vuelve al análisis">⏹ Terminar</button></div>`;
   }
   box.querySelectorAll("[data-c]").forEach(b => b.onclick = () => cpuAction(b.dataset.c));
@@ -613,6 +662,9 @@ function cpuPanel(head, text) {
 function cpuAction(a) {
   if (a === "think") thinkWithMe();
   else if (a === "colors") setMoveColors(!settings.moveColors);
+  else if (a === "tutor") { settings.cpuCoach = !settings.cpuCoach; saveSettings(); cpuPanel(); toast(settings.cpuCoach ? (ui.cpu.tc ? "🎓 El modo profesor no funciona con reloj." : "🎓 Modo profesor: te avisaré si tu jugada es un error.") : "🎓 Modo profesor desactivado."); }
+  else if (a.startsWith("tutor")) coachAction(a);
+  else if (a === "radar") setRadar(!settings.radar);
   else if (a === "talk") talkToPieces();
   else if (a === "scan") readBoard();
   else if (a === "undo") cpuUndo();

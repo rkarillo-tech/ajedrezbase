@@ -1916,6 +1916,130 @@ def prueba_colores_jugadas(browser):
     ctx.close()
 
 
+def prueba_ayudas_profesor(browser):
+    print("Novedades 1.43: radar, voz, nivel de las explicaciones, modo profesor y profesor IA")
+    ctx = contexto(browser)
+    # Voz: se sustituye la síntesis del navegador para ver qué se leería
+    ctx.add_init_script("""(() => { window.__dicho = []; const synth = { speak(u) { window.__dicho.push(u.text); setTimeout(() => u.onend && u.onend(), 30); }, cancel() {}, getVoices() { return [{ lang: 'es-ES', name: 'prueba' }]; }, onvoiceschanged: null };
+      Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
+      window.SpeechSynthesisUtterance = function (t) { this.text = t; }; })();""")
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true; loadFen('r1bqkb1r/pppp1ppp/2n5/4p1N1/2B1n3/2N5/PPPP1PPP/R1BQK2R w KQkq - 0 5')")
+    # 1. Radar
+    comprobar(pg.locator(".radar-ring").count() == 0, "sin activar, el radar no marca nada")
+    pg.keyboard.press("r")
+    rojo = pg.evaluate("[...document.querySelectorAll('.radar-ring.danger')].map(e => Chess.sqName(+e.closest('.square').dataset.sq))")
+    azul = sorted(pg.evaluate("[...document.querySelectorAll('.radar-ring.chance')].map(e => Chess.sqName(+e.closest('.square').dataset.sq))"))
+    comprobar(rojo == ["g5"] and azul == ["e4", "f7"] and pg.is_visible("#radarLegend"), "🛡 Radar (tecla R): rojo el caballo de g5 (atacado y sin defensa); azul el caballo de e4 y el peón de f7, que se pueden ganar")
+    comprobar("sin defensa" in (pg.get_attribute(".radar-ring.danger", "title") or ""), "cada anillo dice por qué está en peligro")
+    pg.evaluate("setBlind(true)")
+    comprobar(not pg.is_visible(".radar-ring.danger"), "con las piezas ocultas no se ven los anillos")
+    pg.evaluate("setBlind(false); setRadar(false)")
+    # 2 y 3. Nivel de las explicaciones y voz en «Piensa conmigo»
+    pg.evaluate("loadFen('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 2 4'); setExplainLevel('basic')")
+    pg.click("#thinkBtn")
+    pg.wait_for_function("!Think.busy && $('thinkBox').querySelector('h3')", timeout=60000)
+    txt = pg.inner_text("#thinkBox")
+    comprobar("Para recordar" in txt and not any(c in txt.split("2. La mejor jugada")[0] for c in ["+0.", "−0.", "+1.", "−1."]) and pg.locator("#thinkBox ol li").count() <= 3,
+              "en el nivel de iniciación, «Piensa conmigo» no da cifras, enseña menos jugadas y añade una regla para recordar")
+    pg.select_option("#thinkBox .explain-level", "advanced")
+    pg.wait_for_function("!Think.busy && $('thinkBox').textContent.includes('Línea completa')", timeout=60000)
+    comprobar(pg.evaluate("settings.explainLevel") == "advanced" and "profundidad" in pg.inner_text("#thinkBox"), "el selector del propio recuadro cambia al nivel avanzado: más detalle y la línea completa")
+    pg.evaluate("setExplainLevel('club')")
+    comprobar(pg.locator("#thinkBox .speak-btn").count() == 1, "cada explicación tiene su botón 🔊")
+    pg.click("#thinkBox .speak-btn")
+    pg.wait_for_function("window.__dicho.length > 0")
+    dicho = pg.evaluate("window.__dicho[0]")
+    comprobar("Piensa conmigo" in dicho and not any(x in dicho for x in ["🧠", "▶ Jugar"]) and (" captura en " in dicho or " a " in dicho), "🔊 lee la explicación con la notación en palabras, sin emojis ni botones")
+    comprobar(pg.evaluate("chessToSpeech('3. Cxf7+ O-O 12...Txe1#')") == "3. caballo captura en f7, jaque enroque corto 12. torre captura en e1, mate", "«3. Cxf7+» se lee «caballo captura en f7, jaque»")
+    pg.evaluate("settings.voiceAuto = true; window.__dicho = []; $('thinkBox').hidden = true; Think.node = null")
+    pg.click("#thinkBtn")
+    pg.wait_for_function("window.__dicho.length > 0", timeout=60000)
+    comprobar(True, "con «Leer automáticamente», cada explicación nueva se lee sola")
+    pg.evaluate("settings.voiceAuto = false; $('thinkBox').hidden = true; Think.node = null")
+    # 5. Modo profesor contra la CPU (desde una posición fija, para que la prueba no dependa de lo que juegue la CPU)
+    pg.evaluate("const g = Pgn.parseGame('1. e4 e5', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() }); ui.flipped = false")
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuOpponent", "cpu"); pg.select_option("#cpuColor", "1"); pg.select_option("#cpuClock", ""); pg.select_option("#cpuFrom", "here")
+    pg.check("#cpuCoachChk")
+    pg.click("#cpuStartBtn")
+    pg.wait_for_function("ui.cpu.on && !ui.cpu.thinking && cur().state.t === 1", timeout=20000)
+    comprobar("on" in (pg.get_attribute("#cpuBox [data-c=tutor]", "class") or ""), "🎓 el modo profesor se activa en el cuadro de la partida (y tiene su botón)")
+    jugadas = pg.evaluate("Pgn.mainlineFrom(game.root).length")
+    casilla(pg, "f1").click(); casilla(pg, "a6").click()
+    pg.wait_for_function("ui.cpu.coach || (!ui.cpu.checking && !ui.cpu.thinking && cur().state.t === 1)", timeout=30000)
+    comprobar(pg.is_visible(".coach-banner") and "error" in pg.inner_text(".coach-banner") and pg.evaluate("cur().state.t") == -1 and pg.evaluate("cur().san") == "Ba6",
+              "2.Aa6?? (regala el alfil) para la partida: el profesor avisa del error antes de que juegue la CPU")
+    pg.click(".coach-banner [data-c=tutorShow]")
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).length") == jugadas and pg.evaluate("cur().state.t") == 1 and pg.evaluate("shapeList().some(s => s.color === 'blue')") and pg.evaluate("ui.cpu.helped") >= 1,
+              "«Otra vez, viendo la buena» deshace la jugada, enseña la mejor con una flecha azul y cuenta como ayuda")
+    casilla(pg, "g1").click(); casilla(pg, "f3").click()
+    pg.wait_for_function("cur().state.t === 1 && !ui.cpu.thinking && !ui.cpu.checking", timeout=30000)
+    comprobar(pg.evaluate("!ui.cpu.coach") and not pg.is_visible(".coach-banner") and pg.evaluate("Pgn.mainlineFrom(game.root).length") == jugadas + 2, "una buena jugada (2.Cf3) no se interrumpe: la CPU responde")
+    pg.evaluate("stopCpu(true); settings.cpuCoach = false")
+    # 4. Profesor IA (Ollama y Gemini simulados)
+    comprobar(not pg.is_visible("#aiBox"), "sin proveedor, el recuadro del profesor IA no aparece y no se envía nada")
+    pedido = {}
+    def ollama(r):
+        pedido["ollama"] = json.loads(r.request.post_data)
+        r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"message": {"role": "assistant", "content": "**Desarrolla** el caballo con Cf3.\n- Controla el centro.\n<img src=x onerror=alert(1)>"}}))
+    ctx.route("http://localhost:11434/api/chat", ollama)
+    pg.evaluate("setGame(Pgn.parseGame('1. e4 e5', { lang: 'en' }).game, { noConfirm: true, current: Pgn.parseGame('1. e4 e5', { lang: 'en' }).game.root }); goEnd()")
+    pg.click("#settingsBtn")
+    pg.select_option("#setAiProvider", "ollama")
+    comprobar(pg.is_visible("#aiUrlRow") and not pg.is_visible("#aiKeyRow") and "tu ordenador" in pg.inner_text("#aiNote"), "Ajustes: con Ollama se pide la dirección y no una clave")
+    pg.click("#aiTestBtn")
+    pg.wait_for_function("$('aiTestResult').textContent.includes('Funciona')", timeout=15000)
+    pg.keyboard.press("Escape")
+    comprobar(pg.is_visible("#aiBox"), "con un proveedor elegido aparece el recuadro de preguntas")
+    pg.click("#aiBox [data-aiq]")
+    pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=60000)
+    u = pedido["ollama"]["messages"][1]["content"]
+    comprobar("FEN" in u and "Mejores líneas del motor" in u and "Pregunta del alumno" in u and pedido["ollama"]["model"] == "qwen2.5:7b" and "No inventes jugadas" in pedido["ollama"]["messages"][0]["content"],
+              "a la IA se le da la posición, las líneas del motor y la pregunta, con la orden de no inventar jugadas")
+    comprobar(pg.locator("#aiAnswer .ai-text b").count() == 1 and pg.locator("#aiAnswer img").count() == 0 and "<img" in pg.inner_text("#aiAnswer"), "la respuesta se muestra como texto: las negritas sí, el HTML no se ejecuta")
+    comprobar(pg.locator("#aiAnswer .speak-btn").count() == 1, "la respuesta también se puede leer en voz alta")
+    def gemini(r):
+        pedido["gemini"] = (r.request.headers.get("x-goog-api-key"), json.loads(r.request.post_data))
+        r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"candidates": [{"content": {"parts": [{"text": "Juega **Cf3**."}]}}]}))
+    ctx.route("https://generativelanguage.googleapis.com/**", gemini)
+    pg.evaluate("settings.aiProvider = 'gemini'; settings.aiKey = 'clave-de-prueba'; settings.aiModel = ''")
+    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
+    pg.wait_for_function("$('aiAnswer').textContent.includes('Cf3') && $('aiAnswer').textContent.includes('Gemini')", timeout=60000)
+    comprobar(pedido["gemini"][0] == "clave-de-prueba" and "No inventes" in pedido["gemini"][1]["systemInstruction"]["parts"][0]["text"], "con Gemini, la clave va en su cabecera y se envía la misma información")
+    comprobar("aiKey" not in pg.evaluate("JSON.stringify(syncPayload().ls.ajedrezSettings)"), "la clave no viaja con la sincronización ni en las copias de seguridad")
+    # Claude: con el SDK oficial de Anthropic (servido en local) y la API simulada
+    sdk = os.environ.get("ANTHROPIC_SDK_FILE")
+    if sdk and pathlib.Path(sdk).exists():
+        cuerpo = pathlib.Path(sdk).read_bytes()
+        ctx.route("**/@anthropic-ai/sdk@*/+esm", lambda r: r.fulfill(status=200, body=cuerpo, headers={"Content-Type": "application/javascript", "Access-Control-Allow-Origin": "*"}))
+        def claude(r):
+            pedido["claude"] = (r.request.all_headers(), json.loads(r.request.post_data))
+            r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "request-id": "req_prueba"}, body=json.dumps({
+                "id": "msg_prueba", "type": "message", "role": "assistant", "model": "claude-opus-5-5", "stop_reason": "end_turn", "stop_sequence": None,
+                "content": [{"type": "text", "text": "Lo mejor es **Cf3**: desarrolla y ataca e5."}], "usage": {"input_tokens": 10, "output_tokens": 10}}))
+        ctx.route("https://api.anthropic.com/**", claude)
+        pg.evaluate("settings.aiProvider = 'claude'; settings.aiKey = 'sk-ant-prueba'; settings.aiModel = ''; AI.sdk = null")
+        pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
+        pg.wait_for_function("$('aiAnswer').textContent.includes('desarrolla y ataca')", timeout=60000)
+        h, b = pedido["claude"]
+        comprobar(b["model"] == "claude-opus-5-5" and b["fallbacks"] == "default" and b["output_config"]["effort"] == "low" and "server-side-fallback-2026-07-01" in h.get("anthropic-beta", "")
+                  and h.get("authorization") == "Bearer sk-ant-prueba" and h.get("anthropic-dangerous-direct-browser-access") == "true" and "sk-ant-prueba" not in json.dumps(b),
+                  "con Claude se usa el SDK oficial: claude-opus-5-5, reserva automática ante rechazos, esfuerzo bajo y la clave sólo en la cabecera de autorización")
+        def claude_mal(r):
+            r.fulfill(status=401, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"type": "error", "error": {"type": "authentication_error", "message": "invalid x-api-key"}}))
+        ctx.unroute("https://api.anthropic.com/**"); ctx.route("https://api.anthropic.com/**", claude_mal)
+        pg.click("#aiAskBtn")
+        pg.wait_for_function("$('aiAnswer').textContent.includes('rechaza la clave')", timeout=60000)
+        comprobar(True, "si la clave no vale, se dice claramente")
+    else:
+        print("  (se omite la parte de Claude: define ANTHROPIC_SDK_FILE con el SDK de Anthropic empaquetado para el navegador)")
+    pg.evaluate("settings.aiProvider = 'none'; settings.aiKey = ''; renderAiBox()")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -2453,7 +2577,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

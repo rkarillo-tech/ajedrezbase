@@ -35,6 +35,8 @@ ENGINES = {
     # Tablero 3D (opcional): Three.js (MIT), sólo si el usuario lo activa
     "THREE_JS": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
     "THREE_JS_B": "https://unpkg.com/three@0.170.0/build/three.module.min.js",
+    # Profesor IA con Claude (opcional): SDK oficial de Anthropic (MIT), sólo si el usuario elige ese proveedor
+    "ANTHROPIC_SDK": "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.3.0/+esm",
 }
 
 

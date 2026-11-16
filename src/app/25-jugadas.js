@@ -396,6 +396,7 @@ function render() {
   updateButtons();
   updateSaveState();
   renderLesson();
+  renderAiBox();
   requestLive();
   if (ui.activeTab === "explorer") refreshExplorer();
   if (ui.activeTab === "library" && ui.librarySub === "position") renderPosTarget();

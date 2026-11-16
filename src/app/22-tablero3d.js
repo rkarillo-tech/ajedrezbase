@@ -450,6 +450,12 @@ function board3dDraw() {
     g.addColorStop(0, "rgba(255,40,40,.95)"); g.addColorStop(1, "rgba(255,40,40,0)");
     c.fillStyle = g; c.fillRect(x, y, sq, sq);
   }
+  const radar = radarMarks();
+  if (radar) {
+    const ring = (i, col) => { const [x, y] = at(i); c.beginPath(); c.lineWidth = sq * 0.07; c.strokeStyle = col; c.setLineDash([sq * 0.12, sq * 0.07]); c.arc(x + sq / 2, y + sq / 2, sq * 0.45, 0, 2 * Math.PI); c.stroke(); c.setLineDash([]); };
+    radar.mine.forEach(x => ring(x.sq, "rgba(229,57,53,.95)"));
+    radar.theirs.forEach(x => ring(x.sq, "rgba(30,136,229,.95)"));
+  }
   const quality = ui.selected != null ? moveQualityFor(node, ui.selected) : null;
   if (ui.selected != null && settings.showLegal) for (const m of Chess.legal(s)) {
     if (m.from !== ui.selected) continue;

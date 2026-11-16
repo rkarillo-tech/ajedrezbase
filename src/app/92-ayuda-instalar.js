@@ -60,7 +60,7 @@ document.addEventListener("keydown", e => {
   if (document.querySelector(".modal-back.open")) return;
   const k = e.key;
   if (editor.active && !["f", "F", "?"].includes(k)) return;
-  if (e.repeat && "pPbBeEfFcC".includes(k)) return;
+  if (e.repeat && "pPbBeEfFcCrR".includes(k)) return;
   if (quiz() && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", " ", "x", "X", "t", "T", "h", "H"].includes(k)) return;
   if (k === "ArrowLeft") { stopAutoplay(); goBack(); }
   else if (k === "ArrowRight") { stopAutoplay(); goForward(); }
@@ -80,6 +80,7 @@ document.addEventListener("keydown", e => {
   else if (k === "b" || k === "B") setBlind(!ui.blind);
   else if (k === "p" || k === "P") fullBoard(!ui.full);
   else if (k === "c" || k === "C") setMoveColors(!settings.moveColors);
+  else if (k === "r" || k === "R") setRadar(!settings.radar);
   else return;
   e.preventDefault();
 });
