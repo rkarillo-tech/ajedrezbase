@@ -73,7 +73,8 @@ const SYNC_LS = {
     }
   },
   ajedrezCpuAdaptativa: { obj: true, merge: (a, b) => ((b.games || []).length > (a.games || []).length ? b : a) },
-  ajedrezVisRecords: { obj: true, merge: maxNums }
+  ajedrezVisRecords: { obj: true, merge: maxNums },
+  ajedrezContrarreloj: { obj: true, merge: maxNums }
 };
 
 /* --- Lo que viaja: una foto completa de este dispositivo --- */
