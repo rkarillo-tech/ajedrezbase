@@ -62,12 +62,22 @@ Reglas estrictas:
 async function aiCall(system, user) {
   const p = aiProvider(), model = aiModel();
   if (p === "ollama") {
-    const base = (settings.aiUrl || "http://localhost:11434").trim().replace(/\/+$/, "");
-    const res = await fetch(`${base}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, stream: false, messages: [{ role: "system", content: system }, { role: "user", content: user }] }) });
-    if (!res.ok) throw Error(res.status === 404 ? `Ollama no tiene el modelo «${model}» (descárgalo con «ollama pull ${model}»)` : `Ollama respondió con un error ${res.status}`);
+    if (!model) throw Error("elige antes un modelo (pulsa «🔌 Probar» para ver los que tienes instalados)");
+    let res;
+    try {
+      res = await fetch(`${ollamaBase()}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model, stream: false, messages: [{ role: "system", content: system }, { role: "user", content: user }] }) });
+    } catch (e) { throw Error(ollamaBlockedMsg()); }
+    if (!res.ok) {
+      let detail = "";
+      try { detail = ((await res.json()) || {}).error || ""; } catch {}
+      if (res.status === 404) throw Error(`Ollama no tiene el modelo «${model}». Escríbelo tal como sale en «ollama list» (con lo que va tras los dos puntos) o descárgalo con «ollama pull ${model}»`);
+      if (/does not support (chat|generate)|embedding/i.test(detail)) throw Error(`«${model}» es un modelo de «embeddings», que no sirve para conversar: elige otro`);
+      throw Error(`Ollama respondió con un error ${res.status}${detail ? ": " + detail : ""}`);
+    }
     const data = await res.json();
-    const text = data && data.message && data.message.content;
+    // Los modelos que «piensan» (deepseek-r1, qwen3…) pueden escribir su razonamiento entre <think> y </think>: se quita
+    const text = String((data && data.message && data.message.content) || "").replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/^[\s\S]*<\/think>/i, "").trim();
     if (!text) throw Error("Ollama no ha devuelto ninguna respuesta");
     return text;
   }
@@ -170,7 +180,8 @@ function syncAiSettingsForm() {
   $("aiUrlRow").hidden = p !== "ollama";
   $("aiModelRow").hidden = p === "none";
   $("aiTestBtn").hidden = p === "none";
-  $("aiNote").innerHTML = p === "ollama" ? "Privado y gratuito: el modelo funciona en tu ordenador. Instala <a href=\"https://ollama.com\" target=\"_blank\" rel=\"noopener noreferrer\">Ollama</a>, descarga un modelo (por ejemplo <code>ollama pull qwen2.5:7b</code>) y deja que esta página lo use arrancándolo con <code>OLLAMA_ORIGINS=*</code>."
+  if (p === "ollama") ollamaModels().then(fillOllamaModels).catch(() => {});   // para elegir el modelo de una lista
+  $("aiNote").innerHTML = p === "ollama" ? `Privado y gratuito: el modelo funciona en tu ordenador. Instala <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">Ollama</a> y descarga un modelo para conversar (por ejemplo <code>ollama pull qwen2.5:7b</code>). Además, Ollama tiene que dar permiso a esta página: <a href="#" class="help-link" data-help="help-ollama">cómo se hace, paso a paso</a>. Luego pulsa «🔌 Probar» y elige el modelo de la lista.`
     : p === "claude" ? "Necesitas una clave de la API de Anthropic (<a href=\"https://platform.claude.com\" target=\"_blank\" rel=\"noopener noreferrer\">platform.claude.com</a>), con su coste por uso. Se guarda sólo en este navegador y se envía sólo a Anthropic, con la posición y tu pregunta."
     : p === "gemini" ? "Necesitas una clave de la API de Google AI Studio. Se guarda sólo en este navegador y se envía sólo a Google, con la posición y tu pregunta."
     : "Desactivado: la aplicación no envía nada a ninguna IA. Las explicaciones de «Piensa conmigo» no necesitan IA.";
@@ -179,13 +190,55 @@ $("setAiProvider").onchange = e => { settings.aiProvider = e.target.value; setti
 $("setAiModel").onchange = e => { settings.aiModel = e.target.value.trim(); saveSettings(); };
 $("setAiKey").onchange = e => { settings.aiKey = e.target.value.trim(); saveSettings(); };
 $("setAiUrl").onchange = e => { settings.aiUrl = e.target.value.trim(); saveSettings(); };
+/* Ollama: dirección, mensaje cuando no deja entrar a esta página y la lista de modelos instalados */
+const ollamaBase = () => (settings.aiUrl || "http://localhost:11434").trim().replace(/\/+$/, "") || "http://localhost:11434";
+const pageOrigin = () => (/^https?:$/.test(location.protocol) ? location.origin : "un archivo abierto desde tu ordenador");
+function ollamaBlockedMsg() {
+  return `no se puede conectar con Ollama en ${ollamaBase()}. Si Ollama está en marcha, es que no deja entrar a esta página (${pageOrigin()}): hay que darle permiso con la variable OLLAMA_ORIGINS y reiniciarlo. Los pasos están en ❓ Ayuda › «Problemas frecuentes» › «Conectar Ollama»`;
+}
+async function ollamaModels() {
+  let res;
+  try { res = await fetch(`${ollamaBase()}/api/tags`); } catch (e) { throw Error(ollamaBlockedMsg()); }
+  if (!res.ok) throw Error(`Ollama respondió con un error ${res.status} al pedir la lista de modelos`);
+  const data = await res.json();
+  return ((data && data.models) || []).map(m => m.name || m.model).filter(Boolean);
+}
+const isEmbedModel = n => /embed|bge-|minilm/i.test(n);
+function fillOllamaModels(names) {
+  const list = $("aiModelList");
+  list.innerHTML = names.filter(n => !isEmbedModel(n)).map(n => `<option value="${esc(n)}">`).join("");
+}
 $("aiTestBtn").onclick = async () => {
   const out = $("aiTestResult");
   out.className = "small"; out.textContent = "⏳ Probando…";
   try {
+    if (aiProvider() === "ollama") {
+      const names = await ollamaModels();
+      fillOllamaModels(names);
+      const chat = names.filter(n => !isEmbedModel(n));
+      if (!chat.length) throw Error("Ollama funciona, pero no tiene ningún modelo para conversar: descarga uno, por ejemplo con «ollama pull qwen2.5:7b»");
+      let m = aiModel();
+      // Sin etiqueta («qwen3.5»), Ollama buscaría «qwen3.5:latest»: si sólo hay una versión instalada, se completa el nombre
+      if (m && !m.includes(":") && !names.includes(m + ":latest")) {
+        const same = chat.filter(n => n.split(":")[0] === m);
+        if (same.length === 1) { m = same[0]; settings.aiModel = m; saveSettings(); $("setAiModel").value = m; }
+      }
+      const has = n => n === m || n === m + ":latest";
+      if (!m || !names.some(has)) {
+        out.className = "small msg-err";
+        out.textContent = `✔ Ollama funciona y deja entrar a esta página, pero ${m ? `no tiene el modelo «${m}»` : "falta elegir el modelo"}. Tus modelos para conversar: ${chat.join(", ")}. Elige uno en «Modelo» (al pulsar en la casilla salen en la lista) y vuelve a pulsar «Probar».`;
+        $("setAiModel").focus();
+        return;
+      }
+      if (isEmbedModel(m)) throw Error(`«${m}» es un modelo de «embeddings», que no sirve para conversar: elige otro`);
+      out.textContent = `⏳ Ollama responde. Cargando «${m}» (la primera vez puede tardar un minuto)…`;
+    }
     const t = await aiCall("Responde en español con una sola palabra.", "Di «hola».");
     out.className = "small msg-ok"; out.textContent = `✔ Funciona. Respuesta: «${t.slice(0, 60)}»`;
-  } catch (e) { out.className = "small msg-err"; out.textContent = "❌ " + (e.message || e); }
+  } catch (e) {
+    out.className = "small msg-err"; out.textContent = "❌ " + (e.message || e);
+    if (/OLLAMA_ORIGINS/.test(e.message || "")) out.insertAdjacentHTML("beforeend", ` <a href="#" class="help-link" data-help="help-ollama">Ver los pasos</a>`);
+  }
 };
 $("aiAskBtn").onclick = () => aiAsk($("aiQuestion").value);
 $("aiQuestion").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); aiAsk($("aiQuestion").value); } });
