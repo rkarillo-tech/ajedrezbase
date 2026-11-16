@@ -122,6 +122,10 @@ function openModal(id) {
     board3dApplyLight();
     $("setLegal").checked = settings.showLegal;
     $("setMoveColors").checked = !!settings.moveColors;
+    $("setRadar").checked = !!settings.radar;
+    $("setVoiceAuto").checked = !!settings.voiceAuto;
+    syncAiSettingsForm();
+    $("setExplainLevel").value = EXPLAIN_LEVELS[settings.explainLevel] ? settings.explainLevel : "club";
     $("setAutosave").checked = settings.autosave;
     $("setAnimate").checked = settings.animate;
     $("setWheel").checked = settings.wheel;
@@ -192,6 +196,11 @@ function setMoveColors(on) {
 $("setMoveColors").onchange = e => setMoveColors(e.target.checked);
 $("moveColorsToggle").onchange = e => setMoveColors(e.target.checked);
 $("moveColorsToggle").checked = !!settings.moveColors;
+$("setRadar").onchange = e => setRadar(e.target.checked);
+$("radarToggle").onchange = e => setRadar(e.target.checked);
+$("radarToggle").checked = !!settings.radar;
+$("setExplainLevel").onchange = e => setExplainLevel(e.target.value);
+$("setVoiceAuto").onchange = e => { settings.voiceAuto = e.target.checked; saveSettings(); if (!e.target.checked) stopSpeaking(); else toast("🔊 Se leerá en voz alta cada explicación nueva."); };
 $("setLegal").onchange = e => { settings.showLegal = e.target.checked; saveSettings(); renderBoard(); };
 $("setAnimate").onchange = e => { settings.animate = e.target.checked; saveSettings(); };
 $("setWheel").onchange = e => { settings.wheel = e.target.checked; saveSettings(); };

@@ -62,6 +62,7 @@ function renderBoard() {
     const sq = boardEl.querySelector(`.square[data-sq="${last.to}"]`);
     if (sq) sq.insertAdjacentHTML("beforeend", `<span class="sq-badge ${NAG_CLASS[node.nag] || ""}-bg" title="${esc(NAG_TITLE[node.nag] || "")}">${esc(node.nag)}</span>`);
   }
+  renderRadar();
   board3dSync();
   requestMoveQuality();
   moveQPaint();
@@ -110,6 +111,7 @@ function shapeList() {
     if (ui.engineArrow && settings.arrow && !quiz() && ui.engineArrow.node === cur() && !(ui.lesson && ui.lesson.game === game)) list.push({ color: "engine", from: ui.engineArrow.from, to: ui.engineArrow.to });
     if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
     if (Scan.node === cur() && Scan.data) for (const sh of Scan.shapes) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
+    if (ui.cpu.on && ui.cpu.coachArrow && ui.cpu.coachArrow.node === cur()) list.push({ color: "blue", from: ui.cpu.coachArrow.from, to: ui.cpu.coachArrow.to });
     if (Talk.node === cur() && (!quiz() || cpuHelpMode())) for (const sh of Talk.shapes) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
     if (Retry.active) {
@@ -402,7 +404,8 @@ function renderStatus() {
   if (editor.active) { el.textContent = "✏ Editor: mueve las piezas libremente y pulsa «Empezar desde esta posición»."; el.className = "status-line"; return; }
   const st = gameStatus(cur());
   let txt = st.text;
-  if (ui.cpu.thinking) txt += " · 🤖 la CPU está pensando…";
+  if (ui.cpu.checking) txt += " · 🎓 el profesor revisa tu jugada…";
+  else if (ui.cpu.thinking) txt += " · 🤖 la CPU está pensando…";
   else if (ui.cpu.on && !st.over) txt += cur().state.t === ui.cpu.side ? " · turno de la CPU" : " · tu turno";
   if (trainer.active) txt = (trainer.puzzle ? "🧩 Problema · " : "🎯 Entrenamiento · ") + txt;
   if (Retry.active) txt = "🎯 Aprende de tus errores · " + txt;

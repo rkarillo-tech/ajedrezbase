@@ -518,6 +518,32 @@ function thinkStepText(c, nextUci) {
   if (!parts.length) parts.push(pc === "p" ? `Avanza el peón a ${Chess.sqName(m.to)}.` : `Mejora ${PIECE_ART[pc]}, que pasa de ${Chess.sqName(m.from)} a ${Chess.sqName(m.to)}.`);
   return parts.join(" ");
 }
+/* Nivel de las explicaciones */
+const EXPLAIN_LEVELS = { basic: "🌱 Iniciación", club: "♟ Club", advanced: "🎓 Avanzado" };
+const explainLevelSelect = cur => `<select class="explain-level" aria-label="Nivel de las explicaciones" title="Nivel de las explicaciones: iniciación (sin cifras y con una regla para recordar), club o avanzado (más alternativas y la línea completa)">${Object.entries(EXPLAIN_LEVELS).map(([k, v]) => `<option value="${k}"${k === cur ? " selected" : ""}>${v}</option>`).join("")}</select>`;
+function wireExplainLevel(box) {
+  const sel = box.querySelector(".explain-level");
+  if (sel) sel.onchange = () => { setExplainLevel(sel.value); if (!helpBlocked()) { Think.node = null; thinkWithMe(); } };
+}
+function setExplainLevel(v) {
+  settings.explainLevel = EXPLAIN_LEVELS[v] ? v : "club";
+  saveSettings();
+  if ($("setExplainLevel")) $("setExplainLevel").value = settings.explainLevel;
+}
+/* En el nivel de iniciación: una regla general que encaja con la mejor jugada */
+function thinkTip(s, m, threat) {
+  if (!m) return "";
+  const p = m.piece.toLowerCase(), opening = s.full <= 12;
+  if (Chess.inCheck(s)) return "ante un jaque, mira las tres salidas: comer la pieza que lo da, tapar o mover el rey.";
+  if (threat && (m.from === threat.m.to || m.to === threat.m.from)) return "antes de cada jugada, pregúntate qué amenaza el rival.";
+  if (m.flag === "castle") return "enroca pronto: el rey queda a salvo y la torre entra en juego.";
+  if (m.captured !== ".") return "antes de comer, comprueba qué puede responder el rival; si es gratis y no hay trampa, cómela.";
+  if (opening && (p === "n" || p === "b") && (m.from >> 4 === 0 || m.from >> 4 === 7)) return "en la apertura, saca los caballos y los alfiles antes que la dama, y una pieza nueva en cada jugada.";
+  if (opening && p === "p" && [3, 4].includes(m.to & 7)) return "los peones del centro (e y d) ganan espacio y abren paso a tus piezas.";
+  if (p === "k" && pieceCount(s) <= 12) return "en el final, el rey es una pieza más: llévalo al centro.";
+  if (Chess.inCheck(Chess.apply(s, m))) return "los jaques obligan al rival a responder: son las primeras jugadas que hay que mirar.";
+  return "cuando no hay nada que comer ni amenazas, mejora tu pieza peor colocada.";
+}
 async function thinkWithMe() {
   ExpEval.token++;
   const node = cur(), s = node.state, me = s.t, box = $("thinkBox");
@@ -538,10 +564,14 @@ async function thinkWithMe() {
   const sanOf = (st, u) => { const m = Chess.moveFromUci(st, u); return m ? formatSan(Chess.san(st, m), settings.lang, st.t) : u; };
   const moveTxt = (st, u) => numPrefix(st) + sanOf(st, u);
   const mine = (w, l) => (me === 1 ? winPct(l) : 100 - winPct(l));
-  const evTxt = l => { const ev = { cp: l.cp, mate: l.mate, winner: l.winner }; return `${fmtEval(ev)} (${evalVerdict(ev).toLowerCase()})`; };
+  // Nivel de las explicaciones (⚙ Ajustes o el selector del recuadro): iniciación (sin cifras, lo esencial y una regla para
+  // recordar), club (como siempre) o avanzado (más alternativas, cifras y la línea completa)
+  const level = EXPLAIN_LEVELS[settings.explainLevel] ? settings.explainLevel : "club", basic = level === "basic", adv = level === "advanced";
+  const evTxt = l => { const ev = { cp: l.cp, mate: l.mate, winner: l.winner }; return basic ? evalVerdict(ev).toLowerCase() : `${fmtEval(ev)} (${evalVerdict(ev).toLowerCase()})`; };
+  const evNum = l => (basic ? "" : ` (${fmtEval({ cp: l.cp, mate: l.mate, winner: l.winner })})`);
   try {
     say("Mirando la posición: qué amenaza el rival y qué jugadas tengo…");
-    const top = await evalState(s, strong ? 3000 : 3500, strong ? 3 : 1);
+    const top = await evalState(s, strong ? 3000 : 3500, strong ? (adv ? 4 : 3) : 1);
     if (!top || !top.lines || !top.lines[0] || cur() !== node) { box.hidden = true; return; }
     const lines = top.lines.filter(l => l && l.pv && l.pv.length);
     const best = lines[0], bestM = Chess.moveFromUci(s, best.pv[0]);
@@ -566,7 +596,7 @@ async function thinkWithMe() {
     const g = Pgn.newGame(Chess.toFen(s));
     let n = g.root;
     const steps = [];
-    for (let k = 0; k < Math.min(7, best.pv.length); k++) {
+    for (let k = 0; k < Math.min(basic ? 3 : adv ? 10 : 7, best.pv.length); k++) {
       const u = best.pv[k], m = Chess.moveFromUci(n.state, u);
       if (!m) break;
       const c = Pgn.addMove(n, m);
@@ -589,12 +619,12 @@ async function thinkWithMe() {
     if (!ideas.length) ideas.push(steps[0] ? steps[0].why : "");
     // Alternativas: por qué no las otras candidatas
     const alts = [];
-    for (const l of lines.slice(1, 3)) {
+    for (const l of lines.slice(1, basic ? 2 : adv ? 4 : 3)) {
       const loss = mine(0, best) - mine(0, l);
       const u = l.pv[0];
-      if (loss < 4) { alts.push(`<b>${esc(moveTxt(s, u))}</b> también es buena: casi igual que la mejor (${esc(fmtEval({ cp: l.cp, mate: l.mate, winner: l.winner }))}).`); continue; }
+      if (loss < 4) { alts.push(`<b>${esc(moveTxt(s, u))}</b> también es buena: casi igual que la mejor${esc(evNum(l))}.`); continue; }
       const s1 = playUcis(s, [u], 1), r = l.pv[1];
-      alts.push(`<b>${esc(moveTxt(s, u))}</b> es peor: ${r ? `el rival respondería <b>${esc(moveTxt(s1, r))}</b> y ` : ""}la valoración baja a ${esc(fmtEval({ cp: l.cp, mate: l.mate, winner: l.winner }))}.`);
+      alts.push(`<b>${esc(moveTxt(s, u))}</b> es peor: ${r ? `el rival respondería <b>${esc(moveTxt(s1, r))}</b> y ` : ""}${basic ? `tu posición empeora${loss >= 15 ? " mucho" : ""}` : `la valoración baja a ${esc(fmtEval({ cp: l.cp, mate: l.mate, winner: l.winner }))}`}.${adv ? ` Línea: ${esc(lineText(s, l.pv, 8))}.` : ""}`);
     }
     // La jugada tentadora: la captura (o el jaque) más llamativa que no está entre las buenas, y por qué falla
     let trap = null;
@@ -620,15 +650,19 @@ async function thinkWithMe() {
     if (Chess.inCheck(s)) situation.push("<b>Estás en jaque</b>: lo primero es salir de él.");
     else if (threat) situation.push(`<b>Amenaza del rival:</b> si le tocara, jugaría <b>${esc(formatSan(Chess.san(threat.t, threat.m), settings.lang, threat.t.t))}</b>${threat.gainMate ? ", con mate" : threat.capt ? `, ganando ${PIECE_ART[threat.m.captured.toLowerCase()]} de ${Chess.sqName(threat.m.to)}` : ""}. Hay que tenerlo en cuenta.`);
     else situation.push("El rival no tiene ninguna amenaza inmediata: puedes pensar en tus planes.");
-    box.innerHTML = `<div class="retry-head">🧠 Piensa conmigo · juegan las ${me === 1 ? "blancas" : "negras"}</div>
+    const tip = basic ? thinkTip(s, bestM, threat) : "";
+    box.innerHTML = `<div class="retry-head">🧠 Piensa conmigo · juegan las ${me === 1 ? "blancas" : "negras"} ${explainLevelSelect(level)}</div>
       <h3>1. La situación</h3><div>${situation.join(" ")}</div>
       <h3>2. La mejor jugada: ${esc(moveTxt(s, best.pv[0]))}</h3><div>${ideas.join(" ")}</div>
       <h3>3. Lo que va a pasar (si los dos jugáis lo mejor)</h3>
       <ol>${steps.map(x => `<li><span class="think-who ${x.mine ? "think-mine" : "think-their"}">${x.mine ? "Tú" : "Rival"}: ${esc(x.txt)}</span> — ${esc(x.why)}</li>`).join("")}</ol>
       ${alts.length ? `<h3>4. ¿Y las otras jugadas?</h3><div>${alts.map(a => `<div>• ${a}</div>`).join("")}</div>` : ""}
       ${trap ? `<h3>${alts.length ? 5 : 4}. ⚠ Cuidado con la jugada tentadora</h3><div>${trap}</div>` : ""}
+      ${tip ? `<div class="think-tip">💡 <b>Para recordar:</b> ${tip}</div>` : ""}
+      ${adv ? `<div class="small">Línea completa: ${esc(lineText(s, best.pv, 16))} · profundidad ${top.depth || best.depth || "?"} · ${esc(Engine.name || "")}</div>` : ""}
       <div class="controls"><button class="sm-btn primary" data-t="play">▶ Jugar ${esc(sanOf(s, best.pv[0]))}</button><button class="sm-btn" data-t="line" title="Añade la línea como variante para recorrerla en el tablero">➕ Ver la línea en el tablero</button><button class="sm-btn" data-t="close">Cerrar</button></div>
       <div class="small">Es el razonamiento del motor puesto en palabras: úsalo para entender la idea, no como verdad absoluta.</div>`;
+    wireExplainLevel(box);
     box.querySelector("[data-t=play]").onclick = () => { if (cur() !== node || !canUserMove() || !bestM) return; box.hidden = true; Think.node = null; playMove(bestM, "user"); };
     box.querySelector("[data-t=line]").onclick = () => {
       if (cur() !== node) { toast("La posición ha cambiado: vuelve a pulsar «Piensa conmigo»."); return; }
