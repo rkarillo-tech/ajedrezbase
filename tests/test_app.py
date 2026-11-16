@@ -17,7 +17,9 @@ import http.server
 import os
 import json
 import pathlib
+import signal
 import sys
+import time
 import threading
 import traceback
 import urllib.parse
@@ -1818,15 +1820,30 @@ def prueba_contrarreloj(browser):
     comprobar(escalera[0] < 900 and sum(escalera[-5:]) / 5 > sum(escalera[:5]) / 5, "los problemas empiezan fáciles y se van endureciendo")
     pg.click("#hintTrainBtn") if pg.is_visible("#hintTrainBtn") else None
     comprobar(not pg.evaluate("trainer.hintArrow") and pg.evaluate("trainer.hints") == 0, "sin pistas")
-    resolver = """() => new Promise(res => { const go = () => { if (!Puz.rush) return res(false); if (!(trainer.active && trainerUserTurn() && !trainer.busy)) return setTimeout(go, 40); playMove(cur().children[0].move, 'user'); setTimeout(() => res(true), 120); }; go(); })"""
-    for _ in range(6):
+    # Las promesas tienen límite propio y atrapan cualquier error: si no, una excepción en la página dejaría
+    # esperando a la prueba para siempre (pasó en la CI con un problema cuya solución era la única jugada legal)
+    jugar = """(fallo) => new Promise(res => { const t0 = Date.now(); const go = () => { try {
+        if (!Puz.rush) return res("fin");
+        if (Date.now() - t0 > 15000) return res("atasco");
+        if (!(trainer.active && trainerUserTurn() && !trainer.busy)) return setTimeout(go, 40);
+        const g = cur().children[0].move;
+        const otra = fallo ? Chess.legal(cur().state).find(m => !(m.from === g.from && m.to === g.to && (m.promotion || '') === (g.promotion || ''))) : null;
+        playMove(otra || g, 'user');
+        setTimeout(() => res(fallo && !otra ? "sin alternativa" : "ok"), 120);
+      } catch (e) { res("error: " + e.message); } }; go(); })"""
+    for _ in range(8):
         if pg.evaluate("Puz.ok") >= 2: break
-        pg.evaluate(resolver)
+        pg.evaluate(jugar, False)
     comprobar(pg.evaluate("Puz.ok") >= 2 and pg.evaluate("Puz.rush.strikes") == 0, "cada problema resuelto suma y pasa solo al siguiente")
-    fallar = """() => new Promise(res => { const go = () => { if (!Puz.rush) return res(false); if (!(trainer.active && trainerUserTurn() && !trainer.busy)) return setTimeout(go, 40); const g = cur().children[0].move; const L = Chess.legal(cur().state).filter(m => !(m.from === g.from && m.to === g.to && (m.promotion || '') === (g.promotion || ''))); playMove(L[0], 'user'); setTimeout(() => res(true), 120); }; go(); })"""
-    pg.evaluate(fallar)
-    comprobar(pg.evaluate("Puz.rush && Puz.rush.strikes") == 1 and "❌" in pg.inner_text("#trainFeedback") or pg.evaluate("Puz.rush && Puz.rush.strikes") == 1, "un fallo es una cruz y se pasa al siguiente")
-    pg.evaluate(fallar); pg.evaluate(fallar)
+    r = pg.evaluate(jugar, True)
+    while r == "sin alternativa":
+        r = pg.evaluate(jugar, True)
+    comprobar(r == "ok" and pg.evaluate("Puz.rush && Puz.rush.strikes") == 1, "un fallo es una cruz y se pasa al siguiente")
+    for _ in range(12):
+        if not pg.evaluate("!!Puz.rush"): break
+        r = pg.evaluate(jugar, True)
+        if r.startswith("error") or r == "atasco": break
+    comprobar(not r.startswith("error") and r != "atasco", "la contrarreloj sigue fluida con varios fallos seguidos" + ("" if not (r.startswith("error") or r == "atasco") else f" ({r})"))
     pg.wait_for_function("!Puz.rush")
     ok = pg.evaluate("Puz.ok")
     comprobar("terminada" in pg.inner_text("#trainFeedback") and "récord" in pg.inner_text("#trainFeedback") and pg.evaluate("rushRecords()[180]") == ok, "con tres fallos se acaba y se guarda el récord")
@@ -1881,7 +1898,7 @@ def prueba_fiabilidad(browser):
     res = pg.evaluate("""async () => {
       settings.live = false; Engine.cancel(); await new Promise(r => setTimeout(r, 300));
       Engine.watchMs = 500; Engine.kind = "stockfish"; Engine.name = "Stockfish 19"; Engine.w.postMessage = () => {};   // «Stockfish» sordo
-      const job = await Engine.analyse(cur(), { purpose: "prueba", movetime: 300 });
+      const job = await Promise.race([Engine.analyse(cur(), { purpose: "prueba", movetime: 300 }), new Promise(r => setTimeout(() => r(null), 20000))]);
       Engine.watchMs = 0;
       return { ok: !!(job && job.best && job.lines.length), kind: Engine.kind, note: Engine.note, revived: Engine.revived, toast: $("toast").textContent };
     }""")
@@ -2360,6 +2377,17 @@ def prueba_stockfish19(browser):
         srv.shutdown()
 
 
+LIMITE_PRUEBA = int(os.environ.get("LIMITE_PRUEBA", "300"))
+
+
+class PruebaColgada(Exception):
+    pass
+
+
+def _prueba_colgada(signum, frame):
+    raise PruebaColgada()
+
+
 def main():
     # index.html no se guarda en el repositorio: se construye ahora para no probar uno viejo
     import subprocess
@@ -2368,11 +2396,27 @@ def main():
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
         for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+            # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
+            # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
+            t0 = time.time()
+            if hasattr(signal, "SIGALRM"):
+                signal.signal(signal.SIGALRM, _prueba_colgada)
+                signal.alarm(LIMITE_PRUEBA)
             try:
                 prueba(browser)
+            except PruebaColgada:
+                # Tras cortar una espera, la conexión con el navegador ya no es fiable: se termina aquí, diciendo cuál fue
+                traceback.print_exc()
+                comprobar(False, f"{prueba.__name__} se quedó colgada (más de {LIMITE_PRUEBA} s)")
+                print(f"\n{len(fallos)} prueba(s) fallida(s); se detiene la ejecución porque {prueba.__name__} se colgó", flush=True)
+                os._exit(1)
             except Exception:
                 traceback.print_exc()
                 comprobar(False, f"{prueba.__name__} terminó con una excepción")
+            finally:
+                if hasattr(signal, "SIGALRM"):
+                    signal.alarm(0)
+            print(f"  ({prueba.__name__}: {time.time() - t0:.0f} s)", flush=True)
         browser.close()
     if fallos:
         print(f"\n{len(fallos)} prueba(s) fallida(s)")
