@@ -1768,7 +1768,7 @@ body.board-full #exportControls { order: 10; }
       <option value="gemini">Gemini (Google), con tu clave</option>
     </select>
     <div class="grid2">
-      <div id="aiModelRow"><label for="setAiModel">Modelo</label><input id="setAiModel" autocomplete="off" spellcheck="false"></div>
+      <div id="aiModelRow"><label for="setAiModel">Modelo</label><input id="setAiModel" autocomplete="off" spellcheck="false" list="aiModelList"><datalist id="aiModelList"></datalist></div>
       <div id="aiKeyRow"><label for="setAiKey">Clave de la API</label><input id="setAiKey" type="password" autocomplete="off" placeholder="Se guarda sólo en este navegador"></div>
       <div id="aiUrlRow"><label for="setAiUrl">Dirección de Ollama</label><input id="setAiUrl" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434"></div>
     </div>

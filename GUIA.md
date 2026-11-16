@@ -381,6 +381,16 @@ Los atajos no funcionan mientras escribes en un recuadro de texto.
 - **Archivo suelto**: también puedes descargar `index.html` y abrirlo con doble clic. Funciona igual, pero la biblioteca de esa copia es distinta de la de la versión web. La primera vez que Stockfish 19 cargue con conexión se guarda una copia en el navegador, y a partir de ahí también funciona sin internet.
 
 ## 🩺 26. Problemas frecuentes
+**Conectar Ollama al profesor IA: «no se puede conectar con Ollama» aunque Ollama está en marcha**
+
+Por seguridad, Ollama sólo atiende a las páginas abiertas en tu propio ordenador (`localhost`). La versión web de AjedrezBase está en `https://rkarillo-tech.github.io`, así que hay que darle permiso con la variable `OLLAMA_ORIGINS` y reiniciar Ollama. Usa como valor `https://rkarillo-tech.github.io` si usas la versión web, o `*` si abres el archivo HTML descargado (con `*` cualquier página podría usar tu Ollama mientras esté en marcha; por eso es mejor la versión web).
+1. **Windows**: cierra Ollama (icono junto al reloj › clic derecho › *Quit Ollama*). Abre PowerShell y escribe `setx OLLAMA_ORIGINS "https://rkarillo-tech.github.io"`. Vuelve a abrir Ollama desde el menú Inicio.
+2. **macOS**: en el Terminal, `launchctl setenv OLLAMA_ORIGINS "https://rkarillo-tech.github.io"`; cierra Ollama (icono de la barra de menús › *Quit Ollama*) y ábrelo otra vez. Hay que repetirlo tras reiniciar el Mac.
+3. **Linux**: `sudo systemctl edit ollama.service`, añade las líneas `[Service]` y `Environment="OLLAMA_ORIGINS=https://rkarillo-tech.github.io"`, guarda, y ejecuta `sudo systemctl daemon-reload` y `sudo systemctl restart ollama`. Si lo arrancas a mano: `OLLAMA_ORIGINS=https://rkarillo-tech.github.io ollama serve`.
+4. En AjedrezBase: ⚙ Ajustes › 🤖 Profesor IA › **Ollama** › **🔌 Probar**. Si el navegador pregunta si la página puede acceder a otros dispositivos o aplicaciones de tu red local, acepta. La prueba dice qué modelos tienes: elige uno en «Modelo» (salen en la lista al pulsar la casilla) y vuelve a pulsar «Probar». La primera respuesta tarda más, mientras Ollama carga el modelo en memoria.
+
+Elige un modelo para conversar (por ejemplo de las familias qwen, gemma, llama o mistral), no uno de *embeddings* como `nomic-embed-text`, que no sabe conversar; los modelos para programar (*coder*) funcionan, pero explican peor. Los que «razonan» antes de responder (como `deepseek-r1`) también sirven, pero tardan más.
+
 **Tengo conexión, pero sale «Stockfish 10» o «Motor interno» en vez de Stockfish 19**
 
 Stockfish 19 se descarga de jsDelivr o, si no responde, de unpkg. Si ninguno responde teniendo conexión, casi siempre es un bloqueador de anuncios (uBlock, AdBlock…), el antivirus o la red de una empresa o un centro de estudios. Permite **cdn.jsdelivr.net** y **unpkg.com** para esta página y, en **⚙ Ajustes**, pulsa **🔄 Reintentar Stockfish 19**. En Ajustes (o pulsando la etiqueta del motor) verás el motivo exacto. Una vez cargado, si tienes la aplicación instalada, se guarda y ya no hace falta descargarlo.

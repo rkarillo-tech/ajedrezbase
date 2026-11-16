@@ -1985,6 +1985,7 @@ def prueba_ayudas_profesor(browser):
         pedido["ollama"] = json.loads(r.request.post_data)
         r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"message": {"role": "assistant", "content": "**Desarrolla** el caballo con Cf3.\n- Controla el centro.\n<img src=x onerror=alert(1)>"}}))
     ctx.route("http://localhost:11434/api/chat", ollama)
+    ctx.route("http://localhost:11434/api/tags", lambda r: r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"models": [{"name": "qwen2.5:7b"}]})))
     pg.evaluate("setGame(Pgn.parseGame('1. e4 e5', { lang: 'en' }).game, { noConfirm: true, current: Pgn.parseGame('1. e4 e5', { lang: 'en' }).game.root }); goEnd()")
     pg.click("#settingsBtn")
     pg.select_option("#setAiProvider", "ollama")
@@ -2036,6 +2037,64 @@ def prueba_ayudas_profesor(browser):
     else:
         print("  (se omite la parte de Claude: define ANTHROPIC_SDK_FILE con el SDK de Anthropic empaquetado para el navegador)")
     pg.evaluate("settings.aiProvider = 'none'; settings.aiKey = ''; renderAiBox()")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_ollama(browser):
+    print("Novedades 1.43.1: conectar Ollama (permiso de la página, lista de modelos y modelos que razonan)")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    estado = {"bloqueado": True}
+    modelos = ["deepseek-r1:8b", "qwen2.5-coder:7b", "qwen3.5-hermes:latest", "gemma4:12b", "nomic-embed-text:v1.5", "qwen3.5:9b", "dolphin3:8b"]
+    def tags(r):
+        if estado["bloqueado"]: r.abort()   # como hace el navegador cuando Ollama no da permiso a la página (CORS)
+        else: r.fulfill(status=200, headers=cab, body=json.dumps({"models": [{"name": n, "model": n} for n in modelos]}))
+    def chat(r):
+        if estado["bloqueado"]: r.abort(); return
+        m = json.loads(r.request.post_data)["model"]
+        if m not in modelos: r.fulfill(status=404, headers=cab, body=json.dumps({"error": f"model '{m}' not found"})); return
+        if "embed" in m: r.fulfill(status=400, headers=cab, body=json.dumps({"error": f'"{m}" does not support chat'})); return
+        txt = "<think>\nEl usuario quiere un saludo.\n</think>\n\nHola" if m.startswith("deepseek") else "Hola"
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
+    ctx.route("http://localhost:11434/api/tags", tags)
+    ctx.route("http://localhost:11434/api/chat", chat)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true")
+    pg.click("#settingsBtn")
+    pg.select_option("#setAiProvider", "ollama")
+    comprobar("paso a paso" in pg.inner_text("#aiNote"), "al elegir Ollama, Ajustes enlaza los pasos para darle permiso a la página")
+    pg.fill("#setAiModel", "deepseek-r1:8b"); pg.dispatch_event("#setAiModel", "change")
+    pg.click("#aiTestBtn")
+    pg.wait_for_function("$('aiTestResult').textContent.includes('❌')", timeout=15000)
+    msg = pg.inner_text("#aiTestResult")
+    comprobar("OLLAMA_ORIGINS" in msg and "no deja entrar a esta página" in msg and pg.locator("#aiTestResult .help-link").count() == 1,
+              "si Ollama no deja entrar a la página, se explica (permiso con OLLAMA_ORIGINS) y se enlazan los pasos")
+    pg.click("#aiTestResult .help-link")
+    pg.wait_for_timeout(300)
+    comprobar(pg.is_visible("#help-ollama") and "setx OLLAMA_ORIGINS" in pg.inner_text("#helpModal"), "«Ver los pasos» abre la ayuda en «Conectar Ollama», con los pasos para Windows, macOS y Linux")
+    pg.keyboard.press("Escape")
+    estado["bloqueado"] = False
+    pg.click("#settingsBtn")
+    pg.fill("#setAiModel", "qwen2.5:7b"); pg.dispatch_event("#setAiModel", "change")
+    pg.click("#aiTestBtn")
+    pg.wait_for_function("$('aiTestResult').textContent.includes('Tus modelos')", timeout=15000)
+    msg = pg.inner_text("#aiTestResult")
+    opciones = pg.evaluate("[...$('aiModelList').options].map(o => o.value)")
+    comprobar("no tiene el modelo «qwen2.5:7b»" in msg and "gemma4:12b" in msg and "nomic-embed-text" not in msg and "nomic-embed-text:v1.5" not in opciones and len(opciones) == 6,
+              "con un modelo que no está, la prueba dice cuáles hay para conversar (sin los de embeddings) y los pone en la lista de la casilla")
+    for nombre in ("deepseek-r1:8b", "gemma4:12b"):
+        pg.fill("#setAiModel", nombre); pg.dispatch_event("#setAiModel", "change")
+        pg.click("#aiTestBtn")
+        pg.wait_for_function("$('aiTestResult').textContent.includes('Funciona')", timeout=15000)
+        comprobar("«Hola»" in pg.inner_text("#aiTestResult") and "think" not in pg.inner_text("#aiTestResult"), f"con «{nombre}» funciona" + (" (sin enseñar su razonamiento <think>)" if nombre.startswith("deepseek") else ""))
+    pg.fill("#setAiModel", "qwen3.5"); pg.dispatch_event("#setAiModel", "change")
+    pg.click("#aiTestBtn")
+    pg.wait_for_function("$('aiTestResult').textContent.includes('❌') || $('aiTestResult').textContent.includes('Funciona') || $('aiTestResult').textContent.includes('Tus modelos')", timeout=15000)
+    comprobar("Funciona" in pg.inner_text("#aiTestResult") and pg.input_value("#setAiModel") == "qwen3.5:9b" and pg.evaluate("settings.aiModel") == "qwen3.5:9b",
+              "escribir el modelo sin la etiqueta («qwen3.5») se completa solo con la versión instalada (qwen3.5:9b)")
+    pg.keyboard.press("Escape")
+    pg.evaluate("settings.aiProvider = 'none'; settings.aiModel = ''; renderAiBox()")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -2577,7 +2636,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
