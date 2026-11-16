@@ -12,6 +12,8 @@ permissions:
 jobs:
   pruebas:
     runs-on: ubuntu-latest
+    # Si algo se cuelga, que falle en minutos (por defecto GitHub espera hasta 6 horas)
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -37,6 +39,7 @@ jobs:
           npm pack three@0.170.0 --silent
           mkdir -p /tmp/three && tar xzf three-0.170.0.tgz -C /tmp/three package/build/three.module.min.js
       - name: Aplicación en el navegador
+        timeout-minutes: 30
         env:
           STOCKFISH_DIR: /tmp/sf/package/bin
           THREE_DIR: /tmp/three/package/build
