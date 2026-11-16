@@ -91,7 +91,7 @@ function moveQStockfish(node, L, mine, token) {
 async function moveQInternal(node, L, mine, token) {
   MoveQ.busy = true;
   const path = Pgn.pathTo(node), stm = node.state.t, base = { fen: Chess.toFen(path[0].state), moves: path.slice(1).map(n => n.uci) };
-  const evalAfter = u => new Promise(res => Engine.start({ purpose: "colors", fen: base.fen, moves: base.moves.concat(u), stm: -stm, movetime: 160, multipv: 1, resolve: res }));
+  const evalAfter = u => new Promise(res => Engine.start({ purpose: "colors", fen: base.fen, moves: base.moves.concat(u), stm: -stm, movetime: 250, multipv: 1, resolve: res }));
   const best = moveQKnownBest(node);
   const list = mine.map(Chess.uci);
   if (best && !list.includes(best)) list.push(best);
