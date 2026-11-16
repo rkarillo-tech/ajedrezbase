@@ -8,6 +8,7 @@ function renderBoard() {
   const targets = new Map();
   if (!editor.active && ui.selected != null && settings.showLegal) for (const m of Chess.legal(s)) if (m.from === ui.selected) targets.set(m.to, m.captured !== ".");
   const locked = !editor.active && !canUserMove();
+  const quality = !editor.active && ui.selected != null ? moveQualityFor(node, ui.selected) : null;
   // Las 64 casillas se crean una vez (o al girar el tablero, cambiar las piezas o las coordenadas);
   // después sólo se actualizan las clases y las piezas que cambian
   const key = `${ui.flipped}|${settings.pieceStyle}|${settings.coords}`;
@@ -42,7 +43,7 @@ function renderBoard() {
     if ((trainer.active && trainer.hintSq === i) || (Retry.active && Retry.hintSq === i) || (Guess.active && Guess.hintSq === i)) cls += " hint-sq";
     if (Vis.marks.ok === i) cls += " vis-ok";
     if (Vis.marks.bad === i) cls += " vis-bad";
-    if (targets.has(i)) cls += targets.get(i) ? " target occupied" : " target";
+    if (targets.has(i)) { cls += targets.get(i) ? " target occupied" : " target"; const q = quality && quality.get(i); if (q) cls += " " + q.cls; }
     if (!locked && !editor.active && p !== "." && Chess.color(p) === s.t) cls += " has-own";
     if (el.className !== cls) el.className = cls;   // también limpia marcas temporales (arrastre, destello de error)
     if (boardCache.pieces[d] !== p) {
@@ -62,6 +63,8 @@ function renderBoard() {
     if (sq) sq.insertAdjacentHTML("beforeend", `<span class="sq-badge ${NAG_CLASS[node.nag] || ""}-bg" title="${esc(NAG_TITLE[node.nag] || "")}">${esc(node.nag)}</span>`);
   }
   board3dSync();
+  requestMoveQuality();
+  moveQPaint();
   const prev = ui.prevRenderNode;
   ui.prevRenderNode = editor.active ? null : node;
   if (prev && prev !== node && !editor.active && settings.animate && !ui.noAnimOnce && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) {

@@ -18,6 +18,7 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 
 ## ♟ 2. Mover piezas y recorrer la partida
 - **Mover**: arrastra la pieza, o haz clic en la pieza y luego en la casilla de destino. Los puntos verdes indican las jugadas legales (se pueden ocultar en ⚙ Ajustes).
+- **🎨 Colores en las jugadas** (interruptor «🎨 Colores» junto al motor, ⚙ Ajustes o tecla `C`): como en los tableros electrónicos, al elegir una pieza el motor colorea sus destinos según lo buena que es cada jugada: **verde** la mejor, **verde claro** buena, **amarillo** imprecisión (?!), **naranja** error (?) y **rojo** error grave (??). Es la misma escala que el análisis de partidas: lo que baja la probabilidad de ganar respecto a la mejor jugada de la posición (con el puntero encima, cada casilla dice cuánto pierde). Primero salen los puntos normales y se colorean en menos de un segundo; también en el tablero 3D. No funciona en los problemas ni en los ejercicios (sería ver la solución), y contra la CPU cuenta como ayuda.
 - **Coronar**: al llevar un peón a la última fila aparece un cuadro para elegir dama, torre, alfil o caballo.
 - **Escribir la jugada**: en el recuadro «⌨ Escribe una jugada» bajo el tablero, teclea `e4`, `Cf3`, `Axc6`, `O-O` (o en inglés, `Nf3`) y pulsa `Intro`. Sirve para jugar sin ratón.
 - **Navegar**: botones **|◀ ◀ ▶ ▶|** bajo el gráfico, el teclado (`←` `→` `Inicio` `Fin`) o la **rueda del ratón** con el puntero sobre el tablero (con un panel táctil, un deslizamiento claro de dos dedos avanza o retrocede una jugada; mientras dibujas flechas, la rueda no hace nada). También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.
@@ -120,7 +121,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
   - **Empezar desde** una partida nueva o desde la posición del tablero (también desde el editor: «🤖 Jugar desde aquí vs CPU»).
   - **🙈 A ciegas**: las piezas se ocultan durante la partida (ver «A ciegas y visualización»).
 - Mientras juegas, el motor, la evaluación y el gráfico se ocultan y no se puede navegar por la partida. Debajo del tablero tienes **↶ Deshacer** (sólo sin reloj), **½ Ofrecer tablas** (la CPU las acepta a partir de la jugada 10 si no cree ir mejor), **🏳 Rendirse** y **⏹ Terminar** (deja la partida sin resultado).
-- **💡 Ayuda en la partida**: cuando te toca mover puedes pedir **🧠 Piensa conmigo** (la mejor jugada, las alternativas, qué amenaza la CPU y por qué) o **🗣 Habla con tus piezas** (qué pieza está más a disgusto y adónde querría ir), con los botones del recuadro de la partida o las teclas `T` y `H`. El cuadro cuenta cuántas veces la has pedido, y una partida con ayuda no cambia tu nivel adaptativo.
+- **💡 Ayuda en la partida**: cuando te toca mover puedes pedir **🧠 Piensa conmigo** (la mejor jugada, las alternativas, qué amenaza la CPU y por qué) o **🗣 Habla con tus piezas** (qué pieza está más a disgusto y adónde querría ir), con los botones del recuadro de la partida o las teclas `T` y `H`, o activar **🎨 Colores** (`C`) para ver lo buena que es cada jugada de la pieza que elijas. El cuadro cuenta cuántas veces la has pedido, y una partida con ayuda no cambia tu nivel adaptativo.
 - Al terminar se apunta el resultado y puedes pedir el **📋 Informe del entrenador**, **💾 Guardar** la partida o pedir la **🔁 Revancha** con los colores cambiados.
 - **📋 Informe del entrenador**: el motor analiza la partida y te muestra tu precisión, cuántos errores cometiste y tus **tres momentos más caros**, cada uno con la jugada que era mejor (pulsa sobre ellos para verlos en el tablero) y un consejo según dónde fallaste. Con **🎯 Practicar estos errores** los repasas como ejercicios, buscando tú la jugada buena.
 
@@ -347,6 +348,7 @@ AjedrezBase no tiene servidor ni cuentas: tus datos viven en tu navegador. Para 
 | `Espacio` | Reproducción automática |
 | `F` | Girar el tablero |
 | `P` | Tablero a pantalla completa (y `Esc` para salir) |
+| `C` | 🎨 Colores en las jugadas de la pieza elegida |
 | `E` | Activar / pausar el análisis continuo |
 | `M` | Marcar la posición |
 | `X` | Ver la amenaza del rival |

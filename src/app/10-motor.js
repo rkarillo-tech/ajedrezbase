@@ -213,7 +213,8 @@ const Engine = {
     this.send(`setoption name Skill Level value ${job.skill == null ? 20 : job.skill}`);
     this.send(`position fen ${job.fen}` + (job.moves && job.moves.length ? " moves " + job.moves.join(" ") : ""));
     const mt = this.kind === "internal" ? Math.min(job.movetime || 1000, job.purpose === "live" ? 2500 : 4000) : (job.movetime || 1000);
-    this.send(job.depth ? `go depth ${job.depth}` : `go movetime ${mt}`);
+    const only = this.kind === "stockfish" && job.searchmoves && job.searchmoves.length ? " searchmoves " + job.searchmoves.join(" ") : "";
+    this.send((job.depth ? `go depth ${job.depth}` : `go movetime ${mt}`) + only);
     job.heard = Date.now();
     job.quiet = this.watchMs || (job.depth ? 60000 : Math.max(25000, mt * 2 + 15000));
     this.watch(job);

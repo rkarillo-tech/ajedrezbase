@@ -314,7 +314,7 @@ function showEngineFor(node, job) {
 }
 const requestLive = debounce(() => {
   const node = cur();
-  if (!settings.live || editor.active || quiz() || Threat.busy || ui.analysing || ExpEval.busy || ui.cpu.thinking || Compare.busy || !Engine.ready) {
+  if (!settings.live || editor.active || quiz() || Threat.busy || MoveQ.busy || ui.analysing || ExpEval.busy || ui.cpu.thinking || Compare.busy || !Engine.ready) {
     Engine.cancel("live");
     return;
   }

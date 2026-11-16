@@ -121,6 +121,7 @@ function openModal(id) {
     $("b3Custom").hidden = settings.board3dLook !== "custom";
     board3dApplyLight();
     $("setLegal").checked = settings.showLegal;
+    $("setMoveColors").checked = !!settings.moveColors;
     $("setAutosave").checked = settings.autosave;
     $("setAnimate").checked = settings.animate;
     $("setWheel").checked = settings.wheel;
@@ -178,6 +179,19 @@ $("setBoard3dLook").onchange = e => {
 for (const k of ["pw", "pb", "sl", "sd"]) $("b3c_" + k).oninput = e => { settings.board3dColors = Object.assign({}, b3Look(), settings.board3dColors || {}, { [k]: e.target.value }); saveSettings(); board3dApplyLook(); };
 $("setB3Light").oninput = e => board3dSetLight("light", e.target.value);
 $("setB3Gloss").oninput = e => board3dSetLight("gloss", e.target.value);
+function setMoveColors(on) {
+  settings.moveColors = !!on;
+  saveSettings();
+  $("setMoveColors").checked = $("moveColorsToggle").checked = settings.moveColors;
+  if (on && !settings.showLegal) { settings.showLegal = true; $("setLegal").checked = true; saveSettings(); }   // los colores van en los puntos de las jugadas legales
+  moveQReset();
+  renderBoard();
+  if (typeof cpuPanel === "function" && ui.cpu.on) cpuPanel();
+  toast(on ? "🎨 Colores activados: elige una pieza y verás lo buena que es cada jugada." : "🎨 Colores desactivados.");
+}
+$("setMoveColors").onchange = e => setMoveColors(e.target.checked);
+$("moveColorsToggle").onchange = e => setMoveColors(e.target.checked);
+$("moveColorsToggle").checked = !!settings.moveColors;
 $("setLegal").onchange = e => { settings.showLegal = e.target.checked; saveSettings(); renderBoard(); };
 $("setAnimate").onchange = e => { settings.animate = e.target.checked; saveSettings(); };
 $("setWheel").onchange = e => { settings.wheel = e.target.checked; saveSettings(); };
