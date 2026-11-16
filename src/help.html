@@ -29,6 +29,7 @@
         <summary>♟ 2. Mover piezas y recorrer la partida</summary>
         <ul>
           <li><b>Mover</b>: arrastra la pieza, o haz clic en la pieza y luego en la casilla de destino. Los puntos verdes indican las jugadas legales (se pueden ocultar en ⚙ Ajustes).</li>
+          <li><b>🎨 Colores en las jugadas</b> (interruptor «🎨 Colores» junto al motor, ⚙ Ajustes o tecla <kbd>C</kbd>): como en los tableros electrónicos, al elegir una pieza el motor colorea sus destinos según lo buena que es cada jugada: <b style="color:#1b8a3a">verde</b> la mejor, <b style="color:#7cb342">verde claro</b> buena, <b style="color:#c99700">amarillo</b> imprecisión (?!), <b style="color:#ef6c00">naranja</b> error (?) y <b style="color:#d32f2f">rojo</b> error grave (??). Es la misma escala que el análisis de partidas: lo que baja la probabilidad de ganar respecto a la mejor jugada de la posición (con el puntero encima, cada casilla dice cuánto pierde). Primero salen los puntos normales y se colorean en menos de un segundo; también en el tablero 3D. No funciona en los problemas ni en los ejercicios (sería ver la solución), y contra la CPU cuenta como ayuda.</li>
           <li><b>Coronar</b>: al llevar un peón a la última fila aparece un cuadro para elegir dama, torre, alfil o caballo.</li>
           <li><b>Escribir la jugada</b>: en el recuadro «⌨ Escribe una jugada» bajo el tablero, teclea <code>e4</code>, <code>Cf3</code>, <code>Axc6</code>, <code>O-O</code> (o en inglés, <code>Nf3</code>) y pulsa <kbd>Intro</kbd>. Sirve para jugar sin ratón.</li>
           <li><b>Navegar</b>: botones <b>|◀ ◀ ▶ ▶|</b> bajo el gráfico, el teclado (<kbd>←</kbd> <kbd>→</kbd> <kbd>Inicio</kbd> <kbd>Fin</kbd>) o la <b>rueda del ratón</b> con el puntero sobre el tablero (con un panel táctil, un deslizamiento claro de dos dedos avanza o retrocede una jugada; mientras dibujas flechas, la rueda no hace nada). También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.</li>
@@ -157,7 +158,7 @@
               <li><b>🙈 A ciegas</b>: las piezas se ocultan durante la partida (ver «A ciegas y visualización»).</li>
             </ul></li>
           <li>Mientras juegas, el motor, la evaluación y el gráfico se ocultan y no se puede navegar por la partida. Debajo del tablero tienes <b>↶ Deshacer</b> (sólo sin reloj), <b>½ Ofrecer tablas</b> (la CPU las acepta a partir de la jugada 10 si no cree ir mejor), <b>🏳 Rendirse</b> y <b>⏹ Terminar</b> (deja la partida sin resultado).</li>
-          <li><b>💡 Ayuda en la partida</b>: cuando te toca mover puedes pedir <b>🧠 Piensa conmigo</b> (la mejor jugada, las alternativas, qué amenaza la CPU y por qué) o <b>🗣 Habla con tus piezas</b> (qué pieza está más a disgusto y adónde querría ir), con los botones del recuadro de la partida o las teclas <kbd>T</kbd> y <kbd>H</kbd>. El cuadro cuenta cuántas veces la has pedido, y una partida con ayuda no cambia tu nivel adaptativo.</li>
+          <li><b>💡 Ayuda en la partida</b>: cuando te toca mover puedes pedir <b>🧠 Piensa conmigo</b> (la mejor jugada, las alternativas, qué amenaza la CPU y por qué) o <b>🗣 Habla con tus piezas</b> (qué pieza está más a disgusto y adónde querría ir), con los botones del recuadro de la partida o las teclas <kbd>T</kbd> y <kbd>H</kbd>, o activar <b>🎨 Colores</b> (<kbd>C</kbd>) para ver lo buena que es cada jugada de la pieza que elijas. El cuadro cuenta cuántas veces la has pedido, y una partida con ayuda no cambia tu nivel adaptativo.</li>
           <li>Al terminar se apunta el resultado y puedes pedir el <b>📋 Informe del entrenador</b>, <b>💾 Guardar</b> la partida o pedir la <b>🔁 Revancha</b> con los colores cambiados.</li>
           <li><b>📋 Informe del entrenador</b>: el motor analiza la partida y te muestra tu precisión, cuántos errores cometiste y tus <b>tres momentos más caros</b>, cada uno con la jugada que era mejor (pulsa sobre ellos para verlos en el tablero) y un consejo según dónde fallaste. Con <b>🎯 Practicar estos errores</b> los repasas como ejercicios, buscando tú la jugada buena.</li>
         </ul>
@@ -450,6 +451,7 @@
           <tr><td><kbd>Espacio</kbd></td><td>Reproducción automática</td></tr>
           <tr><td><kbd>F</kbd></td><td>Girar el tablero</td></tr>
           <tr><td><kbd>P</kbd></td><td>Tablero a pantalla completa (y <kbd>Esc</kbd> para salir)</td></tr>
+          <tr><td><kbd>C</kbd></td><td>🎨 Colores en las jugadas de la pieza elegida</td></tr>
           <tr><td><kbd>E</kbd></td><td>Activar / pausar el análisis continuo</td></tr>
           <tr><td><kbd>M</kbd></td><td>Marcar la posición</td></tr>
           <tr><td><kbd>X</kbd></td><td>Ver la amenaza del rival</td></tr>

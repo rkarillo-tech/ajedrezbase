@@ -450,12 +450,13 @@ function board3dDraw() {
     g.addColorStop(0, "rgba(255,40,40,.95)"); g.addColorStop(1, "rgba(255,40,40,0)");
     c.fillStyle = g; c.fillRect(x, y, sq, sq);
   }
+  const quality = ui.selected != null ? moveQualityFor(node, ui.selected) : null;
   if (ui.selected != null && settings.showLegal) for (const m of Chess.legal(s)) {
     if (m.from !== ui.selected) continue;
-    const [x, y] = at(m.to);
+    const [x, y] = at(m.to), q = quality && quality.get(m.to), col = q ? MOVEQ_COLOR[q.cls] : null;
     c.beginPath();
-    if (m.captured !== ".") { c.lineWidth = sq * 0.09; c.strokeStyle = "rgba(20,60,20,.5)"; c.arc(x + sq / 2, y + sq / 2, sq * 0.43, 0, 2 * Math.PI); c.stroke(); }
-    else { c.fillStyle = "rgba(20,60,20,.45)"; c.arc(x + sq / 2, y + sq / 2, sq * 0.15, 0, 2 * Math.PI); c.fill(); }
+    if (m.captured !== ".") { c.lineWidth = sq * (q ? 0.12 : 0.09); c.strokeStyle = col || "rgba(20,60,20,.5)"; c.arc(x + sq / 2, y + sq / 2, sq * 0.43, 0, 2 * Math.PI); c.stroke(); }
+    else { c.fillStyle = col || "rgba(20,60,20,.45)"; c.arc(x + sq / 2, y + sq / 2, sq * (q ? 0.2 : 0.15), 0, 2 * Math.PI); c.fill(); }
   }
   // Flechas y círculos (las mismas que en el tablero plano)
   for (const sh of shapeList()) {

@@ -1858,6 +1858,64 @@ def prueba_contrarreloj(browser):
     ctx.close()
 
 
+def prueba_colores_jugadas(browser):
+    print("Novedades 1.42: colores en las jugadas de la pieza elegida")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true; loadFen('r1bqkb1r/pppp1p1p/2n2np1/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 2 5')")
+    casilla(pg, "g1").click()
+    comprobar(pg.locator(".square.target").count() == 2 and pg.locator(".square[class*=' q-']").count() == 0 and not pg.is_visible("#moveQLegend"), "sin activar, las jugadas legales se ven como siempre")
+    casilla(pg, "g1").click()
+    pg.keyboard.press("c")
+    comprobar(pg.evaluate("settings.moveColors") and pg.is_checked("#moveColorsToggle"), "la tecla C (o el interruptor «🎨 Colores») activa la ayuda")
+    # Posición inequívoca para cualquier motor y cualquier velocidad: el caballo puede comerse una dama sin defensa
+    # (antes se usaba una posición de diferencias pequeñas y, en la CI, el motor interno a poca profundidad valoraba distinto)
+    pg.evaluate("loadFen('4k3/8/8/3q4/8/4N3/PP6/4K3 w - - 0 1')")
+    casilla(pg, "e3").click()
+    pg.wait_for_function("MoveQ.done", timeout=30000)
+    clases = pg.evaluate("Object.fromEntries([...document.querySelectorAll('.square.target')].map(e => [e.dataset.sq, e.className.split(' ').find(c => c.startsWith('q-'))]))")
+    d5, g4 = str(pg.evaluate("Chess.sqIdx('d5')")), str(pg.evaluate("Chess.sqIdx('g4')"))
+    comprobar(clases.get(d5) == "q-best" and clases.get(g4) == "q-blunder" and len(clases) == 8 and pg.is_visible("#moveQLegend"),
+              "al elegir el caballo, comer la dama (Cxd5) sale en verde y cualquier otra jugada en rojo; y aparece la leyenda")
+    comprobar("pierde" in (pg.get_attribute(f'.square[data-sq="{g4}"]', "title") or ""), "cada casilla dice cuánto pierde esa jugada")
+    casilla(pg, "e3").click()
+    pg.evaluate("loadFen('r1bqkb1r/pppp1p1p/2n2np1/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 2 5')")
+    casilla(pg, "g1").click()
+    pg.wait_for_function("MoveQ.done", timeout=30000)
+    casilla(pg, "e2").click()
+    pg.wait_for_timeout(200)
+    comprobar(pg.evaluate("cur().san") == "Ne2" and not pg.is_visible("#moveQLegend"), "se juega pulsando el destino, y al soltar la pieza desaparecen los colores")
+    # En los ejercicios no se puede usar (destriparía la solución)
+    entrenar(pg, "puzzles")
+    pg.click("#puzzleStartBtn")
+    pg.wait_for_function("trainer.active && trainerUserTurn() && !trainer.busy", timeout=20000)
+    casilla(pg, pg.evaluate("Chess.sqName(cur().children[0].move.from)")).click()
+    pg.wait_for_timeout(600)
+    comprobar(pg.locator(".square[class*=' q-']").count() == 0 and not pg.evaluate("MoveQ.busy"), "en los problemas y ejercicios no colorea nada")
+    pg.evaluate("exitTraining()")
+    pg.click("#puzzlesBackBtn") if pg.is_visible("#puzzlesBackBtn") else None
+    # Contra la CPU sí, pero cuenta como ayuda
+    pg.evaluate("setGame(Pgn.newGame(), { noConfirm: true }); ui.flipped = false")
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuOpponent", "cpu")
+    pg.select_option("#cpuColor", "1") if pg.locator("#cpuColor option[value='1']").count() else None
+    pg.click("#cpuStartBtn")
+    pg.wait_for_function("ui.cpu.on && !ui.cpu.thinking && cur().state.t === ui.cpu.side * -1", timeout=20000)
+    comprobar(pg.locator("#cpuBox [data-c=colors]").count() == 1 and "on" in (pg.get_attribute("#cpuBox [data-c=colors]", "class") or ""), "contra la CPU hay un botón «🎨 Colores» en el panel de la partida")
+    mio = "e2" if pg.evaluate("ui.cpu.side") == -1 else "e7"
+    casilla(pg, mio).click()
+    pg.wait_for_function("MoveQ.done", timeout=30000)
+    comprobar(pg.locator(".square[class*=' q-']").count() >= 1 and pg.evaluate("ui.cpu.helped") == 1 and "ayuda" in pg.inner_text("#cpuBox"), "y al usarlo cuenta como ayuda pedida")
+    casilla(pg, mio).click(); casilla(pg, mio).click()
+    pg.wait_for_function("MoveQ.done", timeout=30000)
+    comprobar(pg.evaluate("ui.cpu.helped") == 1, "mirar otra vez en la misma posición no suma otra ayuda")
+    pg.evaluate("stopCpu(true)")
+    pg.evaluate("setMoveColors(false)")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -2395,7 +2453,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
