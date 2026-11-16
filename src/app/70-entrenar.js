@@ -104,7 +104,7 @@ function trainerUserMove(move) {
     const L = Chess.legal(node.state), san = formatSan(Chess.san(node.state, move, L), settings.lang, node.state.t);
     const inLesson = ui.lesson && ui.lesson.game === game && !courseLessons(ui.lesson.course)[ui.lesson.i].repertoire;
     trainFeedback(trainer.card || trainer.puzzle || inLesson ? `❌ ${esc(san)} no es la jugada buscada. Inténtalo otra vez o pulsa 💡 para una pista.` : `❌ ${esc(san)} no está en tu repertorio. Errores: ${trainer.errors}. Pulsa 💡 si necesitas una pista.`, "bad");
-    if (trainer.puzzle && Puz.exam) { finishPuzzle(false); return; }
+    if (trainer.puzzle && (Puz.exam || Puz.rush)) { finishPuzzle(false); return; }
     if (trainer.puzzle) { $("trainFeedback").insertAdjacentHTML("beforeend", puzzleButtons()); wirePuzzleButtons(); }
     renderBoard();
     const el = boardEl.querySelector(`.square[data-sq="${move.to}"]`);
@@ -112,7 +112,7 @@ function trainerUserMove(move) {
   }
 }
 function trainerHint() {
-  if (!trainer.active || !trainerUserTurn() || (trainer.puzzle && Puz.exam)) return;
+  if (!trainer.active || !trainerUserTurn() || (trainer.puzzle && (Puz.exam || Puz.rush))) return;
   const target = cur().children.find(c => !isMistakeNag(c)) || cur().children[0];
   if (!target) return;
   trainer.hints++;
@@ -186,7 +186,7 @@ function stopTraining(silent) {
 }
 /* «⏹ Salir»: cada entrenamiento se cierra a su manera (resumen y vuelta a tu partida en problemas, examen y tarjetas) */
 function exitTraining() {
-  if (trainer.puzzle || Puz.exam) { endPuzzles(); return; }
+  if (trainer.puzzle || Puz.exam || Puz.rush) { endPuzzles(); return; }
   if (trainer.card) { Cards.queue = []; stopTraining(false); endCards(); return; }
   stopTraining(false);
   trainFeedback("Entrenamiento detenido.");
@@ -205,7 +205,7 @@ const PUZZLE_THEMES = {
 };
 const PUZZLE_LEVELS = [[0, 1100, "Fácil"], [1100, 1500, "Medio"], [1500, 1900, "Difícil"], [1900, 9999, "Muy difícil"]];
 const puzzleLevelOf = r => PUZZLE_LEVELS.findIndex(([a, b]) => r >= a && r < b);
-const Puz = { queue: [], cur: null, done: 0, ok: 0, total: 0, delta: 0, exam: null };
+const Puz = { queue: [], cur: null, done: 0, ok: 0, total: 0, delta: 0, exam: null, rush: null };
 const puzSrs = () => LS.get("ajedrezProblemas", {});
 const puzRating = () => LS.get("ajedrezNivelProblemas", { r: 1200, n: 0 });
 function puzzleThemesText(p) { return p.themes.filter(x => PUZZLE_THEMES[x]).map(x => PUZZLE_THEMES[x]).join(", ") || "Táctica"; }
@@ -371,7 +371,7 @@ function startPuzzles() {
   if (!list.length) list = pool.slice().sort(() => Math.random() - 0.5).slice(0, n);   // todos hechos: repaso al azar
   if (!stashBoard()) return;
   leaveModes();
-  Object.assign(Puz, { queue: list, done: 0, ok: 0, total: list.length, delta: 0, blind: 0 });
+  Object.assign(Puz, { queue: list, done: 0, ok: 0, total: list.length, delta: 0, blind: 0, rush: null });
   nextPuzzle();
 }
 function nextPuzzle() {
@@ -386,12 +386,13 @@ function nextPuzzle() {
   g.headers.Site = "AjedrezBase";
   const side = -g.root.state.t;
   ui.flipped = side === -1;
-  setGame(g, { noConfirm: true, name: Puz.blind ? `🙈 Problema a ciegas ${Puz.done + 1} de ${Puz.total}` : `🧩 Problema ${Puz.done + 1} de ${Puz.total} · ${PUZZLE_LEVELS[puzzleLevelOf(p.rating)][2]}` });
+  setGame(g, { noConfirm: true, name: Puz.rush ? `⚡ Contrarreloj · problema ${Puz.done + 1}` : Puz.blind ? `🙈 Problema a ciegas ${Puz.done + 1} de ${Puz.total}` : `🧩 Problema ${Puz.done + 1} de ${Puz.total} · ${PUZZLE_LEVELS[puzzleLevelOf(p.rating)][2]}` });
   startTraining({ side, puzzle: true });
 }
 function puzzlePrompt() {
   const p = Puz.cur, side = trainer.side === 1 ? "blancas" : "negras";
   if (Puz.blind) { blindPuzzlePrompt(side); return; }
+  if (Puz.rush) { rushPrompt(side); return; }
   if (Puz.exam) {
     trainFeedback(`📏 <b>Examen</b> · problema ${Puz.exam.i} de ${EXAM_N} · juegan las <b>${side}</b> · ⏱ <b id="examClock">${Math.max(0, Math.ceil((Puz.exam.deadline - Date.now()) / 1000))}</b> s<br>El rival acaba de jugar ${esc(numPrefix(cur().parent.state) + dispSan(cur()))}: encuentra la mejor jugada. Sin pistas: una jugada equivocada cuenta como fallo.${trainer.correct ? " ¡Bien! Sigue." : ""}<div class="controls"><button class="sm-btn danger" data-pz="end">⏹ Abandonar el examen</button></div>`);
     wirePuzzleButtons();
@@ -412,6 +413,7 @@ function wirePuzzleButtons() {
 }
 function finishPuzzle(perfect) {
   if (Puz.exam) { finishExamPuzzle(perfect); return; }
+  if (Puz.rush) { finishRushPuzzle(perfect); return; }
   if (Puz.blind) { finishBlindPuzzle(perfect); return; }
   const p = Puz.cur, all = puzSrs(), st = all[p.id] || { box: 0, reps: 0 };
   st.tries = (st.tries || 0) + 1;
@@ -445,7 +447,7 @@ function startBlindPuzzles(secs) {
   const easy = PUZZLES.filter(p => p.rating < 1300 && p.moves.length <= 4);
   if (!stashBoard()) return;
   leaveModes();
-  Object.assign(Puz, { queue: shuffle(easy.slice()).slice(0, 5), done: 0, ok: 0, total: 5, delta: 0, exam: null, blind: secs, peeksAll: 0 });
+  Object.assign(Puz, { queue: shuffle(easy.slice()).slice(0, 5), done: 0, ok: 0, total: 5, delta: 0, exam: null, rush: null, blind: secs, peeksAll: 0 });
   nextPuzzle();
 }
 function blindPuzzlePrompt(side) {
@@ -505,6 +507,7 @@ function endBlindPuzzles() {
 }
 function endPuzzles() {
   if (Puz.exam) { endExam(true); return; }
+  if (Puz.rush) { endRush(); return; }
   if (trainer.active && trainer.puzzle) stopTraining(true);
   Puz.queue = [];
   if (Puz.blind) { endBlindPuzzles(); return; }
@@ -516,6 +519,90 @@ function endPuzzles() {
   renderPuzzleInfo();
 }
 
+/* ---------- 26r. ⚡ Contrarreloj: todos los problemas que puedas en 3 o 5 minutos ----------
+   Empiezan fáciles y se van endureciendo; cada fallo es una cruz y con tres se acaba. No cuenta para tu nivel
+   ni para los repasos (es un ejercicio de velocidad), pero guarda tu récord de cada duración. */
+const RUSH_KEY = "ajedrezContrarreloj", RUSH_STRIKES = 3;
+const rushRecords = () => LS.get(RUSH_KEY, {});
+function rushQueue() {
+  // Problemas cortos (como mucho tres jugadas tuyas), de más fácil a más difícil, con algo de azar en cada escalón
+  const pool = PUZZLES.filter(p => p.moves.length <= 6), used = new Set(), out = [];
+  for (let i = 0; i < 80 && used.size < pool.length; i++) {
+    const target = 600 + i * 45;
+    const c = pool.filter(p => !used.has(p.id)).map(p => ({ p, d: Math.abs(p.rating - target) + Math.random() * 120 })).sort((a, b) => a.d - b.d)[0];
+    if (!c) break;
+    used.add(c.p.id);
+    out.push(c.p);
+  }
+  return out;
+}
+function startRush(secs) {
+  if (PUZZLES.length < 10) { toast("No hay problemas suficientes para la contrarreloj."); return; }
+  if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
+  if (!stashBoard()) return;
+  leaveModes();
+  Object.assign(Puz, { queue: rushQueue(), done: 0, ok: 0, total: 0, delta: 0, blind: 0, exam: null,
+    rush: { secs, end: 0, strikes: 0, timer: null, started: false, fails: [] } });
+  nextPuzzle();
+}
+const fmtRush = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+function rushPrompt(side) {
+  const R = Puz.rush;
+  if (!R.started) {   // el reloj empieza con el primer problema en el tablero
+    R.started = true;
+    R.end = Date.now() + R.secs * 1000;
+    clearInterval(R.timer);
+    R.timer = setInterval(rushTick, 200);
+  }
+  const best = rushRecords()[R.secs] || 0;
+  trainFeedback(`⚡ <b>Contrarreloj</b> · ⏱ <b id="rushClock">${fmtRush(R.end - Date.now())}</b> · ✔ <b>${Puz.ok}</b> · ${"❌".repeat(R.strikes)}${"▫".repeat(RUSH_STRIKES - R.strikes)}${best ? ` · récord: ${best}` : ""}<br>Juegan las <b>${side}</b>: encuentra la mejor jugada. Sin pistas; un fallo es una cruz y con ${RUSH_STRIKES} se acaba.<div class="controls"><button class="sm-btn danger" data-pz="end">⏹ Terminar</button></div>`);
+  wirePuzzleButtons();
+}
+function rushTick() {
+  const R = Puz.rush;
+  if (!R) return;
+  const left = R.end - Date.now(), el = $("rushClock");
+  if (el) { el.textContent = fmtRush(left); el.parentElement && el.classList.toggle("msg-err", left < 15000); }
+  if (left <= 0) { toast("⏱ ¡Tiempo!"); endRush(); }
+}
+function finishRushPuzzle(perfect) {
+  const R = Puz.rush, p = Puz.cur;
+  Puz.done++;
+  if (perfect) { Puz.ok++; Sound.play("ok"); }
+  else { R.strikes++; R.fails.push(p); Sound.play("error"); }
+  trainer.active = false;
+  stopTraining(false);
+  if (R.strikes >= RUSH_STRIKES || !Puz.queue.length || Date.now() >= R.end) { endRush(); return; }
+  setTimeout(() => { if (Puz.rush === R) nextPuzzle(); }, perfect ? 250 : 700);
+}
+function endRush() {
+  const R = Puz.rush;
+  if (!R) return;
+  clearInterval(R.timer);
+  if (trainer.active && trainer.puzzle) stopTraining(true);
+  Puz.rush = null;
+  Puz.queue = [];
+  if (!Puz.done) { trainFeedback("⚡ Contrarreloj cancelada."); restoreStash(); return; }
+  const rec = rushRecords(), prev = rec[R.secs] || 0, record = Puz.ok > prev;
+  if (record) { rec[R.secs] = Puz.ok; LS.set(RUSH_KEY, rec); }
+  logActivity("puzzle");
+  Sound.play(record ? "ok" : "end");
+  const mins = R.secs / 60;
+  trainFeedback(`⚡ <b>Contrarreloj de ${mins} minutos terminada:</b> <b>${Puz.ok}</b> problema${Puz.ok === 1 ? "" : "s"} resuelto${Puz.ok === 1 ? "" : "s"}${R.strikes >= RUSH_STRIKES ? " (tres fallos)" : ""}.
+    ${record ? `<br>🏆 <b>¡Nuevo récord!</b>${prev ? ` (el anterior era ${prev})` : ""}` : `<br>Tu récord: <b>${prev}</b>.`}
+    ${R.fails.length ? `<br><span class="small">Fallaste ${R.fails.map(p => esc(puzzleThemesText(p))).join(" · ")}. La contrarreloj no cuenta para tu nivel: para aprender, resuelve problemas sin prisa.</span>` : ""}
+    <div class="controls"><button id="rushAgainBtn" class="sm-btn primary">⚡ Otra vez</button><button id="puzzlesBackBtn" class="sm-btn">↩ Volver a tu partida</button></div>`, record ? "ok" : "");
+  $("rushAgainBtn").onclick = () => { restoreStash(); startRush(R.secs); };
+  $("puzzlesBackBtn").onclick = () => { restoreStash(); };
+  renderRushInfo();
+}
+function renderRushInfo() {
+  const el = $("rushInfo");
+  if (!el) return;
+  const r = rushRecords();
+  el.textContent = r[180] || r[300] ? `Récords: ${r[180] ? r[180] + " en 3 min" : ""}${r[180] && r[300] ? " · " : ""}${r[300] ? r[300] + " en 5 min" : ""}` : "";
+}
+
 /* ---------- 26a. 📏 Examen: mide tu nivel con problemas que se adaptan a ti ---------- */
 const EXAM_N = 15, EXAM_SECS = 90;
 const examHistory = () => LS.get("ajedrezExamenes", []);
@@ -525,7 +612,7 @@ function startExam() {
   if (!stashBoard()) return;
   leaveModes();
   const last = examHistory().slice(-1)[0], R = puzRating();
-  Object.assign(Puz, { queue: [], done: 0, ok: 0, total: EXAM_N, delta: 0, blind: 0, exam: { est: last ? last.r : R.n ? R.r : 1200, i: 0, res: [], used: new Set(), timer: null, deadline: 0 } });
+  Object.assign(Puz, { queue: [], done: 0, ok: 0, total: EXAM_N, delta: 0, blind: 0, rush: null, exam: { est: last ? last.r : R.n ? R.r : 1200, i: 0, res: [], used: new Set(), timer: null, deadline: 0 } });
   nextExamPuzzle();
 }
 function nextExamPuzzle() {

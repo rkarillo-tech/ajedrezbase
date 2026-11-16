@@ -6,7 +6,7 @@ function switchTab(name) {
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === "tab-" + name));
   if (name === "explorer") refreshExplorer();
   if (name === "library") { refreshLibraryViews(); if (ui.librarySub === "collection") renderCollection(); if (ui.librarySub === "position") renderPosTarget(); }
-  if (name === "tools") { renderDrillInfo(); renderPuzzleInfo(); renderPuzzleStats(); renderExamInfo(); renderToday(); renderMyReps(); }
+  if (name === "tools") { renderDrillInfo(); renderPuzzleInfo(); renderPuzzleStats(); renderExamInfo(); renderRushInfo(); renderToday(); renderMyReps(); }
   if (name === "courses") renderCourses();
   if (name === "endgames" && pieceCount(cur().state) <= 7) querySyzygy();
 }
@@ -559,6 +559,9 @@ $("startTrainBtn").onclick = () => startTraining();
 $("guessStartBtn").onclick = startGuess;
 $("puzzleStartBtn").onclick = startPuzzles;
 $("examStartBtn").onclick = startExam;
+$("rushBtn3").onclick = () => startRush(180);
+$("rushBtn5").onclick = () => startRush(300);
+renderRushInfo();
 $("repCompareBtn").onclick = compareWithRepertoire;
 ["puzzleTheme", "puzzleLevel"].forEach(id => $(id).onchange = renderPuzzleInfo);
 $("visStartBtn").onclick = startVis;

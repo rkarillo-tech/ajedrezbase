@@ -210,3 +210,123 @@
 [Result "*"]
 
 { [%csl Gb5] Las blancas tienen un peón pasado en b5: ningún peón negro puede frenarlo. La torre negra está activa en a2. ¿Qué haces? } 35. b6 { [%cal Gb5b8] ¡Avanzar! Los peones pasados se empujan: cada paso adelante obliga al rival a vigilarlo. La torre blanca, detrás del peón, lo empuja hasta la casilla de coronación. } (35. Rb4?? { Quiere defender el peón desde delante… y abandona la primera fila. } 35... Ra1+ 36. Rb1 Rxb1# { Mate en la última fila: recuerda la lección 14. }) 35... h5 36. b7 Kh7 37. b8=Q { Corona. Resumen del curso: antes de cada jugada, 1) ¿qué amenaza el rival?, 2) ¿hay algo que comer, o jaques y capturas que funcionen? (y cuidado con las trampas), 3) ¿me conviene cambiar?, 4) ¿qué pieza está peor?, 5) ¿cuál es mi plan: atacar, avanzar, activar el rey? Con estas preguntas sabrás qué hacer en cada momento de la partida. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "17"]
+[Title "Desarrollar en vez de mover otra vez la dama"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r1bqkb1r/pppp1p1p/2n2np1/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 2 5"]
+[Result "*"]
+
+{ [%csl Rf3] Es la partida de la lección 5, ahora desde el lado blanco: 1.e4 e5 2.Dh5 Cc6 3.Ac4 g6 4.Df3 Cf6. La dama ya ha jugado dos veces y las negras han sacado dos piezas con ganancia de tiempo. Es tentador buscar otra amenaza con la dama. ¿Qué haces? } 5. Ne2 { [%cal Gg1e2] Desarrollar. El caballo sale (a e2, para no tapar a la dama ni al peón de f), y las blancas preparan el enroque. Hay que olvidarse de dar mate: la amenaza contra f7 ya está parada. } (5. Qb3? { Otra vez la dama, contra f7. } 5... Nd4 { [%cal Gd4b3,Gd4c2] ¡Y el caballo la ataca a ella y a c2! La dama tiene que moverse por cuarta vez y las negras se desarrollan con ganancia de tiempo. }) 5... d6 6. O-O { Las blancas ya tienen el rey a salvo y pueden seguir con Cbc3 y d3. Regla: en la apertura, saca una pieza nueva en cada jugada y enroca pronto; mover muchas veces la misma pieza (sobre todo la dama) regala tiempos al rival. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "18"]
+[Title "¡Enroca! No te asustes del ataque a f7"]
+[Level "Iniciación"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "r1bqk2r/pppp1ppp/2n2n2/2b1p1N1/2B1P3/3P4/PPP2PPP/RNBQK2R b KQkq - 2 5"]
+[Result "*"]
+
+{ [%cal Rg5f7,Rc4f7] Italiana: 1.e4 e5 2.Cf3 Cc6 3.Ac4 Ac5 4.d3 Cf6 5.Cg5. El caballo y el alfil atacan f7, que sólo defiende el rey. Parece peligroso. ¿Qué haces? } 5... O-O { ¡Enrocar! Ahora f7 también lo defiende la torre. Y si las blancas se lanzan con Cxf7, ganan una torre y un peón pero entregan dos piezas, un cambio que favorece a las negras. } (5... Qe7? { Defiende f7… } 6. Bxf7+ { …pero no basta: f7 estaba atacado dos veces. } 6... Kd8 { El rey negro se queda en el centro y ya no podrá enrocar. }) 6. Nc3 (6. Nxf7? Rxf7 7. Bxf7+ Kxf7 { Dos piezas menores valen más que una torre y un peón, sobre todo en el medio juego. Las negras están mejor. }) 6... Na5 7. Bb3 Nxb3 8. axb3 d5 { Las negras han cambiado el alfil más peligroso y atacan en el centro. Regla: pon el rey a salvo pronto; muchas amenazas desaparecen en cuanto enrocas y la torre entra en juego. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "19"]
+[Title "Defender contraatacando"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p1N1/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 5 4"]
+[Result "*"]
+
+{ [%cal Rg5f7,Rc4f7] Dos caballos: 1.e4 e5 2.Cf3 Cc6 3.Ac4 Cf6 4.Cg5. Otra vez el ataque a f7, pero ahora las negras no pueden enrocar a tiempo: Cxf7 ganaría la dama y la torre. ¿Qué haces? } 4... d5 { [%cal Gd5c4] ¡Defender contraatacando! El peón tapa la diagonal del alfil de c4, que es el que ayuda al caballo. Las negras no se defienden pasivamente: atacan. } (4... Qe7? 5. Bxf7+ Kd8 { El rey pierde el enroque y las blancas ganan un peón. }) (4... h6?? 5. Nxf7 { Horquilla a la dama y la torre. }) 5. exd5 Na5 { [%cal Ga5c4] El caballo ataca al alfil. Las negras dan un peón, pero ganan tiempos para desarrollarse. } (5... Nxd5? 6. Nxf7 { ¡El ataque «Fried Liver»! Tras 6...Rxf7 7.Df3+ el rey negro queda al descubierto en el centro. Recuperar el peón con el caballo era justo lo que querían las blancas. }) 6. Bb5+ c6 7. dxc6 bxc6 { Las negras tienen un peón menos, pero mucho desarrollo y la iniciativa. Regla: cuando te atacan, busca antes una defensa activa (que ataque algo o corte la línea de ataque) que una pasiva. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "20"]
+[Title "Contra un ataque en el flanco, el centro"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[Orientation "black"]
+[SetUp "1"]
+[FEN "r1bqk2r/ppppbppp/2n2n2/4p3/2B1P1P1/3P1N2/PPP2P1P/RNBQK2R b KQkq g3 0 5"]
+[Result "*"]
+
+{ [%csl Rg4,Re1] Italiana tranquila: 1.e4 e5 2.Cf3 Cc6 3.Ac4 Cf6 4.d3 Ae7 5.g4. Las blancas lanzan un peón contra tu caballo con su rey todavía en el centro. ¿Qué haces? } 5... d5 { [%cal Gd5e4] ¡Contraataque en el centro! Un ataque en el flanco se combate abriendo el centro, sobre todo cuando el rey rival sigue en e1: el avance g4 ha dejado casillas débiles y el rey blanco quedará expuesto. } (5... h6?! { Demasiado lenta: las blancas siguen con g5 o h4 y su ataque cobra sentido. }) 6. exd5 Nxd5 7. h3 Be6 { Las negras están mejor desarrolladas y el peón de g4 sólo ha debilitado al rey blanco. Regla: si el rival ataca en un flanco sin haber asegurado el centro, la mejor respuesta suele ser abrir el centro. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "21"]
+[Title "En jaque: ¿tapar o mover el rey?"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "rnb1kbnr/pppp1ppp/8/8/2B1Pp1q/8/PPPP2PP/RNBQK1NR w KQkq - 2 4"]
+[Result "*"]
+
+{ [%cal Rh4e1] Gambito de rey: 1.e4 e5 2.f4 exf4 3.Ac4 Dh4+. Estás en jaque. Hay tres maneras de salir de un jaque: comer la pieza que lo da, tapar o mover el rey. Aquí no se puede comer la dama. ¿Tapas o mueves el rey? } 4. Kf1 { Mover el rey. Pierdes el enroque, pero el rey está seguro en f1, y la dama negra será atacada en seguida con Cf3, ganando un tiempo. } (4. g3? fxg3 { ¡El peón come al que tapaba! Ahora amenaza gxh2+ y coronar en g1: las negras ganan material y el rey blanco queda abierto. }) (4. Ke2? { También mueve el rey, pero lo deja en medio del tablero y le tapa el paso al alfil de f1 y a la dama. }) 4... d5 5. Bxd5 Nf6 6. Nf3 { [%cal Gf3h4] El caballo se desarrolla atacando a la dama. Regla: ante un jaque, mira las tres opciones (comer, tapar, mover el rey) y elige la que deja tu posición mejor, no la primera que veas; tapar con un peón que se puede comer no tapa nada. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "22"]
+[Title "Atacar dos cosas a la vez"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "rn1qkb1r/ppp2ppp/5n2/4p3/2B1P3/5Q2/PPP2PPP/RNB1K2R w KQkq - 2 7"]
+[Result "*"]
+
+{ [%csl Rf7,Rb7] Defensa Philidor: 1.e4 e5 2.Cf3 d6 3.d4 Ag4 4.dxe5 Axf3 5.Dxf3 dxe5 6.Ac4 Cf6. Las negras acaban de tapar la amenaza contra f7. Busca una jugada que cree dos amenazas a la vez: el rival sólo puede parar una. } 7. Qb3 { [%cal Gb3b7,Gb3f7] ¡Doble ataque! La dama ataca b7 y, junto con el alfil, f7. Las negras no pueden defender las dos cosas. } 7... Qe7 8. Qxb7 { [%cal Gb7a8] Las blancas ganan un peón y amenazan la torre de a8. } 8... Qb4+ 9. Qxb4 Bxb4+ 10. Bd2 { Las blancas tienen un peón de más y la pareja de alfiles. Regla: busca jugadas que amenacen dos cosas a la vez (dos piezas, una pieza y un mate, una pieza y un peón importante); con una sola amenaza el rival se defiende, con dos casi nunca puede. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "23"]
+[Title "No comer: el arca de Noé"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r1bqkbnr/2p2ppp/p2p4/1p6/3pP3/1B6/PPP2PPP/RNBQK2R w KQkq - 0 8"]
+[Result "*"]
+
+{ [%csl Rd4,Rb3] Española: 1.e4 e5 2.Cf3 Cc6 3.Ab5 a6 4.Aa4 d6 5.d4 b5 6.Ab3 Cxd4 7.Cxd4 exd4. Las negras han ganado un peón y ahora el de d4 parece fácil de recuperar con la dama. Antes de comer, mira dónde se va a quedar tu alfil de b3. ¿Qué haces? } 8. a4 { [%cal Ga4b5] Atacar la cadena de peones que encierra al alfil: el alfil se gana una salida y las blancas recuperarán el peón más adelante. } (8. c3 { También buena: devolver el peón para desarrollarse rápido. } 8... dxc3 9. Nxc3) (8. Qxd4?? c5! { ¡El peón ataca a la dama! } 9. Qd5 Be6 10. Qc6+ Bd7 11. Qd5 c4 { El alfil de b3 queda encerrado por los peones de b5 y c4: no tiene ninguna casilla. Es la trampa del «arca de Noé», y las negras ganan una pieza. }) 8... Bb7 9. axb5 axb5 10. Rxa8 Bxa8 { La columna a se ha abierto y el alfil de b3 ya no está en peligro. Regla: antes de comer, mira si la pieza que come (o alguna otra) puede quedarse encerrada sin casillas; una pieza atrapada se pierde aunque nadie la esté atacando todavía. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "24"]
+[Title "Una clavada que no es absoluta: el mate de Légal"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "r2qkbnr/ppp2ppp/2np4/4p2b/2B1P3/2N2N1P/PPPP1PP1/R1BQK2R w KQkq - 1 6"]
+[Result "*"]
+
+{ [%cal Rh5d1] 1.e4 e5 2.Cf3 d6 3.Ac4 Cc6 4.Cc3 Ag4 5.h3 Ah5. El alfil de h5 clava el caballo de f3 contra la dama. Pero una clavada contra la dama no es absoluta: el caballo puede moverse si a cambio gana algo más. Mira el peón de e5 y la casilla f7. ¿Qué haces? } 6. Nxe5! { ¡El caballo salta aunque deje la dama! Si las negras se la comen, reciben mate. } (6. O-O? { Tranquila, pero deja pasar la ocasión de ganar un peón. }) 6... Nxe5 (6... Bxd1?? 7. Bxf7+ Ke7 8. Nd5# { El mate de Légal: tres piezas menores dan mate a un rey que ha salido de casa. }) 7. Qxh5 Nf6 8. Qe2 Nxc4 9. Qxc4 { Las blancas han ganado un peón limpio y tienen mejor posición. Regla: una pieza clavada a la dama (no al rey) puede moverse si consigue algo mejor; y antes de comerte la dama del rival, mira por qué te la deja. } *
+
+[Event "Curso ¿Qué hago ahora?"]
+[Site "AjedrezBase"]
+[Round "25"]
+[Title "Simplificar a un final de peones ganado"]
+[Level "Intermedio"]
+[Annotator "AjedrezBase"]
+[Type "ejercicio"]
+[SetUp "1"]
+[FEN "3r4/4kpp1/7p/8/P7/4K1P1/3R1P1P/8 w - - 0 40"]
+[Result "*"]
+
+{ [%csl Ga4] Final de torres: las blancas tienen un peón de más, el de a4, que está lejos de los demás (un «peón pasado alejado»). Puedes cambiar las torres o mantenerlas. ¿Qué haces? } 40. Rxd8 { ¡Cambiar las torres! El final de peones está ganado: el peón de a se lleva al rey negro hacia el flanco de dama y, mientras tanto, el rey blanco se come los peones del otro flanco. } (40. a5?! { Sigue siendo mejor para las blancas, pero con las torres en el tablero la victoria es mucho más difícil: la torre negra se pondrá detrás del peón. }) 40... Kxd8 41. Ke4 Kc7 42. a5 Kc6 43. Ke5 { [%cal Ge5f6,Ge5d6] El rey negro tiene que vigilar el peón de a, y el blanco entra en el flanco de rey y se come los peones. Regla: con un peón pasado alejado, el final de peones suele estar ganado; antes de cambiar la última pieza, calcula (o reconoce) el final de peones que queda, porque ahí ya no hay vuelta atrás. } *
