@@ -143,10 +143,17 @@ async function explorerData(db, state) {
   return { total: data.white + data.draws + data.black, moves: (data.moves || []).map(m => ({ san: m.san, n: m.white + m.draws + m.black, white: m.white, draws: m.draws, black: m.black })) };
 }
 const EXPLORER_ERR = { token: "Falta tu token de Lichess (⚙ Ajustes); mientras tanto, elige «Mi biblioteca».", pausa: "Lichess ha pedido una pausa: vuelve a intentarlo en un minuto.", "token-malo": "Lichess ha rechazado tu token: revísalo en ⚙ Ajustes.", red: "No se ha podido consultar Lichess (¿sin conexión?)." };
-/* Evalúa una posición suelta con el motor; devuelve las líneas con la puntuación desde las blancas */
-function evalState(state, ms, multipv = 1) {
-  if (!Chess.legal(state).length) return Promise.resolve({ lines: [{ cp: Chess.inCheck(state) ? -3000 * state.t : 0, pv: [] }] });
-  return new Promise(resolve => Engine.start({ purpose: "batch", fen: Chess.toFen(state), moves: [], stm: state.t, movetime: ms, multipv, resolve }));
+/* Evalúa una posición suelta con el motor; devuelve las líneas con la puntuación desde las blancas.
+   Si otro cálculo la cancela por el camino (por ejemplo, el análisis en vivo al reanudarse), se repite: antes
+   devolvía vacío y el profesor IA o el entrenador se quedaban sin las líneas del motor */
+async function evalState(state, ms, multipv = 1) {
+  if (!Chess.legal(state).length) return { lines: [{ cp: Chess.inCheck(state) ? -3000 * state.t : 0, pv: [] }] };
+  for (let t = 0; t < 4; t++) {
+    const r = await new Promise(resolve => Engine.start({ purpose: "batch", fen: Chess.toFen(state), moves: [], stm: state.t, movetime: ms, multipv, resolve }));
+    if (r && r.lines && r.lines.some(l => l && l.pv && l.pv.length)) return r;
+    await new Promise(res => setTimeout(res, 120));
+  }
+  return null;
 }
 
 /* Sorpresas y trampas de la posición del tablero */
