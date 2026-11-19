@@ -2454,6 +2454,42 @@ def prueba_notacion_ia(browser):
     ctx.close()
 
 
+def prueba_piezas_ia(browser):
+    print("Novedades 1.50.0: lo que la IA dice de las piezas se comprueba en el tablero")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    estado = {"corrige": True}
+    llamadas = []
+    def chat(r):
+        m = json.loads(r.request.post_data)
+        llamadas.append(m)
+        u = m["messages"][1]["content"]
+        if "SÓLO con JSON" in m["messages"][0]["content"]: txt = '{"lineas":[]}'
+        elif "Tiene errores sobre la posición" in u and estado["corrige"]: txt = "El caballo de d7 defiende e5 y tu caballo de f3 presiona d4."
+        else: txt = "Cuidado: el alfil de d7 es peligroso y tu caballo de a4 está amenazado."
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
+    ctx.route("http://localhost:11434/api/chat", chat)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false }); renderAiBox();"
+                "const g = Pgn.parseGame('1. d4 d5 2. c4 c6 3. Nf3 Nf6 4. Nc3 e6 5. e3 Nbd7', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
+    primera = llamadas[0]["messages"][1]["content"]
+    comprobar("Piezas de las negras:" in primera and "caballos en d7, f6" in primera, "la IA recibe la lista de piezas en palabras (no sólo la FEN)")
+    comprobar(len(llamadas) == 2 and "en d7 hay un caballo negro, no un alfil" in llamadas[1]["messages"][1]["content"] and "en a4 no hay ninguna pieza" in llamadas[1]["messages"][1]["content"],
+              "si se equivoca sobre las piezas («el alfil de d7», «tu caballo de a4»), se le pide que corrija diciéndole qué hay de verdad")
+    comprobar("caballo de d7 defiende" in pg.inner_text("#aiAnswer .ai-text") and pg.locator("#aiAnswer .ai-unverified").count() == 0, "y se muestra su respuesta corregida")
+    estado["corrige"] = False; llamadas.clear()
+    pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
+    comprobar(pg.locator("#aiAnswer .ai-unverified").count() == 2 and "se ha equivocado sobre la posición" in pg.inner_text("#aiAnswer") and "hay un caballo negro" in pg.inner_text("#aiAnswer"),
+              "si insiste en el error, se marca con ⚠ y se dice qué hay de verdad en esa casilla")
+    pg.evaluate("Object.assign(settings, { aiProvider: 'none', aiCtxLichess: true, aiPropose: true }); renderAiBox()")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -2991,7 +3027,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

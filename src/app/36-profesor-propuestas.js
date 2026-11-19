@@ -172,9 +172,11 @@ function aiCanonOf(mv, known) {
 /* Recibe el HTML ya escapado de un párrafo: pasa cada jugada a la notación elegida, la hace pulsable si la
    aplicación la conoce (minitablero y, si se puede jugar ya, flecha en el tablero) y marca con ⚠ las no comprobadas */
 function aiMoveMarkup(html, allowed, resolver, stats) {
-  return html.replace(AI_MOVE_RE, (all, num, mv, chk) => {
+  return html.replace(AI_MOVE_RE, (all, num, mv, chk, at, whole) => {
     // Un avance de peón sin número («e5») suele ser una casilla: sólo se hace pulsable si es una jugada conocida, y nunca se marca
     const bare = /^[a-h][1-8]/.test(mv) && !num;
+    // «el caballo de a4», «la casilla e5», «la columna d»: es una casilla, no una jugada
+    if (bare && /(rey|dama|reina|torre|alfil|caballo|pe[oó]n|casilla|punto)(es|s)?\s+(\S+\s+)?(de|en|a|hacia|sobre)?\s*$/i.test(whole.slice(Math.max(0, at - 30), at))) return all;
     const canon = aiCanonOf(mv, k => (resolver && resolver.has(k)) || allowed.has(k));
     const r = resolver && resolver.get(canon);
     if (bare && !r) return all;
@@ -199,3 +201,72 @@ document.addEventListener("click", e => {
   setTimeout(() => { try { showHoverBoard({ clientX: r.left, clientY: r.bottom }, Chess.parseFen(el.dataset.fen), { from: +el.dataset.from, to: +el.dataset.to }); } catch {} }, 0);
 });
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest && e.target.closest(".ai-mv")) e.target.click(); });
+
+/* ---------- Lo que la IA dice de las piezas, comprobado en el tablero ----------
+   Los modelos (sobre todo los pequeños) se equivocan al leer la posición: «el alfil de d7» donde hay un caballo, o
+   «tu caballo de a4» siendo del rival. Se buscan esas afirmaciones en el texto y se comprueban en el tablero (y, para
+   lo que diga de lo que pasará, en las primeras jugadas de las líneas conocidas). Si alguna es falsa, se le pide a
+   la IA que corrija su respuesta; si vuelve a fallar, se marca con ⚠ y se explica qué hay de verdad. */
+const AI_PIECE_WORD = { rey: "k", dama: "q", reina: "q", torre: "r", alfil: "b", caballo: "n", peon: "p" };
+const AI_CLAIM_RE = /(?:\b(tu|tus|mi|mis|el|la|los|las|un|una|del|al|su|sus)\s+)?\b(rey|dama|reina|torres?|alfil(?:es)?|caballos?|pe[oó]n(?:es)?)\s+(?:(blanc[oa]s?|negr[oa]s?|rival(?:es)?|enemig[oa]s?|contrari[oa]s?)\s+)?(?:de|en|situad[oa] en|que est[aá] en)\s+([a-h][1-8])\b(?:\s+(del rival|rival|enemig[oa]|contrari[oa]|de las blancas|de las negras|blanc[oa]|negr[oa]))?/gi;
+const AI_PIECE_NAME = { k: ["un rey", "rey", "rey"], q: ["una dama", "dama", "dama"], r: ["una torre", "torre", "torres"], b: ["un alfil", "alfil", "alfiles"], n: ["un caballo", "caballo", "caballos"], p: ["un peón", "peón", "peones"] };
+const aiFem = t => t === "q" || t === "r";
+const aiNameOf = p => { const t = p.toLowerCase(), white = p !== t; return `${AI_PIECE_NAME[t][0]} ${white ? (aiFem(t) ? "blanca" : "blanco") : aiFem(t) ? "negra" : "negro"}`; };
+const aiPieceType = word => AI_PIECE_WORD[norm(word).replace(/^peones$/, "peon").replace(/^alfiles$/, "alfil").replace(/s$/, "")];
+/* La lista de piezas en palabras, para que la IA no tenga que leer la FEN */
+function aiPiecesText(s) {
+  const out = [];
+  for (const [color, up] of [["blancas", true], ["negras", false]]) {
+    const by = { k: [], q: [], r: [], b: [], n: [], p: [] };
+    for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } const p = s.b[i]; if (p !== "." && (p === p.toUpperCase()) === up) by[p.toLowerCase()].push(Chess.sqName(i)); }
+    const part = "kqrbnp".split("").filter(t => by[t].length).map(t => `${AI_PIECE_NAME[t][by[t].length === 1 ? 1 : 2]} en ${by[t].join(", ")}`);
+    out.push(`Piezas de las ${color}: ${part.join("; ")}.`);
+  }
+  return out.join("\n");
+}
+/* Posiciones en las que una afirmación puede ser cierta: la del tablero y las primeras jugadas de las líneas conocidas */
+function aiLineStates(state, ucis, n = 4) {
+  const out = [];
+  let s = state;
+  for (let i = 0; i < Math.min(n, (ucis || []).length); i++) { const m = Chess.moveFromUci(s, ucis[i]); if (!m) break; s = Chess.apply(s, m); out.push(s); }
+  return out;
+}
+function aiCheckClaims(text, states, me) {
+  const errs = [], s0 = states[0], plain = String(text).replace(/\*\*/g, "");
+  for (const m of plain.matchAll(AI_CLAIM_RE)) {
+    const [all, det, word, adj, sqName, suf] = m;
+    const type = aiPieceType(word);
+    if (!type) continue;
+    const tag = norm(`${adj || ""} ${suf || ""}`);
+    const color = /blanc/.test(tag) ? 1 : /negr/.test(tag) ? -1 : /rival|enemig|contrari/.test(tag) ? -me : /^(tu|tus|mi|mis)$/i.test(det || "") ? me : 0;
+    const sq = Chess.sqIdx(sqName);
+    const fits = st => { const p = st.b[sq]; return p !== "." && p.toLowerCase() === type && (!color || (p === p.toUpperCase() ? 1 : -1) === color); };
+    if (states.some(fits)) continue;
+    const p = s0.b[sq], who = c => (c === me ? "tuyo" : "del rival");
+    const why = p === "." ? `en ${sqName} no hay ninguna pieza`
+      : p.toLowerCase() !== type ? `en ${sqName} hay ${aiNameOf(p)}, no ${AI_PIECE_NAME[type][0]}`
+      : `la pieza de ${sqName} es ${p === p.toUpperCase() ? "blanca" : "negra"} (${who(p === p.toUpperCase() ? 1 : -1)})`;
+    if (!errs.some(e => e.why === why)) errs.push({ text: all.trim(), why });
+  }
+  return errs;
+}
+/* Pregunta a la IA y comprueba lo que dice de las piezas; si se equivoca, le pide una corrección (una vez) */
+async function aiCallChecked(system, user, states, me) {
+  let text = await aiCall(system, user);
+  let errs = aiCheckClaims(text, states, me);
+  if (errs.length) {
+    const fix = await aiCall(system, `${user}\n\nTu respuesta anterior fue:\n«${text}»\nTiene errores sobre la posición: ${errs.map((e, i) => `(${i + 1}) dijiste «${e.text}», pero ${e.why}`).join("; ")}.\nEscribe de nuevo la respuesta corrigiéndolos. Consulta SIEMPRE la lista de piezas para saber qué pieza hay en cada casilla y de qué color es.`).catch(() => "");
+    if (fix) { const e2 = aiCheckClaims(fix, states, me); if (e2.length <= errs.length) { text = fix; errs = e2; } }
+  }
+  return { text, errs };
+}
+/* Marca en el HTML ya formateado las afirmaciones falsas que queden, y una nota que dice la verdad */
+function aiMarkClaims(html, errs) {
+  if (!errs.length) return html;
+  for (const e of errs) {
+    const t = esc(e.text);
+    const i = html.indexOf(t);
+    if (i >= 0) html = html.slice(0, i) + `<span class="ai-unverified" title="${esc(e.why)}">${t}⚠</span>` + html.slice(i + t.length);
+  }
+  return html + `<div class="small ai-unverified-note">⚠ La IA se ha equivocado sobre la posición: ${errs.map(e => esc(e.why)).join("; ")}.</div>`;
+}

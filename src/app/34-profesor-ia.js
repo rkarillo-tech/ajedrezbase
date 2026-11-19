@@ -30,6 +30,7 @@ function aiPositionText(node) {
   const st = gameStatus(node);
   return [
     `Posición (FEN): ${Chess.toFen(s)}`,
+    aiPiecesText(s),
     `Juegan las ${side}.${st.over ? " " + st.text + "." : Chess.inCheck(s) ? " Están en jaque." : ""}`,
     `Jugadas hasta aquí: ${moves}`,
     eco ? `Apertura: ${eco.entry.eco} ${eco.entry.name}.` : "",
@@ -65,6 +66,7 @@ Reglas estrictas:
 1a. Tus propuestas las pensaste tú sin motor y el motor las ha juzgado: defiende las buenas con tus ideas; las DUDOSAS o ERROR no las recomiendes, pero explica por qué fallan usando la refutación del motor (eso enseña mucho); las ILEGALES ni las menciones.
 1b. Además del motor puedes recibir contexto comprobado: el repertorio del alumno, estadísticas del explorador y partidas modelo. Úsalo como lo haría un entrenador: relaciona la posición con su repertorio, con lo que juegan los maestros y con los planes de las partidas modelo, y cítalo siempre diciendo de dónde sale («en tu repertorio…», «los maestros juegan…», «en la partida X–Y se siguió…»). Si la jugada del repertorio o la más jugada no coincide con la mejor del motor, dilo con claridad. Las partidas con la misma estructura de peones sirven para explicar planes, no jugadas concretas de esta posición.
 2. Escribe las jugadas en notación algebraica española (R rey, D dama, T torre, A alfil, C caballo; por ejemplo Cf3, Axc6, O-O). Nunca uses las letras inglesas (K, Q, B, N, ni R para la torre).
+2b. Para saber qué pieza hay en cada casilla y de qué color es, usa SÓLO la lista de piezas que se te da; no lo deduzcas de la FEN ni lo supongas. Si nombras una pieza, di bien su casilla y su color.
 3. Explica el porqué (amenazas, piezas en peligro, desarrollo, seguridad del rey, plan), no sólo la jugada.
 4. Usa como mucho unas pocas viñetas y **negritas** para lo importante; nada de tablas ni bloques de código.`;
 }
@@ -174,7 +176,9 @@ async function aiAsk(question) {
     }
     const propText = aiProposalsText(checked);
     status(`⏳ Preguntando a ${AI_PROVIDERS[aiProvider()].name.split(" (")[0]}…`);
-    const text = await aiCall(aiSystem(), `${facts.text}${propText ? "\n\n" + propText : ""}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}\n\nPregunta del alumno: ${question}`);
+    // Lo que diga de las piezas se comprueba en el tablero (y en las primeras jugadas de las líneas conocidas)
+    const states = [node.state, ...facts.lines.flatMap(l => aiLineStates(node.state, l.pv)), ...checked.filter(p => p.ucis && p.ucis.length).flatMap(p => aiLineStates(p.state0, p.ucis))];
+    const { text, errs: claimErrs } = await aiCallChecked(aiSystem(), `${facts.text}${propText ? "\n\n" + propText : ""}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}\n\nPregunta del alumno: ${question}`, states, node.state.t);
     if (token !== AI.token) return;
     // Lo que cuenta como comprobado: el motor, las propuestas legales con su refutación, el contexto y la partida
     const allowed = aiAllowedMoves([facts.text, ctx.text, ...checked.filter(p => p.status !== "ilegal").map(p => `${p.text} ${p.refutation ? p.refutation.text : ""}`)]);
@@ -183,7 +187,7 @@ async function aiAsk(question) {
       ...checked.filter(p => p.ucis && p.ucis.length).map(p => ({ state: p.state0, ucis: p.ucis })),
       ...checked.filter(p => p.refutation).map(p => ({ state: p.refutation.state, ucis: p.refutation.pv })),
       ...(ctx.games || []).filter(g => g.afterLine).map(g => g.afterLine)]);
-    const answer = aiFormat(text, html => aiMoveMarkup(html, allowed, resolver, stats));
+    const answer = aiMarkClaims(aiFormat(text, html => aiMoveMarkup(html, allowed, resolver, stats)), claimErrs);
     box.innerHTML = `<div class="retry-head">🤖 Profesor IA <span class="small">· ${esc(AI_PROVIDERS[aiProvider()].name.split(" (")[0])} (${esc(aiModel())})</span></div>
       <div class="ai-q small">❓ ${esc(question)}</div><div class="ai-text">${answer}</div>
       ${aiProposalsHtml(checked)}${props && props.error ? `<div class="small">🧪 No se pudieron obtener las propuestas de la IA (${esc(props.error)}); la respuesta usa sólo el motor.</div>` : ""}
@@ -217,7 +221,7 @@ function syncAiSettingsForm() {
   $("aiModelRow").hidden = p === "none";
   $("aiTestBtn").hidden = p === "none";
   if (p === "ollama") ollamaModels().then(fillOllamaModels).catch(() => {});   // para elegir el modelo de una lista
-  $("aiNote").innerHTML = p === "ollama" ? `Privado y gratuito: el modelo funciona en tu ordenador. Instala <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">Ollama</a> y descarga un modelo para conversar (por ejemplo <code>ollama pull qwen2.5:7b</code>). Además, Ollama tiene que dar permiso a esta página: <a href="#" class="help-link" data-help="help-ollama">cómo se hace, paso a paso</a>. Luego pulsa «🔌 Probar» y elige el modelo de la lista.`
+  $("aiNote").innerHTML = p === "ollama" ? `Privado y gratuito: el modelo funciona en tu ordenador. Instala <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">Ollama</a> y descarga un modelo para conversar (por ejemplo <code>ollama pull qwen2.5:7b</code>). Además, Ollama tiene que dar permiso a esta página: <a href="#" class="help-link" data-help="help-ollama">cómo se hace, paso a paso</a>. Luego pulsa «🔌 Probar» y elige el modelo de la lista. <b>Para ajedrez van mejor los modelos grandes</b> (de 14B en adelante, si tu ordenador puede con ellos): los pequeños, como los de 7B, confunden a menudo las piezas; la aplicación comprueba lo que dicen, pero no puede arreglarlo todo. Claude y Gemini son los más fiables.`
     : p === "claude" ? "Necesitas una clave de la API de Anthropic (<a href=\"https://platform.claude.com\" target=\"_blank\" rel=\"noopener noreferrer\">platform.claude.com</a>), con su coste por uso. Se guarda sólo en este navegador y se envía sólo a Anthropic, con la posición y tu pregunta."
     : p === "gemini" ? "Necesitas una clave de la API de Google AI Studio. Se guarda sólo en este navegador y se envía sólo a Google, con la posición y tu pregunta."
     : "Desactivado: la aplicación no envía nada a ninguna IA. Las explicaciones de «Piensa conmigo» no necesitan IA.";
