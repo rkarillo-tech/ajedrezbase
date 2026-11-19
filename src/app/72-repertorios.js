@@ -102,19 +102,28 @@ async function createMyRep(fromCourse) {
 /* Estadísticas de una posición en la base elegida: Lichess (maestros o partidas online, con token) o tus partidas.
    Devuelve { total, moves: [{ san, n, white, draws, black }] } o { error } */
 let LocalMoves = null, LocalMovesSig = "";
-function localMoveIndex() {
-  const sig = Lib.games.size + ":" + Coll.games.length + ":" + Math.max(0, ...[...Lib.games.values()].map(r => r.updated || 0));
+/* Jugadas de tus partidas por posición (clave: la huella de la posición), a partir del índice compartido */
+async function localMoveIndex() {
+  const sig = Lib.games.size + ":" + Coll.games.length + ":" + (Coll.games[0] ? Coll.bytes : 0) + ":" + Math.max(0, ...[...Lib.games.values()].map(r => r.updated || 0));
   if (LocalMoves && LocalMovesSig === sig) return LocalMoves;
   const idx = new Map();
-  const add = (g, res) => { let n = g.root; while (n.children.length) { const c = n.children[0]; const e = idx.get(n.key) || new Map(); const m = e.get(c.san) || { san: c.san, n: 0, white: 0, draws: 0, black: 0 }; m.n++; if (res === "1-0") m.white++; else if (res === "0-1") m.black++; else m.draws++; e.set(c.san, m); idx.set(n.key, e); n = c; } };
-  for (const rec of Lib.games.values()) if (!isRepRec(rec)) { try { add(Pgn.parseGame(rec.pgn, { lang: "en" }).game, rec.result); } catch {} }
-  Coll.games.forEach(t => { try { const g = Pgn.parseGame(t, { lang: "auto" }).game; add(g, (g.headers.Result || "").trim()); } catch {} });
+  for (const { src, e } of await gameIndex()) {
+    const h = gidxHeaders(src), res = String(h.Result || (src.lib != null ? (Lib.games.get(src.lib) || {}).result : "") || "").trim();
+    const sans = gidxSans(e);
+    for (let i = 0; i < sans.length; i++) {
+      let m = idx.get(e.k[i]);
+      if (!m) { m = new Map(); idx.set(e.k[i], m); }
+      const x = m.get(sans[i]) || { san: sans[i], n: 0, white: 0, draws: 0, black: 0 };
+      x.n++; if (res === "1-0") x.white++; else if (res === "0-1") x.black++; else x.draws++;
+      m.set(sans[i], x);
+    }
+  }
   LocalMoves = idx; LocalMovesSig = sig;
   return idx;
 }
 async function explorerData(db, state) {
   if (db === "local") {
-    const e = localMoveIndex().get(Chess.posKey(state));
+    const e = (await localMoveIndex()).get(Chess.hash(state));
     const moves = e ? [...e.values()].sort((a, b) => b.n - a.n) : [];
     return { total: moves.reduce((a, m) => a + m.n, 0), moves };
   }

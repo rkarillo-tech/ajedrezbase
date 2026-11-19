@@ -187,6 +187,8 @@ main {
 .today-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .streak { font-size: 1.05rem; }
 .streak-badge { font-size: .72rem; margin-left: 2px; }
+.tab-btn { position: relative; min-width: 0; }
+.mode-tabs .tab-btn .streak-badge { position: absolute; top: 0; right: 2px; margin: 0; font-size: .62rem; }
 .goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px; }
 .goal { font-size: .82rem; }
 .goal .meter { height: 6px; margin-top: 3px; }
@@ -263,6 +265,7 @@ main {
 .board-side > * { order: 20; }
 .board-side > :is(#navControls, #drawBar, #autoSpeedRow) { order: 1; }   /* la navegación, justo debajo del tablero (sin tener que bajar con la rueda) */
 .board-side > #statusText { order: 2; }
+.board-side > #coachBox { order: 0; }   /* el entrenador, siempre pegado al tablero */
 .board-side > :is(#retryBox, #cpuBox, #guessBox, #visBox, #scanBox) { order: 3; }
 @media (min-width: 981px) { .board-side > :is(#retryBox, #cpuBox, #guessBox, #visBox, #scanBox) { order: 0; } }   /* en el ordenador, lo que se está haciendo va pegado al tablero, antes de la navegación */
 .b3-custom { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0 2px; }
@@ -387,6 +390,11 @@ body.dropping::after { content: "📄 Suelta aquí el fichero .pgn (o una copia 
 .coach-intro { padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--panel2); border-radius: 4px; }
 .coach-hint { margin: 6px 0; padding: 6px 8px; border-left: 3px solid #ffca28; background: var(--panel2); border-radius: 4px; }
 .coach-why { width: 100%; margin-top: 6px; }
+.retry-box.coach-box.side { position: sticky; top: 62px; z-index: 5; margin: 0 0 10px; max-height: calc(100vh - 80px); overflow-y: auto; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+.coach-box:not(.side) { margin-top: 6px; }
+body.coaching :is(#engineBox, #evalChartWrap, #chartLegend, #aiBox, #thinkBox, #talkBox, #scanBox) { display: none !important; }
+#coachFocus { min-width: 0; max-width: 100%; flex: 1 1 220px; }
+#coachLen { min-width: 0; max-width: 100%; }
 .ai-ctx { margin-top: 4px; }
 .ai-ctx summary { cursor: pointer; }
 .ai-ctx label { display: block; margin: 3px 0 0 4px; }
@@ -522,7 +530,7 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .nag-pos { color: var(--info); margin-left: 3px; font-weight: 700; }
 
 /* Pestañas */
-.mode-tabs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; background: var(--deeper); padding: 4px; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 12px; }
+.mode-tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; background: var(--deeper); padding: 4px; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 12px; }
 .tab-btn { gap: 4px; padding: 7px 5px; border: 1px solid transparent; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.79rem; border-radius: 6px; justify-content: center; }
 .tab-btn.active { background: var(--panel2); color: var(--text); border-color: var(--border); }
 .tab-pane { display: none; }
@@ -770,6 +778,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #drawBar { order: 1; }
   #statusText { order: 2; }
   #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox { order: 3; }
+  #coachBox { order: 0; }
   #moves { order: 4; max-height: 32vh; }
   #varControls { order: 5; }
   #gameMarksBox { order: 5; }
@@ -823,6 +832,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #drawBar { order: 1; margin-top: 3px; }
   #statusText { order: 2; margin-top: 3px; }
   #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox { order: 3; }
+  #coachBox { order: 0; }
   #moves { order: 4; max-height: 52vh; max-height: 52dvh; min-height: 90px; margin-top: 4px; }
   #varControls { order: 5; }
   #gameMarksBox { order: 5; }
@@ -881,6 +891,7 @@ body.board-full .board-side > * { order: 20; flex: none; }
 body.board-full :is(#navControls, #drawBar, #autoSpeedRow) { order: 1; }
 body.board-full #navControls { margin-top: 0; }
 body.board-full #statusText { order: 2; }
+body.board-full #coachBox { order: 0; }
 body.board-full :is(#retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox) { order: 3; }
 body.board-full #moves { order: 4; }
 body.board-full :is(#varControls, #gameMarksBox) { order: 5; }
@@ -975,6 +986,7 @@ body.board-full #exportControls { order: 10; }
     </div>
     </div>
     <div class="board-side">
+    <div id="coachBox" class="retry-box coach-box" hidden aria-live="polite"></div>
 
 
     <!-- Motor -->
@@ -1075,7 +1087,6 @@ body.board-full #exportControls { order: 10; }
     <div id="moveQLegend" class="mq-legend" hidden><span>🎨 Jugadas de la pieza:</span><span><i style="background:#1b8a3a"></i>la mejor</span><span><i style="background:#7cb342"></i>buena</span><span><i style="background:#f2b705"></i>imprecisión</span><span><i style="background:#ef6c00"></i>error</span><span><i style="background:#d32f2f"></i>error grave</span><span class="mq-state"></span></div>
     <div id="radarLegend" class="mq-legend" hidden><span>🛡 Radar:</span><span><i style="background:none;border:2px dashed #e53935"></i>tus piezas en peligro</span><span><i style="background:none;border:2px dashed #1e88e5"></i>piezas del rival que se pueden ganar</span><span class="rd-count"></span></div>
     <div id="retryBox" class="retry-box" hidden aria-live="polite" tabindex="-1"></div>
-    <div id="coachBox" class="retry-box coach-box" hidden aria-live="polite"></div>
     <div id="cpuBox" class="retry-box" hidden aria-live="polite"></div>
     <div id="guessBox" class="retry-box" hidden aria-live="polite"></div>
     <div id="visBox" class="retry-box" hidden aria-live="polite"></div>
@@ -1988,9 +1999,9 @@ body.board-full #exportControls { order: 10; }
 <div class="modal-back cmd-back" id="cmdModal" role="dialog" aria-modal="true" aria-label="Buscar funciones">
   <div class="modal cmd-modal">
     <input id="cmdInput" type="search" role="combobox" aria-expanded="true" aria-controls="cmdList" autocomplete="off" spellcheck="false"
-      placeholder="Escribe qué quieres hacer: «radar», «siciliana», «Carlsen Nakamura», «Cf3»…" aria-label="Qué quieres hacer">
+      placeholder="Escribe qué quieres hacer: «radar», «jugar con negras nivel 5», «Carlsen contra Nakamura», «Cf3»…" aria-label="Qué quieres hacer">
     <ul id="cmdList" class="cmd-list" role="listbox"></ul>
-    <div class="small cmd-foot">↑ ↓ para elegir · Intro para abrir · Esc para cerrar · funciones, ajustes, ayuda, lecciones, aperturas, tus partidas, jugadas y FEN</div>
+    <div class="small cmd-foot">↑ ↓ para elegir · Intro para abrir · Esc para cerrar · funciones, ajustes, ayuda, lecciones, aperturas, partidas, jugadas, FEN y órdenes («ir a la jugada 20», «modo oscuro»)</div>
   </div>
 </div>
 
@@ -2054,8 +2065,10 @@ body.board-full #exportControls { order: 10; }
 <script id="coreLib">
 {{CORE}}
 </script>
-<script>
+<script id="pgnLib">
 {{PGN}}
+</script>
+<script>
 {{ECO}}
 {{APP}}
 </script>

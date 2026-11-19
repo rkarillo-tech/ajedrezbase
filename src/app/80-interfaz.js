@@ -59,6 +59,7 @@ function fullBoard(on) {
   if (on === !!ui.full) return;
   if (on && editor.active) { toast("Cierra antes el editor de posición."); return; }
   ui.full = on;
+  if (Coach.active) placeCoachBox();
   document.body.classList.toggle("board-full", on);
   const btn = $("fullBtn"), label = on ? "Salir de la pantalla completa (Esc o tecla P)" : "Tablero a pantalla completa (tecla P)";
   btn.setAttribute("aria-pressed", String(on));

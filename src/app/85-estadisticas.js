@@ -447,38 +447,34 @@ function materialText(s) {
 const PosSearch = { running: false, cancel: false };
 async function searchPosition() {
   if (PosSearch.running) { PosSearch.cancel = true; return; }
-  const mode = $("posMode").value, s = viewState(), node = cur();
-  const target = mode === "exact" ? node.key : mode === "pawns" ? pawnKey(s) : materialKey(s);
-  const keyOf = mode === "exact" ? n => n.key : mode === "pawns" ? n => pawnKey(n.state) : n => materialKey(n.state);
+  const mode = $("posMode").value, s = viewState();
+  const target = mode === "pawns" ? pawnKey(s) : "";
   if (mode === "pawns" && target === "|") { toast("En esta posición no quedan peones: busca por material."); return; }
-  const sources = [...[...Lib.games.values()].filter(r => r.id !== ui.libId).map(r => ({ lib: r.id })), ...($("posColl").checked ? Coll.games.map((g, i) => ({ coll: i })) : [])];
-  if (!sources.length) { toast("No hay partidas en las que buscar: tu biblioteca está vacía y no hay ningún .pgn abierto."); return; }
+  const want = (Lib.games.size - (ui.libId ? 1 : 0)) + ($("posColl").checked ? Coll.games.length : 0);
+  if (!want) { toast("No hay partidas en las que buscar: tu biblioteca está vacía y no hay ningún .pgn abierto."); return; }
   Object.assign(PosSearch, { running: true, cancel: false });
   $("posBtn").textContent = "⏹ Detener";
   const list = $("posResults"), found = [];
   list.innerHTML = "";
   const tally = { w: 0, d: 0, b: 0 }, names = myNameList(), me = { games: 0, pts: 0, fin: 0 };
-  for (let k = 0; k < sources.length && !PosSearch.cancel; k++) {
-    const src = sources[k];
-    let r;
-    try { r = src.lib != null ? Pgn.parseGame(Lib.games.get(src.lib).pgn, { lang: "en" }) : Pgn.parseGame(Coll.games[src.coll], { lang: "auto" }); } catch { continue; }
-    let n = r.game.root, ply = 0, hit = null;
-    for (;;) {
-      if (ply >= (mode === "exact" ? 0 : 2) && keyOf(n) === target) { hit = n; break; }
-      if (!n.children.length) break;
-      n = n.children[0]; ply++;
-    }
-    if (hit) {
-      const h = r.game.headers, res = (h.Result || "*").trim();
-      if (res === "1-0") tally.w++; else if (res === "0-1") tally.b++; else if (res === "1/2-1/2") tally.d++;
-      if (src.lib != null) { const c = colorOfMe(Lib.games.get(src.lib), names); if (c) { me.games++; const sc = scoreOf(res, c); if (sc != null) { me.fin++; me.pts += sc; } } }
-      found.push(Object.assign({ h, path: Pgn.pathTo(hit).slice(1).map(x => x.uci), label: hit.parent ? `${numPrefix(hit.parent.state)}${dispSan(hit)}` : "posición inicial", fen: Chess.toFen(hit.state) }, src));
-    }
-    if (k % 20 === 19) {
-      $("posStatus").textContent = `Buscando: ${k + 1} de ${sources.length} partidas · ${found.length} encontradas…`;
-      await new Promise(res => setTimeout(res, 0));
-    }
+  // Con el índice compartido: cada partida se lee una sola vez (en segundo plano) y después buscar es instantáneo
+  const all = await gameIndex((d, n) => { $("posStatus").textContent = `Preparando tus partidas para buscar (sólo la primera vez): ${d} de ${n}…`; }, { reps: true });
+  const H = mode === "exact" ? Chess.hash(s) : mode === "pawns" ? gidxPawnHash(s) : gidxMatHash(s);
+  for (const { src, e } of all) {
+    if (PosSearch.cancel) break;
+    if (src.lib != null && src.lib === ui.libId) continue;
+    if (src.coll != null && !$("posColl").checked) continue;
+    const arr = mode === "exact" ? e.k : mode === "pawns" ? e.pw : e.mt;
+    let ply = -1;
+    for (let i = mode === "exact" ? 0 : 2; i < arr.length; i++) if (arr[i] === H) { ply = i; break; }
+    if (ply < 0) continue;
+    const h = gidxHeaders(src), res = String(h.Result || "*").trim();
+    if (res === "1-0") tally.w++; else if (res === "0-1") tally.b++; else if (res === "1/2-1/2") tally.d++;
+    if (src.lib != null) { const c = colorOfMe(Lib.games.get(src.lib), names); if (c) { me.games++; const sc = scoreOf(res, c); if (sc != null) { me.fin++; me.pts += sc; } } }
+    found.push(Object.assign({ h, e, ply, path: gidxUcis(e).slice(0, ply) }, src));
   }
+  // El texto de la jugada y el minitablero, sólo de las que se enseñan
+  for (const f of found.slice(0, 200)) { f.label = gidxLabel(f.e, f.ply); f.fen = Chess.toFen(gidxStateAt(f.e, f.ply)); }
   const stopped = PosSearch.cancel;
   Object.assign(PosSearch, { running: false, cancel: false });
   $("posBtn").textContent = "🔍 Buscar";

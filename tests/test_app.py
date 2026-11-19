@@ -2286,7 +2286,8 @@ def prueba_entrenador_ia(browser):
     pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
     comprobar(pg.is_visible("#coachBox") and pg.evaluate("Coach.queue.filter(x => x.kind === 'drill').length") == 2 and pg.evaluate("Coach.queue[0].kind") == "puzzle",
               "la clase mezcla problemas del tema y posiciones de tus partidas (empieza con un problema)")
-    comprobar(pg.evaluate("quiz()") and not pg.is_visible("#evalBarOuter:not(.hidden-eval)"), "durante la clase el motor no se ve")
+    comprobar(pg.evaluate("quiz()") and not pg.is_visible("#evalBarOuter:not(.hidden-eval)") and not pg.is_visible("#engineBox"), "durante la clase el motor no se ve")
+    comprobar(pg.evaluate("$('coachBox').parentElement === $('toolsPanel') && $('coachBox').getBoundingClientRect().top < innerHeight / 2"), "en el ordenador, el recuadro del entrenador va junto al tablero, arriba a la derecha, sin desplazarse")
     malo = pg.evaluate("(() => { const s = Coach.ex.node.state; return Chess.uci(Chess.legal(s).find(m => Chess.uci(m) !== Coach.ex.best)); })()")
     pg.evaluate(f"playMove(Chess.moveFromUci(Coach.ex.node.state, '{malo}'), 'user')")
     pg.wait_for_function("Coach.state === 'ask' && Coach.hint === 1", timeout=30000)
@@ -2335,6 +2336,73 @@ def prueba_entrenador_ia(browser):
     comprobar("No inventes jugadas" in llamadas[-1]["messages"][0]["content"], "con la orden de no inventar jugadas")
     pg.click("#coachBox [data-co=end]")
     pg.evaluate("Object.assign(settings, { aiProvider: 'none', myNames: '' }); ['coach0', 'coach1', 'coach2'].forEach(k => Lib.games.delete(k)); renderAiBox()")
+    # En el móvil: justo debajo del tablero y sin desbordar la página
+    pg.set_viewport_size({"width": 390, "height": 844})
+    pg.click('.tab-btn[data-tab="tools"]')
+    if not pg.is_visible("#coachStartBtn"): pg.click('#trainMenu [data-train-open="coach"]')
+    comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "en el móvil, la sección del entrenador no desborda la página")
+    pg.click("#coachStartBtn"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000); pg.wait_for_timeout(600)
+    r = pg.evaluate("(() => { const b = $('coachBox').getBoundingClientRect(), w = $('bottomBar').getBoundingClientRect(); return { gap: b.top - w.bottom, top: b.top, vh: innerHeight }; })()")
+    comprobar(0 <= r["gap"] < 20 and r["top"] < r["vh"] - 100 and pg.evaluate("document.documentElement.scrollWidth") <= 390, "en el móvil, el recuadro del entrenador va justo debajo del tablero, a la vista")
+    pg.click("#coachBox [data-co=end]")
+    pg.set_viewport_size({"width": 1400, "height": 1000})
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_velocidad_y_ordenes(browser):
+    print("Novedades 1.48.0: índice de posiciones (más velocidad), órdenes escritas y erratas en el buscador")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    # 300 partidas al azar en un .pgn abierto (con dos jugadores para filtrar)
+    pg.evaluate("""() => { $('welcomeBox').hidden = true; let seed = 3; const rnd = n => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+      const out = []; for (let g = 0; g < 300; g++) { let s = Chess.parseFen(Chess.START_FEN); const sans = [];
+        for (let p = 0; p < 40; p++) { const L = Chess.legal(s); if (!L.length) break; const m = p === 0 ? Chess.moveFromUci(s, ['e2e4', 'd2d4'][g % 2], L) : L[rnd(L.length)]; sans.push((s.t === 1 ? s.full + '. ' : '') + Chess.san(s, m, L)); s = Chess.apply(s, m); }
+        out.push(`[White "${g % 3 ? 'Carlsen, Magnus' : 'Otro'}"]\\n[Black "${g % 5 ? 'Nakamura, Hikaru' : 'Otra'}"]\\n[Result "1-0"]\\n\\n${sans.join(' ')} 1-0\\n`); }
+      setCollection(out.join('\\n'), false, 'azar.pgn'); }""")
+    pg.wait_for_function("!GIdx.building", timeout=60000)
+    todo = pg.evaluate("""async () => { const all = await gameIndex(); let ok = 0;
+      for (const { src, e } of all.slice(0, 40)) { const g = Pgn.parseGame(Coll.games[src.coll], { lang: 'auto' }).game; const keys = [g.root, ...Pgn.mainlineFrom(g.root)].map(n => Chess.hash(n.state));
+        if (keys.length === e.k.length && keys.every((k, i) => k === e.k[i]) && Pgn.mainlineFrom(g.root).map(n => n.uci).join(' ') === e.u) ok++; }
+      return { n: all.length, ok, workers: (GIdx.workers || []).length }; }""")
+    comprobar(todo["n"] == 300 and todo["ok"] == 40, f"el índice de posiciones coincide con leer cada partida ({todo['ok']}/40 comprobadas, {todo['workers']} proceso(s) en segundo plano)")
+    # Buscar posición: lo mismo que contar a mano, y al instante
+    pg.evaluate("const g = Pgn.parseGame('1. e4', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+    pg.click('.tab-btn[data-tab="library"]'); pg.click('.sub-btn[data-sub="position"]')
+    pg.select_option("#posMode", "exact"); pg.check("#posColl")
+    ms = pg.evaluate("async () => { const t0 = performance.now(); await searchPosition(); return performance.now() - t0; }")
+    comprobar("150 partidas" in pg.inner_text("#posStatus") and ms < 1500, f"«Buscar posición» encuentra las 150 partidas con 1.e4 en {ms:.0f} ms")
+    pg.evaluate("$('explorerDbSelect').value = 'local'; switchTab('explorer'); LocalIdx = null; refreshExplorer()")
+    pg.wait_for_function("$('explorerMovesBody').textContent.includes('150') || $('explorerGamesBody').querySelectorAll('tr').length > 1", timeout=20000)
+    comprobar(pg.locator("#explorerGamesBody tr").count() > 1, "el explorador de tus partidas usa el mismo índice")
+    # Buscador: el .pgn abierto, órdenes, erratas, lo último usado y lo que no encuentra
+    pg.keyboard.press("Control+k")
+    comprobar(pg.is_visible("#cmdInput"), "el buscador se abre con un .pgn abierto (antes fallaba)")
+    def primero(q):
+        pg.fill("#cmdInput", q)
+        return pg.evaluate("Cmd.shown[0] ? Cmd.shown[0].cat + ': ' + Cmd.shown[0].name : ''")
+    comprobar(primero("jugar con negras nivel 5 a 5+3") == "Orden: Jugar con negras, nivel 5, reloj 5+3", "«jugar con negras nivel 5 a 5+3» se entiende")
+    pg.keyboard.press("Enter"); pg.wait_for_selector("#cpuModal.open")
+    comprobar(pg.evaluate("[$('cpuColor').value, $('cpuLevel').value, $('cpuClock').value]") == ["-1", "11", "5+3"], "y abre la partida con el color, el nivel y el reloj elegidos")
+    pg.keyboard.press("Escape")
+    pg.evaluate("loadCollGame(0)")
+    pg.keyboard.press("Control+k"); primero("ir a la jugada 12"); pg.keyboard.press("Enter")
+    pg.wait_for_function("cur().parent && cur().parent.state.full === 12 && cur().parent.state.t === 1", timeout=5000)
+    comprobar(True, "«ir a la jugada 12» va a esa jugada")
+    pg.keyboard.press("Control+k")
+    comprobar(primero("carlsen contra nakamura") == "Orden: Buscar partidas: Carlsen contra Nakamura", "«Carlsen contra Nakamura» busca sus partidas")
+    pg.keyboard.press("Enter")
+    pg.wait_for_function("$('dbFilterInput').value === 'carlsen nakamura'", timeout=5000)
+    comprobar(pg.evaluate("$('dbFilterInput').value") == "carlsen nakamura" and pg.evaluate("collFiltered().length") == 160, "y filtra el .pgn abierto (160 partidas entre ellos)")
+    pg.keyboard.press("Control+k")
+    comprobar("Siciliana" in primero("sicilana") and "Najdorf" in primero("najdrof"), "las erratas también encuentran («sicilana», «najdrof»)")
+    comprobar(primero("modo claro") == "Orden: Aspecto claro" and primero("quita el radar") == "Orden: Desactivar: Radar de piezas en peligro", "órdenes de ajustes («modo claro», «quita el radar»)")
+    comprobar(primero("zzzzzz").startswith("Ayuda: Buscar"), "si no encuentra nada, ofrece buscarlo en la ayuda")
+    primero("radar"); pg.keyboard.press("Enter"); pg.wait_for_function("settings.radar === true", timeout=5000); pg.evaluate("setRadar(false)")
+    pg.keyboard.press("Control+k"); pg.fill("#cmdInput", "")
+    comprobar(pg.evaluate("Cmd.shown[0].name") == "Radar de piezas en peligro", "lo último que usaste sale el primero")
+    pg.keyboard.press("Escape")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -2876,7 +2944,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

@@ -118,6 +118,8 @@ async function coachStart() {
   const n = +$("coachLen").value || 6;
   Object.assign(Coach, { active: true, busy: false, state: "intro", queue: coachBuildQueue(P, focus, n), i: 0, ex: null, results: [], arrows: [], hintSq: -1, hint: 0, attempts: 0,
     token: Coach.token + 1, target: Math.max(600, P.rating - 100), streak: 0, focus, profile: P, msg: "", intro: "" });
+  document.body.classList.add("coaching");
+  placeCoachBox();
   $("coachBox").hidden = false;
   logActivity("coach");
   const tok = Coach.token;
@@ -189,6 +191,7 @@ async function coachShow() {
   Coach.busy = false;
   Coach.state = "ask";
   coachPanel();
+  coachIntoView();
 }
 const coachWaitEngine = () => new Promise(res => { const t0 = Date.now(); const k = () => (Engine.ready || Date.now() - t0 > 20000 ? res() : setTimeout(k, 200)); k(); });
 const coachSide = () => (Coach.ex && Coach.ex.node.state.t === 1 ? "las blancas" : "las negras");
@@ -349,6 +352,7 @@ async function coachSummary() {
   const failedThemes = {};
   R.filter(r => !r.ok).forEach(r => { failedThemes[r.theme] = (failedThemes[r.theme] || 0) + 1; });
   const next = ok >= R.length * 0.8 ? "subir la dificultad: prueba el examen de nivel o los problemas difíciles" : solved >= R.length / 2 ? `repetir mañana el mismo tema (${F.name})` : `repasar las posiciones falladas como tarjetas y hacer problemas fáciles de ${F.name.toLowerCase()}`;
+  setTimeout(coachIntoView, 50);
   Coach.summary = `<b>${ok} de ${R.length}</b> a la primera y sin pistas, ${solved} resuelta${solved === 1 ? "" : "s"} en total. Nivel de los problemas al terminar: ≈ ${Math.round(Coach.target)}.<br>Mi consejo: ${esc(next)}.`;
   renderShapes();
   coachPanel();
@@ -367,6 +371,7 @@ function coachEnd(silent) {
   Coach.state = "";
   Coach.arrows = []; Coach.hintSq = -1;
   $("coachBox").hidden = true;
+  document.body.classList.remove("coaching");
   if (!silent) { if (Cards.stash) restoreStash(); else render(); }
 }
 
@@ -410,3 +415,22 @@ function coachLessonAction(a) {
   else if (a === "end") coachEnd(false);
 }
 $("coachStartBtn").onclick = coachStart;
+/* Dónde va el recuadro: en pantallas anchas, arriba de la columna derecha y fijo al desplazarse (junto al tablero);
+   en el móvil y la tableta en vertical, justo debajo del tablero. Al empezar, se lleva a la vista */
+const coachHome = { parent: $("coachBox").parentElement, next: $("coachBox").nextElementSibling };
+function placeCoachBox() {
+  const box = $("coachBox"), side = sideLayout();
+  if (side && box.parentElement !== $("toolsPanel")) $("toolsPanel").prepend(box);
+  if (!side && box.parentElement !== coachHome.parent) coachHome.parent.insertBefore(box, coachHome.next);
+  box.classList.toggle("side", side);
+}
+function coachIntoView() {
+  if (!Coach.active) return;
+  const box = $("coachBox"), board = $("boardWrap").getBoundingClientRect(), r = box.getBoundingClientRect();
+  if (sideLayout()) { if (board.top < 0 || board.bottom > innerHeight) $("topBar").scrollIntoView({ block: "start", behavior: "smooth" }); return; }
+  // En el móvil: que se vean el tablero y el principio del recuadro; si no caben, manda el recuadro
+  if (r.top < 0 || r.top > innerHeight - 120 || board.top < 0) {
+    const y = scrollY + Math.min(board.top - 8, r.top - Math.max(0, innerHeight - r.height - 16));
+    scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+  }
+}
