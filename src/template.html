@@ -389,7 +389,9 @@ body.dropping::after { content: "📄 Suelta aquí el fichero .pgn (o una copia 
 .coach-intro, .coach-msg, .coach-ai { margin: 6px 0; line-height: 1.5; }
 .coach-intro { padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--panel2); border-radius: 4px; }
 .coach-hint { margin: 6px 0; padding: 6px 8px; border-left: 3px solid #ffca28; background: var(--panel2); border-radius: 4px; }
-.coach-why { width: 100%; margin-top: 6px; }
+.coach-why-row { display: flex; gap: 5px; margin-top: 6px; }
+.coach-why { flex: 1; min-width: 0; }
+.coach-idea { border-left-color: var(--info); }
 .retry-box.coach-box.side { position: sticky; top: 62px; z-index: 5; margin: 0 0 10px; max-height: calc(100vh - 80px); overflow-y: auto; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
 .coach-box:not(.side) { margin-top: 6px; }
 body.coaching :is(#engineBox, #evalChartWrap, #chartLegend, #aiBox, #thinkBox, #talkBox, #scanBox) { display: none !important; }

@@ -170,7 +170,7 @@ async function coachShow() {
     }
   }
   if (!ex) { Coach.i++; coachShow(); return; }
-  Object.assign(Coach, { ex, state: "preparing", busy: true, arrows: [], hintSq: -1, hint: 0, attempts: 0, msg: "", tries: [] });
+  Object.assign(Coach, { ex, state: "preparing", busy: true, arrows: [], hintSq: -1, hint: 0, attempts: 0, msg: "", tries: [], hintText: "", ideaText: "", ideaHelp: false });
   ui.flipped = ex.node.state.t === -1;
   setGame(ex.g, { noConfirm: true, name: `🧑‍🏫 Entrenador · ${Coach.i + 1} de ${Coach.queue.length}`, current: ex.node });
   if (ex.kind === "drill") Coach.arrows = [{ color: "threat", from: Chess.moveFromUci(ex.node.state, ex.wrong).from, to: Chess.moveFromUci(ex.node.state, ex.wrong).to }];
@@ -276,7 +276,7 @@ function coachFacts(ex, secret) {
 }
 async function coachSolved(move, san, loss) {
   const ex = Coach.ex, s = ex.node.state;
-  const perfect = Coach.attempts === 0 && Coach.hint === 0;
+  const perfect = Coach.attempts === 0 && Coach.hint === 0 && !Coach.ideaHelp;
   Coach.state = "solved";
   Coach.hintSq = -1;
   const child = Pgn.addMove(ex.node, move);
@@ -311,8 +311,11 @@ function coachShowSolution() {
 }
 async function coachExplain(what) {
   const ex = Coach.ex;
-  if (!aiProvider()) return;
   const why = ($("coachWhy") && $("coachWhy").value.trim()) || Coach.why || "";
+  if (!aiProvider()) {
+    if (why) { Coach.explain += `<div class="small">💭 Tu idea: «${esc(why)}». Compárala con la línea del motor: ¿coincide el plan?</div>`; coachPanel(); }
+    return;
+  }
   const tok = Coach.token;
   Coach.explain += ` <span class="small">⏳ el entrenador prepara la explicación…</span>`;
   coachPanel();
@@ -341,6 +344,31 @@ function coachRecord(perfect) {
     logPuzzleResult(p, perfect);
     logActivity("puzzle");
   }
+}
+/* «💬 Valorar mi idea» (o Intro en la casilla): si empieza por una jugada legal, se juega con el resto como
+   razonamiento; si no, el profesor IA dice si va por buen camino sin revelar la solución (cuenta como una ayuda) */
+async function coachIdea() {
+  const ex = Coach.ex, w = $("coachWhy");
+  if (!ex || Coach.state !== "ask" || Coach.busy || !w) return;
+  const txt = w.value.trim();
+  if (!txt) { w.focus(); toast("Escribe primero tu idea (o tu jugada y por qué)."); return; }
+  const first = txt.split(/\s+/)[0].replace(/[,.;:]+$/, "");
+  try {
+    const { move } = Chess.parseMove(ex.node.state, first, "auto");
+    if (move) { Coach.why = txt.slice(first.length).replace(/^[\s,.;:-]*(porque|ya que|pues)?\s*/i, "") || txt; coachMove(move); return; }
+  } catch {}
+  Coach.why = txt;
+  if (!aiProvider()) { Coach.ideaText = `📝 Anotado. Ahora haz tu jugada en el tablero: al comprobarla verás tu idea junto a la línea del motor.`; coachPanel(); return; }
+  const tok = Coach.token;
+  Coach.ideaHelp = true;
+  Coach.ideaText = `💬 <span class="small">⏳ el entrenador valora tu idea…</span>`;
+  coachPanel();
+  try {
+    const t = await aiCall(coachSystem(), `${coachFacts(ex, true)}\n\nEl alumno todavía no ha movido. Su idea: «${txt}».\nValora su idea en una o dos frases: dile si va por buen camino comparándola con lo que muestra el motor y qué debería mirar, sin decir la jugada buena, ni la pieza que se mueve, ni su casilla de destino. Termina pidiéndole que haga su jugada.`);
+    if (tok !== Coach.token || Coach.ex !== ex || Coach.state !== "ask") return;
+    Coach.ideaText = coachHintIsSafe(t, ex) ? `💬 ${aiFormat(t)}` : `💬 He anotado tu idea; para no darte la solución, la comentaré cuando hagas la jugada. Haz ahora tu jugada en el tablero.`;
+  } catch (e) { if (tok === Coach.token) Coach.ideaText = `💬 No he podido valorar tu idea (${esc(e.message || String(e))}). Haz tu jugada y la comentaré al comprobarla.`; }
+  coachPanel();
 }
 function coachNext() { Coach.i++; Coach.why = ""; if ($("coachWhy")) $("coachWhy").value = ""; coachShow(); }
 
@@ -389,9 +417,10 @@ function coachPanel(wait) {
     if (wait) html += `<div class="small">${esc(wait)}</div>`;
     if (ex && (Coach.state === "ask" || Coach.state === "checking")) {
       html += `<div class="retry-q">Juegan <b>${coachSide()}</b>. ${ex.kind === "drill" ? "En tu partida se jugó la flecha roja discontinua, que fue un error. ¿Qué era mejor?" : `El rival acaba de jugar ${esc(numPrefix(ex.node.parent.state) + dispSan(ex.node))}. ¿Qué jugarías?`} Haz la jugada en el tablero.</div>
-        <input id="coachWhy" class="coach-why" placeholder="¿Por qué? (opcional: escribe tu idea antes de mover y el entrenador la comentará)" autocomplete="off" value="${esc(Coach.why || "")}">`;
+        <div class="coach-why-row"><input id="coachWhy" class="coach-why" placeholder="Tu idea (opcional): «quiero atacar f7…» o «Cf3 porque…»" aria-label="Tu idea o tu jugada y por qué" autocomplete="off" value="${esc(Coach.why || "")}"><button class="sm-btn" data-co="idea" title="El entrenador valora tu idea sin decirte la solución (o juega la jugada si empiezas por ella)">💬 Valorar mi idea</button></div>`;
     }
     if (Coach.msg) html += `<div class="retry-msg">${Coach.msg}</div>`;
+    if (Coach.ideaText && Coach.state === "ask") html += `<div class="coach-hint coach-idea">${Coach.ideaText}</div>`;
     if (Coach.hintText && Coach.state === "ask") html += `<div class="coach-hint">${Coach.hintText}</div>`;
     if (Coach.state === "checking") html += `<div class="small">⏳ Comprobando tu jugada con ${esc(Engine.name || "el motor")}…</div>`;
     if ((Coach.state === "solved" || Coach.state === "shown") && Coach.explain) html += `<div class="coach-msg">${Coach.explain}</div>`;
@@ -404,10 +433,11 @@ function coachPanel(wait) {
   box.innerHTML = html;
   box.querySelectorAll("[data-co]").forEach(b => b.onclick = () => coachLessonAction(b.dataset.co));
   const w = $("coachWhy");
-  if (w) { w.oninput = () => { Coach.why = w.value; }; if (keepFocus) { w.focus(); w.setSelectionRange(w.value.length, w.value.length); } }
+  if (w) { w.oninput = () => { Coach.why = w.value; }; w.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); coachIdea(); } }; if (keepFocus) { w.focus(); w.setSelectionRange(w.value.length, w.value.length); } }
 }
 function coachLessonAction(a) {
-  if (a === "hint") coachHint();
+  if (a === "idea") coachIdea();
+  else if (a === "hint") coachHint();
   else if (a === "show") coachShowSolution();
   else if (a === "skip") { if (Coach.state === "ask") { coachRecord(false); Coach.streak = 0; } coachNext(); }
   else if (a === "next") coachNext();
