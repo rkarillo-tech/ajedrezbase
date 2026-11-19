@@ -310,6 +310,16 @@ seccion("📖 Aperturas explicadas", () => {
   comprobar(r.najdorf.startsWith("siciliana|") && r.najdorf.includes("Najdorf"), "una variante va al artículo de su familia con su nota propia (Najdorf → Siciliana)");
 });
 
+seccion("Código: sin funciones con el mismo nombre", () => {
+  // Todos los ficheros de src/app/ forman un único script: dos funciones con el mismo nombre se pisan sin avisar
+  const fs = require("fs"), path = require("path"), dir = path.join(__dirname, "..", "src", "app"), vistas = {};
+  for (const f of fs.readdirSync(dir).filter(x => x.endsWith(".js"))) {
+    for (const m of fs.readFileSync(path.join(dir, f), "utf8").matchAll(/^(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/gm)) (vistas[m[1]] = vistas[m[1]] || []).push(f);
+  }
+  const rep = Object.entries(vistas).filter(([, v]) => v.length > 1).map(([k, v]) => `${k} (${v.join(", ")})`);
+  comprobar(!rep.length, "cada función de primer nivel tiene un nombre único" + (rep.length ? ": " + rep.join("; ") : ""));
+});
+
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log(`\nTodas las pruebas de lógica superadas (${((Date.now() - t0) / 1000).toFixed(1)} s).`);
 process.exit(0);

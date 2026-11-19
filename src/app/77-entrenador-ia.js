@@ -397,11 +397,11 @@ function coachPanel(wait) {
   }
   const keepFocus = document.activeElement && document.activeElement.id === "coachWhy";
   box.innerHTML = html;
-  box.querySelectorAll("[data-co]").forEach(b => b.onclick = () => coachAction(b.dataset.co));
+  box.querySelectorAll("[data-co]").forEach(b => b.onclick = () => coachLessonAction(b.dataset.co));
   const w = $("coachWhy");
   if (w) { w.oninput = () => { Coach.why = w.value; }; if (keepFocus) { w.focus(); w.setSelectionRange(w.value.length, w.value.length); } }
 }
-function coachAction(a) {
+function coachLessonAction(a) {
   if (a === "hint") coachHint();
   else if (a === "show") coachShowSolution();
   else if (a === "skip") { if (Coach.state === "ask") { coachRecord(false); Coach.streak = 0; } coachNext(); }

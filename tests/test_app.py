@@ -257,7 +257,7 @@ def prueba_ayuda_y_movil(browser):
     comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "sin desplazamiento horizontal en el móvil")
     pg.click('.tab-btn[data-tab="tools"]')
     comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "sin desplazamiento horizontal en el móvil en la pestaña Entrenar")
-    comprobar(pg.locator("#trainMenu .train-card").count() == 6 and pg.is_visible("#todayBox") and not pg.is_visible("#puzzleStartBtn") and not pg.is_visible("#trainBackBtn"),
+    comprobar(pg.locator("#trainMenu .train-card").count() == 7 and pg.is_visible("#todayBox") and not pg.is_visible("#puzzleStartBtn") and not pg.is_visible("#trainBackBtn"),
               "Entrenar se abre con «Hoy» y un menú de actividades, sin todas las secciones apiladas")
     pg.click('#trainMenu [data-train-open="puzzles"]')
     comprobar(pg.is_visible("#puzzleStartBtn") and not pg.is_visible("#trainMenu") and not pg.is_visible("#drillDueBtn") and pg.is_visible("#trainBackBtn"),
