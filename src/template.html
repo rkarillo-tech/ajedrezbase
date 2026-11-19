@@ -368,9 +368,40 @@ body.dropping::after { content: "📄 Suelta aquí el fichero .pgn (o una copia 
 .cmd-item kbd, .cmd-kbd { font: 0.75rem ui-monospace, monospace; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; color: var(--muted); }
 .cmd-flash { outline: 3px solid var(--accent) !important; outline-offset: 2px; transition: outline-color .3s; }
 @media (max-width: 640px) { .cmd-btn-lbl, .cmd-kbd { display: none; } .modal-back.cmd-back { padding-top: 4vh; } }
+.eco-banner[role=button] { cursor: pointer; }
+.eco-banner[role=button]:hover { text-decoration: underline; }
+.opening-body p { margin: 4px 0; line-height: 1.5; }
+.opening-body ul { margin: 4px 0 4px 18px; line-height: 1.5; }
+.oa-h { font-size: .95rem; margin: 12px 0 2px; color: var(--accent); }
+.oa-meta { margin-bottom: 6px; }
+.oa-variant { margin: 6px 0; }
+.oa-variants { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+.oa-actions { margin-top: 12px; }
+.oa-note { margin-top: 8px; color: var(--muted); }
+.opening-brief p { margin: 4px 0; }
+.oa-brief-head { margin-bottom: 2px; }
+.eco-read { padding: 0 6px; }
+.coach-diag div { margin: 3px 0; }
+.coach-card { border-color: var(--accent); }
+.coach-intro, .coach-msg, .coach-ai { margin: 6px 0; line-height: 1.5; }
+.coach-intro { padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--panel2); border-radius: 4px; }
+.coach-hint { margin: 6px 0; padding: 6px 8px; border-left: 3px solid #ffca28; background: var(--panel2); border-radius: 4px; }
+.coach-why { width: 100%; margin-top: 6px; }
 .ai-ctx { margin-top: 4px; }
 .ai-ctx summary { cursor: pointer; }
 .ai-ctx label { display: block; margin: 3px 0 0 4px; }
+.ai-props { margin: 8px 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel2); }
+.ai-prop { display: flex; gap: 8px; align-items: flex-start; margin-top: 5px; }
+.ai-verdict { flex: none; font-size: .78rem; font-weight: 600; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border); white-space: nowrap; }
+.ai-verdict.ok { color: #66bb6a; border-color: #66bb6a; }
+.ai-verdict.meh { color: #26c6da; border-color: #26c6da; }
+.ai-verdict.warn { color: #ffca28; border-color: #ffca28; }
+.ai-verdict.bad { color: #ef5350; border-color: #ef5350; }
+[data-ui="light"] .ai-verdict.ok { color: #2e7d32; border-color: #2e7d32; }
+[data-ui="light"] .ai-verdict.meh { color: #00838f; border-color: #00838f; }
+[data-ui="light"] .ai-verdict.warn { color: #a66f00; border-color: #a66f00; }
+[data-ui="light"] .ai-verdict.bad { color: #c62828; border-color: #c62828; }
+.ai-unverified { text-decoration: underline dotted #ffca28; cursor: help; }
 .ai-models { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0; }
 .ai-q { margin-bottom: 4px; }
 .ai-text p { margin: 4px 0; }
@@ -870,7 +901,7 @@ body.board-full #exportControls { order: 10; }
 <header>
   <div class="brand-title">
     <h1>♞ AjedrezBase</h1>
-    <span id="ecoBanner" class="eco-banner" title="Apertura detectada (reconoce transposiciones)">Posición inicial</span>
+    <span id="ecoBanner" class="eco-banner" role="button" tabindex="0" title="Apertura detectada (reconoce transposiciones). Pulsa para leer qué es y cómo se juega">Posición inicial</span>
   </div>
   <div class="header-actions">
     <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor (nivel, estilo, ventaja y reloj) o contra otra persona en este dispositivo">🤖 Jugar vs CPU</button>
@@ -990,9 +1021,10 @@ body.board-full #exportControls { order: 10; }
     <div id="aiBox" class="ai-box" hidden>
       <div class="ai-row"><input id="aiQuestion" placeholder="🤖 Pregunta al profesor IA sobre esta posición…" aria-label="Pregunta al profesor IA" autocomplete="off"><button id="aiAskBtn" class="sm-btn primary">Preguntar</button></div>
       <div class="ai-quick"><button class="sm-btn" data-aiq="¿Qué debería hacer ahora y por qué?">¿Qué hago ahora?</button><button class="sm-btn" data-aiq="¿Qué tal ha sido la última jugada y por qué?">¿Y la última jugada?</button><button class="sm-btn" data-aiq="¿Cuál es el plan para los dos bandos en esta posición?">¿Cuál es el plan?</button></div>
-      <details class="ai-ctx small"><summary>📚 Qué más consulta el profesor, además del motor</summary>
+      <details class="ai-ctx small"><summary>📚 Cómo piensa el profesor y qué consulta, además del motor</summary>
+        <label><input type="checkbox" id="aiPropose"> 🧪 La IA propone sus propias jugadas (pensadas sin ver al motor) y Stockfish las comprueba antes de enseñarlas (una consulta más a la IA)</label>
         <label><input type="checkbox" id="aiCtxRep"> 🗂 Tu repertorio (si la posición está en tus líneas o dónde te saliste)</label>
-        <label><input type="checkbox" id="aiCtxModels"> ♟ Partidas modelo de los cursos (y de tus partidas, si marcas la siguiente)</label>
+        <label><input type="checkbox" id="aiCtxModels"> ♟ Los cursos: partidas modelo y la apertura explicada (y tus partidas modelo, si marcas la siguiente)</label>
         <label><input type="checkbox" id="aiCtxGames"> 📚 Tu biblioteca y el .pgn abierto (abre en 📚 Biblioteca › 🗂 Abrir .pgn la base que quieras que use)</label>
         <label><input type="checkbox" id="aiCtxLichess"> 🌍 Explorador de Lichess: maestros y partidas online, con sus partidas destacadas</label>
         <div id="aiCtxLichessNote" hidden>Para Lichess hace falta tu token gratuito (⚙ Ajustes).</div>
@@ -1043,6 +1075,7 @@ body.board-full #exportControls { order: 10; }
     <div id="moveQLegend" class="mq-legend" hidden><span>🎨 Jugadas de la pieza:</span><span><i style="background:#1b8a3a"></i>la mejor</span><span><i style="background:#7cb342"></i>buena</span><span><i style="background:#f2b705"></i>imprecisión</span><span><i style="background:#ef6c00"></i>error</span><span><i style="background:#d32f2f"></i>error grave</span><span class="mq-state"></span></div>
     <div id="radarLegend" class="mq-legend" hidden><span>🛡 Radar:</span><span><i style="background:none;border:2px dashed #e53935"></i>tus piezas en peligro</span><span><i style="background:none;border:2px dashed #1e88e5"></i>piezas del rival que se pueden ganar</span><span class="rd-count"></span></div>
     <div id="retryBox" class="retry-box" hidden aria-live="polite" tabindex="-1"></div>
+    <div id="coachBox" class="retry-box coach-box" hidden aria-live="polite"></div>
     <div id="cpuBox" class="retry-box" hidden aria-live="polite"></div>
     <div id="guessBox" class="retry-box" hidden aria-live="polite"></div>
     <div id="visBox" class="retry-box" hidden aria-live="polite"></div>
@@ -1259,6 +1292,10 @@ body.board-full #exportControls { order: 10; }
           <thead><tr><th>Jugada</th><th class="num">Partidas</th><th>Blancas / Tablas / Negras</th><th class="num" title="Valoración de cada jugada: ☁ nube de Lichess (Stockfish profundo) o ⚙ el motor de la aplicación">Motor</th><th class="num hide-sm">Elo medio</th></tr></thead>
           <tbody id="explorerMovesBody"><tr><td colspan="5" class="small">Abre esta pestaña para consultar la posición.</td></tr></tbody>
         </table>
+      </div>
+      <div class="section" id="openingSection">
+        <h2><span>📖 Aperturas explicadas</span></h2>
+        <div id="openingBrief" class="opening-brief"></div>
       </div>
       <div class="section">
         <h2><span>🔎 Sorpresas y trampas</span></h2>
@@ -1513,6 +1550,7 @@ body.board-full #exportControls { order: 10; }
       <details id="weekBox" class="week-box"><summary id="weekSummary">📈 Tu semana</summary><div id="weekBody"></div></details>
       <h2 class="train-menu-title"><span>🎯 ¿Qué quieres entrenar?</span></h2>
       <div id="trainMenu" class="train-menu">
+        <button type="button" class="train-card coach-card" data-train-open="coach"><span class="tc-ico" aria-hidden="true">🧑‍🏫</span><span class="tc-body"><b>Entrenador IA</b><span class="small">Una clase a tu medida: elige qué trabajar según tus errores, te pregunta, te da pistas y te explica</span></span></button>
         <button type="button" class="train-card" data-train-open="puzzles"><span class="tc-ico" aria-hidden="true">🧩</span><span class="tc-body"><b>Problemas de táctica</b><span class="small">Por temas y dificultad, con repaso espaciado y examen de nivel</span></span><span class="srs-pill tc-badge" data-badge-of="puzzleBadge" hidden></span></button>
         <button type="button" class="train-card" data-train-open="rep"><span class="tc-ico" aria-hidden="true">🗂</span><span class="tc-body"><b>Repertorios</b><span class="small">Crea, entrena y revisa tus líneas de apertura</span></span><span class="srs-pill tc-badge" data-badge-of="myRepBadge" hidden></span></button>
         <button type="button" class="train-card" data-train-open="drill"><span class="tc-ico" aria-hidden="true">🎯</span><span class="tc-body"><b>Errores de tus partidas</b><span class="small">Encuentra la jugada buena donde fallaste</span></span><span class="srs-pill tc-badge" data-badge-of="drillBadge" hidden></span></button>
@@ -1661,6 +1699,16 @@ body.board-full #exportControls { order: 10; }
         </div>
       </div>
 
+      <div class="section" data-train="coach">
+        <h2><span>🧑‍🏫 Entrenador IA</span></h2>
+        <p class="small">El entrenador mira tus errores en las partidas analizadas, tu acierto por temas en los problemas y tu nivel; elige qué te conviene trabajar y te da una clase con posiciones de tus partidas y problemas del tema. En cada una te pregunta qué jugarías (y por qué), Stockfish comprueba tu jugada, te da pistas sin decirte la solución y te explica la idea. La dificultad se adapta a cómo te va.</p>
+        <div id="coachDiag" class="note-box small coach-diag"></div>
+        <div class="filter-row">
+          <select id="coachFocus" aria-label="Qué entrenar"></select>
+          <select id="coachLen" aria-label="Duración"><option value="4">4 posiciones (≈ 5 min)</option><option value="6" selected>6 posiciones (≈ 10 min)</option><option value="10">10 posiciones (≈ 20 min)</option></select>
+          <button id="coachStartBtn" class="primary">▶ Empezar la clase</button>
+        </div>
+      </div>
       <div class="section" data-train="blind">
         <h2>
           <span>🙈 A ciegas y visualización</span>
@@ -1925,6 +1973,14 @@ body.board-full #exportControls { order: 10; }
     <div class="controls">
       <button id="cpuStartBtn" class="primary">▶ Empezar a jugar</button>
     </div>
+  </div>
+</div>
+
+<!-- Apertura explicada -->
+<div class="modal-back" id="openingModal" role="dialog" aria-modal="true" aria-labelledby="openingTitle">
+  <div class="modal wide">
+    <h2><span id="openingTitle">📖 Apertura</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div id="openingBody" class="opening-body"></div>
   </div>
 </div>
 

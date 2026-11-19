@@ -1,7 +1,7 @@
 /* ---------- 26b. Plan de hoy: objetivos diarios, racha y calendario de actividad ---------- */
 const ACT_KEY = "ajedrezActividad";
-const ACT_LABEL = { puzzle: "problemas", lesson: "lecciones", rep: "líneas de repertorio", card: "tarjetas", drill: "ejercicios", cpu: "partidas contra la CPU", exam: "exámenes", guess: "partidas adivinadas", vis: "ejercicios de visualización" };
-const ACT_ONE = { puzzle: "problema", lesson: "lección", rep: "línea de repertorio", card: "tarjeta", drill: "ejercicio", cpu: "partida contra la CPU", exam: "examen", guess: "partida adivinada", vis: "ejercicio de visualización" };
+const ACT_LABEL = { puzzle: "problemas", lesson: "lecciones", rep: "líneas de repertorio", card: "tarjetas", drill: "ejercicios", cpu: "partidas contra la CPU", exam: "exámenes", guess: "partidas adivinadas", vis: "ejercicios de visualización", coach: "clases con el entrenador" };
+const ACT_ONE = { puzzle: "problema", lesson: "lección", rep: "línea de repertorio", card: "tarjeta", drill: "ejercicio", cpu: "partida contra la CPU", exam: "examen", guess: "partida adivinada", vis: "ejercicio de visualización", coach: "clase con el entrenador" };
 const actText = (k, v) => `${v} ${v === 1 ? ACT_ONE[k] : ACT_LABEL[k]}`;
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const actDays = () => LS.get(ACT_KEY, {});

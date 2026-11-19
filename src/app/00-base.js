@@ -60,7 +60,7 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, autoplayMs: 2000, board3d: false, board3dLook: "wood", board3dColors: null, board3dLight: 100, board3dGloss: 30, moveColors: false, radar: false, explainLevel: "club", voiceAuto: false, cpuCoach: false, aiProvider: "none", aiModel: "", aiKey: "", aiUrl: "", aiCtxRep: true, aiCtxModels: true, aiCtxGames: true, aiCtxLichess: true
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, autoplayMs: 2000, board3d: false, board3dLook: "wood", board3dColors: null, board3dLight: 100, board3dGloss: 30, moveColors: false, radar: false, explainLevel: "club", voiceAuto: false, cpuCoach: false, aiProvider: "none", aiModel: "", aiKey: "", aiUrl: "", aiCtxRep: true, aiCtxModels: true, aiCtxGames: true, aiCtxLichess: true, aiPropose: true
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
@@ -175,12 +175,14 @@ const ui = {
   libId: null, dirty: false, rev: 0, saveError: "", recUpdated: 0, explorerAbort: null, fav: false, tags: [], legacyStudy: null, markCtx: null, librarySub: "games"
 };
 const trainer = { active: false, side: 1, errors: 0, hints: 0, correct: 0, hintLevel: 0, hintArrow: null, hintSq: -1, libId: null, markId: null, card: false, puzzle: false, busy: false };
+/* 🧑‍🏫 Entrenador IA (src/app/77-entrenador-ia.js) */
+const Coach = { active: false, busy: false, state: "", queue: [], i: 0, ex: null, results: [], arrows: [], hintSq: -1, hint: 0, attempts: 0, token: 0, target: 1200, streak: 0, focus: null };
 const editor = { active: false, state: null, tool: "MOVE", sel: null, origin: null };
 const cur = () => game.current;
 /* ¿Estamos en un ejercicio o jugando contra la CPU? Entonces se oculta el motor y no se navega por la partida */
-const quiz = () => trainer.active || Retry.active || Guess.active || Vis.active || ui.cpu.on;
+const quiz = () => trainer.active || Coach.active || Retry.active || Guess.active || Vis.active || ui.cpu.on;
 /* En una partida contra la CPU (sin otro ejercicio en marcha) se pueden pedir «Piensa conmigo» y «Habla con tus piezas» */
-const cpuHelpMode = () => ui.cpu.on && !trainer.active && !Retry.active && !Guess.active && !Vis.active;
+const cpuHelpMode = () => ui.cpu.on && !trainer.active && !Coach.active && !Retry.active && !Guess.active && !Vis.active;
 /* Por qué no se puede pedir ayuda ahora (o null si se puede) */
 function helpBlocked() {
   if (editor.active) return "Cierra antes el editor de posición.";

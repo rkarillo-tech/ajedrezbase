@@ -6,6 +6,7 @@ function leaveModes() {
   if (editor.active) closeEditor();
   if (trainer.active) stopTraining(true);
   if (Retry.active) retryEnd(true);
+  if (Coach.active) coachEnd(true);
   if (ui.cpu.on) stopCpu(true);
   if (Guess.active) guessStop();
   if (Vis.active) visStop(true);

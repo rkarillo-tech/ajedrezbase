@@ -291,6 +291,35 @@ seccion("Notación, valoraciones y material", () => {
   comprobar(A.repLeaves(arbol).map(n => n.san).sort().join() === "Nf3,Nf3,f4", "las líneas de un repertorio (sus hojas)");
 });
 
+seccion("📖 Aperturas explicadas", () => {
+  const r = JSON.parse(E.ev(`JSON.stringify((() => {
+    const sin = ECO_BOOK.filter(e => !openingArticleOf(e)).map(e => e.name);
+    const usados = new Set(ECO_BOOK.map(e => openingArticleOf(e) && openingArticleOf(e).art.id));
+    const vacios = OPENING_ARTICLES.filter(a => !usados.has(a.id)).map(a => a.id);
+    const campos = OPENING_ARTICLES.filter(a => !["que", "blancas", "negras", "errores", "origen"].every(k => String(a[k] || "").length > 40) || !(a.ideas && a.ideas.length >= 3)).map(a => a.id);
+    const notas = [];
+    for (const a of OPENING_ARTICLES) for (const [re] of (a.v || [])) if (!ECO_BOOK.some(e => openingArticleOf(e).art === a && re.test(e.name))) notas.push(a.id + " " + re);
+    const jugadas = OPENING_ARTICLES.filter(a => Pgn.parseGame(a.moves, { lang: "en" }).error || !Pgn.mainlineFrom(Pgn.parseGame(a.moves, { lang: "en" }).game.root).length).map(a => a.id);
+    const najdorf = openingArticleOf(ECO_BOOK.find(e => e.name === "Siciliana · Variante Najdorf"));
+    return { sin, vacios, campos, notas, jugadas, najdorf: najdorf.art.id + "|" + najdorf.note };
+  })())`));
+  comprobar(!r.sin.length, "todas las aperturas de la enciclopedia tienen su artículo" + (r.sin.length ? ": faltan " + r.sin.join(", ") : ""));
+  comprobar(!r.vacios.length && !r.notas.length, "cada artículo y cada nota de variante corresponde a alguna apertura" + (r.vacios.length || r.notas.length ? ": " + r.vacios.concat(r.notas).join(", ") : ""));
+  comprobar(!r.campos.length, "todos tienen qué es, ideas, cómo jugarla con cada color, errores y origen" + (r.campos.length ? ": incompletos " + r.campos.join(", ") : ""));
+  comprobar(!r.jugadas.length, "las jugadas de cada artículo son legales" + (r.jugadas.length ? ": " + r.jugadas.join(", ") : ""));
+  comprobar(r.najdorf.startsWith("siciliana|") && r.najdorf.includes("Najdorf"), "una variante va al artículo de su familia con su nota propia (Najdorf → Siciliana)");
+});
+
+seccion("Código: sin funciones con el mismo nombre", () => {
+  // Todos los ficheros de src/app/ forman un único script: dos funciones con el mismo nombre se pisan sin avisar
+  const fs = require("fs"), path = require("path"), dir = path.join(__dirname, "..", "src", "app"), vistas = {};
+  for (const f of fs.readdirSync(dir).filter(x => x.endsWith(".js"))) {
+    for (const m of fs.readFileSync(path.join(dir, f), "utf8").matchAll(/^(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/gm)) (vistas[m[1]] = vistas[m[1]] || []).push(f);
+  }
+  const rep = Object.entries(vistas).filter(([, v]) => v.length > 1).map(([k, v]) => `${k} (${v.join(", ")})`);
+  comprobar(!rep.length, "cada función de primer nivel tiene un nombre único" + (rep.length ? ": " + rep.join("; ") : ""));
+});
+
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log(`\nTodas las pruebas de lógica superadas (${((Date.now() - t0) / 1000).toFixed(1)} s).`);
 process.exit(0);

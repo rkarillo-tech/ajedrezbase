@@ -4,7 +4,7 @@ function switchTab(name) {
   ui.activeTab = name;
   document.querySelectorAll(".tab-btn").forEach(b => { b.classList.toggle("active", b.dataset.tab === name); b.setAttribute("aria-selected", b.dataset.tab === name); });
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === "tab-" + name));
-  if (name === "explorer") refreshExplorer();
+  if (name === "explorer") { refreshExplorer(); renderOpeningBrief(); }
   if (name === "library") { refreshLibraryViews(); if (ui.librarySub === "collection") renderCollection(); if (ui.librarySub === "position") renderPosTarget(); }
   if (name === "tools") { renderDrillInfo(); renderPuzzleInfo(); renderPuzzleStats(); renderExamInfo(); renderRushInfo(); renderToday(); renderMyReps(); }
   if (name === "courses") renderCourses();
@@ -38,7 +38,7 @@ function syncTrainBadge(card) {
   card.className = src.className + " tc-badge";
   card.hidden = !txt || /^0 /.test(txt);
 }
-document.querySelectorAll("#trainMenu [data-train-open]").forEach(b => b.addEventListener("click", () => openTrainSection(b.dataset.trainOpen)));
+document.querySelectorAll("#trainMenu [data-train-open]").forEach(b => b.addEventListener("click", () => { openTrainSection(b.dataset.trainOpen); if (b.dataset.trainOpen === "coach") coachRenderStart(); }));
 document.querySelectorAll("#trainMenu [data-badge-of]").forEach(card => {
   syncTrainBadge(card);
   new MutationObserver(() => syncTrainBadge(card)).observe($(card.dataset.badgeOf), { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class"] });

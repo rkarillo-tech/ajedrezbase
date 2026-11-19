@@ -202,6 +202,8 @@ function aiModelGamesText(mg) {
 async function aiContext(node) {
   const parts = [], sources = [];
   let games = [];
+  const oa = settings.aiCtxModels ? openingArticleText(node) : "";
+  if (oa) { parts.push(oa); sources.push("📖 apertura explicada"); }
   if (settings.aiCtxRep) {
     const r = aiRepertoireFacts(node);
     if (r) { parts.push("Repertorio: " + r.text); if (r.source) sources.push(r.source); }
@@ -228,10 +230,10 @@ function aiOpenModel(g) {
 
 /* Casillas «Usar como contexto» del recuadro del profesor */
 function syncAiCtxForm() {
-  for (const [id, k] of [["aiCtxRep", "aiCtxRep"], ["aiCtxModels", "aiCtxModels"], ["aiCtxGames", "aiCtxGames"], ["aiCtxLichess", "aiCtxLichess"]]) if ($(id)) $(id).checked = !!settings[k];
+  for (const [id, k] of [["aiPropose", "aiPropose"], ["aiCtxRep", "aiCtxRep"], ["aiCtxModels", "aiCtxModels"], ["aiCtxGames", "aiCtxGames"], ["aiCtxLichess", "aiCtxLichess"]]) if ($(id)) $(id).checked = !!settings[k];
   if ($("aiCtxLichessNote")) $("aiCtxLichessNote").hidden = !settings.aiCtxLichess || !!settings.token;
 }
-for (const id of ["aiCtxRep", "aiCtxModels", "aiCtxGames", "aiCtxLichess"]) {
+for (const id of ["aiPropose", "aiCtxRep", "aiCtxModels", "aiCtxGames", "aiCtxLichess"]) {
   $(id).onchange = e => { settings[id] = e.target.checked; saveSettings(); AICtx.cache.clear(); syncAiCtxForm(); };
 }
 syncAiCtxForm();

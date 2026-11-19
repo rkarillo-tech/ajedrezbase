@@ -80,6 +80,7 @@ function cmdCommands() {
     C("Buscar esta posición en mis partidas", () => { closeModals(); switchTab("library"); switchSub("position"); }, { kw: "posicion estructura de peones material partidas modelo" }),
     C("Sorpresas y trampas de esta posición", () => cmdUse("surpriseBtn"), { kw: "trampa sorpresa apertura" }),
     C("Preparar un rival", () => cmdUse("rivalUser", false), { kw: "rival oponente preparacion lichess" }),
+    C("Entrenador IA (una clase a tu medida)", () => { closeModals(); switchTab("tools"); openTrainSection("coach"); coachRenderStart(); }, { kw: "entrenador coach clase profesor ia entrenar errores pistas modo entrenador" }),
     C("Problemas de táctica", () => cmdUse("puzzleStartBtn", false), { kw: "puzzles ejercicios tactica" }),
     C("Contrarreloj de problemas", () => cmdUse("rushBtn3", false), { kw: "rush tiempo problemas rapidos" }),
     C("Examen de nivel", () => cmdUse("examStartBtn", false), { kw: "elo nivel examen medir" }),
@@ -161,12 +162,13 @@ function cmdCourseItems() {
   return out;
 }
 function cmdOpeningItems() {
-  return ECO_BOOK.filter(x => x.ucis).map(x => ({ cat: "Apertura", icon: "📖", name: x.name, ctx: x.eco, kw: x.eco, run: () => {
+  const arts = OPENING_ARTICLES.map(a => ({ cat: "Apertura explicada", icon: "📖", name: `Leer: ${a.name}`, ctx: a.eco, kw: `${a.name} articulo explicada historia como se juega ${a.eco}`, run: () => openOpeningArticle(a.id) }));
+  return arts.concat(ECO_BOOK.filter(x => x.ucis).map(x => ({ cat: "Apertura", icon: "📖", name: x.name, ctx: x.eco, kw: x.eco, run: () => {
     const r = Pgn.parseGame(x.moves, { lang: "en" });
     r.game.headers.Event = x.name; r.game.headers.ECO = x.eco;
     closeModals();
     setGame(r.game, { name: x.name, current: Pgn.mainlineFrom(r.game.root).pop() });
-  } }));
+  } })));
 }
 function cmdGameItems() {
   const out = [];

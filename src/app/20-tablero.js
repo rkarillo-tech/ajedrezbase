@@ -40,7 +40,7 @@ function renderBoard() {
     if (ui.selected === i) cls += " selected";
     if (last && (last.from === i || last.to === i)) cls += " last";
     if (checkSq === i) cls += " in-check";
-    if ((trainer.active && trainer.hintSq === i) || (Retry.active && Retry.hintSq === i) || (Guess.active && Guess.hintSq === i)) cls += " hint-sq";
+    if ((trainer.active && trainer.hintSq === i) || (Retry.active && Retry.hintSq === i) || (Coach.active && Coach.hintSq === i) || (Guess.active && Guess.hintSq === i)) cls += " hint-sq";
     if (Vis.marks.ok === i) cls += " vis-ok";
     if (Vis.marks.bad === i) cls += " vis-bad";
     if (targets.has(i)) { cls += targets.get(i) ? " target occupied" : " target"; const q = quality && quality.get(i); if (q) cls += " " + q.cls; }
@@ -114,6 +114,7 @@ function shapeList() {
     if (ui.cpu.on && ui.cpu.coachArrow && ui.cpu.coachArrow.node === cur()) list.push({ color: "blue", from: ui.cpu.coachArrow.from, to: ui.cpu.coachArrow.to });
     if (Talk.node === cur() && (!quiz() || cpuHelpMode())) for (const sh of Talk.shapes) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
+    if (Coach.active) for (const a of Coach.arrows) list.push(a);
     if (Retry.active) {
       // La jugada que se hizo en la partida (el error), como referencia mientras se busca la buena
       if (Retry.played && ["ask", "wrong", "checking", "preparing"].includes(Retry.state)) list.push(Retry.played);
@@ -157,6 +158,7 @@ function canUserMove() {
   if (ui.cpu.thinking || trainer.busy || Vis.active) return false;
   if (Guess.active) return Guess.state === "ask" && !Guess.busy && cur().state.t === Guess.side;
   if (Retry.active) return !Retry.busy && Retry.state !== "solved" && Retry.state !== "shown";
+  if (Coach.active) return !Coach.busy && Coach.state === "ask";
   if (trainer.active) return trainerUserTurn();
   if (ui.cpu.on && !ui.cpu.two && cur().state.t === ui.cpu.side) return false;
   return true;
@@ -327,6 +329,7 @@ function soundFor(node) {
 }
 function playMove(move, who = "user") {
   if (Retry.active && who === "user") { retryMove(move); return; }
+  if (Coach.active && who === "user") { coachMove(move); return; }
   if (trainer.active && who === "user") { trainerUserMove(move); return; }
   if (Guess.active && who === "user") { guessResolve(move); return; }
   if (who === "user") stopAutoplay();

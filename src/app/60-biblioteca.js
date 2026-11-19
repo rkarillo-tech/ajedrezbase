@@ -1106,7 +1106,9 @@ function renderLocalEcoList() {
     const tr = document.createElement("tr");
     const r = Pgn.parseGame(item.moves, { lang: "en" });
     const txt = Pgn.mainlineFrom(r.game.root).map(n => (n.parent.state.t === 1 ? n.parent.state.full + "." : "") + dispSan(n)).join(" ");
-    tr.innerHTML = `<td><b>${esc(item.eco)}</b></td><td>${esc(item.name)}</td><td class="small">${esc(txt)}</td>`;
+    const art = openingArticleOf(item);
+    tr.innerHTML = `<td><b>${esc(item.eco)}</b></td><td>${esc(item.name)}</td><td class="small">${esc(txt)}</td><td>${art ? `<button class="sm-btn eco-read" title="Leer: ${esc(art.art.name)}" aria-label="Leer el artículo de ${esc(art.art.name)}">📖</button>` : ""}</td>`;
+    if (art) tr.querySelector(".eco-read").onclick = ev => { ev.stopPropagation(); openOpeningArticle(art.art.id, item); };
     tr.onclick = () => {
       const r2 = Pgn.parseGame(item.moves, { lang: "en" });
       r2.game.headers.Event = item.name;
