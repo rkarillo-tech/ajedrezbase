@@ -2286,7 +2286,8 @@ def prueba_entrenador_ia(browser):
     pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
     comprobar(pg.is_visible("#coachBox") and pg.evaluate("Coach.queue.filter(x => x.kind === 'drill').length") == 2 and pg.evaluate("Coach.queue[0].kind") == "puzzle",
               "la clase mezcla problemas del tema y posiciones de tus partidas (empieza con un problema)")
-    comprobar(pg.evaluate("quiz()") and not pg.is_visible("#evalBarOuter:not(.hidden-eval)"), "durante la clase el motor no se ve")
+    comprobar(pg.evaluate("quiz()") and not pg.is_visible("#evalBarOuter:not(.hidden-eval)") and not pg.is_visible("#engineBox"), "durante la clase el motor no se ve")
+    comprobar(pg.evaluate("$('coachBox').parentElement === $('toolsPanel') && $('coachBox').getBoundingClientRect().top < innerHeight / 2"), "en el ordenador, el recuadro del entrenador va junto al tablero, arriba a la derecha, sin desplazarse")
     malo = pg.evaluate("(() => { const s = Coach.ex.node.state; return Chess.uci(Chess.legal(s).find(m => Chess.uci(m) !== Coach.ex.best)); })()")
     pg.evaluate(f"playMove(Chess.moveFromUci(Coach.ex.node.state, '{malo}'), 'user')")
     pg.wait_for_function("Coach.state === 'ask' && Coach.hint === 1", timeout=30000)
@@ -2335,6 +2336,16 @@ def prueba_entrenador_ia(browser):
     comprobar("No inventes jugadas" in llamadas[-1]["messages"][0]["content"], "con la orden de no inventar jugadas")
     pg.click("#coachBox [data-co=end]")
     pg.evaluate("Object.assign(settings, { aiProvider: 'none', myNames: '' }); ['coach0', 'coach1', 'coach2'].forEach(k => Lib.games.delete(k)); renderAiBox()")
+    # En el móvil: justo debajo del tablero y sin desbordar la página
+    pg.set_viewport_size({"width": 390, "height": 844})
+    pg.click('.tab-btn[data-tab="tools"]')
+    if not pg.is_visible("#coachStartBtn"): pg.click('#trainMenu [data-train-open="coach"]')
+    comprobar(pg.evaluate("document.documentElement.scrollWidth") <= 390, "en el móvil, la sección del entrenador no desborda la página")
+    pg.click("#coachStartBtn"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000); pg.wait_for_timeout(600)
+    r = pg.evaluate("(() => { const b = $('coachBox').getBoundingClientRect(), w = $('bottomBar').getBoundingClientRect(); return { gap: b.top - w.bottom, top: b.top, vh: innerHeight }; })()")
+    comprobar(0 <= r["gap"] < 20 and r["top"] < r["vh"] - 100 and pg.evaluate("document.documentElement.scrollWidth") <= 390, "en el móvil, el recuadro del entrenador va justo debajo del tablero, a la vista")
+    pg.click("#coachBox [data-co=end]")
+    pg.set_viewport_size({"width": 1400, "height": 1000})
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 

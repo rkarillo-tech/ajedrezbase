@@ -177,7 +177,7 @@ function placeTrainFeedback() {
   if (el.nextElementSibling !== btns) el.after(btns);
   el.classList.toggle("under-board", !sideLayout());
 }
-const onLayout = () => { placeLessonBox(); placeTrainFeedback(); };
+const onLayout = () => { placeLessonBox(); placeTrainFeedback(); if (Coach.active) placeCoachBox(); };
 wideLayout.addEventListener ? wideLayout.addEventListener("change", onLayout) : wideLayout.addListener(onLayout);
 onLayout();
 /* La línea principal de la lección tal como viene en el curso (sin las jugadas que pruebe el usuario) */
