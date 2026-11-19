@@ -2099,6 +2099,88 @@ def prueba_ollama(browser):
     ctx.close()
 
 
+def prueba_buscador_y_contexto_ia(browser):
+    print("Novedades 1.44.0: buscador de comandos (Ctrl + K) y contexto del profesor IA (repertorio, explorador y partidas modelo)")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    pedido = {}
+    def chat(r):
+        pedido["m"] = json.loads(r.request.post_data)
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": "Juega **Cc3**, como en tu repertorio."}}))
+    def explorador(r):
+        r.fulfill(status=200, headers=cab, body=json.dumps({"white": 500, "draws": 300, "black": 200, "opening": {"eco": "B12", "name": "Caro-Kann Defense"},
+            "moves": [{"san": "Nc3", "white": 200, "draws": 100, "black": 80}, {"san": "e5", "white": 150, "draws": 100, "black": 60}],
+            "topGames": [{"id": "abc", "white": {"name": "Kasparov, Garry", "rating": 2800}, "black": {"name": "Karpov, Anatoly", "rating": 2750}, "year": 1990, "winner": "white"}]}))
+    ctx.route("http://localhost:11434/api/chat", chat)
+    ctx.route("https://explorer.lichess.ovh/**", explorador)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true")
+    # 1. Buscador de comandos
+    pg.keyboard.press("Control+k")
+    comprobar(pg.is_visible("#cmdInput") and pg.locator("#cmdList .cmd-item").count() > 5, "Ctrl + K abre el buscador con las funciones principales")
+    def busca(q):
+        pg.fill("#cmdInput", q)
+        return pg.evaluate("Cmd.shown.slice(0, 5).map(x => x.cat + ': ' + x.name)")
+    comprobar(busca("radar")[0] == "Función: Radar de piezas en peligro", "«radar» encuentra la función")
+    comprobar(any(x.startswith("Apertura: Siciliana") for x in busca("siciliana")), "«siciliana» encuentra las aperturas de la enciclopedia")
+    comprobar(any("Lucena" in x for x in busca("lucena")), "«lucena» encuentra la lección")
+    comprobar(busca("tablero 3d")[0] == "Ajuste: Tablero en 3D", "«tablero 3d» encuentra el ajuste")
+    pg.keyboard.press("Enter")
+    pg.wait_for_function("$('settingsModal').classList.contains('open') && document.querySelector('.cmd-flash')", timeout=5000)
+    comprobar(True, "al elegir un ajuste se abre ⚙ Ajustes y se resalta")
+    pg.keyboard.press("Escape")
+    pg.keyboard.press("/")
+    comprobar(busca("Cf3")[0] == "Jugada: Jugar Cf3", "una jugada legal escrita se ofrece para jugarla")
+    pg.keyboard.press("Enter")
+    pg.wait_for_function("cur().san === 'Nf3'", timeout=5000)
+    comprobar(True, "Intro juega la jugada en el tablero")
+    pg.keyboard.press("/"); busca("sorpresas"); pg.keyboard.press("Enter")
+    pg.wait_for_function("ui.activeTab === 'explorer'", timeout=5000)
+    comprobar(True, "una función de otra pestaña abre esa pestaña")
+    pg.keyboard.press("/"); busca("radar"); pg.keyboard.press("Enter")
+    pg.wait_for_function("settings.radar === true", timeout=5000)
+    comprobar(True, "y las funciones se ejecutan directamente")
+    pg.evaluate("setRadar(false)")
+    # 2. Contexto del profesor IA: repertorio propio, .pgn abierto (partida modelo) y explorador de Lichess
+    carlsen = '[White "Carlsen, Magnus"]\n[Black "Nakamura, Hikaru"]\n[Result "1-0"]\n[Date "2019.01.01"]\n\n1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Bf5 5. Ng3 Bg6 {La retirada del alfil.} 6. h4 h6 1-0\n'
+    pg.evaluate("""async (pgn) => {
+      const g = Pgn.parseGame('1. e4 c6 2. d4 d5 3. Nc3 (3. e5 Bf5) dxe4', { lang: 'en' }).game;
+      setGame(g, { name: 'Mi e4', tags: ['repertorio'], noConfirm: true });
+      await saveToLibrary({ silent: true, force: true });
+      setCollection(pgn, false, 'carlsen.pgn');
+      Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', token: 'lip_prueba' }); renderAiBox(); syncAiCtxForm();
+      const g2 = Pgn.parseGame('1. e4 c6 2. d4 d5', { lang: 'en' }).game;
+      setGame(g2, { noConfirm: true, current: Pgn.mainlineFrom(g2.root).pop() });
+    }""", carlsen)
+    comprobar(pg.locator(".ai-ctx input[type=checkbox]:checked").count() == 4, "las cuatro fuentes de contexto vienen activadas")
+    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
+    pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=60000)
+    u = pedido["m"]["messages"][1]["content"]
+    comprobar("tu repertorio «Mi e4»" in u and "Jugada preparada: Cc3" in u, "a la IA se le dice que la posición está en tu repertorio y qué tienes preparado")
+    comprobar("partidas de maestros: 1000" in u and "Kasparov, Garry" in u, "y lo que juegan los maestros, con sus partidas destacadas (explorador de Lichess)")
+    comprobar("Carlsen, Magnus – Nakamura, Hikaru" in u and "Después se jugó: 3.Cc3" in u and "los cursos" in u, "y partidas modelo del .pgn abierto y de los cursos, con lo que se jugó después")
+    comprobar("contexto comprobado" in pedido["m"]["messages"][0]["content"] and "No inventes jugadas" in pedido["m"]["messages"][0]["content"], "con la orden de citar de dónde sale cada dato y de no inventar jugadas")
+    comprobar("Mi e4" in pg.inner_text("#aiAnswer") and "maestros" in pg.inner_text("#aiAnswer"), "bajo la respuesta se ve qué fuentes se han consultado")
+    pg.evaluate("const g = Pgn.parseGame('1. e4 c6 2. d4 d5 3. f3', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+    pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=60000)
+    comprobar("Tú te saliste de tu repertorio «Mi e4»" in pedido["m"]["messages"][1]["content"], "si te sales del repertorio, se le dice en qué jugada y qué tenías preparado")
+    pg.evaluate("const g = Pgn.parseGame('1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Bf5 5. Ng3 Bg6', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+    pg.click("#aiAskBtn")
+    pg.wait_for_function("$('aiAnswer').querySelector('[data-ai-model]')", timeout=60000)
+    pg.click("#aiAnswer [data-ai-model]")
+    pg.wait_for_function("game.headers.White === 'Carlsen, Magnus' && cur().san === 'Bg6'", timeout=5000)
+    comprobar(True, "una partida modelo se abre justo en la posición")
+    pg.click(".ai-ctx summary")
+    pg.uncheck("#aiCtxRep"); pg.uncheck("#aiCtxModels"); pg.uncheck("#aiCtxGames"); pg.uncheck("#aiCtxLichess")
+    pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=60000)
+    comprobar("Contexto (datos" not in pedido["m"]["messages"][1]["content"], "sin fuentes marcadas, sólo se envía lo del motor")
+    pg.evaluate("Object.assign(settings, { aiProvider: 'none', token: '', aiCtxRep: true, aiCtxModels: true, aiCtxGames: true, aiCtxLichess: true }); renderAiBox()")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -2636,7 +2718,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
