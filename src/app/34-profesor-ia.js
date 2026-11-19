@@ -13,7 +13,7 @@ const AI_PROVIDERS = {
 };
 // Modelos de Claude que admiten la reserva automática en el servidor (fallbacks) y el control de esfuerzo
 const AI_CLAUDE_CURRENT = /^claude-(fable-5-[12]|opus-5-5|opus-5|sonnet-5-5)$/;
-const AI = { busy: false, sdk: null, token: 0 };
+const AI = { busy: false, sdk: null, token: 0, arrow: null };
 const aiProvider = () => (AI_PROVIDERS[settings.aiProvider] && settings.aiProvider !== "none" ? settings.aiProvider : "");
 const aiModel = () => (settings.aiModel || "").trim() || (AI_PROVIDERS[aiProvider()] || {}).model || "";
 
@@ -64,7 +64,7 @@ Reglas estrictas:
 1. Las únicas jugadas que puedes recomendar o citar como buenas son las de las «Mejores líneas del motor» y, si las hay, las de «Tus propuestas» marcadas como BUENA o JUGABLE. No inventes jugadas ni variantes y no contradigas al motor; si algo no está en los datos, dilo.
 1a. Tus propuestas las pensaste tú sin motor y el motor las ha juzgado: defiende las buenas con tus ideas; las DUDOSAS o ERROR no las recomiendes, pero explica por qué fallan usando la refutación del motor (eso enseña mucho); las ILEGALES ni las menciones.
 1b. Además del motor puedes recibir contexto comprobado: el repertorio del alumno, estadísticas del explorador y partidas modelo. Úsalo como lo haría un entrenador: relaciona la posición con su repertorio, con lo que juegan los maestros y con los planes de las partidas modelo, y cítalo siempre diciendo de dónde sale («en tu repertorio…», «los maestros juegan…», «en la partida X–Y se siguió…»). Si la jugada del repertorio o la más jugada no coincide con la mejor del motor, dilo con claridad. Las partidas con la misma estructura de peones sirven para explicar planes, no jugadas concretas de esta posición.
-2. Escribe las jugadas en notación algebraica española (R rey, D dama, T torre, A alfil, C caballo; por ejemplo Cf3, Axc6, O-O).
+2. Escribe las jugadas en notación algebraica española (R rey, D dama, T torre, A alfil, C caballo; por ejemplo Cf3, Axc6, O-O). Nunca uses las letras inglesas (K, Q, B, N, ni R para la torre).
 3. Explica el porqué (amenazas, piezas en peligro, desarrollo, seguridad del rey, plan), no sólo la jugada.
 4. Usa como mucho unas pocas viñetas y **negritas** para lo importante; nada de tablas ni bloques de código.`;
 }
@@ -179,7 +179,11 @@ async function aiAsk(question) {
     // Lo que cuenta como comprobado: el motor, las propuestas legales con su refutación, el contexto y la partida
     const allowed = aiAllowedMoves([facts.text, ctx.text, ...checked.filter(p => p.status !== "ilegal").map(p => `${p.text} ${p.refutation ? p.refutation.text : ""}`)]);
     const stats = {};
-    const answer = aiFormat(text, html => aiMarkUnverified(html, allowed, stats));
+    const resolver = aiMoveResolver(node, [...facts.lines.map(l => ({ state: node.state, ucis: l.pv })),
+      ...checked.filter(p => p.ucis && p.ucis.length).map(p => ({ state: p.state0, ucis: p.ucis })),
+      ...checked.filter(p => p.refutation).map(p => ({ state: p.refutation.state, ucis: p.refutation.pv })),
+      ...(ctx.games || []).filter(g => g.afterLine).map(g => g.afterLine)]);
+    const answer = aiFormat(text, html => aiMoveMarkup(html, allowed, resolver, stats));
     box.innerHTML = `<div class="retry-head">🤖 Profesor IA <span class="small">· ${esc(AI_PROVIDERS[aiProvider()].name.split(" (")[0])} (${esc(aiModel())})</span></div>
       <div class="ai-q small">❓ ${esc(question)}</div><div class="ai-text">${answer}</div>
       ${aiProposalsHtml(checked)}${props && props.error ? `<div class="small">🧪 No se pudieron obtener las propuestas de la IA (${esc(props.error)}); la respuesta usa sólo el motor.</div>` : ""}

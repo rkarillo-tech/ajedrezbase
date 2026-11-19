@@ -139,6 +139,7 @@ async function aiModelGames(node) {
       if (at < 0) continue;
       const u = gidxUcis(e), st = gidxStateAt(e, at);
       const it = item(src, gidxHeaders(src), kind, gidxLabel(e, at), lineText(st, u.slice(at, at + 10), 10), "", u.slice(0, at));
+      it.afterLine = { state: st, ucis: u.slice(at, at + 10) };
       (kind === "exact" ? exact : pawns).push(it);
       if (exact.length >= 12) break;
     }
@@ -156,8 +157,10 @@ async function aiModelGames(node) {
       for (let j = 0; j < 10 && m.children.length; j++) { m = m.children[0]; after.push(m.uci); }
       let comment = "";
       for (let j = 0, c = hit; j < 4 && c; j++, c = c.children[0]) if (c.comment && c.comment.trim().length > 12) { comment = c.comment; break; }
-      exact.push(item({ course: id, i }, g.headers, "exact", hit.parent ? `${numPrefix(hit.parent.state)}${aiSan(hit.parent.state, hit.uci)}` : "el inicio",
-        after.length ? lineText(hit.state, after, 10) : "", comment, Pgn.pathTo(hit).slice(1).map(x => x.uci)));
+      const ci = item({ course: id, i }, g.headers, "exact", hit.parent ? `${numPrefix(hit.parent.state)}${aiSan(hit.parent.state, hit.uci)}` : "el inicio",
+        after.length ? lineText(hit.state, after, 10) : "", comment, Pgn.pathTo(hit).slice(1).map(x => x.uci));
+      ci.afterLine = { state: hit.state, ucis: after };
+      exact.push(ci);
     }
   }
   // Primero las comentadas de los cursos y las de verdad con Elo; como mucho cinco

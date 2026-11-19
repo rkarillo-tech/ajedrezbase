@@ -2419,6 +2419,41 @@ def prueba_velocidad_y_ordenes(browser):
     ctx.close()
 
 
+def prueba_notacion_ia(browser):
+    print("Novedades 1.49.0: la notación de la IA, siempre la tuya, y jugadas pulsables")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    def chat(r):
+        m = json.loads(r.request.post_data)
+        txt = '{"lineas":[{"jugadas":"Nf3 Nc6 Bb5","idea":"desarrollo"}]}' if "SÓLO con JSON" in m["messages"][0]["content"] else \
+              "Juega **Nf3**, luego Bb5. Tu última jugada 1.e4 fue buena; ojo con la casilla e5. Qh5 es mala idea y Bxf7+ un sacrificio."
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
+    ctx.route("http://localhost:11434/api/chat", chat)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, lang: 'es' }); renderAiBox();"
+                "const g = Pgn.parseGame('1. e4 e5', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
+    pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=90000)
+    t = pg.inner_text("#aiAnswer .ai-text")
+    comprobar("Cf3" in t and "Ab5" in t and "Dh5" in t and "Axf7+" in t and not any(x in t for x in ("Nf3", "Bb5", "Qh5", "Bxf7")),
+              "las jugadas que la IA escribe en inglés (Nf3, Bb5, Qh5) se muestran en tu notación (Cf3, Ab5, Dh5)")
+    comprobar(pg.evaluate("[...document.querySelectorAll('#aiAnswer .ai-text .ai-unverified')].map(x => x.textContent)") == ["Axf7+⚠"], "y la no comprobada sigue marcada con ⚠")
+    comprobar(pg.locator("#aiAnswer .ai-text .ai-mv").count() >= 4 and pg.locator("#aiAnswer .ai-text .ai-mv[data-board]").count() >= 2, "las jugadas de la respuesta se pueden pulsar")
+    pg.click("#aiAnswer .ai-text .ai-mv[data-board]")
+    pg.wait_for_function("!hoverTip.hidden && AI.arrow", timeout=3000)
+    pg.wait_for_timeout(150)   # el minitablero del clic se abre justo después de la flecha
+    comprobar(pg.evaluate("shapeList().some(s => s.color === 'blue')"), "al pulsar una jugada se ve en el minitablero y, si se puede jugar ya, con una flecha en el tablero")
+    pg.mouse.click(5, 5)
+    comprobar(pg.evaluate("hoverTip.hidden && !AI.arrow"), "pulsar fuera lo cierra")
+    pg.evaluate("settings.lang = 'en'; renderAiBox()")
+    pg.click("#aiAskBtn"); pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
+    comprobar("Nf3" in pg.inner_text("#aiAnswer .ai-text") and "Cf3" not in pg.inner_text("#aiAnswer .ai-text"), "con la notación inglesa elegida, se muestran en inglés")
+    pg.evaluate("Object.assign(settings, { aiProvider: 'none', lang: 'es', aiCtxLichess: true }); renderAiBox()")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -2956,7 +2991,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
