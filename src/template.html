@@ -412,6 +412,8 @@ body.coaching :is(#engineBox, #evalChartWrap, #chartLegend, #aiBox, #thinkBox, #
 [data-ui="light"] .ai-verdict.warn { color: #a66f00; border-color: #a66f00; }
 [data-ui="light"] .ai-verdict.bad { color: #c62828; border-color: #c62828; }
 .ai-unverified { text-decoration: underline dotted #ffca28; cursor: help; }
+.ai-mv { cursor: pointer; color: var(--info); font-weight: 600; border-bottom: 1px dashed currentColor; }
+.ai-mv:hover, .ai-mv:focus { background: var(--panel3); border-radius: 3px; outline: none; }
 .ai-models { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0; }
 .ai-q { margin-bottom: 4px; }
 .ai-text p { margin: 4px 0; }

@@ -115,6 +115,7 @@ function shapeList() {
     if (Talk.node === cur() && (!quiz() || cpuHelpMode())) for (const sh of Talk.shapes) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
     if (trainer.active && trainer.hintArrow) list.push({ color: "blue", from: trainer.hintArrow.from, to: trainer.hintArrow.to });
     if (Coach.active) for (const a of Coach.arrows) list.push(a);
+    if (AI.arrow && AI.arrow.node === cur()) list.push({ color: "blue", from: AI.arrow.from, to: AI.arrow.to });
     if (Retry.active) {
       // La jugada que se hizo en la partida (el error), como referencia mientras se busca la buena
       if (Retry.played && ["ask", "wrong", "checking", "preparing"].includes(Retry.state)) list.push(Retry.played);

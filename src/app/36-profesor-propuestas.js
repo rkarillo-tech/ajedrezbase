@@ -135,13 +135,67 @@ function aiAllowedMoves(texts) {
   for (const t of texts) for (const m of String(t || "").matchAll(AI_MOVE_RE)) set.add(aiCanon(m[2], lang));
   return set;
 }
-/* Recibe el HTML ya escapado de un párrafo y envuelve las jugadas no comprobadas */
-function aiMarkUnverified(html, allowed, stats) {
+/* Las jugadas que la aplicación conoce para esta respuesta: las legales en la posición, las de las líneas del
+   motor, las propuestas, las refutaciones, las partidas modelo y las ya jugadas. Clave: la jugada en SAN inglés sin
+   jaque; valor: la posición después (para el minitablero), las casillas y si se puede jugar ya en el tablero */
+function aiMoveResolver(node, lines) {
+  const map = new Map();
+  const add = (state, ucis, onBoard, max = 12) => {
+    let s = state;
+    for (let i = 0; i < Math.min(ucis.length, max); i++) {
+      const L = Chess.legal(s), m = Chess.moveFromUci(s, ucis[i], L);
+      if (!m) break;
+      const en = Chess.san(s, m, L).replace(/[+#]/g, ""), s2 = Chess.apply(s, m);
+      if (!map.has(en)) map.set(en, { fen: Chess.toFen(s2), from: m.from, to: m.to, t: s.t, onBoard: onBoard && i === 0 });
+      s = s2;
+    }
+  };
+  try {
+    for (const m of Chess.legal(node.state)) add(node.state, [Chess.uci(m)], true, 1);
+    for (const l of lines || []) if (l && l.state && l.ucis && l.ucis.length) add(l.state, l.ucis, l.state === node.state);
+    const path = Pgn.pathTo(node).slice(1);   // lo ya jugado («tu última jugada, Cxe5…»)
+    if (path.length) add(game.root.state, path.map(n => n.uci), false, 400);
+  } catch {}
+  return map;
+}
+/* Una jugada escrita por la IA, en la notación que sea, a su forma canónica (SAN inglés sin jaque).
+   B, N, Q y K sólo existen en inglés; D, T, A y C sólo en español; la R puede ser rey (es) o torre (en): se decide
+   por lo que la aplicación conoce y, si no, se toma como española, que es lo que se le pide a la IA */
+function aiCanonOf(mv, known) {
+  const t = mv.replace(/0/g, "O");
+  if (/^[BNQK]/.test(t)) return aiCanon(t, "en");
+  if (/^[DTAC]/.test(t)) return aiCanon(t, "es");
+  if (/^[♔-♟]/.test(t)) return aiCanon(t, "fig");
+  if (/^R/.test(t)) { const es = aiCanon(t, "es"), en = aiCanon(t, "en"); return known(es) ? es : known(en) ? en : es; }
+  return aiCanon(t, "es");
+}
+/* Recibe el HTML ya escapado de un párrafo: pasa cada jugada a la notación elegida, la hace pulsable si la
+   aplicación la conoce (minitablero y, si se puede jugar ya, flecha en el tablero) y marca con ⚠ las no comprobadas */
+function aiMoveMarkup(html, allowed, resolver, stats) {
   return html.replace(AI_MOVE_RE, (all, num, mv, chk) => {
-    if (/^[a-h][1-8]/.test(mv) && !num) return all;
-    const ok = allowed.has(aiCanon(mv, "es")) || allowed.has(aiCanon(mv, settings.lang === "en" ? "en" : "es"));
-    if (ok) return all;
+    // Un avance de peón sin número («e5») suele ser una casilla: sólo se hace pulsable si es una jugada conocida, y nunca se marca
+    const bare = /^[a-h][1-8]/.test(mv) && !num;
+    const canon = aiCanonOf(mv, k => (resolver && resolver.has(k)) || allowed.has(k));
+    const r = resolver && resolver.get(canon);
+    if (bare && !r) return all;
+    const shown = (num || "") + formatSan(canon, settings.lang, r ? r.t : 1) + (chk || "");
+    const ok = bare || allowed.has(canon);
+    const txt = r ? `<span class="pv-mv ai-mv" role="button" tabindex="0" data-fen="${esc(r.fen)}" data-from="${r.from}" data-to="${r.to}"${r.onBoard ? ` data-board="1"` : ""} title="Ver la jugada">${esc(shown)}</span>` : esc(shown);
+    if (ok) return txt;
     stats.flagged = (stats.flagged || 0) + 1;
-    return `<span class="ai-unverified" title="Esta jugada no la ha comprobado el motor: tómala con cautela">${all}⚠</span>`;
+    return `<span class="ai-unverified" title="Esta jugada no la ha comprobado el motor: tómala con cautela">${txt}⚠</span>`;
   });
 }
+const aiMarkUnverified = (html, allowed, stats) => aiMoveMarkup(html, allowed, null, stats);
+/* Pulsar (o tocar) una jugada de la IA: minitablero junto a ella y, si se puede jugar ya, flecha en el tablero */
+document.addEventListener("click", e => {
+  const el = e.target.closest && e.target.closest(".ai-mv");
+  if (!el) { if (AI.arrow && !e.target.closest(".hover-board")) { AI.arrow = null; hoverTip.hidden = true; renderShapes(); } return; }
+  e.preventDefault();
+  // Primero la flecha (redibujar cierra el minitablero) y después el minitablero junto a la jugada
+  AI.arrow = el.dataset.board ? { node: cur(), from: +el.dataset.from, to: +el.dataset.to } : null;
+  renderShapes();
+  const r = el.getBoundingClientRect();
+  setTimeout(() => { try { showHoverBoard({ clientX: r.left, clientY: r.bottom }, Chess.parseFen(el.dataset.fen), { from: +el.dataset.from, to: +el.dataset.to }); } catch {} }, 0);
+});
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest && e.target.closest(".ai-mv")) e.target.click(); });

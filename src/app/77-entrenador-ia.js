@@ -141,7 +141,7 @@ function coachSystem() {
 Nivel del alumno: ${lvl}
 Reglas estrictas:
 1. Las únicas jugadas que puedes citar son las que aparecen en los datos (calculadas por el motor). No inventes jugadas ni variantes. No inventes jugadas.
-2. Escribe las jugadas en notación algebraica española (R, D, T, A, C; por ejemplo Cf3, Axc6, O-O).
+2. Escribe las jugadas en notación algebraica española (R rey, D dama, T torre, A alfil, C caballo; por ejemplo Cf3, Axc6, O-O). Nunca uses las letras inglesas (K, Q, B, N, ni R para la torre).
 3. Enseña el porqué (amenazas, piezas sueltas, rey, plan), no sólo la jugada.
 4. Nada de tablas ni bloques de código; como mucho **negritas**.`;
 }
@@ -324,7 +324,8 @@ async function coachExplain(what) {
     const t = await aiCall(coachSystem(), `${facts}\n${what}${why ? `\nSu razonamiento: «${why}».` : ""}\n\nExplica en 2 a 4 frases por qué funciona la mejor jugada (usa la línea del motor)${why ? " y comenta su razonamiento: qué vio bien y qué se le escapó" : ""}. Termina con una idea para recordar.`);
     if (tok !== Coach.token || Coach.ex !== ex) return;
     const allowed = aiAllowedMoves([facts]), stats = {};
-    Coach.explain = aiFormat(t, h => aiMarkUnverified(h, allowed, stats)) + `<div class="small">Línea del motor: ${esc(lineText(ex.node.state, ex.line, 8))}</div>`;
+    const resolver = aiMoveResolver(ex.node, [{ state: ex.node.state, ucis: ex.line }, ...(ex.lines || []).map(l => ({ state: ex.node.state, ucis: l.pv }))]);
+    Coach.explain = aiFormat(t, h => aiMoveMarkup(h, allowed, resolver, stats)) + `<div class="small">Línea del motor: ${esc(lineText(ex.node.state, ex.line, 8))}</div>`;
   } catch (e) { if (tok === Coach.token) Coach.explain = Coach.explain.replace(/ <span class="small">⏳[^<]*<\/span>/, ""); }
   coachPanel();
 }
