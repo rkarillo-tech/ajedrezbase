@@ -397,6 +397,8 @@ body.dropping::after { content: "📄 Suelta aquí el fichero .pgn (o una copia 
 body.coaching :is(#engineBox, #evalChartWrap, #chartLegend, #aiBox, #thinkBox, #talkBox, #scanBox) { display: none !important; }
 #coachFocus { min-width: 0; max-width: 100%; flex: 1 1 220px; }
 #coachLen { min-width: 0; max-width: 100%; }
+.ai-depth { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; color: var(--muted); }
+.ai-depth .sm-btn.on { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
 .ai-ctx { margin-top: 4px; }
 .ai-ctx summary { cursor: pointer; }
 .ai-ctx label { display: block; margin: 3px 0 0 4px; }
@@ -1037,6 +1039,9 @@ body.board-full #exportControls { order: 10; }
     <div id="aiBox" class="ai-box" hidden>
       <div class="ai-row"><input id="aiQuestion" placeholder="🤖 Pregunta al profesor IA sobre esta posición…" aria-label="Pregunta al profesor IA" autocomplete="off"><button id="aiAskBtn" class="sm-btn primary">Preguntar</button></div>
       <div id="aiQuick" class="ai-quick" aria-label="Preguntas rápidas sobre la jugada seleccionada"></div>
+      <div class="ai-depth small" role="group" aria-label="Profundidad de las respuestas">📏 Respuestas:
+        <button class="sm-btn" data-ai-depth="short" title="Lo esencial, en pocas frases">Breves</button><button class="sm-btn" data-ai-depth="normal" title="El porqué de lo importante">Normales</button><button class="sm-btn" data-ai-depth="deep" title="A fondo: el porqué de cada jugada, ideas de fondo y planes">Detalladas</button>
+      </div>
       <details class="ai-ctx small"><summary>📚 Cómo piensa el profesor y qué consulta, además del motor</summary>
         <label><input type="checkbox" id="aiPropose"> 🧪 La IA propone sus propias jugadas (pensadas sin ver al motor) y Stockfish las comprueba antes de enseñarlas (una consulta más a la IA)</label>
         <label><input type="checkbox" id="aiCtxRep"> 🗂 Tu repertorio (si la posición está en tus líneas o dónde te saliste)</label>
@@ -1849,6 +1854,12 @@ body.board-full #exportControls { order: 10; }
       <option value="advanced">🎓 Avanzado: más alternativas, valoraciones y la línea completa</option>
     </select>
     <div class="chk-row" id="voiceRow"><label title="Lee en voz alta cada explicación nueva (Piensa conmigo, lecciones, ejercicios…). En cada recuadro hay además un botón 🔊 para leerlo cuando quieras"><input type="checkbox" id="setVoiceAuto"> 🔊 Leer automáticamente las explicaciones</label></div>
+    <label for="setAiDepth">📏 Profundidad de las respuestas del profesor IA y del entrenador</label>
+    <select id="setAiDepth">
+      <option value="short">Breves: lo esencial y su porqué, en pocas frases</option>
+      <option value="normal">Normales: el porqué de lo importante</option>
+      <option value="deep">Detalladas: el porqué de cada jugada, ideas de fondo y planes de los dos bandos</option>
+    </select>
     <label id="aiLabel" for="setAiProvider">🤖 Profesor IA (opcional): preguntas libres sobre la posición</label>
     <select id="setAiProvider">
       <option value="none">Desactivado</option>

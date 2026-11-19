@@ -2227,6 +2227,17 @@ def prueba_propuestas_ia(browser):
     comprobar("2.Aa6" in u and "ERROR" in u and "refutación del motor" in u, "la que regala el alfil llega como error, con la refutación del motor")
     comprobar("«Axf7»: ILEGAL" in u, "la ilegal se descarta y se le dice que no la mencione")
     comprobar("BUENA o JUGABLE" in final["messages"][0]["content"] and "No inventes jugadas" in final["messages"][0]["content"], "sólo puede recomendar las del motor y sus propuestas buenas o jugables")
+    comprobar(propuesta.get("options", {}).get("num_predict") == 450 and "options" in final and "num_predict" not in final["options"],
+              "la consulta interna de propuestas es corta (con límite de longitud) y la respuesta que lees, no")
+    comprobar("unas 200 palabras" in final["messages"][0]["content"], "por defecto, respuestas normales (unas 200 palabras, con el porqué de lo importante)")
+    comprobar("Tu papel:" in final["messages"][0]["content"] and "enseñarle a pensar" in final["messages"][0]["content"] and "tutor" in propuesta["messages"][0]["content"],
+              "la IA recibe su papel: un tutor que enseña a pensar (también al proponer jugadas)")
+    pg.click("#aiBox [data-ai-depth=deep]")
+    llamadas.clear(); pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
+    comprobar("unas 400 palabras" in llamadas[-1]["messages"][0]["content"] and "el porqué de cada jugada que cites" in llamadas[-1]["messages"][0]["content"] and pg.evaluate("settings.aiDepth") == "deep",
+              "📏 «Detalladas» pide explicar a fondo el porqué de cada jugada (y se recuerda)")
+    pg.click("#aiBox [data-ai-depth=normal]")
     caja = pg.inner_text("#aiAnswer")
     comprobar(pg.locator("#aiAnswer .ai-prop").count() == 3 and "✔ buena" in caja and "✗ error" in caja and "⛔ ilegal" in caja and "Refutación" in caja,
               "bajo la respuesta se ven las propuestas con su veredicto y la refutación")

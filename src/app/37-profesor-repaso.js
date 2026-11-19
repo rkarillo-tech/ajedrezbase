@@ -35,7 +35,7 @@ function aiReviewFacts(R, side) {
   return { text: lines.filter(Boolean).join("\n"), moments, states, resolverLines };
 }
 function aiReviewSystem() {
-  return aiSystem().replace("de forma breve (unas 200 palabras como máximo)", "de forma clara (unas 280 palabras como máximo)") +
+  return aiSystem().replace(`unas ${aiDepth().words} palabras`, `unas ${aiDepth().review} palabras`) +
     `\n5. Estás comentando una partida ya jugada: no hay «posición actual»; habla de cada momento clave con su jugada y su número.`;
 }
 /* Pide el comentario y lo pinta en `box`; `side` (1 / -1) para centrarse en las jugadas del alumno */

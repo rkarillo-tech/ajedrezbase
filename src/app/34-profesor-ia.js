@@ -55,11 +55,28 @@ async function aiFacts(node) {
     last ? `Última jugada: ${last}.` : ""
   ].filter(Boolean).join("\n") };
 }
+/* 📏 Profundidad de las respuestas: cuánto se extiende y cuánto explica el porqué (profesor, comentario de la partida y entrenador) */
+const AI_DEPTHS = {
+  short: { name: "Breve", words: 100, coach: 60, review: 180, how: "Ve a lo esencial: la idea principal y su porqué en pocas frases." },
+  normal: { name: "Normal", words: 200, coach: 90, review: 280, how: "Explica el porqué de lo importante: amenazas, piezas en peligro, plan." },
+  deep: { name: "Detallada", words: 400, coach: 180, review: 450, how: "Explica a fondo: el porqué de cada jugada que cites, las ideas de fondo (estructura, piezas buenas y malas, casillas clave), los planes de los dos bandos y qué pasaría con la alternativa tentadora." }
+};
+const aiDepth = () => AI_DEPTHS[settings.aiDepth] || AI_DEPTHS.normal;
+/* El papel de la IA: un tutor que enseña a pensar, no un oráculo de jugadas. Va antes de las reglas en el profesor,
+   el comentario de la partida y el entrenador; a los modelos pequeños les cambia mucho el tono */
+function aiTutorRole(where) {
+  return `Tu papel:
+- Eres un tutor de ajedrez paciente y exigente que acompaña a un alumno ${where}. Tu objetivo no es darle la jugada, sino enseñarle a pensar: que entienda el porqué y sepa aplicarlo en sus propias partidas.
+- Cómo enseñas: parte de lo que pregunta y de lo que se ve en el tablero (amenazas, piezas sueltas, seguridad del rey); da la idea principal y su porqué con conceptos de ajedrez (principios de apertura, estructura de peones, piezas buenas y malas, casillas débiles, columnas, iniciativa, jugadas forzadas); relaciónala con un principio general que pueda reutilizar; y, si ayuda, termina con una pregunta corta que le haga pensar o con qué debe mirar en su próxima jugada.
+- Eres honesto: si algo no está claro en los datos, lo dices. Animas sin adular: reconoces lo que el alumno hace bien y corriges con claridad.
+- Te apoyas en Stockfish como un profesor en un buen libro de referencia: el motor da las jugadas y las valoraciones exactas; tú pones las ideas, los planes y el porqué.`;
+}
 function aiSystem() {
   const lvl = { basic: "INICIACIÓN: tono cálido y sencillo, sin cifras de valoración ni términos técnicos sin explicar; termina con una regla general para recordar.",
     club: "CLUB: terminología de ajedrez precisa pero accesible (clavadas, horquillas, columnas abiertas, estructura de peones).",
     advanced: "AVANZADO: análisis concreto, con variantes y valoraciones, y los matices estratégicos." }[settings.explainLevel] || "";
-  return `Eres el profesor de ajedrez de AjedrezBase. Respondes siempre en español de España, de forma breve (unas 200 palabras como máximo) y didáctica.
+  return `Eres el profesor de ajedrez de AjedrezBase. Respondes siempre en español de España, de forma didáctica (unas ${aiDepth().words} palabras como máximo). ${aiDepth().how}
+${aiTutorRole("mientras estudia sus partidas y posiciones en AjedrezBase")}
 Nivel del alumno: ${lvl}
 Reglas estrictas:
 1. Las únicas jugadas que puedes recomendar o citar como buenas son las de las «Mejores líneas del motor» y, si las hay, las de «Tus propuestas» marcadas como BUENA o JUGABLE. No inventes jugadas ni variantes y no contradigas al motor; si algo no está en los datos, dilo.
@@ -70,7 +87,7 @@ Reglas estrictas:
 3. Explica el porqué (amenazas, piezas en peligro, desarrollo, seguridad del rey, plan), no sólo la jugada.
 4. Usa como mucho unas pocas viñetas y **negritas** para lo importante; nada de tablas ni bloques de código.`;
 }
-async function aiCall(system, user) {
+async function aiCall(system, user, opts = {}) {
   const p = aiProvider(), model = aiModel();
   if (p === "ollama") {
     if (!model) throw Error("elige antes un modelo (pulsa «🔌 Probar» para ver los que tienes instalados)");
@@ -82,7 +99,7 @@ async function aiCall(system, user) {
     const need = Math.ceil((system.length + user.length) / 3) + 1500;
     const num_ctx = Math.min(32768, Math.max(4096, Math.ceil(need / 2048) * 2048));
     const ask = think => fetch(`${ollamaBase()}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.assign({ model, stream: false, keep_alive: "15m", options: { num_ctx }, messages: [{ role: "system", content: system }, { role: "user", content: user }] }, think === false ? { think: false } : {})) });
+      body: JSON.stringify(Object.assign({ model, stream: false, keep_alive: "15m", options: Object.assign({ num_ctx }, opts.maxTokens ? { num_predict: opts.maxTokens } : {}), messages: [{ role: "system", content: system }, { role: "user", content: user }] }, think === false ? { think: false } : {})) });
     let res, detail = "";
     try { res = await ask(false); } catch (e) { throw Error(ollamaBlockedMsg()); }
     if (!res.ok) {
@@ -105,7 +122,7 @@ async function aiCall(system, user) {
   if (p === "gemini") {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": settings.aiKey },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }] }) });
+      body: JSON.stringify(Object.assign({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }] }, opts.maxTokens ? { generationConfig: { maxOutputTokens: opts.maxTokens } } : {})) });
     if (res.status === 400 || res.status === 401 || res.status === 403) throw Error("Google rechaza la petición: revisa la clave y el nombre del modelo");
     if (res.status === 429) throw Error("Google pide esperar (demasiadas peticiones o sin saldo)");
     if (!res.ok) throw Error(`Google respondió con un error ${res.status}`);
@@ -125,7 +142,7 @@ async function aiCall(system, user) {
   const current = AI_CLAUDE_CURRENT.test(model);
   let res;
   try {
-    const req = { model, max_tokens: 16000, system, messages: [{ role: "user", content: user }] };
+    const req = { model, max_tokens: opts.maxTokens ? Math.max(1024, opts.maxTokens) : 16000, system, messages: [{ role: "user", content: user }] };
     if (current) {
       req.output_config = { effort: "low" };   // respuestas cortas de chat: el esfuerzo bajo basta y responde antes
       res = await client.beta.messages.create(Object.assign(req, { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" }));
@@ -296,3 +313,13 @@ $("aiTestBtn").onclick = async () => {
 $("aiAskBtn").onclick = () => aiAsk($("aiQuestion").value);
 $("aiQuestion").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); aiAsk($("aiQuestion").value); } });
 renderAiQuick();
+
+/* 📏 Profundidad: los botones del recuadro y el desplegable de Ajustes */
+function syncAiDepth() {
+  const d = AI_DEPTHS[settings.aiDepth] ? settings.aiDepth : "normal";
+  document.querySelectorAll("[data-ai-depth]").forEach(b => { b.classList.toggle("on", b.dataset.aiDepth === d); b.setAttribute("aria-pressed", b.dataset.aiDepth === d); });
+  if ($("setAiDepth")) $("setAiDepth").value = d;
+}
+document.querySelectorAll("[data-ai-depth]").forEach(b => b.onclick = () => { settings.aiDepth = b.dataset.aiDepth; saveSettings(); syncAiDepth(); toast(`📏 Respuestas ${{ short: "breves", normal: "normales", deep: "detalladas" }[settings.aiDepth]}`); });
+$("setAiDepth").onchange = e => { settings.aiDepth = e.target.value; saveSettings(); syncAiDepth(); };
+syncAiDepth();
