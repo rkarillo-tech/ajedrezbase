@@ -258,7 +258,7 @@ async function humanOpeningMove(node, elo, P) {
     }
   }
   if (!moves.length) {
-    const local = localMoveIndex().get(Chess.posKey(s));
+    const local = (await localMoveIndex()).get(Chess.hash(s));
     if (local) { const arr = [...local.values()], tot = arr.reduce((a, m) => a + m.n, 0); if (tot >= 3) moves = arr.map(m => { try { return { uci: Chess.uci(Chess.parseMove(s, m.san, "en").move), n: m.n }; } catch { return null; } }).filter(Boolean); }
   }
   if (!moves.length) moves = humanBookMoves(node, P);

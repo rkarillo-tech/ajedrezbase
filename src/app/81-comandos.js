@@ -178,10 +178,10 @@ function cmdGameItems() {
     out.push({ cat: rep ? "Repertorio" : "Partida", icon: rep ? "🗂" : "📚", name: r.title || defaultTitle(h), ctx: [r.white || h.White, r.black || h.Black, r.event || h.Event, (r.date || h.Date || "").slice(0, 4)].filter(x => x && x !== "?").join(" · "),
       kw: [(r.tags || []).join(" "), r.opening || "", r.eco || ""].join(" "), game: true, run: () => { closeModals(); if (openLibGame(r.id, [])) switchTab("study"); } });
   }
-  const tag = (t, k) => { const m = t.match(new RegExp(`\\[${k} "([^"]*)"`)); return m ? m[1] : ""; };
-  Coll.games.slice(0, 20000).forEach((t, i) => {
-    const w = tag(t, "White"), b = tag(t, "Black");
-    out.push({ cat: "Partida (.pgn)", icon: "🗂", name: `${w || "?"} – ${b || "?"}`, ctx: [tag(t, "Result"), tag(t, "Event"), tag(t, "Date").slice(0, 4)].filter(x => x && x !== "?").join(" · "), kw: tag(t, "ECO") + " " + tag(t, "Opening"), game: true, run: () => { closeModals(); loadCollGame(i); switchTab("study"); } });
+  // Las partidas del .pgn abierto son objetos { headers, movetext }
+  Coll.games.slice(0, 20000).forEach((g, i) => {
+    const h = (g && g.headers) || {}, v = k => String(h[k] || "");
+    out.push({ cat: "Partida (.pgn)", icon: "🗂", name: `${v("White") || "?"} – ${v("Black") || "?"}`, ctx: [v("Result"), v("Event"), v("Date").slice(0, 4)].filter(x => x && x !== "?").join(" · "), kw: v("ECO") + " " + v("Opening"), game: true, run: () => { closeModals(); loadCollGame(i); switchTab("study"); } });
   });
   return out;
 }
@@ -195,9 +195,81 @@ function cmdBuild() {
     .map(it => Object.assign(it, { hay: cmdNorm(`${it.name} ${it.ctx || ""} ${it.kw || ""} ${it.cat}`), nm: cmdNorm(it.name) }));
 }
 
+/* Órdenes escritas con datos: «jugar con negras nivel 5 a 5+3», «ir a la jugada 23», «partidas de Carlsen»,
+   «Carlsen contra Nakamura», «modo oscuro», «activar 3D»… */
+const CMD_LEVELS = ["1", "3", "5", "8", "11", "14", "17", "20"];
+function cmdIntents(q) {
+  const t = cmdNorm(q), out = [];
+  if (!t) return out;
+  // Jugar contra la CPU con nivel, color y ritmo
+  if (/^(jugar|juega|partida|cpu|ordenador|maquina|rival)\b/.test(t) && !/\bposicion\b/.test(t)) {
+    const color = /\bnegras?\b/.test(t) ? "-1" : /\bblancas?\b/.test(t) ? "1" : "";
+    const lv = (t.match(/\bnivel (\d)\b/) || [])[1], adapt = /\badaptativ/.test(t);
+    const eloRaw = (t.match(/\b(?:humano|elo) ?(\d{3,4})\b/) || [])[1], elo = eloRaw ? String(Math.max(800, Math.min(2200, Math.round(+eloRaw / 200) * 200))) : "";
+    const tc = (t.match(/\b(\d{1,2}) ?\+ ?(\d{1,2})\b/) || []).slice(1, 3).join("+");
+    const two = /\b(dos jugadores|2 jugadores|amigo)\b/.test(t);
+    const parts = [color === "-1" ? "con negras" : color === "1" ? "con blancas" : "", lv ? `nivel ${lv}` : "", elo ? `rival humano ~${elo}` : "", adapt ? "adaptativo" : "", tc ? `reloj ${tc}` : "", two ? "dos jugadores" : ""].filter(Boolean);
+    if (parts.length) out.push({ cat: "Orden", icon: "🤖", name: `Jugar ${parts.join(", ")}`, ctx: "abre la partida con eso ya elegido", run: () => {
+      closeModals();
+      if (ui.cpu.on) { toast("Ya estás jugando una partida."); return; }
+      openCpuDialog();
+      const set = (id, v) => { const el = $(id); if (el && v != null && [...el.options].some(o => o.value === v)) { el.value = v; el.dispatchEvent(new Event("change")); } };
+      if (two) set("cpuOpponent", "two"); else set("cpuOpponent", "cpu");
+      if (color) set("cpuColor", color);
+      if (adapt) set("cpuLevel", "a");
+      else if (elo) set("cpuLevel", "h" + elo);
+      else if (lv && +lv >= 1 && +lv <= 8) set("cpuLevel", CMD_LEVELS[+lv - 1]);
+      if (tc) set("cpuClock", tc);
+      setTimeout(() => $("cpuStartBtn").focus(), 60);
+      toast("Revisa la partida y pulsa «▶ Empezar a jugar» (o Intro).");
+    } });
+  }
+  // Ir a una jugada de la línea principal
+  const mj = t.match(/^(?:ir a (?:la )?)?jugada (\d{1,3})(?: (?:de )?(blancas|negras))?$/) || t.match(/^(\d{1,3})(\.\.\.|\.)$/);
+  if (mj) {
+    const n = +mj[1], black = mj[2] === "negras" || mj[2] === "...";
+    out.push({ cat: "Orden", icon: "↪", name: `Ir a la jugada ${n}${black ? " de las negras" : ""}`, run: () => {
+      closeModals();
+      const line = Pgn.mainlineFrom(game.root);
+      const target = line.find(x => x.parent.state.full === n && x.parent.state.t === (black ? -1 : 1)) || line.find(x => x.parent.state.full === n);
+      if (target) goTo(target); else toast(`La partida no llega a la jugada ${n}.`);
+    } });
+  }
+  // Partidas de un jugador, o de dos entre sí, en tu biblioteca y en el .pgn abierto
+  const mv = t.match(/^(?:partidas? (?:de )?)?([\p{L}.' -]{3,}?) (?:contra|vs\.?|v|frente a|-) ([\p{L}.' -]{3,})$/u);
+  const mp = !mv && t.match(/^partidas? (?:de|del|con) ([\p{L}.' -]{3,})$/u);
+  if (mv || mp) {
+    const who = mv ? `${mv[1]} ${mv[2]}` : mp[1];
+    const label = mv ? `${cap(mv[1])} contra ${cap(mv[2])}` : cap(mp[1]);
+    out.push({ cat: "Orden", icon: "📚", name: `Buscar partidas: ${label}`, ctx: "en tu biblioteca y en el .pgn abierto", run: () => {
+      closeModals(); switchTab("library");
+      const inColl = Coll.games.length && !Lib.games.size;
+      switchSub(inColl ? "collection" : "games");
+      const box = $(inColl ? "dbFilterInput" : "libFilter");
+      box.value = who; box.dispatchEvent(new Event("input"));
+      if (inColl) renderCollection(); else renderLibrary();
+    } });
+  }
+  // Interruptores directos
+  const on = /\b(activar|activa|pon|poner|encender|enciende|mostrar|muestra|con)\b/.test(t), off = /\b(desactivar|desactiva|quitar|quita|apagar|apaga|ocultar|oculta|sin)\b/.test(t);
+  const sw = [[/\b3 ?d\b/, "setBoard3d", "Tablero en 3D"], [/\bradar\b/, "setRadar", "Radar de piezas en peligro"], [/\bcolores\b/, "setMoveColors", "Colores en las jugadas"], [/\bsonido\b/, null, "Sonido"], [/\bcoordenadas\b/, "setCoords", "Coordenadas"]];
+  for (const [re, id, name] of sw) if (re.test(t) && (on || off)) out.push({ cat: "Orden", icon: on ? "✅" : "⛔", name: `${on ? "Activar" : "Desactivar"}: ${name}`, run: () => {
+    closeModals();
+    if (!id) { if (settings.sound !== on) $("soundToggle").click(); return; }
+    if (id === "setRadar") { setRadar(on); return; }
+    if (id === "setMoveColors") { setMoveColors(on); return; }
+    const el = $(id); if (el && el.checked !== on) { el.checked = on; el.dispatchEvent(new Event("change")); }
+    toast(`${name}: ${on ? "activado" : "desactivado"}`);
+  } });
+  const theme = /\b(modo|tema|aspecto)\b/.test(t) && (/\boscuro\b|\bnoche\b/.test(t) ? "dark" : /\bclaro\b|\bdia\b/.test(t) ? "light" : /\bautomatico\b|\bsistema\b/.test(t) ? "auto" : "");
+  if (theme) out.push({ cat: "Orden", icon: theme === "dark" ? "🌙" : theme === "light" ? "☀" : "🌓", name: `Aspecto ${theme === "dark" ? "oscuro" : theme === "light" ? "claro" : "automático"}`, run: () => {
+    closeModals(); const el = $("setUiTheme"); if ([...el.options].some(o => o.value === theme)) { el.value = theme; el.dispatchEvent(new Event("change")); }
+  } });
+  return out;
+}
 /* Lo escrito puede ser también una jugada legal en el tablero o una FEN */
 function cmdSpecial(q) {
-  const out = [];
+  const out = cmdIntents(q);
   const txt = q.trim();
   if (/^([rnbqkpRNBQKP1-8]+\/){7}[rnbqkpRNBQKP1-8]+(\s|$)/.test(txt)) out.push({ cat: "Posición", icon: "♟", name: "Cargar esta posición (FEN)", ctx: txt.slice(0, 40), run: () => { closeModals(); loadFen(txt); } });
   if (txt.length >= 2 && txt.length <= 8 && !/\s/.test(txt)) {
@@ -213,30 +285,61 @@ function cmdSpecial(q) {
   }
   return out;
 }
-/* Todas las palabras tienen que aparecer; puntúa más lo que empieza por ellas y lo que está en el nombre */
+/* ¿Se parece la palabra a alguna del texto? (una errata: una letra de más, de menos, cambiada o dos intercambiadas) */
+function cmdNear(w, hay) {
+  if (w.length < 5) return false;
+  for (const x of hay.split(" ")) {
+    if (Math.abs(x.length - w.length) > 1 || x[0] !== w[0]) continue;
+    let i = 0, j = 0, e = 0;
+    while (i < w.length && j < x.length) {
+      if (w[i] === x[j]) { i++; j++; continue; }
+      if (++e > 1) break;
+      if (w[i + 1] === x[j] && w[i] === x[j + 1]) { i += 2; j += 2; continue; }
+      if (w.length > x.length) i++; else if (x.length > w.length) j++; else { i++; j++; }
+    }
+    if (e + (w.length - i) + (x.length - j) <= 1) return true;
+  }
+  return false;
+}
+const cmdRecent = () => { try { return LS.get("ajedrezCmdRecientes", []); } catch { return []; } };
+/* Todas las palabras tienen que aparecer (o casi, con una errata); puntúa más lo que empieza por ellas y lo que
+   está en el nombre. Sin texto: lo último que usaste y las funciones principales */
 function cmdSearch(q) {
   const words = cmdNorm(q).split(" ").filter(Boolean);
-  if (!words.length) return Cmd.items.filter(it => it.cat === "Función" && it.icon === "⚡").slice(0, 14);
-  const scored = [];
+  if (!words.length) {
+    const rec = cmdRecent().map(n => Cmd.items.find(it => it.name === n)).filter(Boolean).map(it => Object.assign(Object.create(it), { ctx: "usado hace poco" }));
+    return rec.concat(Cmd.items.filter(it => it.cat === "Función" && it.icon === "⚡" && !rec.some(r => r.name === it.name)).slice(0, 14 - rec.length));
+  }
+  const scored = [], recent = cmdRecent();
   for (const it of Cmd.items) {
     let score = 0, ok = true;
     for (const w of words) {
       const i = it.hay.indexOf(w);
-      if (i < 0) { ok = false; break; }
+      if (i < 0) { if (cmdNear(w, it.hay)) { score += 0.8; continue; } ok = false; break; }
       const inName = it.nm.indexOf(w);
       score += inName === 0 ? 6 : inName > 0 && it.nm[inName - 1] === " " ? 4 : inName > 0 ? 2 : it.hay[i - 1] === " " || i === 0 ? 1 : 0.5;
     }
     if (!ok) continue;
     if (it.icon === "⚡") score += 1.5;
     if (it.game) score -= 0.5;
+    if (recent.includes(it.name)) score += 1;
     scored.push([score, it]);
   }
   scored.sort((a, b) => b[0] - a[0]);
   return scored.slice(0, 40).map(x => x[1]);
 }
+/* Si no hay nada (o casi), se ofrece preguntarlo al profesor IA o buscarlo en la ayuda */
+function cmdFallback(q, n) {
+  const txt = q.trim(), out = [];
+  if (txt.length < 3) return out;
+  if (aiProvider() && (n === 0 || txt.split(/\s+/).length >= 3)) out.push({ cat: "Profesor IA", icon: "🤖", name: `Preguntar al profesor: «${aiClip(txt, 60)}»`, ctx: "sobre la posición del tablero", run: () => { closeModals(); $("aiQuestion").value = txt; revealEl($("aiQuestion")); aiAsk(txt); } });
+  if (n === 0) out.push({ cat: "Ayuda", icon: "❓", name: `Buscar «${aiClip(txt, 40)}» en la ayuda`, run: () => { closeModals(); openHelp(); $("helpSearch").value = txt; $("helpSearch").dispatchEvent(new Event("input")); } });
+  return out;
+}
 function cmdRender() {
   const q = $("cmdInput").value;
-  Cmd.shown = cmdSpecial(q).concat(cmdSearch(q));
+  const found = cmdSpecial(q).concat(cmdSearch(q));
+  Cmd.shown = found.concat(cmdFallback(q, found.length));
   Cmd.sel = Math.min(Cmd.sel, Math.max(0, Cmd.shown.length - 1));
   const list = $("cmdList");
   list.innerHTML = Cmd.shown.length ? Cmd.shown.map((it, i) => `<li role="option" id="cmdOpt${i}" data-i="${i}" class="cmd-item${i === Cmd.sel ? " sel" : ""}" aria-selected="${i === Cmd.sel}">
@@ -250,7 +353,7 @@ function cmdRender() {
 function cmdRun(i) {
   const it = Cmd.shown[i];
   if (!it) return;
-  try { LS.set("ajedrezCmdUltimo", it.name); } catch {}
+  if (it.cat !== "Orden" && it.cat !== "Jugada" && it.cat !== "Posición" && it.cat !== "Profesor IA") { try { LS.set("ajedrezCmdRecientes", [it.name].concat(cmdRecent().filter(n => n !== it.name)).slice(0, 5)); } catch {} }
   closeModals();
   setTimeout(() => it.run(), 0);
 }

@@ -489,6 +489,7 @@ function setCollection(text, append, name) {
   Coll.bytes += text.length;
   if (name) Coll.names.push(name);
   LocalIdx = null;
+  gidxWarm();
   renderCollection();
   updateStorage();
   return parts.length;
@@ -1005,6 +1006,7 @@ async function initLibrary() {
   } catch (e) { toast("❌ No se pudo leer la biblioteca: " + e.message, 6000); }
   await migrateLegacy();
   Lib.ready = true;
+  if (Lib.games.size >= 50) gidxWarm();   // con muchas partidas, el índice se prepara en segundo plano
   if (ui.libId && !Lib.games.has(ui.libId)) ui.libId = null;
   if (!ui.libId && ui.legacyStudy) {
     const r = [...Lib.games.values()].find(x => x.title === ui.legacyStudy);
@@ -1039,35 +1041,24 @@ const renderDrillInfoSoon = debounce(() => renderDrillInfo(), 500);
 async function buildLocalIndex() {
   if (LocalIdxBuilding) return;
   LocalIdxBuilding = true;
-  const idx = new Map();
-  const sources = [...[...Lib.games.values()].map(r => ({ lib: r.id })), ...Coll.games.map((g, i) => ({ coll: i }))];
-  for (let k = 0; k < sources.length; k++) {
-    const src = sources[k];
-    let r, h;
-    if (src.lib != null) { const rec = Lib.games.get(src.lib); if (!rec) continue; r = Pgn.parseGame(rec.pgn, { lang: "en" }); }
-    else r = Pgn.parseGame(Coll.games[src.coll], { lang: "auto" });
-    h = r.game.headers;
-    const res = (h.Result || "*").trim();
-    const wElo = +h.WhiteElo || 0, bElo = +h.BlackElo || 0;
-    let n = r.game.root;
-    while (n.children.length) {
-      const c = n.children[0];
-      let e = idx.get(n.key);
-      if (!e) { e = { moves: new Map(), games: [] }; idx.set(n.key, e); }
-      let mv = e.moves.get(c.san);
-      if (!mv) { mv = { san: c.san, white: 0, draws: 0, black: 0, elo: 0, eloN: 0 }; e.moves.set(c.san, mv); }
-      if (res === "1-0") mv.white++; else if (res === "0-1") mv.black++; else mv.draws++;
-      if (wElo && bElo) { mv.elo += (wElo + bElo) / 2; mv.eloN++; }
-      if (e.games.length < 30 && (!e.games.length || e.games[e.games.length - 1].k !== k)) e.games.push(Object.assign({ h, k, path: Pgn.pathTo(n).slice(1).map(x => x.uci) }, src));
-      n = c;
-    }
-    if (k % 25 === 24) {
-      $("explorerMovesBody").innerHTML = `<tr><td colspan="5" class="small">Indexando: ${k + 1} / ${sources.length} partidas…</td></tr>`;
-      await new Promise(r2 => setTimeout(r2, 0));
-    }
-  }
-  LocalIdx = idx;
-  LocalIdxBuilding = false;
+  try {
+    const all = await gameIndex((d, n) => { $("explorerMovesBody").innerHTML = `<tr><td colspan="5" class="small">Indexando tus partidas: ${d} / ${n}…</td></tr>`; }, { reps: true });
+    const idx = new Map();
+    all.forEach(({ src, e }, k) => {
+      const h = gidxHeaders(src), res = String(h.Result || "*").trim(), wElo = +h.WhiteElo || 0, bElo = +h.BlackElo || 0;
+      const sans = gidxSans(e), ucis = gidxUcis(e);
+      for (let i = 0; i < sans.length; i++) {
+        let x = idx.get(e.k[i]);
+        if (!x) { x = { moves: new Map(), games: [] }; idx.set(e.k[i], x); }
+        let mv = x.moves.get(sans[i]);
+        if (!mv) { mv = { san: sans[i], white: 0, draws: 0, black: 0, elo: 0, eloN: 0 }; x.moves.set(sans[i], mv); }
+        if (res === "1-0") mv.white++; else if (res === "0-1") mv.black++; else mv.draws++;
+        if (wElo && bElo) { mv.elo += (wElo + bElo) / 2; mv.eloN++; }
+        if (x.games.length < 30 && (!x.games.length || x.games[x.games.length - 1].k !== k)) x.games.push(Object.assign({ h, k, path: ucis.slice(0, i) }, src));
+      }
+    });
+    LocalIdx = idx;
+  } finally { LocalIdxBuilding = false; }
 }
 async function renderLocalExplorer(node) {
   const tbody = $("explorerMovesBody"), gbody = $("explorerGamesBody");
@@ -1080,7 +1071,7 @@ async function renderLocalExplorer(node) {
   }
   if (!LocalIdx) await buildLocalIndex();
   if (cur() !== node || ui.activeTab !== "explorer" || $("explorerDbSelect").value !== "local") return;
-  const e = LocalIdx && LocalIdx.get(node.key);
+  const e = LocalIdx && LocalIdx.get(Chess.hash(node.state));
   const rows = e ? [...e.moves.values()].map(m => Object.assign({}, m, { averageRating: m.eloN ? Math.round(m.elo / m.eloN) : 0 })).sort((a, b) => (b.white + b.draws + b.black) - (a.white + a.draws + a.black)) : [];
   explorerMoveRows(node, rows);
   gbody.innerHTML = "";

@@ -1999,9 +1999,9 @@ body.board-full #exportControls { order: 10; }
 <div class="modal-back cmd-back" id="cmdModal" role="dialog" aria-modal="true" aria-label="Buscar funciones">
   <div class="modal cmd-modal">
     <input id="cmdInput" type="search" role="combobox" aria-expanded="true" aria-controls="cmdList" autocomplete="off" spellcheck="false"
-      placeholder="Escribe qué quieres hacer: «radar», «siciliana», «Carlsen Nakamura», «Cf3»…" aria-label="Qué quieres hacer">
+      placeholder="Escribe qué quieres hacer: «radar», «jugar con negras nivel 5», «Carlsen contra Nakamura», «Cf3»…" aria-label="Qué quieres hacer">
     <ul id="cmdList" class="cmd-list" role="listbox"></ul>
-    <div class="small cmd-foot">↑ ↓ para elegir · Intro para abrir · Esc para cerrar · funciones, ajustes, ayuda, lecciones, aperturas, tus partidas, jugadas y FEN</div>
+    <div class="small cmd-foot">↑ ↓ para elegir · Intro para abrir · Esc para cerrar · funciones, ajustes, ayuda, lecciones, aperturas, partidas, jugadas, FEN y órdenes («ir a la jugada 20», «modo oscuro»)</div>
   </div>
 </div>
 
@@ -2065,8 +2065,10 @@ body.board-full #exportControls { order: 10; }
 <script id="coreLib">
 {{CORE}}
 </script>
-<script>
+<script id="pgnLib">
 {{PGN}}
+</script>
+<script>
 {{ECO}}
 {{APP}}
 </script>

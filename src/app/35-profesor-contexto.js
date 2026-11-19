@@ -8,7 +8,6 @@
    Nada de esto lo inventa la IA: todo sale de aquí y se le dice de dónde viene. Las jugadas recomendadas siguen
    siendo sólo las del motor; el resto lo puede citar atribuyéndolo («en tu repertorio», «los maestros juegan»…). */
 const AI_CTX_COURSES = ["partidas", "planes", "estrategia", "aperturas", "trampas", "decisiones", "finales"];
-const AI_CTX_MAX_SOURCES = 6000, AI_CTX_BUDGET_MS = 3000;
 const AICtx = { cache: new Map() };
 const aiSan = (state, uci) => { const t = lineText(state, [uci], 1); return t.replace(/^\d+\.(\.\.)?/, ""); };
 const aiClip = (s, n) => { s = String(s || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
@@ -103,7 +102,7 @@ async function aiExplorerFacts(node) {
   }
   if (settings.aiCtxGames && (Lib.games.size || Coll.games.length)) {
     try {
-      const e = localMoveIndex().get(node.key);
+      const e = (await localMoveIndex()).get(Chess.hash(node.state));
       const moves = e ? [...e.values()].sort((a, b) => b.n - a.n) : [];
       const total = moves.reduce((a, m) => a + m.n, 0);
       if (total) {
@@ -116,74 +115,56 @@ async function aiExplorerFacts(node) {
 }
 
 /* ♟ Partidas modelo: la misma posición (y, si hay pocas, la misma estructura de peones) */
-function aiCtxSources() {
-  const src = [];
-  if (settings.aiCtxGames) {
-    for (const r of Lib.games.values()) if (r.id !== ui.libId && !isRepRec(r)) src.push({ lib: r.id });
-    Coll.games.forEach((g, i) => src.push({ coll: i }));
-  }
-  for (const id of AI_CTX_COURSES) courseLessons(id).forEach((l, i) => src.push({ course: id, i }));
-  return src.slice(0, AI_CTX_MAX_SOURCES);
-}
-function aiParseSource(src) {
-  if (src.lib != null) { const rec = Lib.games.get(src.lib); return rec ? Pgn.parseGame(rec.pgn, { lang: "en" }).game : null; }
-  if (src.coll != null) return Pgn.parseGame(Coll.games[src.coll], { lang: "auto" }).game;
-  const l = courseLessons(src.course)[src.i];
-  return l ? Pgn.parseGame(l.g, { lang: "en" }).game : null;
-}
 async function aiModelGames(node) {
   const s = node.state, key = node.key, pk = pawnKey(s);
   const ply = Pgn.pathTo(node).length - 1;
   const usePawns = ply >= 12 && pk !== "|";   // en la apertura la estructura de peones se repite demasiado
   const sig = `${key}|${settings.aiCtxGames}|${Lib.games.size}|${Coll.games.length}|${ui.libId}`;
   if (AICtx.cache.has(sig)) return AICtx.cache.get(sig);
-  const exact = [], pawns = [], t0 = Date.now(), sources = aiCtxSources();
-  let partial = false;
-  for (let k = 0; k < sources.length; k++) {
-    if (Date.now() - t0 > AI_CTX_BUDGET_MS) { partial = true; break; }
-    const src = sources[k];
-    let g;
-    try { g = aiParseSource(src); } catch { continue; }
-    if (!g) continue;
-    // Se recorre la línea principal y, en los cursos, también las variantes (es donde están muchas ideas)
-    let hit = null, kind = "";
-    if (src.course) { hit = aiFindInTree(g.root, key, 4000); if (hit) kind = "exact"; }
-    else {
-      let n = g.root, d = 0;
-      for (;;) {
-        if (n.key === key) { hit = n; kind = "exact"; break; }
-        if (usePawns && !hit && d >= 10 && pawns.length < 6 && pawnKey(n.state) === pk) { hit = n; kind = "pawns"; }
-        if (!n.children.length) break;
-        n = n.children[0]; d++;
-      }
+  const exact = [], pawns = [];
+  const item = (src, h, kind, label, after, comment, path) => Object.assign({
+    kind, h, path,
+    title: src.course ? `${(COURSES.find(c => c.id === src.course) || {}).name || "Curso"} · ${h.Title || "Lección"}` : `${h.White || "?"} – ${h.Black || "?"}`,
+    where: src.lib != null ? "tu biblioteca" : src.coll != null ? "el .pgn abierto" : "los cursos",
+    label, after, comment: comment ? aiClip(comment, 260) : ""
+  }, src);
+  // 1. Tus partidas y el .pgn abierto: con el índice (instantáneo una vez preparado)
+  if (settings.aiCtxGames && (Lib.games.size || Coll.games.length)) {
+    const H = Chess.hash(s), P = usePawns ? gidxPawnHash(s) : null;
+    for (const { src, e } of await gameIndex()) {
+      if (src.lib != null && src.lib === ui.libId) continue;
+      let at = -1, kind = "";
+      for (let i = 0; i < e.k.length; i++) if (e.k[i] === H) { at = i; kind = "exact"; break; }
+      if (at < 0 && P != null && pawns.length < 6) for (let i = 10; i < e.pw.length; i++) if (e.pw[i] === P) { at = i; kind = "pawns"; break; }
+      if (at < 0) continue;
+      const u = gidxUcis(e), st = gidxStateAt(e, at);
+      const it = item(src, gidxHeaders(src), kind, gidxLabel(e, at), lineText(st, u.slice(at, at + 10), 10), "", u.slice(0, at));
+      (kind === "exact" ? exact : pawns).push(it);
+      if (exact.length >= 12) break;
     }
-    if (!hit) {
-      if (k % 40 === 39) await new Promise(r => setTimeout(r, 0));
-      continue;
-    }
-    const h = g.headers;
-    const after = [];
-    let m = hit;
-    for (let i = 0; i < 10 && m.children.length; i++) { m = m.children[0]; after.push(m.uci); }
-    let comment = "";
-    for (let i = 0, c = hit; i < 4 && c; i++, c = c.children[0]) if (c.comment && c.comment.trim().length > 12) { comment = c.comment; break; }
-    const item = Object.assign({
-      kind, h, path: Pgn.pathTo(hit).slice(1).map(x => x.uci),
-      title: src.course ? `${(COURSES.find(c => c.id === src.course) || {}).name || "Curso"} · ${h.Title || "Lección"}` : `${h.White || "?"} – ${h.Black || "?"}`,
-      where: src.lib != null ? "tu biblioteca" : src.coll != null ? "el .pgn abierto" : "los cursos",
-      label: hit.parent ? `${numPrefix(hit.parent.state)}${aiSan(hit.parent.state, hit.uci)}` : "el inicio",
-      after: after.length ? lineText(hit.state, after, 10) : "",
-      comment: comment ? aiClip(comment, 260) : ""
-    }, src);
-    (kind === "exact" ? exact : pawns).push(item);
-    if (exact.length >= 6) break;
-    if (k % 40 === 39) await new Promise(r => setTimeout(r, 0));
   }
-  // Primero las de verdad (con nombres y resultado) y las comentadas de los cursos; como mucho cinco
+  // 2. Los cursos: se recorren también las variantes, que es donde están muchas ideas comentadas
+  for (const id of AI_CTX_COURSES) {
+    const ls = courseLessons(id);
+    for (let i = 0; i < ls.length; i++) {
+      let g;
+      try { g = Pgn.parseGame(ls[i].g, { lang: "en" }).game; } catch { continue; }
+      const hit = aiFindInTree(g.root, key, 4000);
+      if (!hit) continue;
+      const after = [];
+      let m = hit;
+      for (let j = 0; j < 10 && m.children.length; j++) { m = m.children[0]; after.push(m.uci); }
+      let comment = "";
+      for (let j = 0, c = hit; j < 4 && c; j++, c = c.children[0]) if (c.comment && c.comment.trim().length > 12) { comment = c.comment; break; }
+      exact.push(item({ course: id, i }, g.headers, "exact", hit.parent ? `${numPrefix(hit.parent.state)}${aiSan(hit.parent.state, hit.uci)}` : "el inicio",
+        after.length ? lineText(hit.state, after, 10) : "", comment, Pgn.pathTo(hit).slice(1).map(x => x.uci)));
+    }
+  }
+  // Primero las comentadas de los cursos y las de verdad con Elo; como mucho cinco
   const rank = x => (x.course ? 0 : 1) + (x.comment ? 1 : 0) + (x.h.WhiteElo ? 1 : 0);
   const games = exact.sort((a, b) => rank(b) - rank(a)).slice(0, 5);
   if (games.length < 3) games.push(...pawns.slice(0, 3 - games.length));
-  const out = { games, partial };
+  const out = { games, partial: false };
   AICtx.cache.set(sig, out);
   if (AICtx.cache.size > 60) AICtx.cache.delete(AICtx.cache.keys().next().value);
   return out;
