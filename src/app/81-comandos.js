@@ -161,12 +161,13 @@ function cmdCourseItems() {
   return out;
 }
 function cmdOpeningItems() {
-  return ECO_BOOK.filter(x => x.ucis).map(x => ({ cat: "Apertura", icon: "📖", name: x.name, ctx: x.eco, kw: x.eco, run: () => {
+  const arts = OPENING_ARTICLES.map(a => ({ cat: "Apertura explicada", icon: "📖", name: `Leer: ${a.name}`, ctx: a.eco, kw: `${a.name} articulo explicada historia como se juega ${a.eco}`, run: () => openOpeningArticle(a.id) }));
+  return arts.concat(ECO_BOOK.filter(x => x.ucis).map(x => ({ cat: "Apertura", icon: "📖", name: x.name, ctx: x.eco, kw: x.eco, run: () => {
     const r = Pgn.parseGame(x.moves, { lang: "en" });
     r.game.headers.Event = x.name; r.game.headers.ECO = x.eco;
     closeModals();
     setGame(r.game, { name: x.name, current: Pgn.mainlineFrom(r.game.root).pop() });
-  } }));
+  } })));
 }
 function cmdGameItems() {
   const out = [];

@@ -202,6 +202,8 @@ function aiModelGamesText(mg) {
 async function aiContext(node) {
   const parts = [], sources = [];
   let games = [];
+  const oa = openingArticleText(node);
+  if (oa) { parts.push(oa); sources.push("📖 apertura explicada"); }
   if (settings.aiCtxRep) {
     const r = aiRepertoireFacts(node);
     if (r) { parts.push("Repertorio: " + r.text); if (r.source) sources.push(r.source); }

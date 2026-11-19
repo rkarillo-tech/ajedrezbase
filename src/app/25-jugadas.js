@@ -137,6 +137,7 @@ function renderEco() {
   if (d) banner.textContent = `${d.entry.eco} · ${d.entry.name}`;
   else if (game.root.state && Chess.toFen(game.root.state) !== Chess.START_FEN) banner.textContent = "Posición personalizada";
   else banner.textContent = cur().parent ? "Apertura sin catalogar" : "Posición inicial";
+  if (ui.activeTab === "explorer") renderOpeningBrief();
 }
 function updateEvalBar(ev) {
   const outer = $("evalBarOuter");

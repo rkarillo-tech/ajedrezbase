@@ -243,7 +243,8 @@ AjedrezBase no tiene servidor ni cuentas: tus datos viven en tu navegador. Para 
 
 > **Ejemplo:** abres el .pgn de un torneo, juegas en el tablero tu línea de la Defensa Francesa hasta la jugada 6 y buscas «La misma posición»: ves las partidas que la siguieron y cuántas ganaron las blancas.
 
-## 🌍 15. Aperturas: explorador con valoración, sorpresas y trampas, preparar un rival, enciclopedia (y el token de Lichess)
+## 🌍 15. Aperturas: explorador con valoración, aperturas explicadas, sorpresas y trampas, preparar un rival, enciclopedia (y el token de Lichess)
+- **📖 Aperturas explicadas**: cada apertura de la enciclopedia tiene su artículo, con **qué es**, sus **características e ideas**, **cómo jugarla** con blancas y con negras, los **errores y trampas típicos** y su **origen**; las variantes importantes (Najdorf, Dragón, Winawer, Berlinesa, Marshall…) tienen además su nota. Se abre pulsando el nombre de la apertura en la barra superior, desde el recuadro «📖 Aperturas explicadas» de esta pestaña (que resume la apertura de la posición del tablero), con el botón 📖 de cada fila de la enciclopedia o escribiendo «leer siciliana» en el buscador (`Ctrl` + `K`). Desde el artículo puedes poner la apertura en el tablero, abrirla en el explorador, saltar a sus variantes y a las lecciones de los cursos que la enseñan, o preguntar al profesor IA por sus planes (que además recibe el resumen de la apertura como contexto). Funciona sin conexión. Los textos están redactados con ayuda de IA: si ves algún error, avísanos.
 - La pestaña **🌍 Aperturas** muestra, para la posición del tablero, qué jugadas se han hecho, cuántas veces y con qué resultado (barra blanco / tablas / negro), y partidas de ejemplo que puedes cargar.
 - Tres fuentes:
   - **Maestros**: partidas reales de jugadores de +2200 (necesita token de Lichess).

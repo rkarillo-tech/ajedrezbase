@@ -2226,6 +2226,41 @@ def prueba_propuestas_ia(browser):
     ctx.close()
 
 
+def prueba_aperturas_explicadas(browser):
+    print("Novedades 1.46.0: aperturas explicadas")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true; const g = Pgn.parseGame('1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+    pg.click("#ecoBanner")
+    pg.wait_for_selector("#openingModal.open")
+    texto = pg.inner_text("#openingBody")
+    comprobar("Defensa Siciliana" in pg.inner_text("#openingTitle") and "Najdorf" in texto and all(t in texto for t in ("Qué es", "Características e ideas", "Cómo jugarla", "Con blancas", "Con negras", "Errores y trampas", "Origen")),
+              "pulsar la apertura de la cabecera abre su artículo (Siciliana, con la nota de la Najdorf) con todos sus apartados")
+    comprobar(pg.locator("#openingBody [data-oa-eco]").count() > 10, "el artículo enlaza las variantes de la enciclopedia")
+    pg.click("#openingBody [data-oa-explorer]")
+    pg.wait_for_function("ui.activeTab === 'explorer' && !document.querySelector('.modal-back.open')", timeout=5000)
+    comprobar("Defensa Siciliana" in pg.inner_text("#openingBrief") and pg.evaluate("cur().san") == "a6", "en la pestaña Aperturas se resume la apertura de la posición, sin cambiar la partida")
+    pg.click("#openingBrief [data-oa-open]")
+    pg.wait_for_selector("#openingModal.open")
+    pg.keyboard.press("Escape")
+    pg.fill("#ecoSearchInput", "Petrov")
+    pg.wait_for_function("$('ecoLocalList').rows.length === 1 && $('ecoLocalList').textContent.includes('Petrov')", timeout=5000)
+    pg.click("#ecoLocalList .eco-read")
+    pg.wait_for_selector("#openingModal.open")
+    comprobar("Petrov" in pg.inner_text("#openingTitle") and "Cxe4??" in pg.inner_text("#openingBody"), "el botón 📖 de la enciclopedia abre el artículo, con su trampa típica")
+    pg.click("#openingBody [data-oa-play]")
+    pg.wait_for_function("ECO.detect(cur()) && ECO.detect(cur()).entry.name.includes('Petrov')", timeout=5000)
+    comprobar(True, "«Ver en el tablero» pone la apertura en el tablero")
+    pg.keyboard.press("Control+k"); pg.fill("#cmdInput", "leer caro")
+    comprobar(pg.evaluate("Cmd.shown[0] && Cmd.shown[0].name") == "Leer: Defensa Caro-Kann", "el buscador encuentra los artículos")
+    pg.keyboard.press("Enter")
+    pg.wait_for_function("$('openingModal').classList.contains('open') && $('openingTitle').textContent.includes('Caro-Kann')", timeout=5000)
+    comprobar(True, "y los abre")
+    pg.keyboard.press("Escape")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -2763,7 +2798,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

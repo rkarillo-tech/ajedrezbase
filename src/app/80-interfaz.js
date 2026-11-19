@@ -4,7 +4,7 @@ function switchTab(name) {
   ui.activeTab = name;
   document.querySelectorAll(".tab-btn").forEach(b => { b.classList.toggle("active", b.dataset.tab === name); b.setAttribute("aria-selected", b.dataset.tab === name); });
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === "tab-" + name));
-  if (name === "explorer") refreshExplorer();
+  if (name === "explorer") { refreshExplorer(); renderOpeningBrief(); }
   if (name === "library") { refreshLibraryViews(); if (ui.librarySub === "collection") renderCollection(); if (ui.librarySub === "position") renderPosTarget(); }
   if (name === "tools") { renderDrillInfo(); renderPuzzleInfo(); renderPuzzleStats(); renderExamInfo(); renderRushInfo(); renderToday(); renderMyReps(); }
   if (name === "courses") renderCourses();
