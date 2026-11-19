@@ -320,6 +320,21 @@ seccion("Código: sin funciones con el mismo nombre", () => {
   comprobar(!rep.length, "cada función de primer nivel tiene un nombre único" + (rep.length ? ": " + rep.join("; ") : ""));
 });
 
+seccion("🤖 Lo que la IA dice de las piezas", () => {
+  const r = JSON.parse(E.ev(`JSON.stringify((() => {
+    const s = Chess.parseFen("r1bqkb1r/pp1n1ppp/2p1pn2/n2p4/2PP4/2N1PN2/PP3PPP/R1BQKB1R w KQkq - 0 7");
+    // La respuesta real que dio un modelo pequeño: dos piezas que no están donde dice
+    const mal = "Tu idea va bien, pero hay un problema: el alfil de d7 es peligroso. El caballo de a4 también está amenazado. Lo más eficiente es capturar el alfil de d7 con el caballo de a4.";
+    const bien = "Tu caballo de f3 está bien, el caballo negro de f6 defiende d5 y la dama de d8 vigila; tu alfil de f1 aún no ha salido.";
+    const color = "Tu caballo de d7 está mal colocado.";
+    return { mal: aiCheckClaims(mal, [s], 1).map(e => e.why), bien: aiCheckClaims(bien, [s], 1).length, color: aiCheckClaims(color, [s], 1).map(e => e.why), lista: aiPiecesText(s) };
+  })())`));
+  comprobar(r.mal.join(" | ") === "en d7 hay un caballo negro, no un alfil | en a4 no hay ninguna pieza", "detecta «el alfil de d7» (es un caballo) y «el caballo de a4» (no hay nada)");
+  comprobar(r.bien === 0, "no marca lo que es cierto (piezas, casillas y colores correctos)");
+  comprobar(r.color[0] === "la pieza de d7 es negra (del rival)", "detecta cuando dice «tu» de una pieza del rival");
+  comprobar(r.lista.includes("Piezas de las negras: rey en e8; dama en d8; torres en a8, h8; alfiles en c8, f8; caballos en d7, f6, a5"), "la lista de piezas en palabras que recibe la IA");
+});
+
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log(`\nTodas las pruebas de lógica superadas (${((Date.now() - t0) / 1000).toFixed(1)} s).`);
 process.exit(0);

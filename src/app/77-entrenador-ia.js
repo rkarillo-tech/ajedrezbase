@@ -142,6 +142,7 @@ Nivel del alumno: ${lvl}
 Reglas estrictas:
 1. Las únicas jugadas que puedes citar son las que aparecen en los datos (calculadas por el motor). No inventes jugadas ni variantes. No inventes jugadas.
 2. Escribe las jugadas en notación algebraica española (R rey, D dama, T torre, A alfil, C caballo; por ejemplo Cf3, Axc6, O-O). Nunca uses las letras inglesas (K, Q, B, N, ni R para la torre).
+2b. Para saber qué pieza hay en cada casilla y de qué color es, usa SÓLO la lista de piezas que se te da; no lo supongas. Las piezas del alumno son las del bando que juega.
 3. Enseña el porqué (amenazas, piezas sueltas, rey, plan), no sólo la jugada.
 4. Nada de tablas ni bloques de código; como mucho **negritas**.`;
 }
@@ -251,9 +252,9 @@ async function coachHint(o = {}) {
   Coach.hintText += ` <span class="small">⏳ el entrenador piensa…</span>`;
   coachPanel();
   try {
-    const t = await aiCall(coachSystem(), `${coachFacts(ex, true)}\n${o.wrong ? `El alumno ha probado ${o.wrong}, que es un error${o.refut ? `; la refutación del motor: ${o.refut}` : ""}.` : ""}${Coach.tries.length > 1 ? ` Antes probó: ${Coach.tries.slice(0, -1).join(", ")}.` : ""}\n\nDa la pista número ${level} de 3 en una o dos frases${o.wrong ? " (empieza explicando en pocas palabras por qué falla su jugada)" : ""}: guía con una pregunta, sin decir la jugada buena, ni la pieza que se mueve${level === 1 ? "" : " (ya está marcada en el tablero)"}, ni su casilla de destino.`);
+    const { text: t, errs: herrs } = await aiCallChecked(coachSystem(), `${coachFacts(ex, true)}\n${o.wrong ? `El alumno ha probado ${o.wrong}, que es un error${o.refut ? `; la refutación del motor: ${o.refut}` : ""}.` : ""}${Coach.tries.length > 1 ? ` Antes probó: ${Coach.tries.slice(0, -1).join(", ")}.` : ""}\n\nDa la pista número ${level} de 3 en una o dos frases${o.wrong ? " (empieza explicando en pocas palabras por qué falla su jugada)" : ""}: guía con una pregunta, sin decir la jugada buena, ni la pieza que se mueve${level === 1 ? "" : " (ya está marcada en el tablero)"}, ni su casilla de destino.`, coachStates(ex), ex.node.state.t);
     if (tok !== Coach.token || Coach.ex !== ex || Coach.hint !== at || Coach.state !== "ask") return;
-    const safe = coachHintIsSafe(t, ex);
+    const safe = coachHintIsSafe(t, ex) && !herrs.length;   // si sigue equivocándose sobre la posición, mejor la pista propia
     Coach.hintText = safe ? `💡 ${aiFormat(t)}` : `💡 ${esc(text)}`;
   } catch { if (Coach.hint === at) Coach.hintText = `💡 ${esc(text)}`; }
   coachPanel();
@@ -266,6 +267,8 @@ function coachHintIsSafe(t, ex) {
   const txt = String(t).replace(/[+#!?]/g, "");
   return ![en, es].some(x => txt.includes(x)) && !new RegExp(`\\b${to}\\b`).test(txt);
 }
+/* Posiciones en las que puede ser cierto lo que diga la IA de las piezas: la del ejercicio y las primeras jugadas de las líneas */
+const coachStates = ex => [ex.node.state, ...aiLineStates(ex.node.state, ex.line), ...(ex.lines || []).flatMap(l => aiLineStates(ex.node.state, l.pv))];
 function coachFacts(ex, secret) {
   const s = ex.node.state;
   const lines = (ex.lines || []).map((l, i) => `${i + 1}. ${fmtEval(aiEv(l))}: ${lineText(s, l.pv, 8)}`).join("\n");
@@ -321,11 +324,11 @@ async function coachExplain(what) {
   coachPanel();
   try {
     const facts = coachFacts(ex, false);
-    const t = await aiCall(coachSystem(), `${facts}\n${what}${why ? `\nSu razonamiento: «${why}».` : ""}\n\nExplica en 2 a 4 frases por qué funciona la mejor jugada (usa la línea del motor)${why ? " y comenta su razonamiento: qué vio bien y qué se le escapó" : ""}. Termina con una idea para recordar.`);
+    const { text: t, errs: eerrs } = await aiCallChecked(coachSystem(), `${facts}\n${what}${why ? `\nSu razonamiento: «${why}».` : ""}\n\nExplica en 2 a 4 frases por qué funciona la mejor jugada (usa la línea del motor)${why ? " y comenta su razonamiento: qué vio bien y qué se le escapó" : ""}. Termina con una idea para recordar.`, coachStates(ex), ex.node.state.t);
     if (tok !== Coach.token || Coach.ex !== ex) return;
     const allowed = aiAllowedMoves([facts]), stats = {};
     const resolver = aiMoveResolver(ex.node, [{ state: ex.node.state, ucis: ex.line }, ...(ex.lines || []).map(l => ({ state: ex.node.state, ucis: l.pv }))]);
-    Coach.explain = aiFormat(t, h => aiMoveMarkup(h, allowed, resolver, stats)) + `<div class="small">Línea del motor: ${esc(lineText(ex.node.state, ex.line, 8))}</div>`;
+    Coach.explain = aiMarkClaims(aiFormat(t, h => aiMoveMarkup(h, allowed, resolver, stats)), eerrs) + `<div class="small">Línea del motor: ${esc(lineText(ex.node.state, ex.line, 8))}</div>`;
   } catch (e) { if (tok === Coach.token) Coach.explain = Coach.explain.replace(/ <span class="small">⏳[^<]*<\/span>/, ""); }
   coachPanel();
 }
@@ -365,9 +368,9 @@ async function coachIdea() {
   Coach.ideaText = `💬 <span class="small">⏳ el entrenador valora tu idea…</span>`;
   coachPanel();
   try {
-    const t = await aiCall(coachSystem(), `${coachFacts(ex, true)}\n\nEl alumno todavía no ha movido. Su idea: «${txt}».\nValora su idea en una o dos frases: dile si va por buen camino comparándola con lo que muestra el motor y qué debería mirar, sin decir la jugada buena, ni la pieza que se mueve, ni su casilla de destino. Termina pidiéndole que haga su jugada.`);
+    const { text: t, errs: ierrs } = await aiCallChecked(coachSystem(), `${coachFacts(ex, true)}\n\nEl alumno todavía no ha movido. Su idea: «${txt}».\nValora su idea en una o dos frases: dile si va por buen camino comparándola con lo que muestra el motor y qué debería mirar, sin decir la jugada buena, ni la pieza que se mueve, ni su casilla de destino. Termina pidiéndole que haga su jugada.`, coachStates(ex), ex.node.state.t);
     if (tok !== Coach.token || Coach.ex !== ex || Coach.state !== "ask") return;
-    Coach.ideaText = coachHintIsSafe(t, ex) ? `💬 ${aiFormat(t)}` : `💬 He anotado tu idea; para no darte la solución, la comentaré cuando hagas la jugada. Haz ahora tu jugada en el tablero.`;
+    Coach.ideaText = ierrs.length ? `💬 He anotado tu idea. Haz ahora tu jugada en el tablero y la comentaré al comprobarla.` : coachHintIsSafe(t, ex) ? `💬 ${aiFormat(t)}` : `💬 He anotado tu idea; para no darte la solución, la comentaré cuando hagas la jugada. Haz ahora tu jugada en el tablero.`;
   } catch (e) { if (tok === Coach.token) Coach.ideaText = `💬 No he podido valorar tu idea (${esc(e.message || String(e))}). Haz tu jugada y la comentaré al comprobarla.`; }
   coachPanel();
 }
