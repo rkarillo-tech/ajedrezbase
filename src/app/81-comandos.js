@@ -80,6 +80,7 @@ function cmdCommands() {
     C("Buscar esta posición en mis partidas", () => { closeModals(); switchTab("library"); switchSub("position"); }, { kw: "posicion estructura de peones material partidas modelo" }),
     C("Sorpresas y trampas de esta posición", () => cmdUse("surpriseBtn"), { kw: "trampa sorpresa apertura" }),
     C("Preparar un rival", () => cmdUse("rivalUser", false), { kw: "rival oponente preparacion lichess" }),
+    C("Entrenador IA (una clase a tu medida)", () => { closeModals(); switchTab("tools"); openTrainSection("coach"); coachRenderStart(); }, { kw: "entrenador coach clase profesor ia entrenar errores pistas modo entrenador" }),
     C("Problemas de táctica", () => cmdUse("puzzleStartBtn", false), { kw: "puzzles ejercicios tactica" }),
     C("Contrarreloj de problemas", () => cmdUse("rushBtn3", false), { kw: "rush tiempo problemas rapidos" }),
     C("Examen de nivel", () => cmdUse("examStartBtn", false), { kw: "elo nivel examen medir" }),

@@ -202,7 +202,7 @@ function aiModelGamesText(mg) {
 async function aiContext(node) {
   const parts = [], sources = [];
   let games = [];
-  const oa = openingArticleText(node);
+  const oa = settings.aiCtxModels ? openingArticleText(node) : "";
   if (oa) { parts.push(oa); sources.push("📖 apertura explicada"); }
   if (settings.aiCtxRep) {
     const r = aiRepertoireFacts(node);

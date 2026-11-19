@@ -38,7 +38,7 @@ function syncTrainBadge(card) {
   card.className = src.className + " tc-badge";
   card.hidden = !txt || /^0 /.test(txt);
 }
-document.querySelectorAll("#trainMenu [data-train-open]").forEach(b => b.addEventListener("click", () => openTrainSection(b.dataset.trainOpen)));
+document.querySelectorAll("#trainMenu [data-train-open]").forEach(b => b.addEventListener("click", () => { openTrainSection(b.dataset.trainOpen); if (b.dataset.trainOpen === "coach") coachRenderStart(); }));
 document.querySelectorAll("#trainMenu [data-badge-of]").forEach(card => {
   syncTrainBadge(card);
   new MutationObserver(() => syncTrainBadge(card)).observe($(card.dataset.badgeOf), { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class"] });

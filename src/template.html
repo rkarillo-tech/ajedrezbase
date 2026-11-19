@@ -381,6 +381,12 @@ body.dropping::after { content: "📄 Suelta aquí el fichero .pgn (o una copia 
 .opening-brief p { margin: 4px 0; }
 .oa-brief-head { margin-bottom: 2px; }
 .eco-read { padding: 0 6px; }
+.coach-diag div { margin: 3px 0; }
+.coach-card { border-color: var(--accent); }
+.coach-intro, .coach-msg, .coach-ai { margin: 6px 0; line-height: 1.5; }
+.coach-intro { padding: 6px 8px; border-left: 3px solid var(--accent); background: var(--panel2); border-radius: 4px; }
+.coach-hint { margin: 6px 0; padding: 6px 8px; border-left: 3px solid #ffca28; background: var(--panel2); border-radius: 4px; }
+.coach-why { width: 100%; margin-top: 6px; }
 .ai-ctx { margin-top: 4px; }
 .ai-ctx summary { cursor: pointer; }
 .ai-ctx label { display: block; margin: 3px 0 0 4px; }
@@ -1018,7 +1024,7 @@ body.board-full #exportControls { order: 10; }
       <details class="ai-ctx small"><summary>📚 Cómo piensa el profesor y qué consulta, además del motor</summary>
         <label><input type="checkbox" id="aiPropose"> 🧪 La IA propone sus propias jugadas (pensadas sin ver al motor) y Stockfish las comprueba antes de enseñarlas (una consulta más a la IA)</label>
         <label><input type="checkbox" id="aiCtxRep"> 🗂 Tu repertorio (si la posición está en tus líneas o dónde te saliste)</label>
-        <label><input type="checkbox" id="aiCtxModels"> ♟ Partidas modelo de los cursos (y de tus partidas, si marcas la siguiente)</label>
+        <label><input type="checkbox" id="aiCtxModels"> ♟ Los cursos: partidas modelo y la apertura explicada (y tus partidas modelo, si marcas la siguiente)</label>
         <label><input type="checkbox" id="aiCtxGames"> 📚 Tu biblioteca y el .pgn abierto (abre en 📚 Biblioteca › 🗂 Abrir .pgn la base que quieras que use)</label>
         <label><input type="checkbox" id="aiCtxLichess"> 🌍 Explorador de Lichess: maestros y partidas online, con sus partidas destacadas</label>
         <div id="aiCtxLichessNote" hidden>Para Lichess hace falta tu token gratuito (⚙ Ajustes).</div>
@@ -1069,6 +1075,7 @@ body.board-full #exportControls { order: 10; }
     <div id="moveQLegend" class="mq-legend" hidden><span>🎨 Jugadas de la pieza:</span><span><i style="background:#1b8a3a"></i>la mejor</span><span><i style="background:#7cb342"></i>buena</span><span><i style="background:#f2b705"></i>imprecisión</span><span><i style="background:#ef6c00"></i>error</span><span><i style="background:#d32f2f"></i>error grave</span><span class="mq-state"></span></div>
     <div id="radarLegend" class="mq-legend" hidden><span>🛡 Radar:</span><span><i style="background:none;border:2px dashed #e53935"></i>tus piezas en peligro</span><span><i style="background:none;border:2px dashed #1e88e5"></i>piezas del rival que se pueden ganar</span><span class="rd-count"></span></div>
     <div id="retryBox" class="retry-box" hidden aria-live="polite" tabindex="-1"></div>
+    <div id="coachBox" class="retry-box coach-box" hidden aria-live="polite"></div>
     <div id="cpuBox" class="retry-box" hidden aria-live="polite"></div>
     <div id="guessBox" class="retry-box" hidden aria-live="polite"></div>
     <div id="visBox" class="retry-box" hidden aria-live="polite"></div>
@@ -1543,6 +1550,7 @@ body.board-full #exportControls { order: 10; }
       <details id="weekBox" class="week-box"><summary id="weekSummary">📈 Tu semana</summary><div id="weekBody"></div></details>
       <h2 class="train-menu-title"><span>🎯 ¿Qué quieres entrenar?</span></h2>
       <div id="trainMenu" class="train-menu">
+        <button type="button" class="train-card coach-card" data-train-open="coach"><span class="tc-ico" aria-hidden="true">🧑‍🏫</span><span class="tc-body"><b>Entrenador IA</b><span class="small">Una clase a tu medida: elige qué trabajar según tus errores, te pregunta, te da pistas y te explica</span></span></button>
         <button type="button" class="train-card" data-train-open="puzzles"><span class="tc-ico" aria-hidden="true">🧩</span><span class="tc-body"><b>Problemas de táctica</b><span class="small">Por temas y dificultad, con repaso espaciado y examen de nivel</span></span><span class="srs-pill tc-badge" data-badge-of="puzzleBadge" hidden></span></button>
         <button type="button" class="train-card" data-train-open="rep"><span class="tc-ico" aria-hidden="true">🗂</span><span class="tc-body"><b>Repertorios</b><span class="small">Crea, entrena y revisa tus líneas de apertura</span></span><span class="srs-pill tc-badge" data-badge-of="myRepBadge" hidden></span></button>
         <button type="button" class="train-card" data-train-open="drill"><span class="tc-ico" aria-hidden="true">🎯</span><span class="tc-body"><b>Errores de tus partidas</b><span class="small">Encuentra la jugada buena donde fallaste</span></span><span class="srs-pill tc-badge" data-badge-of="drillBadge" hidden></span></button>
@@ -1691,6 +1699,16 @@ body.board-full #exportControls { order: 10; }
         </div>
       </div>
 
+      <div class="section" data-train="coach">
+        <h2><span>🧑‍🏫 Entrenador IA</span></h2>
+        <p class="small">El entrenador mira tus errores en las partidas analizadas, tu acierto por temas en los problemas y tu nivel; elige qué te conviene trabajar y te da una clase con posiciones de tus partidas y problemas del tema. En cada una te pregunta qué jugarías (y por qué), Stockfish comprueba tu jugada, te da pistas sin decirte la solución y te explica la idea. La dificultad se adapta a cómo te va.</p>
+        <div id="coachDiag" class="note-box small coach-diag"></div>
+        <div class="filter-row">
+          <select id="coachFocus" aria-label="Qué entrenar"></select>
+          <select id="coachLen" aria-label="Duración"><option value="4">4 posiciones (≈ 5 min)</option><option value="6" selected>6 posiciones (≈ 10 min)</option><option value="10">10 posiciones (≈ 20 min)</option></select>
+          <button id="coachStartBtn" class="primary">▶ Empezar la clase</button>
+        </div>
+      </div>
       <div class="section" data-train="blind">
         <h2>
           <span>🙈 A ciegas y visualización</span>

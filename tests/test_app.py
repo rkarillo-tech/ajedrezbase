@@ -2261,6 +2261,84 @@ def prueba_aperturas_explicadas(browser):
     ctx.close()
 
 
+def prueba_entrenador_ia(browser):
+    print("Novedades 1.47.0: entrenador IA (una clase guiada con tus errores y problemas del tema)")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    llamadas, pista = [], ["¿Qué pieza rival está sin defender?"]
+    def chat(r):
+        m = json.loads(r.request.post_data)
+        llamadas.append(m)
+        u = m["messages"][1]["content"]
+        txt = "Hoy toca **táctica**." if "presentación" in u else pista[0] if "pista número" in u else "Funciona porque gana material. Otra idea: Txh7." if "Explica" in u else "Buen trabajo."
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
+    ctx.route("http://localhost:11434/api/chat", chat)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    # Una partida tuya con un error ya analizado: la torre de a1 se deja tomar en vez de capturar la dama colgada
+    pg.evaluate("""() => { $('welcomeBox').hidden = true; settings.myNames = 'Yo';
+      for (let i = 0; i < 3; i++) Lib.games.set('coach' + i, { id: 'coach' + i, title: 'Mi partida ' + i, white: 'Yo', black: 'Rival', pgn: '[White "Yo"]\\n[Black "Rival"]\\n\\n*', tags: [],
+        analysis: { err: [{ fen: '4k3/8/8/3q4/8/8/8/R2QK3 w - - 0 1', uci: 'a1a8', best: 'd1d5', th: 'material', mover: 1, ply: 20 + i, ph: 'medio', cls: '??' }] } }); }""")
+    pg.click('.tab-btn[data-tab="tools"]'); pg.click('#trainMenu [data-train-open="coach"]')
+    diag = pg.inner_text("#coachDiag")
+    comprobar("3 errores en 3 partidas" in diag and "Táctica: no perder material" in diag and "se repite en tus partidas" in diag, "el entrenador mira tus errores y propone qué trabajar (y por qué)")
+    pg.select_option("#coachLen", "4"); pg.click("#coachStartBtn")
+    pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
+    comprobar(pg.is_visible("#coachBox") and pg.evaluate("Coach.queue.filter(x => x.kind === 'drill').length") == 2 and pg.evaluate("Coach.queue[0].kind") == "puzzle",
+              "la clase mezcla problemas del tema y posiciones de tus partidas (empieza con un problema)")
+    comprobar(pg.evaluate("quiz()") and not pg.is_visible("#evalBarOuter:not(.hidden-eval)"), "durante la clase el motor no se ve")
+    malo = pg.evaluate("(() => { const s = Coach.ex.node.state; return Chess.uci(Chess.legal(s).find(m => Chess.uci(m) !== Coach.ex.best)); })()")
+    pg.evaluate(f"playMove(Chess.moveFromUci(Coach.ex.node.state, '{malo}'), 'user')")
+    pg.wait_for_function("Coach.state === 'ask' && Coach.hint === 1", timeout=30000)
+    comprobar("❌" in pg.inner_text("#coachBox") and pg.locator("#coachBox .coach-hint").count() == 1 and pg.evaluate("cur() === Coach.ex.node"),
+              "una jugada mala no se hace: se marca en rojo y llega la primera pista")
+    pg.evaluate("playMove(Chess.moveFromUci(Coach.ex.node.state, Coach.ex.best), 'user')")
+    pg.wait_for_function("Coach.state === 'solved'", timeout=30000)
+    comprobar("¡Exacto!" in pg.inner_text("#coachBox") and "Línea" in pg.inner_text("#coachBox"), "la buena se acepta y se explica con la línea del motor")
+    pg.click("#coachBox [data-co=next]")
+    pg.wait_for_function("Coach.state === 'ask' && Coach.ex.kind === 'drill'", timeout=30000)
+    comprobar("De tu partida" in pg.inner_text("#coachBox") and pg.evaluate("Coach.arrows.some(a => a.color === 'threat')"), "las posiciones de tus partidas enseñan el error que cometiste")
+    pg.evaluate("playMove(Chess.moveFromUci(Coach.ex.node.state, 'a1a8'), 'user')")
+    comprobar("justo lo que se jugó en la partida" in pg.inner_text("#coachBox"), "repetir el error de la partida se detecta")
+    pg.evaluate("playMove(Chess.moveFromUci(Coach.ex.node.state, 'd1d5'), 'user')")
+    pg.wait_for_function("Coach.state === 'solved'", timeout=30000)
+    pg.wait_for_timeout(300)
+    comprobar(pg.evaluate("Object.values(Lib.games.get(Coach.ex.d.rec.id).drills || {}).length") == 1, "lo resuelto cuenta para el repaso de tus errores")
+    pg.click("#coachBox [data-co=next]"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
+    pg.click("#coachBox [data-co=show]")
+    comprobar("La buena era" in pg.inner_text("#coachBox"), "«Solución» la enseña")
+    pg.click("#coachBox [data-co=next]"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
+    pg.click("#coachBox [data-co=skip]"); pg.wait_for_function("Coach.state === 'summary'", timeout=30000)
+    comprobar("de 4" in pg.inner_text("#coachBox") and "Mi consejo" in pg.inner_text("#coachBox"), "al final, un resumen con qué entrenar después")
+    pg.click("#coachBox [data-co=end]")
+    comprobar(not pg.evaluate("Coach.active") and not pg.is_visible("#coachBox"), "«Volver a tu partida» termina la clase")
+    # Con la IA: presentación, pistas que no pueden revelar la solución y explicación que comenta tu razonamiento
+    pg.evaluate("Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b' }); renderAiBox()")
+    pg.click('.tab-btn[data-tab="tools"]')
+    if not pg.is_visible("#coachStartBtn"): pg.click('#trainMenu [data-train-open="coach"]')
+    pg.click("#coachStartBtn"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
+    comprobar("Hoy toca" in pg.inner_text("#coachBox"), "con IA, la IA presenta la clase")
+    buena = pg.evaluate("(() => { const s = Coach.ex.node.state, L = Chess.legal(s), m = Chess.moveFromUci(s, Coach.ex.best, L); return formatSan(Chess.san(s, m, L), 'es', s.t).replace(/[+#]/g, ''); })()")
+    pista[0] = f"Juega {buena} y ganas."
+    pg.click("#coachBox [data-co=hint]")
+    pg.wait_for_function("!$('coachBox').textContent.includes('piensa…')", timeout=30000)
+    comprobar(buena not in pg.inner_text("#coachBox .coach-hint"), "si la pista de la IA revela la solución, se descarta y se da la del entrenador")
+    pista[0] = "¿Qué pieza rival está sin defender?"
+    pg.click("#coachBox [data-co=hint]")
+    pg.wait_for_function("!$('coachBox').textContent.includes('piensa…')", timeout=30000)
+    comprobar("sin defender" in pg.inner_text("#coachBox .coach-hint") and pg.evaluate("Coach.hintSq") >= 0, "una pista que no la revela se muestra (y la segunda marca la pieza)")
+    pg.fill("#coachWhy", "porque ataca dos piezas")
+    pg.evaluate("playMove(Chess.moveFromUci(Coach.ex.node.state, Coach.ex.best), 'user')")
+    pg.wait_for_function("Coach.state === 'solved' && !$('coachBox').textContent.includes('prepara la explicación')", timeout=30000)
+    comprobar("ataca dos piezas" in llamadas[-1]["messages"][1]["content"] and "Funciona porque" in pg.inner_text("#coachBox") and pg.locator("#coachBox .ai-unverified").count() == 1,
+              "la IA explica la jugada comentando tu razonamiento, y lo no comprobado lleva ⚠")
+    comprobar("No inventes jugadas" in llamadas[-1]["messages"][0]["content"], "con la orden de no inventar jugadas")
+    pg.click("#coachBox [data-co=end]")
+    pg.evaluate("Object.assign(settings, { aiProvider: 'none', myNames: '' }); ['coach0', 'coach1', 'coach2'].forEach(k => Lib.games.delete(k)); renderAiBox()")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_fiabilidad(browser):
     print("Fiabilidad: Lichess, varias pestañas")
     ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
@@ -2798,7 +2876,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
