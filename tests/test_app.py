@@ -1997,8 +1997,9 @@ def prueba_ayudas_profesor(browser):
     pg.click("#aiBox [data-aiq]")
     pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=60000)
     u = pedido["ollama"]["messages"][1]["content"]
-    comprobar("FEN" in u and "Mejores líneas del motor" in u and "Pregunta del alumno" in u and pedido["ollama"]["model"] == "qwen2.5:7b" and "No inventes jugadas" in pedido["ollama"]["messages"][0]["content"],
-              "a la IA se le da la posición, las líneas del motor y la pregunta, con la orden de no inventar jugadas")
+    ok = "FEN" in u and "Mejores líneas del motor" in u and "Pregunta del alumno" in u and pedido["ollama"]["model"] == "qwen2.5:7b" and "No inventes jugadas" in pedido["ollama"]["messages"][0]["content"]
+    if not ok: print("    (lo que recibió la IA:)", u[:600].replace("\n", " | "))
+    comprobar(ok, "a la IA se le da la posición, las líneas del motor y la pregunta, con la orden de no inventar jugadas")
     comprobar(pg.locator("#aiAnswer .ai-text b").count() == 1 and pg.locator("#aiAnswer img").count() == 0 and "<img" in pg.inner_text("#aiAnswer"), "la respuesta se muestra como texto: las negritas sí, el HTML no se ejecuta")
     comprobar(pg.locator("#aiAnswer .speak-btn").count() == 1, "la respuesta también se puede leer en voz alta")
     def gemini(r):
@@ -2221,6 +2222,11 @@ def prueba_propuestas_ia(browser):
     pg.click("#aiAskBtn")
     pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
     comprobar(len(llamadas) == 1 and "Tus propuestas" not in llamadas[0]["messages"][1]["content"], "sin la casilla, una sola consulta y sin propuestas")
+    # Si otro cálculo (el análisis en vivo) interrumpe el del profesor, se repite en vez de quedarse sin líneas
+    r = pg.evaluate("""async () => { const s = cur().state; const p = evalState(s, 800, 2);
+      setTimeout(() => Engine.start({ purpose: 'live', fen: Chess.toFen(s), moves: [], stm: s.t, movetime: 300, multipv: 1, resolve() {} }), 60);
+      const out = await p; return !!(out && out.lines && out.lines.some(l => l.pv && l.pv.length)); }""")
+    comprobar(r, "si el análisis en vivo interrumpe el cálculo del profesor, se repite (antes se quedaba sin las líneas del motor)")
     pg.evaluate("Object.assign(settings, { aiProvider: 'none', aiPropose: true, aiCtxLichess: true }); renderAiBox(); syncAiCtxForm()")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
