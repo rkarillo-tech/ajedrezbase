@@ -354,6 +354,24 @@ body.dropping::after { content: "📄 Suelta aquí el fichero .pgn (o una copia 
 .ai-row { display: flex; gap: 5px; }
 .ai-row input { flex: 1; min-width: 0; }
 .ai-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.modal-back.cmd-back { align-items: flex-start; padding-top: 10vh; }
+.cmd-modal { width: min(640px, 100%); padding: 10px; display: flex; flex-direction: column; max-height: 75vh; }
+#cmdInput { width: 100%; font-size: 1.05rem; padding: 10px 12px; }
+.cmd-list { list-style: none; margin: 8px 0 0; padding: 0; overflow: auto; flex: 1; }
+.cmd-item { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 7px; cursor: pointer; }
+.cmd-item.sel, .cmd-item:hover { background: var(--panel3); }
+.cmd-ico { width: 1.4em; text-align: center; flex: none; }
+.cmd-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmd-cat { flex: none; color: var(--muted); }
+.cmd-empty { padding: 10px; }
+.cmd-foot { margin-top: 6px; color: var(--muted); }
+.cmd-item kbd, .cmd-kbd { font: 0.75rem ui-monospace, monospace; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; color: var(--muted); }
+.cmd-flash { outline: 3px solid var(--accent) !important; outline-offset: 2px; transition: outline-color .3s; }
+@media (max-width: 640px) { .cmd-btn-lbl, .cmd-kbd { display: none; } .modal-back.cmd-back { padding-top: 4vh; } }
+.ai-ctx { margin-top: 4px; }
+.ai-ctx summary { cursor: pointer; }
+.ai-ctx label { display: block; margin: 3px 0 0 4px; }
+.ai-models { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0; }
 .ai-q { margin-bottom: 4px; }
 .ai-text p { margin: 4px 0; }
 .explain-level { width: auto; padding: 1px 4px; font-size: .74rem; margin-left: 6px; font-weight: 400; }
@@ -858,6 +876,7 @@ body.board-full #exportControls { order: 10; }
     <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor (nivel, estilo, ventaja y reloj) o contra otra persona en este dispositivo">🤖 Jugar vs CPU</button>
     <button id="syncChip" hidden></button>
     <button id="soundToggle" title="Sonido de las jugadas" aria-label="Sonido">🔊</button>
+    <button id="cmdBtn" title="Buscar cualquier función, ajuste, lección, apertura o partida (Ctrl + K o /)" aria-label="Buscar funciones">🔎<span class="cmd-btn-lbl"> Buscar</span> <kbd class="cmd-kbd">Ctrl K</kbd></button>
     <button id="settingsBtn" title="Ajustes (motor, token de Lichess, análisis)" aria-label="Ajustes">⚙</button>
     <button id="installBtn" class="primary" hidden title="Instalar AjedrezBase como aplicación (funciona sin conexión)">⬇ Instalar</button>
     <button id="helpBtn" title="Guía completa y atajos (?)" aria-label="Ayuda">❓ Ayuda</button>
@@ -971,6 +990,13 @@ body.board-full #exportControls { order: 10; }
     <div id="aiBox" class="ai-box" hidden>
       <div class="ai-row"><input id="aiQuestion" placeholder="🤖 Pregunta al profesor IA sobre esta posición…" aria-label="Pregunta al profesor IA" autocomplete="off"><button id="aiAskBtn" class="sm-btn primary">Preguntar</button></div>
       <div class="ai-quick"><button class="sm-btn" data-aiq="¿Qué debería hacer ahora y por qué?">¿Qué hago ahora?</button><button class="sm-btn" data-aiq="¿Qué tal ha sido la última jugada y por qué?">¿Y la última jugada?</button><button class="sm-btn" data-aiq="¿Cuál es el plan para los dos bandos en esta posición?">¿Cuál es el plan?</button></div>
+      <details class="ai-ctx small"><summary>📚 Qué más consulta el profesor, además del motor</summary>
+        <label><input type="checkbox" id="aiCtxRep"> 🗂 Tu repertorio (si la posición está en tus líneas o dónde te saliste)</label>
+        <label><input type="checkbox" id="aiCtxModels"> ♟ Partidas modelo de los cursos (y de tus partidas, si marcas la siguiente)</label>
+        <label><input type="checkbox" id="aiCtxGames"> 📚 Tu biblioteca y el .pgn abierto (abre en 📚 Biblioteca › 🗂 Abrir .pgn la base que quieras que use)</label>
+        <label><input type="checkbox" id="aiCtxLichess"> 🌍 Explorador de Lichess: maestros y partidas online, con sus partidas destacadas</label>
+        <div id="aiCtxLichessNote" hidden>Para Lichess hace falta tu token gratuito (⚙ Ajustes).</div>
+      </details>
       <div id="aiAnswer" class="retry-box think-box" hidden aria-live="polite"></div>
     </div>
     <div class="eval-chart-wrap" id="evalChartWrap" title="Probabilidad de ganar a lo largo de la línea principal: arriba ventaja blanca, abajo negra. Clic para saltar a esa jugada.">
@@ -1899,6 +1925,16 @@ body.board-full #exportControls { order: 10; }
     <div class="controls">
       <button id="cpuStartBtn" class="primary">▶ Empezar a jugar</button>
     </div>
+  </div>
+</div>
+
+<!-- Buscador de comandos -->
+<div class="modal-back cmd-back" id="cmdModal" role="dialog" aria-modal="true" aria-label="Buscar funciones">
+  <div class="modal cmd-modal">
+    <input id="cmdInput" type="search" role="combobox" aria-expanded="true" aria-controls="cmdList" autocomplete="off" spellcheck="false"
+      placeholder="Escribe qué quieres hacer: «radar», «siciliana», «Carlsen Nakamura», «Cf3»…" aria-label="Qué quieres hacer">
+    <ul id="cmdList" class="cmd-list" role="listbox"></ul>
+    <div class="small cmd-foot">↑ ↓ para elegir · Intro para abrir · Esc para cerrar · funciones, ajustes, ayuda, lecciones, aperturas, tus partidas, jugadas y FEN</div>
   </div>
 </div>
 

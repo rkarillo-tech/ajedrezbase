@@ -51,10 +51,11 @@ function aiSystem() {
   const lvl = { basic: "INICIACIÓN: tono cálido y sencillo, sin cifras de valoración ni términos técnicos sin explicar; termina con una regla general para recordar.",
     club: "CLUB: terminología de ajedrez precisa pero accesible (clavadas, horquillas, columnas abiertas, estructura de peones).",
     advanced: "AVANZADO: análisis concreto, con variantes y valoraciones, y los matices estratégicos." }[settings.explainLevel] || "";
-  return `Eres el profesor de ajedrez de AjedrezBase. Respondes siempre en español de España, de forma breve (unas 150 palabras como máximo) y didáctica.
+  return `Eres el profesor de ajedrez de AjedrezBase. Respondes siempre en español de España, de forma breve (unas 200 palabras como máximo) y didáctica.
 Nivel del alumno: ${lvl}
 Reglas estrictas:
 1. Las únicas jugadas que puedes recomendar o citar como buenas son las de las «Mejores líneas del motor» que se te dan. No inventes jugadas ni variantes y no contradigas al motor; si algo no está en los datos, dilo.
+1b. Además del motor puedes recibir contexto comprobado: el repertorio del alumno, estadísticas del explorador y partidas modelo. Úsalo como lo haría un entrenador: relaciona la posición con su repertorio, con lo que juegan los maestros y con los planes de las partidas modelo, y cítalo siempre diciendo de dónde sale («en tu repertorio…», «los maestros juegan…», «en la partida X–Y se siguió…»). Si la jugada del repertorio o la más jugada no coincide con la mejor del motor, dilo con claridad. Las partidas con la misma estructura de peones sirven para explicar planes, no jugadas concretas de esta posición.
 2. Escribe las jugadas en notación algebraica española (R rey, D dama, T torre, A alfil, C caballo; por ejemplo Cf3, Axc6, O-O).
 3. Explica el porqué (amenazas, piezas en peligro, desarrollo, seguridad del rey, plan), no sólo la jugada.
 4. Usa como mucho unas pocas viñetas y **negritas** para lo importante; nada de tablas ni bloques de código.`;
@@ -147,14 +148,17 @@ async function aiAsk(question) {
   box.innerHTML = `<div class="retry-head">🤖 Profesor IA</div><div class="small">⏳ Analizando la posición con el motor…</div>`;
   $("aiAskBtn").disabled = true;
   try {
-    const facts = await aiFacts(node);
+    // El motor y el contexto (repertorio, explorador, partidas modelo) se preparan a la vez
+    const [facts, ctx] = await Promise.all([aiFacts(node), aiContext(node).catch(() => ({ text: "", sources: [], games: [] }))]);
     if (token !== AI.token || cur() !== node) return;
     box.querySelector(".small").textContent = `⏳ Preguntando a ${AI_PROVIDERS[aiProvider()].name.split(" (")[0]}…`;
-    const text = await aiCall(aiSystem(), `${facts.text}\n\nPregunta del alumno: ${question}`);
+    const text = await aiCall(aiSystem(), `${facts.text}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}\n\nPregunta del alumno: ${question}`);
     if (token !== AI.token) return;
     box.innerHTML = `<div class="retry-head">🤖 Profesor IA <span class="small">· ${esc(AI_PROVIDERS[aiProvider()].name.split(" (")[0])} (${esc(aiModel())})</span></div>
       <div class="ai-q small">❓ ${esc(question)}</div><div class="ai-text">${aiFormat(text)}</div>
-      <div class="small">Las jugadas y valoraciones salen de ${esc(Engine.name || "el motor")}; la explicación, de la IA, que puede equivocarse.</div>`;
+      ${ctx.games.length ? `<div class="ai-models small">♟ Partidas modelo: ${ctx.games.map((g, i) => `<button class="sm-btn" data-ai-model="${i}" title="Abrir en esta posición">${esc(g.title)}</button>`).join(" ")}</div>` : ""}
+      <div class="small">Las jugadas y valoraciones salen de ${esc(Engine.name || "el motor")}${ctx.sources.length ? `; contexto: ${esc(ctx.sources.join(" · "))}` : ""}. La explicación es de la IA, que puede equivocarse.</div>`;
+    box.querySelectorAll("[data-ai-model]").forEach(b => b.onclick = () => aiOpenModel(ctx.games[+b.dataset.aiModel]));
   } catch (e) {
     if (token !== AI.token) return;
     box.innerHTML = `<div class="retry-head">🤖 Profesor IA</div><div class="msg-err">No se pudo obtener la respuesta: ${esc(e.message || String(e))}.</div>`;

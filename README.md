@@ -21,6 +21,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Variantes** | Árbol completo: variantes anidadas, promover, hacer principal, cortar; comentarios y símbolos `!` `?` `±`… en cada jugada |
 | **PGN** | Importa notación española (`Cf3`), inglesa, figurines, coordenadas y PGN completos de Lichess, Chess.com o ChessBase; exporta PGN estándar; conserva los tiempos de reloj (`[%clk]`) y muestra cuánto se tardó en cada jugada |
 | **Motor** | Stockfish 19 (NNUE) en el navegador: hasta 3 líneas, flecha, barra de evaluación, **🧠 Piensa conmigo** (`T`: el razonamiento de la mejor jugada explicado en palabras, con la línea paso a paso, las alternativas y la jugada tentadora que falla) **🗣 Habla con tus piezas** (`H`: entrevista a cada pieza, la más infeliz cuenta su casilla soñada y la ruta para llegar, revisada por el motor; también con las piezas del rival, para la profilaxis) y **👁 Ver amenaza** (`X`); nube de Lichess y motor propio de respaldo sin conexión, **🔎 Lee el tablero** (`L`: el método previo al cálculo en cinco pasos —material, reyes, amenazas del rival con rayos X, tus oportunidades y las jugadas forzadas—, sin motor) |
+| **🤖 Profesor IA** | Opcional (Ollama en tu ordenador, Claude o Gemini con tu clave): pregunta lo que quieras sobre la posición. Las jugadas salen siempre de Stockfish; además consulta **tu repertorio**, el **explorador** (maestros y Lichess), **tus partidas** y **partidas modelo** de los cursos, tu biblioteca o el `.pgn` que abras, y te dice de dónde sale cada cosa |
 | **Análisis** | Analiza la partida (o una variante): marca `??` `?` `?!` `!`, redacta comentarios en español (también estratégicos: peones pasados o aislados, casillas fuertes, pareja de alfiles…), calcula la precisión y dibuja el gráfico |
 | **Informe** | Resumen de cómo fue la partida, momentos clave por impacto, precisión por fases, ⏰ cómo se usó el reloj (y los errores con apuros de tiempo) y qué practicar |
 | **Aprende de tus errores** | Tras el análisis, repasa cada `?` y `??` buscando tú la jugada buena; acepta alternativas casi igual de buenas y guarda los que quieras como tarjetas |
@@ -40,6 +41,7 @@ aperturas, finales, biblioteca con marcadores y repaso con repetición espaciada
 | **Mis repertorios** | Crea tus repertorios jugando en el tablero (o copia uno del curso), entrénalos con repaso espaciado y **revísalos**: huecos (respuestas frecuentes del rival que no tienes, con el explorador de Lichess), líneas sin terminar, jugadas dudosas según Stockfish y cómo te va con ellos en tus partidas |
 | **Entrenar** | Repertorio contra tus variantes, **ejercicios con los errores de todas tus partidas** (táctica, mates, defensa, convertir la ventaja, finales…) y **tarjetas** de tus marcadores, con repetición espaciada (1, 3, 7, 16, 35, 75 días) |
 | **Compartir** | Imagen PNG de la posición (también al portapapeles), impresión o PDF de la partida comentada con diagramas, y enlace que abre la partida en una jugada |
+| **🔎 Buscador** | `Ctrl + K` o `/`: escribe lo que quieres hacer y lo encuentra: funciones, ajustes, apartados de la ayuda, lecciones, aperturas (las pone en el tablero), partidas de tu biblioteca o del `.pgn` abierto («Carlsen Nakamura»), jugadas («Cf3») y FEN |
 | **Más** | Editor de posición arrastrando piezas, jugar escribiendo la jugada, planilla de dos columnas, rueda del ratón, ficheros `.pgn` de miles de partidas, medidor de memoria |
 
 ## Cómo se usa
@@ -60,7 +62,7 @@ Todo está explicado con ejemplos en la **[guía de uso](GUIA.md)**, que tambié
 ## Atajos
 
 `←` `→` jugada anterior / siguiente · `↑` `↓` cambiar de variante · `Inicio` `Fin` · `Espacio` reproducir ·
-`F` girar el tablero · `E` análisis on/off · `X` ver amenaza · `M` marcar posición · `B` piezas ocultas · `P` pantalla completa · `C` colores en las jugadas · `R` radar de piezas en peligro · `?` ayuda · `Esc` cerrar ·
+`F` girar el tablero · `E` análisis on/off · `X` ver amenaza · `M` marcar posición · `B` piezas ocultas · `P` pantalla completa · `C` colores en las jugadas · `R` radar de piezas en peligro · `Ctrl + K` o `/` buscador · `?` ayuda · `Esc` cerrar ·
 rueda del ratón sobre el tablero para avanzar y retroceder.
 
 ## Preguntas frecuentes
