@@ -18,33 +18,40 @@ const aiProvider = () => (AI_PROVIDERS[settings.aiProvider] && settings.aiProvid
 const aiModel = () => (settings.aiModel || "").trim() || (AI_PROVIDERS[aiProvider()] || {}).model || "";
 
 /* Lo que se le da a la IA: hechos calculados aquí, nunca inventados por ella */
-async function aiFacts(node) {
-  const s = node.state, me = s.t, strong = Engine.kind === "stockfish";
-  const top = Engine.ready ? await evalState(s, strong ? 1600 : 2000, strong ? 3 : 1) : null;
-  const lines = ((top && top.lines) || []).filter(l => l && l.pv && l.pv.length);
+/* La posición sin nada del motor: lo que ve la IA cuando propone sus propias jugadas */
+function aiPositionText(node) {
+  const s = node.state, me = s.t;
   const side = me === 1 ? "blancas" : "negras";
-  const fmt = l => `${fmtEval({ cp: l.cp, mate: l.mate, winner: l.winner })} (${evalVerdict({ cp: l.cp, mate: l.mate, winner: l.winner }).toLowerCase()}): ${lineText(s, l.pv, 8)}`;
   const path = Pgn.pathTo(node).slice(1);
   const moves = path.length ? lineText(game.root.state, path.map(n => n.uci), 400) : "(ninguna: posición inicial de la lección o de la partida)";
   const eco = ECO.detect(node);
   const danger = piecesInDanger(s, me).map(x => `${PIECE_ES[s.b[x.sq].toLowerCase()]} de ${Chess.sqName(x.sq)} (${x.why})`);
   const chances = piecesInDanger(s, -me).map(x => `${PIECE_ES[s.b[x.sq].toLowerCase()]} de ${Chess.sqName(x.sq)} (${x.why})`);
+  const st = gameStatus(node);
+  return [
+    `Posición (FEN): ${Chess.toFen(s)}`,
+    `Juegan las ${side}.${st.over ? " " + st.text + "." : Chess.inCheck(s) ? " Están en jaque." : ""}`,
+    `Jugadas hasta aquí: ${moves}`,
+    eco ? `Apertura: ${eco.entry.eco} ${eco.entry.name}.` : "",
+    danger.length ? `Piezas de las ${side} en peligro: ${danger.join("; ")}.` : `Ninguna pieza de las ${side} está en peligro inmediato.`,
+    chances.length ? `Piezas del rival que se pueden ganar: ${chances.join("; ")}.` : ""
+  ].filter(Boolean).join("\n");
+}
+async function aiFacts(node) {
+  const s = node.state, strong = Engine.kind === "stockfish";
+  const top = Engine.ready ? await evalState(s, strong ? 1600 : 2000, strong ? 3 : 1) : null;
+  const lines = ((top && top.lines) || []).filter(l => l && l.pv && l.pv.length);
+  const fmt = l => `${fmtEval({ cp: l.cp, mate: l.mate, winner: l.winner })} (${evalVerdict({ cp: l.cp, mate: l.mate, winner: l.winner }).toLowerCase()}): ${lineText(s, l.pv, 8)}`;
   let last = "";
   if (node.parent && node.move) {
     const info = classifyMove(node);
     const san = numPrefix(node.parent.state) + dispSan(node);
     last = info ? `${san}: ${info.cls ? { "??": "error grave", "?": "error", "?!": "imprecisión", "!": "muy buena" }[info.cls] : "correcta"} (pierde ${Math.round(info.loss)} puntos de probabilidad de ganar)${node.parent.eval && node.parent.eval.best ? `; lo mejor era ${lineText(node.parent.state, [node.parent.eval.best], 1)}` : ""}` : `${san} (sin valorar todavía)`;
   }
-  const st = gameStatus(node);
   return { lines, text: [
-    `Posición (FEN): ${Chess.toFen(s)}`,
-    `Juegan las ${side}.${st.over ? " " + st.text + "." : Chess.inCheck(s) ? " Están en jaque." : ""}`,
-    `Jugadas hasta aquí: ${moves}`,
-    eco ? `Apertura: ${eco.entry.eco} ${eco.entry.name}.` : "",
+    aiPositionText(node),
     lines.length ? `Mejores líneas del motor (${Engine.name || "motor"}), de mejor a peor, valoración desde el punto de vista de las blancas:\n${lines.map((l, i) => `${i + 1}. ${fmt(l)}`).join("\n")}` : "No hay análisis del motor.",
-    last ? `Última jugada: ${last}.` : "",
-    danger.length ? `Piezas de las ${side} en peligro: ${danger.join("; ")}.` : `Ninguna pieza de las ${side} está en peligro inmediato.`,
-    chances.length ? `Piezas del rival que se pueden ganar: ${chances.join("; ")}.` : ""
+    last ? `Última jugada: ${last}.` : ""
   ].filter(Boolean).join("\n") };
 }
 function aiSystem() {
@@ -54,7 +61,8 @@ function aiSystem() {
   return `Eres el profesor de ajedrez de AjedrezBase. Respondes siempre en español de España, de forma breve (unas 200 palabras como máximo) y didáctica.
 Nivel del alumno: ${lvl}
 Reglas estrictas:
-1. Las únicas jugadas que puedes recomendar o citar como buenas son las de las «Mejores líneas del motor» que se te dan. No inventes jugadas ni variantes y no contradigas al motor; si algo no está en los datos, dilo.
+1. Las únicas jugadas que puedes recomendar o citar como buenas son las de las «Mejores líneas del motor» y, si las hay, las de «Tus propuestas» marcadas como BUENA o JUGABLE. No inventes jugadas ni variantes y no contradigas al motor; si algo no está en los datos, dilo.
+1a. Tus propuestas las pensaste tú sin motor y el motor las ha juzgado: defiende las buenas con tus ideas; las DUDOSAS o ERROR no las recomiendes, pero explica por qué fallan usando la refutación del motor (eso enseña mucho); las ILEGALES ni las menciones.
 1b. Además del motor puedes recibir contexto comprobado: el repertorio del alumno, estadísticas del explorador y partidas modelo. Úsalo como lo haría un entrenador: relaciona la posición con su repertorio, con lo que juegan los maestros y con los planes de las partidas modelo, y cítalo siempre diciendo de dónde sale («en tu repertorio…», «los maestros juegan…», «en la partida X–Y se siguió…»). Si la jugada del repertorio o la más jugada no coincide con la mejor del motor, dilo con claridad. Las partidas con la misma estructura de peones sirven para explicar planes, no jugadas concretas de esta posición.
 2. Escribe las jugadas en notación algebraica española (R rey, D dama, T torre, A alfil, C caballo; por ejemplo Cf3, Axc6, O-O).
 3. Explica el porqué (amenazas, piezas en peligro, desarrollo, seguridad del rey, plan), no sólo la jugada.
@@ -127,10 +135,10 @@ async function aiCall(system, user) {
   return out;
 }
 /* El texto de la IA se muestra como texto (nunca como HTML): sólo se interpretan **negritas**, viñetas y saltos de línea */
-function aiFormat(text) {
+function aiFormat(text, mark = h => h) {
   return String(text).split(/\n{2,}/).map(par => {
     const lines = par.split("\n");
-    const html = lines.map(l => esc(l).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/^\s*[-*•]\s+/, "• ")).join("<br>");
+    const html = lines.map(l => mark(esc(l)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/^\s*[-*•]\s+/, "• ")).join("<br>");
     return `<p>${html}</p>`;
   }).join("");
 }
@@ -148,14 +156,34 @@ async function aiAsk(question) {
   box.innerHTML = `<div class="retry-head">🤖 Profesor IA</div><div class="small">⏳ Analizando la posición con el motor…</div>`;
   $("aiAskBtn").disabled = true;
   try {
-    // El motor y el contexto (repertorio, explorador, partidas modelo) se preparan a la vez
-    const [facts, ctx] = await Promise.all([aiFacts(node), aiContext(node).catch(() => ({ text: "", sources: [], games: [] }))]);
+    // El motor, el contexto (repertorio, explorador, partidas modelo) y las propuestas de la IA se preparan a la vez:
+    // la IA piensa sus jugadas mientras el motor analiza, y sin ver lo que dice el motor
+    const status = t => { if (token === AI.token) box.querySelector(".small").textContent = t; };
+    const ctxP = aiContext(node).catch(() => ({ text: "", sources: [], games: [] }));
+    const propP = settings.aiPropose && !gameStatus(node).over
+      ? ctxP.then(ctx => aiPropose(node, ctx, question)).catch(e => ({ error: e.message || String(e) }))
+      : Promise.resolve([]);
+    if (settings.aiPropose) status("⏳ El motor analiza mientras la IA piensa sus propias jugadas (sin ver al motor)…");
+    const [facts, ctx, props] = await Promise.all([aiFacts(node), ctxP, propP]);
     if (token !== AI.token || cur() !== node) return;
-    box.querySelector(".small").textContent = `⏳ Preguntando a ${AI_PROVIDERS[aiProvider()].name.split(" (")[0]}…`;
-    const text = await aiCall(aiSystem(), `${facts.text}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}\n\nPregunta del alumno: ${question}`);
+    let checked = [];
+    if (Array.isArray(props) && props.length) {
+      status(`⏳ ${Engine.name || "El motor"} comprueba las ${props.length} propuestas de la IA…`);
+      checked = await aiVerify(node, props, facts.lines);
+      if (token !== AI.token || cur() !== node) return;
+    }
+    const propText = aiProposalsText(checked);
+    status(`⏳ Preguntando a ${AI_PROVIDERS[aiProvider()].name.split(" (")[0]}…`);
+    const text = await aiCall(aiSystem(), `${facts.text}${propText ? "\n\n" + propText : ""}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}\n\nPregunta del alumno: ${question}`);
     if (token !== AI.token) return;
+    // Lo que cuenta como comprobado: el motor, las propuestas legales con su refutación, el contexto y la partida
+    const allowed = aiAllowedMoves([facts.text, ctx.text, ...checked.filter(p => p.status !== "ilegal").map(p => `${p.text} ${p.refutation ? p.refutation.text : ""}`)]);
+    const stats = {};
+    const answer = aiFormat(text, html => aiMarkUnverified(html, allowed, stats));
     box.innerHTML = `<div class="retry-head">🤖 Profesor IA <span class="small">· ${esc(AI_PROVIDERS[aiProvider()].name.split(" (")[0])} (${esc(aiModel())})</span></div>
-      <div class="ai-q small">❓ ${esc(question)}</div><div class="ai-text">${aiFormat(text)}</div>
+      <div class="ai-q small">❓ ${esc(question)}</div><div class="ai-text">${answer}</div>
+      ${aiProposalsHtml(checked)}${props && props.error ? `<div class="small">🧪 No se pudieron obtener las propuestas de la IA (${esc(props.error)}); la respuesta usa sólo el motor.</div>` : ""}
+      ${stats.flagged ? `<div class="small ai-unverified-note">⚠ ${stats.flagged === 1 ? "Una jugada de la respuesta no está comprobada" : `${stats.flagged} jugadas de la respuesta no están comprobadas`} por el motor: tómala${stats.flagged === 1 ? "" : "s"} con cautela.</div>` : ""}
       ${ctx.games.length ? `<div class="ai-models small">♟ Partidas modelo: ${ctx.games.map((g, i) => `<button class="sm-btn" data-ai-model="${i}" title="Abrir en esta posición">${esc(g.title)}</button>`).join(" ")}</div>` : ""}
       <div class="small">Las jugadas y valoraciones salen de ${esc(Engine.name || "el motor")}${ctx.sources.length ? `; contexto: ${esc(ctx.sources.join(" · "))}` : ""}. La explicación es de la IA, que puede equivocarse.</div>`;
     box.querySelectorAll("[data-ai-model]").forEach(b => b.onclick = () => aiOpenModel(ctx.games[+b.dataset.aiModel]));

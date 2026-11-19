@@ -2152,7 +2152,7 @@ def prueba_buscador_y_contexto_ia(browser):
       const g2 = Pgn.parseGame('1. e4 c6 2. d4 d5', { lang: 'en' }).game;
       setGame(g2, { noConfirm: true, current: Pgn.mainlineFrom(g2.root).pop() });
     }""", carlsen)
-    comprobar(pg.locator(".ai-ctx input[type=checkbox]:checked").count() == 4, "las cuatro fuentes de contexto vienen activadas")
+    comprobar(pg.locator(".ai-ctx input[type=checkbox]:checked").count() == 5, "las cuatro fuentes de contexto y las propuestas de la IA vienen activadas")
     pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
     pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=60000)
     u = pedido["m"]["messages"][1]["content"]
@@ -2172,11 +2172,56 @@ def prueba_buscador_y_contexto_ia(browser):
     pg.wait_for_function("game.headers.White === 'Carlsen, Magnus' && cur().san === 'Bg6'", timeout=5000)
     comprobar(True, "una partida modelo se abre justo en la posición")
     pg.click(".ai-ctx summary")
-    pg.uncheck("#aiCtxRep"); pg.uncheck("#aiCtxModels"); pg.uncheck("#aiCtxGames"); pg.uncheck("#aiCtxLichess")
+    pg.uncheck("#aiPropose"); pg.uncheck("#aiCtxRep"); pg.uncheck("#aiCtxModels"); pg.uncheck("#aiCtxGames"); pg.uncheck("#aiCtxLichess")
     pg.click("#aiAskBtn")
     pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=60000)
     comprobar("Contexto (datos" not in pedido["m"]["messages"][1]["content"], "sin fuentes marcadas, sólo se envía lo del motor")
-    pg.evaluate("Object.assign(settings, { aiProvider: 'none', token: '', aiCtxRep: true, aiCtxModels: true, aiCtxGames: true, aiCtxLichess: true }); renderAiBox()")
+    pg.evaluate("Object.assign(settings, { aiProvider: 'none', token: '', aiCtxRep: true, aiCtxModels: true, aiCtxGames: true, aiCtxLichess: true, aiPropose: true }); renderAiBox(); syncAiCtxForm()")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_propuestas_ia(browser):
+    print("Novedades 1.45.0: la IA propone sus propias jugadas (sin ver al motor) y Stockfish las comprueba")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    llamadas = []
+    def chat(r):
+        m = json.loads(r.request.post_data)
+        llamadas.append(m)
+        if "SÓLO con JSON" in m["messages"][0]["content"]:
+            txt = '```json\n{"lineas":[{"jugadas":"Cf3 Cc6 Ab5","idea":"desarrollo y presión en e5"},{"jugadas":"Aa6","idea":"atacar b7"},{"jugadas":"Axf7","idea":"sacrificio"}]}\n```'
+        else:
+            txt = "Juega **Cf3**. No juegues Aa6, que pierde el alfil. Otra idea sería Txh7."
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
+    ctx.route("http://localhost:11434/api/chat", chat)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false }); renderAiBox(); syncAiCtxForm();"
+                "const g = Pgn.parseGame('1. e4 e5', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
+    pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=90000)
+    propuesta, final = llamadas[0], llamadas[-1]
+    comprobar(len(llamadas) == 2 and "Mejores líneas del motor" not in propuesta["messages"][1]["content"] and "FEN" in propuesta["messages"][1]["content"],
+              "primero la IA propone sus jugadas viendo la posición pero no al motor")
+    u = final["messages"][1]["content"]
+    comprobar("Tus propuestas" in u and "2.Cf3 Cc6 3.Ab5" in u and "BUENA" in u, "la línea buena llega juzgada a la respuesta final")
+    comprobar("2.Aa6" in u and "ERROR" in u and "refutación del motor" in u, "la que regala el alfil llega como error, con la refutación del motor")
+    comprobar("«Axf7»: ILEGAL" in u, "la ilegal se descarta y se le dice que no la mencione")
+    comprobar("BUENA o JUGABLE" in final["messages"][0]["content"] and "No inventes jugadas" in final["messages"][0]["content"], "sólo puede recomendar las del motor y sus propuestas buenas o jugables")
+    caja = pg.inner_text("#aiAnswer")
+    comprobar(pg.locator("#aiAnswer .ai-prop").count() == 3 and "✔ buena" in caja and "✗ error" in caja and "⛔ ilegal" in caja and "Refutación" in caja,
+              "bajo la respuesta se ven las propuestas con su veredicto y la refutación")
+    comprobar(pg.locator("#aiAnswer .ai-prop .pv-mv").count() >= 4, "las jugadas de las propuestas se pueden ver en el minitablero")
+    marcadas = pg.evaluate("[...document.querySelectorAll('#aiAnswer .ai-unverified')].map(x => x.textContent)")
+    comprobar(marcadas == ["Txh7⚠"] and "no están comprobadas" not in caja and "no está comprobada" in caja,
+              "una jugada de la respuesta que nadie ha comprobado se marca con ⚠ (y las comprobadas no)")
+    pg.click(".ai-ctx summary"); pg.uncheck("#aiPropose")
+    llamadas.clear()
+    pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
+    comprobar(len(llamadas) == 1 and "Tus propuestas" not in llamadas[0]["messages"][1]["content"], "sin la casilla, una sola consulta y sin propuestas")
+    pg.evaluate("Object.assign(settings, { aiProvider: 'none', aiPropose: true, aiCtxLichess: true }); renderAiBox(); syncAiCtxForm()")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -2718,7 +2763,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
