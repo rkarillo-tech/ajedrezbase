@@ -74,22 +74,31 @@ async function aiCall(system, user) {
   const p = aiProvider(), model = aiModel();
   if (p === "ollama") {
     if (!model) throw Error("elige antes un modelo (pulsa «🔌 Probar» para ver los que tienes instalados)");
-    let res;
-    try {
-      res = await fetch(`${ollamaBase()}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model, stream: false, messages: [{ role: "system", content: system }, { role: "user", content: user }] }) });
-    } catch (e) { throw Error(ollamaBlockedMsg()); }
+    // Dos ajustes para que los modelos locales respondan bien:
+    // · think: false — los modelos que «razonan» (qwen3, deepseek-r1…) se pasaban muchísimo rato pensando y a veces
+    //   no llegaban a escribir respuesta; si el modelo no admite la opción, se repite sin ella.
+    // · num_ctx — Ollama usa por defecto una ventana pequeña y recortaba sin avisar el principio de las preguntas
+    //   largas (las instrucciones y la posición): se ajusta al tamaño de cada pregunta (≈ 3 caracteres por token).
+    const need = Math.ceil((system.length + user.length) / 3) + 1500;
+    const num_ctx = Math.min(32768, Math.max(4096, Math.ceil(need / 2048) * 2048));
+    const ask = think => fetch(`${ollamaBase()}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({ model, stream: false, keep_alive: "15m", options: { num_ctx }, messages: [{ role: "system", content: system }, { role: "user", content: user }] }, think === false ? { think: false } : {})) });
+    let res, detail = "";
+    try { res = await ask(false); } catch (e) { throw Error(ollamaBlockedMsg()); }
     if (!res.ok) {
-      let detail = "";
       try { detail = ((await res.json()) || {}).error || ""; } catch {}
+      if (res.status === 400 && /think/i.test(detail)) { try { res = await ask(null); detail = ""; } catch (e) { throw Error(ollamaBlockedMsg()); } }
+    }
+    if (!res.ok) {
+      if (!detail) { try { detail = ((await res.json()) || {}).error || ""; } catch {} }
       if (res.status === 404) throw Error(`Ollama no tiene el modelo «${model}». Escríbelo tal como sale en «ollama list» (con lo que va tras los dos puntos) o descárgalo con «ollama pull ${model}»`);
       if (/does not support (chat|generate)|embedding/i.test(detail)) throw Error(`«${model}» es un modelo de «embeddings», que no sirve para conversar: elige otro`);
       throw Error(`Ollama respondió con un error ${res.status}${detail ? ": " + detail : ""}`);
     }
     const data = await res.json();
-    // Los modelos que «piensan» (deepseek-r1, qwen3…) pueden escribir su razonamiento entre <think> y </think>: se quita
+    // Si aun así escribe su razonamiento entre <think> y </think> (versiones antiguas de Ollama), se quita
     const text = String((data && data.message && data.message.content) || "").replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/^[\s\S]*<\/think>/i, "").trim();
-    if (!text) throw Error("Ollama no ha devuelto ninguna respuesta");
+    if (!text) throw Error(data && data.message && data.message.thinking ? `«${model}» se ha quedado razonando sin llegar a responder; prueba con otro modelo (por ejemplo uno que no «razone»)` : "Ollama no ha devuelto ninguna respuesta");
     return text;
   }
   if (!settings.aiKey) throw Error("falta la clave: ponla en ⚙ Ajustes › Profesor IA");
@@ -152,6 +161,7 @@ async function aiAsk(question) {
   if (blocked) { toast(blocked); return; }
   if (AI.busy) return;
   AI.busy = true;
+  Engine.cancel("live");
   const token = ++AI.token, node = cur(), box = $("aiAnswer");
   noteCpuHelp();
   box.hidden = false;
@@ -166,7 +176,9 @@ async function aiAsk(question) {
       ? ctxP.then(ctx => aiPropose(node, ctx, question)).catch(e => ({ error: e.message || String(e) }))
       : Promise.resolve([]);
     if (settings.aiPropose) status("⏳ El motor analiza mientras la IA piensa sus propias jugadas (sin ver al motor)…");
-    const [facts, ctx, props] = await Promise.all([aiFacts(node), ctxP, propP]);
+    const aboutMove = /por qu[eé] se jug|compar|alternativ|en vez de|mejor que|[uú]ltima jugada|fue buena/i.test(question);
+    const [facts, ctx, props, moveFacts] = await Promise.all([aiFacts(node), ctxP, propP, aboutMove ? aiMoveFacts(node).catch(() => "") : Promise.resolve("")]);
+    if (moveFacts) facts.text += "\n" + moveFacts;
     if (token !== AI.token || cur() !== node) return;
     let checked = [];
     if (Array.isArray(props) && props.length) {
@@ -199,7 +211,7 @@ async function aiAsk(question) {
     if (token !== AI.token) return;
     box.innerHTML = `<div class="retry-head">🤖 Profesor IA</div><div class="msg-err">No se pudo obtener la respuesta: ${esc(e.message || String(e))}.</div>`;
   } finally {
-    if (token === AI.token) { AI.busy = false; $("aiAskBtn").disabled = false; }
+    if (token === AI.token) { AI.busy = false; $("aiAskBtn").disabled = false; requestLive(); }
   }
 }
 /* El recuadro sólo se ve con un proveedor elegido, y no en los ejercicios */
@@ -208,6 +220,7 @@ function renderAiBox() {
   if (!box) return;
   box.hidden = !aiProvider() || editor.active || (quiz() && !cpuHelpMode());
   if (box.hidden) $("aiAnswer").hidden = true;
+  renderAiQuick();
 }
 function syncAiSettingsForm() {
   const p = settings.aiProvider in AI_PROVIDERS ? settings.aiProvider : "none";
@@ -282,4 +295,4 @@ $("aiTestBtn").onclick = async () => {
 };
 $("aiAskBtn").onclick = () => aiAsk($("aiQuestion").value);
 $("aiQuestion").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); aiAsk($("aiQuestion").value); } });
-document.querySelectorAll("[data-aiq]").forEach(b => b.onclick = () => { $("aiQuestion").value = b.dataset.aiq; aiAsk(b.dataset.aiq); });
+renderAiQuick();

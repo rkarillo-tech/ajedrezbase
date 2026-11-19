@@ -604,9 +604,9 @@ async function coachReport() {
     <div>Tu precisión: <b>${acc != null ? acc + " %" : "–"}</b> · ${count("??")} error${count("??") === 1 ? "" : "es"} grave${count("??") === 1 ? "" : "s"}, ${count("?")} error${count("?") === 1 ? "" : "es"} y ${count("?!")} imprecisi${count("?!") === 1 ? "ón" : "ones"} <span class="small">(CPU ${esc(desc)})</span></div>
     ${worst.length ? `<div class="retry-msg"><b>Tus ${worst.length === 1 ? "momento más caro" : worst.length + " momentos más caros"}:</b><ol style="margin:4px 0 0 18px; padding:0">${items}</ol></div>` : ""}
     <div class="retry-msg">💡 ${esc(advice)}</div>
-    <div class="controls">${worst.length ? `<button class="sm-btn primary" data-k="retry">🎯 Practicar ${worst.length === 1 ? "este error" : "estos errores"}</button>` : ""}<button class="sm-btn" data-k="save">💾 Guardar la partida</button><button class="sm-btn info-btn" data-k="rematch">🔁 Revancha</button><button class="sm-btn" data-k="close">Cerrar</button></div>`;
+    <div class="controls">${worst.length ? `<button class="sm-btn primary" data-k="retry">🎯 Practicar ${worst.length === 1 ? "este error" : "estos errores"}</button>` : ""}${aiProvider() && worst.length ? `<button class="sm-btn info-btn" data-k="ai" title="El profesor IA comenta tus momentos clave">🤖 Que la comente el profesor</button>` : ""}<button class="sm-btn" data-k="save">💾 Guardar la partida</button><button class="sm-btn info-btn" data-k="rematch">🔁 Revancha</button><button class="sm-btn" data-k="close">Cerrar</button></div>`;
   box.querySelectorAll("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); goTo(worst[+a.dataset.go].n); });
-  const act = { retry: () => { box.hidden = true; startRetry(0, worst.map(x => x.n)); }, save: () => saveToLibrary({}), rematch: () => cpuAction("rematch"), close: () => { box.hidden = true; } };
+  const act = { ai: () => { let rv = $("aiReviewCpu"); if (!rv) { rv = document.createElement("div"); rv.id = "aiReviewCpu"; rv.className = "retry-box think-box"; box.append(rv); } aiGameReview(rv, user); }, retry: () => { box.hidden = true; startRetry(0, worst.map(x => x.n)); }, save: () => saveToLibrary({}), rematch: () => cpuAction("rematch"), close: () => { box.hidden = true; } };
   box.querySelectorAll("[data-k]").forEach(b => b.onclick = act[b.dataset.k]);
 }
 function cpuUndo() {

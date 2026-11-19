@@ -2047,13 +2047,19 @@ def prueba_ollama(browser):
     ctx = contexto(browser)
     cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
     estado = {"bloqueado": True}
-    modelos = ["deepseek-r1:8b", "qwen2.5-coder:7b", "qwen3.5-hermes:latest", "gemma4:12b", "nomic-embed-text:v1.5", "qwen3.5:9b", "dolphin3:8b"]
+    modelos = ["deepseek-r1:8b", "qwen2.5-coder:7b", "qwen3.5-hermes:latest", "gemma4:12b", "nomic-embed-text:v1.5", "qwen3.5:9b", "dolphin3:8b", "sin-think:1b", "solo-razona:1b"]
     def tags(r):
         if estado["bloqueado"]: r.abort()   # como hace el navegador cuando Ollama no da permiso a la página (CORS)
         else: r.fulfill(status=200, headers=cab, body=json.dumps({"models": [{"name": n, "model": n} for n in modelos]}))
     def chat(r):
         if estado["bloqueado"]: r.abort(); return
-        m = json.loads(r.request.post_data)["model"]
+        cuerpo = json.loads(r.request.post_data)
+        estado["ultimo"] = cuerpo
+        m = cuerpo["model"]
+        if m == "solo-razona:1b": r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": "", "thinking": "mmm..."}})); return
+        if m == "sin-think:1b":
+            if "think" in cuerpo: r.fulfill(status=400, headers=cab, body=json.dumps({"error": f'"{m}" does not support thinking'})); return
+            r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": "Hola"}})); return
         if m not in modelos: r.fulfill(status=404, headers=cab, body=json.dumps({"error": f"model '{m}' not found"})); return
         if "embed" in m: r.fulfill(status=400, headers=cab, body=json.dumps({"error": f'"{m}" does not support chat'})); return
         txt = "<think>\nEl usuario quiere un saludo.\n</think>\n\nHola" if m.startswith("deepseek") else "Hola"
@@ -2082,7 +2088,7 @@ def prueba_ollama(browser):
     pg.wait_for_function("$('aiTestResult').textContent.includes('Tus modelos')", timeout=15000)
     msg = pg.inner_text("#aiTestResult")
     opciones = pg.evaluate("[...$('aiModelList').options].map(o => o.value)")
-    comprobar("no tiene el modelo «qwen2.5:7b»" in msg and "gemma4:12b" in msg and "nomic-embed-text" not in msg and "nomic-embed-text:v1.5" not in opciones and len(opciones) == 6,
+    comprobar("no tiene el modelo «qwen2.5:7b»" in msg and "gemma4:12b" in msg and "nomic-embed-text" not in msg and "nomic-embed-text:v1.5" not in opciones and len(opciones) == 8,
               "con un modelo que no está, la prueba dice cuáles hay para conversar (sin los de embeddings) y los pone en la lista de la casilla")
     for nombre in ("deepseek-r1:8b", "gemma4:12b"):
         pg.fill("#setAiModel", nombre); pg.dispatch_event("#setAiModel", "change")
@@ -2096,6 +2102,17 @@ def prueba_ollama(browser):
               "escribir el modelo sin la etiqueta («qwen3.5») se completa solo con la versión instalada (qwen3.5:9b)")
     pg.keyboard.press("Escape")
     pg.evaluate("settings.aiProvider = 'none'; settings.aiModel = ''; renderAiBox()")
+    # Ajustes para los modelos locales: sin razonamiento interno y con la ventana de contexto a la medida de la pregunta
+    pg.evaluate("settings.aiProvider = 'ollama'; settings.aiModel = 'qwen3.5:9b'")
+    r = pg.evaluate("aiCall('Sistema', 'x'.repeat(30000)).then(t => t)")
+    u = estado["ultimo"]
+    comprobar(u.get("think") is False and u["options"]["num_ctx"] >= 12288 and u["options"]["num_ctx"] % 2048 == 0,
+              f"a Ollama se le pide no razonar por dentro y una ventana de contexto a la medida de la pregunta ({u['options']['num_ctx']} tokens)")
+    pg.evaluate("settings.aiModel = 'sin-think:1b'")
+    comprobar(pg.evaluate("aiCall('s', 'di hola')") == "Hola" and "think" not in estado["ultimo"], "si el modelo no admite esa opción, se repite sin ella")
+    pg.evaluate("settings.aiModel = 'solo-razona:1b'")
+    msg = pg.evaluate("aiCall('s', 'di hola').then(() => '', e => e.message)")
+    comprobar("se ha quedado razonando" in msg, "si el modelo sólo razona y no responde, se dice claramente")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -2486,6 +2503,51 @@ def prueba_piezas_ia(browser):
     comprobar(pg.locator("#aiAnswer .ai-unverified").count() == 2 and "se ha equivocado sobre la posición" in pg.inner_text("#aiAnswer") and "hay un caballo negro" in pg.inner_text("#aiAnswer"),
               "si insiste en el error, se marca con ⚠ y se dice qué hay de verdad en esa casilla")
     pg.evaluate("Object.assign(settings, { aiProvider: 'none', aiCtxLichess: true, aiPropose: true }); renderAiBox()")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_repaso_y_preguntas(browser):
+    print("Novedades 1.51.0: el profesor comenta la partida y preguntas sin escribir")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    llamadas = []
+    def chat(r):
+        m = json.loads(r.request.post_data)
+        llamadas.append(m)
+        txt = '{"lineas":[]}' if "SÓLO con JSON" in m["messages"][0]["content"] else "En el momento clave las blancas jugaron **Cxe5** y lo mejor era otra cosa. Lección: no comas un peón envenenado."
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
+    ctx.route("http://localhost:11434/api/chat", chat)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false, analysisMs: 300 }); renderAiBox();"
+                "loadPgnText('[White \"Yo\"]\\n[Black \"Rival\"]\\n\\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 4. Nxe5 Qg5 5. Nxf7 Qxg2 6. Rf1 Qxe4+ 7. Be2 Nf3# 0-1', { endAtEnd: true })")
+    pg.evaluate("analyseGame()")
+    pg.wait_for_function("ui.report && !ui.analysing && $('aiReviewBtn')", timeout=120000)
+    pg.click("#aiReviewBtn")
+    pg.wait_for_function("$('aiReviewBox').querySelector('.ai-text')", timeout=60000)
+    u = llamadas[-1]["messages"][1]["content"]
+    comprobar("Momento clave 1:" in u and "Piezas de las blancas:" in u and "Lo mejor era" in u and "Comenta la partida como un entrenador" in u,
+              "«🤖 Que la comente el profesor» le da a la IA los momentos clave con su posición, lo jugado y lo que era mejor")
+    comprobar(pg.locator("#aiReviewBox [data-rv-go]").count() >= 1 and pg.locator("#aiReviewBox .ai-mv").count() >= 1, "el comentario enlaza los momentos clave y sus jugadas se pueden pulsar")
+    pg.click("#aiReviewBox [data-rv-go]")
+    comprobar(pg.evaluate("!!cur().parent && cur() !== Pgn.mainlineFrom(game.root).pop()"), "«Ir a» lleva al momento clave")
+    pg.click("#aiReviewBox [data-rv-save]")
+    comprobar("Comentario del profesor IA" in pg.evaluate("game.root.comment"), "se puede guardar como comentario de la partida")
+    # Preguntas sin escribir: dependen de la jugada seleccionada
+    pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[6])")   # 4.Cxe5
+    etiquetas = pg.evaluate("[...$('aiQuick').querySelectorAll('button')].map(b => b.textContent)")
+    comprobar("¿Por qué 4.Cxe5?" in etiquetas and "¿Qué amenaza el rival?" in etiquetas, f"las preguntas rápidas cambian con la jugada seleccionada ({', '.join(etiquetas)})")
+    pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[5]); playMove(Chess.moveFromUci(cur().state, 'b1c3'), 'user')")   # 4.Cc3 como variante
+    etiquetas = pg.evaluate("[...$('aiQuick').querySelectorAll('button')].map(b => b.textContent)")
+    comprobar("¿Cc3 o Cxe5?" in etiquetas, "con una variante aparece «¿Cc3 o Cxe5?» para compararlas")
+    llamadas.clear()
+    pg.click("#aiQuick button:has-text('¿Cc3 o Cxe5?')")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
+    u = llamadas[-1]["messages"][1]["content"]
+    comprobar("Compara 4.Cc3 con 4.Cxe5" in u and "Jugada elegida: 4.Cc3" in u and "Alternativa" in u and "4.Cxe5" in u,
+              "y la IA recibe la valoración del motor de las dos jugadas")
+    pg.evaluate("Object.assign(settings, { aiProvider: 'none', aiCtxLichess: true, aiPropose: true, analysisMs: 1000 }); renderAiBox()")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -3027,7 +3089,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

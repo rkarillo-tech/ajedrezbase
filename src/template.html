@@ -1036,7 +1036,7 @@ body.board-full #exportControls { order: 10; }
     <div id="scanBox" class="retry-box think-box scan-box" hidden aria-live="polite"></div>
     <div id="aiBox" class="ai-box" hidden>
       <div class="ai-row"><input id="aiQuestion" placeholder="🤖 Pregunta al profesor IA sobre esta posición…" aria-label="Pregunta al profesor IA" autocomplete="off"><button id="aiAskBtn" class="sm-btn primary">Preguntar</button></div>
-      <div class="ai-quick"><button class="sm-btn" data-aiq="¿Qué debería hacer ahora y por qué?">¿Qué hago ahora?</button><button class="sm-btn" data-aiq="¿Qué tal ha sido la última jugada y por qué?">¿Y la última jugada?</button><button class="sm-btn" data-aiq="¿Cuál es el plan para los dos bandos en esta posición?">¿Cuál es el plan?</button></div>
+      <div id="aiQuick" class="ai-quick" aria-label="Preguntas rápidas sobre la jugada seleccionada"></div>
       <details class="ai-ctx small"><summary>📚 Cómo piensa el profesor y qué consulta, además del motor</summary>
         <label><input type="checkbox" id="aiPropose"> 🧪 La IA propone sus propias jugadas (pensadas sin ver al motor) y Stockfish las comprueba antes de enseñarlas (una consulta más a la IA)</label>
         <label><input type="checkbox" id="aiCtxRep"> 🗂 Tu repertorio (si la posición está en tus líneas o dónde te saliste)</label>
