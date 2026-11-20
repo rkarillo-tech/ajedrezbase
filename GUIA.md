@@ -388,7 +388,7 @@ Con el 🤖 profesor IA configurado, la IA es la que habla: presenta la clase co
 | `?` | Abrir esta ayuda |
 | `Esc` | Cerrar ventanas |
 
-Los atajos no funcionan mientras escribes en un recuadro de texto.
+Los atajos no funcionan mientras escribes en un recuadro de texto. Con el foco en las pestañas (llegas a ellas con `Tab`), `←` `→` `Inicio` `Fin` cambian de pestaña en vez de jugada.
 
 ## 📤 24. Imagen, impresión y enlaces para compartir
 - **🖼 Imagen**: descarga la posición del tablero como PNG, con sus flechas y círculos y un pie con la partida y la jugada. Si el navegador lo permite, además la copia al portapapeles para pegarla en un correo, un chat o un documento.
@@ -429,7 +429,11 @@ Lichess limita las consultas seguidas. La aplicación hace una cada vez y, si Li
 
 **«Esta partida se ha modificado en otra pestaña»**
 
-Tienes la aplicación abierta en dos pestañas o ventanas. Para no perder nada, no se guarda encima de los cambios de la otra: vuelve a abrir la partida desde la biblioteca, o pulsa 💾 si quieres quedarte con la versión de esta pestaña.
+Tienes la aplicación abierta en dos pestañas o ventanas. Para no perder nada, no se guarda encima de los cambios de la otra: vuelve a abrir la partida desde la biblioteca, o pulsa 💾 si quieres quedarte con la versión de esta pestaña. Si en ese momento pasas a otra partida, se te pregunta: puedes guardar tus cambios como una **copia aparte** (la versión de la otra pestaña queda como está) o volver a la partida.
+
+**«Los cambios de … no se pudieron guardar»**
+
+Al pasar a otra partida, la anterior se guarda sola; si el navegador no deja guardar (por falta de espacio, por ejemplo), tus cambios no se pierden: quedan a salvo, también si recargas la página, y debajo del título aparece un aviso con **↩ Recuperar** (vuelve a abrir la partida con tus cambios e intenta guardarlos de nuevo), **⬇ Descargar .pgn** y **✖ Descartar**. Si falta espacio, exporta y borra partidas antiguas de la biblioteca antes de recuperar.
 
 **«Motor interno ⚠» en vez de Stockfish**
 

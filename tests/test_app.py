@@ -2639,6 +2639,76 @@ def prueba_fiabilidad(browser):
     ctx.close()
 
 
+def prueba_guardar_al_salir(browser):
+    print("1.52.1: al pasar a otra partida no se pierden los cambios sin guardar")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.fill("#moveInput", "1. e4 e5 2. Nf3")
+    pg.click("#importBtn")
+    pg.click("#saveGame")
+    pg.wait_for_function("Lib.games.size === 1 && !ui.dirty")
+    # La escritura falla (sin espacio) justo al pasar a otra partida
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    res = pg.evaluate("""async () => {
+      const id = ui.libId, put = DB.put;
+      DB.put = () => Promise.reject(new Error("QuotaExceededError"));
+      cur().comment = "idea importante"; markDirty();
+      setGame(Pgn.parseGame("1. d4", { lang: "en" }).game);
+      await new Promise(r => setTimeout(r, 300));
+      DB.put = put;
+      return { id, lib: Lib.games.get(id).pgn.includes("idea importante"), box: !$("rescueBox").hidden, ls: !!LS.get("ajedrezRescue", null), txt: $("rescueText").textContent };
+    }""")
+    comprobar(not res["lib"] and res["box"] and res["ls"] and "no se pudieron guardar" in res["txt"],
+              "si falla el guardado al cambiar de partida, los cambios quedan rescatados y se avisa")
+    pg.reload()
+    pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+    comprobar(pg.is_visible("#rescueBox"), "el rescate sigue ahí tras recargar la página")
+    pg.click("#rescueOpen")
+    lid = json.dumps(res["id"])
+    pg.wait_for_function(f"!ui.dirty && Lib.games.get({lid}).pgn.includes('idea importante')", timeout=8000)
+    comprobar(pg.evaluate(f"ui.libId === {lid} && $('rescueBox').hidden && !LS.get('ajedrezRescue', null)"),
+              "«↩ Recuperar» vuelve a abrir la partida con los cambios y los guarda en la biblioteca")
+    # Modificada en otra pestaña: antes se descartaban los cambios en silencio
+    res = pg.evaluate("""async () => {
+      const id = ui.libId;
+      Lib.games.get(id).updated = ui.recUpdated + 5000;   // otra pestaña la ha guardado después
+      cur().comment = "cambio de esta pestaña"; markDirty();
+      const conf = window.confirm;
+      window.confirm = () => false;
+      const stay = setGame(Pgn.parseGame("1. c4", { lang: "en" }).game) === false && ui.libId === id;
+      window.confirm = () => true;
+      setGame(Pgn.parseGame("1. c4", { lang: "en" }).game);
+      window.confirm = conf;
+      await new Promise(r => setTimeout(r, 400));
+      const copy = [...Lib.games.values()].find(r => r.id !== id && r.pgn.includes("cambio de esta pestaña"));
+      return { stay, copy: !!copy, title: copy ? copy.title : "", orig: Lib.games.get(id).pgn.includes("cambio de esta pestaña"), n: Lib.games.size };
+    }""")
+    comprobar(res["stay"], "si la partida cambió en otra pestaña, se pregunta antes de salir y se puede volver a ella")
+    comprobar(res["copy"] and "(copia)" in res["title"] and not res["orig"] and res["n"] == 2,
+              "al aceptar, tus cambios se guardan como copia y la versión de la otra pestaña queda intacta")
+    # Pestañas accesibles
+    res = pg.evaluate("""() => {
+      const b = document.querySelector('.tab-btn[data-tab="library"]'), p = $("tab-library");
+      return { ctl: b.getAttribute("aria-controls"), lbl: p.getAttribute("aria-labelledby") === b.id, sel: document.querySelector('.tab-btn[aria-selected="true"]').dataset.tab,
+               tabs: [...document.querySelectorAll('.tab-btn[data-tab]')].filter(x => x.tabIndex === 0).length };
+    }""")
+    comprobar(res["ctl"] == "tab-library" and res["lbl"] and res["sel"] == "study" and res["tabs"] == 1,
+              "cada pestaña dice qué panel controla y sólo la activa está en el orden de tabulación")
+    ply = pg.evaluate("Pgn.pathTo(cur()).length")
+    pg.focus('.tab-btn[data-tab="study"]')
+    pg.keyboard.press("ArrowRight")
+    comprobar(pg.evaluate("ui.activeTab") == "courses" and pg.evaluate("document.activeElement.dataset.tab") == "courses" and pg.evaluate("Pgn.pathTo(cur()).length") == ply,
+              "con el foco en las pestañas, → cambia de pestaña y no de jugada")
+    pg.keyboard.press("End")
+    comprobar(pg.evaluate("ui.activeTab") == "tools", "Fin lleva a la última pestaña")
+    pg.click('.tab-btn[data-tab="library"]')
+    pg.click('.sub-btn[data-sub="marks"]')
+    comprobar(pg.evaluate("""(() => { const b = document.querySelector('.sub-btn[data-sub="marks"]'); return b.getAttribute('aria-selected') === 'true' && b.getAttribute('aria-controls') === 'sub-marks'; })()"""),
+              "las subpestañas de la biblioteca también son accesibles")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_salir_del_entrenamiento(browser):
     print("Salir de cada entrenamiento con los botones de la sesión")
     ctx = contexto(browser)
@@ -3126,7 +3196,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

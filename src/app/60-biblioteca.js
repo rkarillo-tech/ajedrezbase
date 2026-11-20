@@ -216,6 +216,7 @@ async function saveToLibrary(opts = {}) {
   try { await DB.put("games", rec); }
   catch (e) {
     if (g === game) { ui.saveError = e.message || String(e); updateSaveState(); }
+    else if (opts.rescue) { rescueStore(rec, existing && !opts.copy ? existing.id : null, e); return null; }
     toast("❌ No se pudo guardar: " + (e.message || e), 6000);
     return null;
   }
@@ -229,7 +230,8 @@ async function saveToLibrary(opts = {}) {
     else scheduleLibSave();
     $("gameName").value = rec.title;
   }
-  if (opts.copy) toast(`📑 Copia guardada como «${rec.title}». Ahora editas la copia; la original queda como estaba.`, 4500);
+  if (opts.copy && g !== game) toast(`📑 Tus cambios se han guardado como «${rec.title}» en la biblioteca; la otra versión queda como estaba.`, 5000);
+  else if (opts.copy) toast(`📑 Copia guardada como «${rec.title}». Ahora editas la copia; la original queda como estaba.`, 4500);
   else if (!opts.silent) toast(existing ? `💾 «${rec.title}» actualizada.` : `💾 «${rec.title}» guardada en tu biblioteca.`);
   refreshLibraryViews();
   scheduleAutosave();
@@ -238,9 +240,56 @@ async function saveToLibrary(opts = {}) {
 function confirmLeave() {
   if (!ui.dirty || (trainer.active && trainer.card)) return true;
   if (ui.lesson && ui.lesson.game === game && !ui.libId) return true;   // las pruebas en una lección no se guardan: el curso sigue intacto
-  if (ui.libId && Lib.games.has(ui.libId)) { saveToLibrary({ silent: true }); return true; }
+  if (ui.libId && Lib.games.has(ui.libId)) {
+    // El registro se prepara antes de cualquier espera, así que se puede continuar sin esperar a la escritura:
+    // si ésta falla, los cambios quedan rescatados (rescue) y se pueden recuperar.
+    const ex = Lib.games.get(ui.libId);
+    if (ui.recUpdated && ex.updated > ui.recUpdated) {
+      // Modificada en otra pestaña: no se sustituye nada sin preguntar, y tampoco se pierden los cambios de aquí
+      if (!confirm(`«${ex.title}» se ha modificado en otra pestaña o ventana después de abrirla aquí, y en ésta tienes cambios sin guardar.\n\nAceptar = guardar tus cambios como una copia aparte y continuar (la otra versión queda como está)\nCancelar = volver a la partida`)) return false;
+      saveToLibrary({ silent: true, copy: true, rescue: true });
+      return true;
+    }
+    saveToLibrary({ silent: true, rescue: true });
+    return true;
+  }
   return confirm("La partida actual tiene cambios y no está guardada en la biblioteca.\n\nAceptar = descartarlos y continuar\nCancelar = volver para guardarla (💾)");
 }
+/* Rescate: cambios que no se pudieron guardar al pasar a otra partida (sin espacio, error del navegador…).
+   Se conservan en memoria y en localStorage (sobreviven a recargar) hasta que se recuperan o se descartan. */
+const RESCUE_KEY = "ajedrezRescue";
+let Rescue = null;
+function rescueStore(rec, libId, err) {
+  Rescue = { pgn: rec.pgn, title: rec.title, libId: libId || null, tags: rec.tags || [], fav: !!rec.fav, t: Date.now(), error: (err && (err.message || String(err))) || "" };
+  const kept = LS.set(RESCUE_KEY, Rescue);
+  renderRescue();
+  toast(`❌ No se pudieron guardar los cambios de «${rec.title}». ${kept ? "Están a salvo: pulsa «↩ Recuperar» arriba para volver a ellos." : "Pulsa «↩ Recuperar» arriba antes de cerrar la página."}`, 8000);
+}
+function rescueLoad() { if (!Rescue) { const r = LS.get(RESCUE_KEY, null); if (r && r.pgn) Rescue = r; } renderRescue(); }
+function rescueClear() { Rescue = null; try { localStorage.removeItem(RESCUE_KEY); } catch {} renderRescue(); }
+function renderRescue() {
+  const box = $("rescueBox");
+  if (!box) return;
+  box.hidden = !Rescue;
+  if (Rescue) $("rescueText").textContent = `⚠ Los cambios de «${Rescue.title}» no se pudieron guardar${Rescue.error ? " (" + Rescue.error + ")" : ""}. Siguen aquí, a salvo:`;
+}
+function rescueOpen() {
+  if (!Rescue) return false;
+  const r0 = Rescue, r = Pgn.parseGame(r0.pgn, { lang: "en" });
+  const libId = r0.libId && Lib.games.has(r0.libId) ? r0.libId : null;
+  if (setGame(r.game, { libId, name: r0.title, fav: r0.fav, tags: r0.tags, current: r.game.root }) === false) return false;
+  rescueClear();
+  markDirty();   // en la biblioteca se vuelve a intentar guardar sola; si no, queda pendiente de 💾
+  toast(libId ? "↩ Cambios recuperados: se vuelve a intentar guardarlos." : "↩ Cambios recuperados. Pulsa 💾 para guardarlos en la biblioteca.", 5000);
+  return true;
+}
+function rescueDownload() {
+  if (Rescue) download(safeName(Rescue.title) + ".pgn", Rescue.pgn, "application/x-chess-pgn");
+}
+$("rescueOpen").onclick = rescueOpen;
+$("rescueDl").onclick = rescueDownload;
+$("rescueDrop").onclick = () => { if (confirm(`¿Descartar los cambios sin guardar de «${Rescue ? Rescue.title : ""}»? No se podrán recuperar.`)) rescueClear(); };
+
 /* Versiones de una partida de la biblioteca: el original y las últimas fotos antes de cada sesión de cambios */
 const fmtWhen = ts => new Date(ts).toLocaleString("es-ES", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 function versionsOf(rec) {
@@ -1006,6 +1055,7 @@ async function initLibrary() {
   } catch (e) { toast("❌ No se pudo leer la biblioteca: " + e.message, 6000); }
   await migrateLegacy();
   Lib.ready = true;
+  rescueLoad();
   if (Lib.games.size >= 50) gidxWarm();   // con muchas partidas, el índice se prepara en segundo plano
   if (ui.libId && !Lib.games.has(ui.libId)) ui.libId = null;
   if (!ui.libId && ui.legacyStudy) {

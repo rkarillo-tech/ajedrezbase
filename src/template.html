@@ -617,6 +617,9 @@ details > summary { cursor: pointer; color: var(--muted); font-size: .84rem; mar
 .save-state { font-size: .76rem; color: var(--muted); }
 .save-state.dirty { color: var(--warn); }
 .save-state.saved { color: var(--accent); }
+.rescue-box { margin-top: 6px; padding: 6px 8px; border-left: 3px solid var(--warn); background: var(--panel2); border-radius: 4px; font-size: .8rem; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.rescue-box[hidden] { display: none; }
+.rescue-box > span { flex: 1 1 100%; }
 /* Ocupación */
 .storage-box { background: var(--deep); border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; margin-bottom: 10px; }
 .storage-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
@@ -1177,6 +1180,10 @@ body.board-full #exportControls { order: 10; }
         <button id="markBtn" class="warn-btn" title="Marca la jugada actual (favorita, idea, táctica, error típico…) con una nota, para encontrarla fácilmente">📌 Marcar jugada</button>
       </div>
       <div id="saveState" class="save-state">No guardada en la biblioteca</div>
+      <div id="rescueBox" class="rescue-box" role="alert" hidden><span id="rescueText"></span>
+        <button id="rescueOpen" class="sm-btn" type="button" title="Vuelve a abrir la partida con tus cambios">↩ Recuperar</button>
+        <button id="rescueDl" class="sm-btn" type="button" title="Descarga la partida con tus cambios en un archivo .pgn">⬇ Descargar .pgn</button>
+        <button id="rescueDrop" class="sm-btn warn-btn" type="button" title="Olvida estos cambios">✖ Descartar</button></div>
       <div class="controls" id="gcVersions" hidden style="margin-top:5px">
         <button id="copyGameBtn" class="sm-btn" title="Guarda esta partida como una partida nueva; la original queda como está">📑 Guardar como copia</button>
         <button id="versionsBtn" class="sm-btn" title="El original y las versiones anteriores de esta partida">🕘 Versiones</button>

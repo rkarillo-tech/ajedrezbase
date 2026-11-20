@@ -2,7 +2,8 @@
 function switchTab(name) {
   if (ui.full && name !== ui.activeTab) fullBoard(false);   // lo que se abre está en el otro panel
   ui.activeTab = name;
-  document.querySelectorAll(".tab-btn").forEach(b => { b.classList.toggle("active", b.dataset.tab === name); b.setAttribute("aria-selected", b.dataset.tab === name); });
+  document.querySelectorAll(".tab-btn[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  ariaTabsSync(".tab-btn[data-tab]", b => b.dataset.tab === name);
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === "tab-" + name));
   if (name === "explorer") { refreshExplorer(); renderOpeningBrief(); }
   if (name === "library") { refreshLibraryViews(); if (ui.librarySub === "collection") renderCollection(); if (ui.librarySub === "position") renderPosTarget(); }
@@ -10,6 +11,36 @@ function switchTab(name) {
   if (name === "courses") renderCourses();
   if (name === "endgames" && pieceCount(cur().state) <= 7) querySyzygy();
 }
+/* Pestañas accesibles: cada pestaña dice qué panel controla (y el panel, qué pestaña lo nombra), sólo la activa
+   está en el orden de tabulación, y con el foco en ellas ← → Inicio Fin cambian de pestaña en vez de jugada */
+function ariaTabs(list, btnSel, paneOf) {
+  const btns = [...list.querySelectorAll(btnSel)];
+  btns.forEach(b => {
+    const pane = paneOf(b);
+    if (!pane) return;
+    b.setAttribute("role", "tab");
+    b.type = "button";
+    if (!b.id) b.id = "tabbtn-" + pane.id;
+    b.setAttribute("aria-controls", pane.id);
+    pane.setAttribute("role", "tabpanel");
+    pane.setAttribute("aria-labelledby", b.id);
+  });
+  list.addEventListener("keydown", e => {
+    const i = btns.indexOf(document.activeElement);
+    if (i < 0 || e.ctrlKey || e.metaKey || e.altKey) return;
+    const n = btns.length, j = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+    if (j === undefined) return;
+    e.preventDefault();
+    e.stopPropagation();
+    btns[j].focus();
+    btns[j].click();
+  });
+}
+function ariaTabsSync(btnSel, isActive) {
+  document.querySelectorAll(btnSel).forEach(b => { const on = !!isActive(b); b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; });
+}
+ariaTabs(document.querySelector(".mode-tabs"), ".tab-btn[data-tab]", b => $("tab-" + b.dataset.tab));
+ariaTabsSync(".tab-btn[data-tab]", b => b.classList.contains("active"));
 /* En el móvil en vertical las pestañas son una barra fija abajo: al pulsar una se lleva su contenido a la vista, y «♟ Tablero» vuelve arriba */
 const phoneLayout = matchMedia("(max-width: 640px) and (orientation: portrait)");
 document.querySelectorAll(".tab-btn[data-tab]").forEach(btn => btn.addEventListener("click", () => {
@@ -487,9 +518,12 @@ $("markFilter").oninput = debounce(renderMarks, 150);
 $("commentSearchBtn").onclick = searchComments;
 $("commentSearch").addEventListener("keydown", e => { if (e.key === "Enter") searchComments(); });
 document.querySelectorAll(".sub-btn").forEach(b => b.onclick = () => switchSub(b.dataset.sub));
+ariaTabs(document.querySelector(".subtabs"), ".sub-btn", b => $("sub-" + b.dataset.sub));
+ariaTabsSync(".sub-btn", b => b.classList.contains("active"));
 function switchSub(name) {
   ui.librarySub = name;
   document.querySelectorAll(".sub-btn").forEach(b => b.classList.toggle("active", b.dataset.sub === name));
+  ariaTabsSync(".sub-btn", b => b.dataset.sub === name);
   document.querySelectorAll(".subpane").forEach(p => { p.hidden = p.id !== "sub-" + name; });
   if (name === "collection") renderCollection();
   if (name === "search") setTimeout(() => $("commentSearch").focus(), 30);
