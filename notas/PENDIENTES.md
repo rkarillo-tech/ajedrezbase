@@ -34,7 +34,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 
 ## D. Calidad y mantenimiento
 
-- **D1**. Revisar los 34 artículos de aperturas de la 1.46.0. Los redactó la IA; necesita a un jugador con buen nivel.
+- **D1**. Revisar los 34 artículos de aperturas de la 1.46.0 y los planes de las 13 estructuras de peones de la 1.54.0 (`src/app/38-estructuras.js`). Los redactó la IA; necesita a un jugador con buen nivel.
 - **D2**. Probar la parte del profesor IA que usa Claude. Necesita el SDK de Anthropic aparte y en la CI solo se ejecuta si está configurado.
 - **D3**. Pruebas de fallos: CDN caída, sin conexión la primera vez, cambio de motor durante un análisis.
 - **D4**. Revisar los usos de `innerHTML` donde se pinta texto de PGN o comentarios importados (hay unos 160).
