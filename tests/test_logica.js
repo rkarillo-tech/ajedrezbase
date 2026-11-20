@@ -327,9 +327,11 @@ seccion("🤖 Lo que la IA dice de las piezas", () => {
     const mal = "Tu idea va bien, pero hay un problema: el alfil de d7 es peligroso. El caballo de a4 también está amenazado. Lo más eficiente es capturar el alfil de d7 con el caballo de a4.";
     const bien = "Tu caballo de f3 está bien, el caballo negro de f6 defiende d5 y la dama de d8 vigila; tu alfil de f1 aún no ha salido.";
     const color = "Tu caballo de d7 está mal colocado.";
-    return { mal: aiCheckClaims(mal, [s], 1).map(e => e.why), bien: aiCheckClaims(bien, [s], 1).length, color: aiCheckClaims(color, [s], 1).map(e => e.why), lista: aiPiecesText(s) };
+    const primera = aiCheckClaims("La clave es la debilidad del rey negro contra mi dama en g6.", [s], 1).map(e => e.why);
+    return { primera, mal: aiCheckClaims(mal, [s], 1).map(e => e.why), bien: aiCheckClaims(bien, [s], 1).length, color: aiCheckClaims(color, [s], 1).map(e => e.why), lista: aiPiecesText(s) };
   })())`));
   comprobar(r.mal.join(" | ") === "en d7 hay un caballo negro, no un alfil | en a4 no hay ninguna pieza", "detecta «el alfil de d7» (es un caballo) y «el caballo de a4» (no hay nada)");
+  comprobar(r.primera.length >= 1 && r.primera[0].includes("primera persona"), "detecta cuando el tutor habla como si jugara («mi dama»)");
   comprobar(r.bien === 0, "no marca lo que es cierto (piezas, casillas y colores correctos)");
   comprobar(r.color[0] === "la pieza de d7 es negra (del rival)", "detecta cuando dice «tu» de una pieza del rival");
   comprobar(r.lista.includes("Piezas de las negras: rey negro en e8; dama negra en d8; torre negra en a8; torre negra en h8; alfil negro en c8; alfil negro en f8; caballo negro en d7; caballo negro en f6; caballo negro en a5;") && r.lista.includes("peón blanco en c4"), "la lista de piezas que recibe la IA, cada una con su color pegado");

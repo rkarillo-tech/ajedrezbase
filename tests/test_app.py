@@ -2341,6 +2341,10 @@ def prueba_entrenador_ia(browser):
     pg.wait_for_function("Coach.state === 'solved'", timeout=30000)
     pg.wait_for_timeout(300)
     comprobar(pg.evaluate("Object.values(Lib.games.get(Coach.ex.d.rec.id).drills || {}).length") == 1, "lo resuelto cuenta para el repaso de tus errores")
+    comprobar(pg.locator("#coachAsk").count() == 1 and pg.locator("#coachBox [data-co-q]").count() >= 2, "al terminar el ejercicio se puede seguir preguntando (con preguntas rápidas)")
+    pg.fill("#coachAsk", "¿y si juego Ta8+?"); pg.press("#coachAsk", "Enter")
+    pg.wait_for_function("!Coach.chatBusy && Coach.chat.length === 1", timeout=30000)
+    comprobar("valoración" in pg.inner_text("#coachBox .coach-answer") and "Ta8" in pg.inner_text("#coachBox .coach-answer"), "sin IA, una pregunta sobre otra jugada se responde con la valoración del motor")
     pg.click("#coachBox [data-co=next]"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
     pg.click("#coachBox [data-co=show]")
     comprobar("La buena era" in pg.inner_text("#coachBox"), "«Solución» la enseña")
@@ -2373,6 +2377,16 @@ def prueba_entrenador_ia(browser):
     comprobar(True, "si la idea empieza por una jugada («Cf3 porque…»), Intro la juega")
     comprobar("ataca dos piezas" in llamadas[-1]["messages"][1]["content"] and "Funciona porque" in pg.inner_text("#coachBox") and pg.locator("#coachBox .ai-unverified").count() == 1,
               "la IA explica la jugada comentando tu razonamiento, y lo no comprobado lleva ⚠")
+    pg.click("#coachBox [data-co-q]")
+    pg.wait_for_function("!Coach.chatBusy && Coach.chat.length === 1", timeout=30000)
+    seg = llamadas[-1]["messages"][1]["content"]
+    comprobar("Nueva pregunta del alumno: ¿Qué otras jugadas valían" in seg and "Conversación hasta ahora" in seg and "Explicación que ya le diste" in seg and pg.locator("#coachBox .coach-answer").count() == 1,
+              "con IA, tras el ejercicio el entrenador responde preguntas recordando la explicación y la conversación")
+    jug = pg.evaluate("(() => { const s = Coach.ex.node.state, L = Chess.legal(s); const m = L.find(m => Chess.uci(m) !== Coach.ex.best); return formatSan(Chess.san(s, m, L), 'es', s.t); })()")
+    pg.fill("#coachAsk", f"¿y si juego {jug}?"); pg.press("#coachAsk", "Enter")
+    pg.wait_for_function("!Coach.chatBusy && Coach.chat.length === 2", timeout=60000)
+    comprobar("Jugadas que menciona el alumno, valoradas por el motor" in llamadas[-1]["messages"][1]["content"] and "Alumno: ¿Qué otras jugadas valían" in llamadas[-1]["messages"][1]["content"],
+              "si pregunta por otra jugada, el motor la valora antes de que conteste la IA (y recuerda lo anterior)")
     exp = [m for m in llamadas if "Explica en 2 a 4 frases" in m["messages"][1]["content"]][-1]["messages"][1]["content"]
     fen_ej = pg.evaluate("Chess.toFen(Coach.ex.node.state)")
     comprobar("Posición del ejercicio (antes de la jugada del alumno)" in exp and fen_ej in exp and "(le toca al alumno)" in exp and "El alumno ha jugado" in exp and "Material al final de la línea del motor" in exp,
@@ -2478,6 +2492,11 @@ def prueba_notacion_ia(browser):
     comprobar(pg.evaluate("shapeList().some(s => s.color === 'blue')"), "al pulsar una jugada se ve en el minitablero y, si se puede jugar ya, con una flecha en el tablero")
     pg.mouse.click(5, 5)
     comprobar(pg.evaluate("hoverTip.hidden && !AI.arrow"), "pulsar fuera lo cierra")
+    pg.fill("#aiQuestion", "¿Y si juego Cc3?"); pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
+    comprobar(pg.locator("#aiAnswer [data-ai-save]").count() == 1 and "Recuerda 1 pregunta anterior" in pg.inner_text("#aiAnswer"), "el profesor recuerda lo que ya le preguntaste en esta posición")
+    pg.click("#aiAnswer [data-ai-save]")
+    comprobar("Profesor IA (¿Y si juego Cc3?)" in pg.evaluate("cur().comment"), "«💾 Añadir como comentario» guarda la respuesta en la jugada")
     pg.evaluate("settings.lang = 'en'; renderAiBox()")
     pg.click("#aiAskBtn"); pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
     comprobar("Nf3" in pg.inner_text("#aiAnswer .ai-text") and "Cf3" not in pg.inner_text("#aiAnswer .ai-text"), "con la notación inglesa elegida, se muestran en inglés")

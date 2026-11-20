@@ -172,7 +172,7 @@ async function coachShow() {
     }
   }
   if (!ex) { Coach.i++; coachShow(); return; }
-  Object.assign(Coach, { ex, state: "preparing", busy: true, arrows: [], hintSq: -1, hint: 0, attempts: 0, msg: "", tries: [], hintText: "", ideaText: "", ideaHelp: false });
+  Object.assign(Coach, { ex, state: "preparing", busy: true, arrows: [], hintSq: -1, hint: 0, attempts: 0, msg: "", tries: [], hintText: "", ideaText: "", ideaHelp: false, chat: [], chatBusy: false });
   ui.flipped = ex.node.state.t === -1;
   setGame(ex.g, { noConfirm: true, name: `🧑‍🏫 Entrenador · ${Coach.i + 1} de ${Coach.queue.length}`, current: ex.node });
   if (ex.kind === "drill") Coach.arrows = [{ color: "threat", from: Chess.moveFromUci(ex.node.state, ex.wrong).from, to: Chess.moveFromUci(ex.node.state, ex.wrong).to }];
@@ -390,6 +390,39 @@ async function coachIdea() {
   } catch (e) { if (tok === Coach.token) Coach.ideaText = `💬 No he podido valorar tu idea (${esc(e.message || String(e))}). Haz tu jugada y la comentaré al comprobarla.`; }
   coachPanel();
 }
+/* Seguir preguntando al terminar un ejercicio: la IA responde con los datos del ejercicio, la conversación hasta
+   ahora y, si se menciona una jugada, la valoración del motor de esa jugada (libertad vigilada). Sin IA, las preguntas
+   sobre jugadas se responden con los datos del motor */
+async function coachFollow(q) {
+  const ex = Coach.ex;
+  q = String(q || "").trim();
+  if (!ex || !q || Coach.chatBusy || !["solved", "shown"].includes(Coach.state)) { if (!q && $("coachAsk")) $("coachAsk").focus(); return; }
+  const tok = Coach.token;
+  Coach.chatBusy = true;
+  coachPanel();
+  try {
+    const alt = await aiMovesInQuestion(ex.node, q, ex.bestEv);
+    if (tok !== Coach.token || Coach.ex !== ex) return;
+    let html;
+    if (!aiProvider()) {
+      html = alt.items.length ? alt.items.map(a => esc(a.text)).join("<br>") : "Para preguntas abiertas hace falta el 🤖 profesor IA (⚙ Ajustes). Sin él puedo valorarte jugadas concretas: escribe por ejemplo «¿y si juego Cf3?».";
+    } else {
+      const facts = coachFacts(ex, false);
+      const history = [`Explicación que ya le diste: ${String(Coach.explain || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}`, ...(Coach.chat || []).slice(-3).map(c => `Alumno: ${c.q}\nEntrenador: ${c.plain}`)].join("\n");
+      const user = `${facts}${alt.text ? "\n\nJugadas que menciona el alumno, valoradas por el motor desde la posición del ejercicio:\n" + alt.text : ""}\n\nConversación hasta ahora:\n${history}\n\nNueva pregunta del alumno: ${q}\nResponde a esta pregunta como su tutor, con el porqué. Si pregunta por una jugada, usa la valoración del motor que se te da.`;
+      const states = [...coachStates(ex), ...alt.items.flatMap(a => [a.after, ...aiLineStates(a.after, a.reply || [])])];
+      const { text, errs } = await aiCallChecked(coachSystem(), user, states, ex.node.state.t);
+      if (tok !== Coach.token || Coach.ex !== ex) return;
+      const resolver = aiMoveResolver(ex.node, [{ state: ex.node.state, ucis: ex.line }, ...(ex.lines || []).map(l => ({ state: ex.node.state, ucis: l.pv })), ...alt.items.map(a => ({ state: ex.node.state, ucis: [a.uci, ...(a.reply || [])] }))]);
+      const stats = {};
+      html = aiMarkClaims(aiFormat(text, h => aiMoveMarkup(h, aiAllowedMoves([facts, alt.text]), resolver, stats)), errs);
+      Coach.chat.push({ q, a: html, plain: String(text).slice(0, 600) });
+      html = null;
+    }
+    if (html) Coach.chat.push({ q, a: html, plain: html.replace(/<[^>]+>/g, " ") });
+  } catch (e) { if (tok === Coach.token) Coach.chat.push({ q, a: `<span class="msg-err">No he podido responder: ${esc(e.message || String(e))}.</span>`, plain: "" }); }
+  finally { if (tok === Coach.token) { Coach.chatBusy = false; coachPanel(); const a = $("coachAsk"); if (a) a.focus(); } }
+}
 function coachNext() { Coach.i++; Coach.why = ""; if ($("coachWhy")) $("coachWhy").value = ""; coachShow(); }
 
 async function coachSummary() {
@@ -444,6 +477,14 @@ function coachPanel(wait) {
     if (Coach.hintText && Coach.state === "ask") html += `<div class="coach-hint">${Coach.hintText}</div>`;
     if (Coach.state === "checking") html += `<div class="small">⏳ Comprobando tu jugada con ${esc(Engine.name || "el motor")}…</div>`;
     if ((Coach.state === "solved" || Coach.state === "shown") && Coach.explain) html += `<div class="coach-msg">${Coach.explain}</div>`;
+    if (Coach.state === "solved" || Coach.state === "shown") {
+      for (const c of Coach.chat || []) html += `<div class="ai-q small">❓ ${esc(c.q)}</div><div class="coach-msg coach-answer">${c.a}</div>`;
+      if (Coach.chatBusy) html += `<div class="small">⏳ ${aiProvider() ? "El entrenador piensa la respuesta…" : "El motor estudia la jugada…"}</div>`;
+      const chips = [["¿Qué otras jugadas valían?", "¿Qué otras jugadas valían en esta posición y por qué?"], ["¿Cómo sigue?", "¿Cómo sigue la partida después de la mejor jugada? ¿Cuál es el plan?"]]
+        .concat((Coach.tries || []).slice(-2).map(t => [`¿Por qué no ${t}?`, `¿Por qué no era buena ${t}?`]));
+      html += `<div class="coach-follow"><div class="ai-quick">${chips.map(([l, q]) => `<button class="sm-btn" data-co-q="${esc(q)}">${esc(l)}</button>`).join("")}</div>
+        <div class="coach-why-row"><input id="coachAsk" class="coach-why" placeholder="Pregunta al entrenador sobre esta posición: «¿y si juego Ae3?», «¿por qué no Dxd5?»…" aria-label="Pregunta al entrenador sobre esta posición" autocomplete="off"><button class="sm-btn" data-co="ask"${Coach.chatBusy ? " disabled" : ""}>Preguntar</button></div></div>`;
+    }
     html += `<div class="controls">`;
     if (Coach.state === "ask") html += `<button class="sm-btn" data-co="hint">💡 Pista${Coach.hint ? ` (${Coach.hint + 1}/3)` : ""}</button><button class="sm-btn" data-co="show">👁 Solución</button><button class="sm-btn" data-co="skip">⏭ Saltar</button>`;
     if (Coach.state === "solved" || Coach.state === "shown") html += `<button class="sm-btn primary" data-co="next">${Coach.i + 1 < n ? "Siguiente ▶" : "Ver el resumen ▶"}</button>`;
@@ -452,11 +493,15 @@ function coachPanel(wait) {
   const keepFocus = document.activeElement && document.activeElement.id === "coachWhy";
   box.innerHTML = html;
   box.querySelectorAll("[data-co]").forEach(b => b.onclick = () => coachLessonAction(b.dataset.co));
+  box.querySelectorAll("[data-co-q]").forEach(b => b.onclick = () => coachFollow(b.dataset.coQ));
+  const ask = $("coachAsk");
+  if (ask) ask.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); coachFollow(ask.value); } };
   const w = $("coachWhy");
   if (w) { w.oninput = () => { Coach.why = w.value; }; w.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); coachIdea(); } }; if (keepFocus) { w.focus(); w.setSelectionRange(w.value.length, w.value.length); } }
 }
 function coachLessonAction(a) {
-  if (a === "idea") coachIdea();
+  if (a === "ask") coachFollow($("coachAsk") && $("coachAsk").value);
+  else if (a === "idea") coachIdea();
   else if (a === "hint") coachHint();
   else if (a === "show") coachShowSolution();
   else if (a === "skip") { if (Coach.state === "ask") { coachRecord(false); Coach.streak = 0; } coachNext(); }

@@ -240,12 +240,15 @@ function aiLineStates(state, ucis, n = 4) {
 }
 function aiCheckClaims(text, states, me) {
   const errs = [], s0 = states[0], plain = String(text).replace(/\*\*/g, "");
+  // El tutor no juega: «mi dama», «mis peones»… confunde de quién son las piezas
+  const first = plain.match(/\b(mi|mis)\s+(rey|dama|reina|torres?|alfil(?:es)?|caballos?|pe[oó]n(?:es)?|piezas?)\b/i);
+  if (first) errs.push({ text: first[0], why: `hablas en primera persona («${first[0]}»), pero tú no juegas: di «tu…» si es del alumno o «del rival» si es del otro bando` });
   for (const m of plain.matchAll(AI_CLAIM_RE)) {
     const [all, det, word, adj, sqName, suf] = m;
     const type = aiPieceType(word);
     if (!type) continue;
     const tag = norm(`${adj || ""} ${suf || ""}`);
-    const color = /blanc/.test(tag) ? 1 : /negr/.test(tag) ? -1 : /rival|enemig|contrari/.test(tag) ? -me : /^(tu|tus|mi|mis)$/i.test(det || "") ? me : 0;
+    const color = /blanc/.test(tag) ? 1 : /negr/.test(tag) ? -1 : /rival|enemig|contrari/.test(tag) ? -me : /^(tu|tus)$/i.test(det || "") ? me : 0;
     const sq = Chess.sqIdx(sqName);
     const fits = st => { const p = st.b[sq]; return p !== "." && p.toLowerCase() === type && (!color || (p === p.toUpperCase() ? 1 : -1) === color); };
     if (states.some(fits)) continue;
@@ -276,4 +279,28 @@ function aiMarkClaims(html, errs) {
     if (i >= 0) html = html.slice(0, i) + `<span class="ai-unverified" title="${esc(e.why)}">${t}⚠</span>` + html.slice(i + t.length);
   }
   return html + `<div class="small ai-unverified-note">⚠ La IA se ha equivocado sobre la posición: ${errs.map(e => esc(e.why)).join("; ")}.</div>`;
+}
+
+/* Jugadas que el alumno menciona en su pregunta («¿y si juego Ae3?», «¿por qué no Dxd5?»), valoradas por el motor
+   desde la posición dada: así la IA puede contestar con datos y no a ojo */
+async function aiMovesInQuestion(node, question, bestEv) {
+  const s = node.state, items = [], seen = new Set();
+  for (const m of String(question).matchAll(AI_MOVE_RE)) {
+    let move = null;
+    for (const tok of [m[2], m[2].replace(/^R/, "K")]) { try { move = Chess.parseMove(s, tok, "auto").move; break; } catch {} }
+    if (!move) continue;
+    const uci = Chess.uci(move);
+    if (seen.has(uci) || items.length >= 3) continue;
+    seen.add(uci);
+    const after = Chess.apply(s, move);
+    let ev = terminalEval({ state: after }), reply = null;
+    if (!ev) { const r = await evalState(after, Engine.kind === "stockfish" ? 1000 : 1300, 1); const l = r && r.lines && r.lines[0]; ev = aiEv(l); reply = l && l.pv && l.pv.length ? l.pv.slice(0, 6) : null; }
+    if (!ev) continue;
+    const loss = bestEv ? Math.max(0, aiWinFor(bestEv, s.t) - aiWinFor(ev, s.t)) : null;
+    const san = lineText(s, [uci], 1);
+    const verdict = loss == null ? "" : loss < 3 ? "buena (casi tan buena como la mejor)" : loss < 8 ? "jugable" : loss < 15 ? "dudosa" : "un error";
+    const text = `${san}: valoración ${fmtEval(ev)}${verdict ? `, ${verdict}` : ""}${loss != null && loss >= 1 ? ` (pierde ${Math.round(loss)} puntos de probabilidad de ganar respecto a la mejor)` : ""}${reply ? `; lo que seguiría según el motor: ${lineText(after, reply, 6)}` : ""}.`;
+    items.push({ uci, after, reply, ev, loss, text });
+  }
+  return { items, text: items.map(i => i.text).join("\n") };
 }
