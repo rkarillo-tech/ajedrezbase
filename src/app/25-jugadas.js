@@ -390,6 +390,7 @@ function render() {
   renderMoves();
   renderComment();
   renderStructure();
+  renderCmp();
   renderEco();
   renderEvalChart();
   if (!editor.active) {

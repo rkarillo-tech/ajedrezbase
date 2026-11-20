@@ -2983,6 +2983,57 @@ def prueba_vigilancia_ia(browser):
     ctx.close()
 
 
+def prueba_v159_herramientas(browser):
+    print("1.59: modo básico, estado de los servicios, comparar dos posiciones y espacios de trabajo")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true")
+    # Estado de los servicios
+    comprobar(pg.is_visible("#servicesBtn") and "svc-dot" in (pg.get_attribute("#servicesDot", "class") or ""), "en la cabecera hay un indicador del estado de los servicios")
+    pg.click("#servicesBtn")
+    t = pg.inner_text("#servicesList")
+    comprobar(all(x in t for x in ["Motor", "Conexión", "Profesor IA", "Lichess", "Sincronización"]), "el cuadro dice cómo están el motor, la conexión, el profesor IA, Lichess y la sincronización")
+    pg.locator("#servicesList .svc-row", has_text="Profesor IA").locator("button").click()
+    comprobar(pg.is_visible("#setAiProvider"), "desde el estado de un servicio se va a su ajuste")
+    pg.keyboard.press("Escape")
+    # Modo básico
+    revelar(pg, "#setUiMode")
+    pg.click("#settingsBtn"); revelar(pg, "#setUiMode"); pg.select_option("#setUiMode", "basic")
+    pg.keyboard.press("Escape")
+    comprobar(pg.evaluate("document.body.classList.contains('ui-basic')") and not pg.is_visible("#exportControls") and not pg.is_visible("#engineToolsBtn"), "en modo básico se ocultan los botones menos usados")
+    comprobar(pg.is_visible("#liveToggle") and pg.is_visible("#moves"), "lo esencial sigue a la vista (motor y jugadas)")
+    pg.reload(); pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+    comprobar(pg.evaluate("document.body.classList.contains('ui-basic')"), "el modo básico se recuerda")
+    pg.evaluate("setUiMode('full')")
+    # Comparar dos posiciones
+    pg.evaluate("$('welcomeBox').hidden = true; const g = Pgn.parseGame('1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. cxd5 exd5 5. Bg5 c6 6. e3', { lang: 'en' }).game; setGame(g, { noConfirm: true }); goTo(resolvePath(g.root, ['d2d4', 'd7d5', 'c2c4', 'e7e6']))")
+    pg.click("#cmpBox > summary"); pg.click("#cmpSetA")
+    pg.evaluate("goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.wait_for_timeout(200)
+    t = pg.inner_text("#cmpBody")
+    comprobar("De A a B" in t and "3.Cc3" in t and "Carlsbad" in t, "compara A con el tablero: las jugadas entre ambas y la estructura (Carlsbad en B)")
+    comprobar("peón e2 → e3" in t and "peón c4 ✗" in t and "Ac1 → g5" in t, "dice qué piezas han cambiado de sitio (sin emparejar peones de columnas lejanas)")
+    pg.click("#cmpGoA")
+    comprobar(pg.evaluate("Pgn.pathTo(cur()).length") == 5, "«Ir a A» vuelve a la posición fijada")
+    # Espacios de trabajo
+    pg.click("#settingsBtn"); revelar(pg, "#wsSelect")
+    opts = pg.evaluate("[...$('wsSelect').options].map(o => o.value)")
+    comprobar(opts[:3] == ["analizar", "jugar", "entrenar"], "hay tres espacios de trabajo de serie: Analizar, Jugar y Entrenar")
+    pg.select_option("#wsSelect", "entrenar"); pg.click("#wsApply")
+    r = pg.evaluate("({ live: settings.live, basic: document.body.classList.contains('ui-basic'), tab: ui.activeTab, arrow: settings.arrow })")
+    comprobar(not r["live"] and r["basic"] and r["tab"] == "tools" and not r["arrow"], "«Entrenar» quita el análisis en vivo y la flecha, pone el modo básico y abre Entrenar")
+    pg.select_option("#wsSelect", "analizar"); pg.click("#wsApply")
+    r = pg.evaluate("({ live: settings.live, basic: document.body.classList.contains('ui-basic'), tab: ui.activeTab, tools: settings.engineTools })")
+    comprobar(r["live"] and not r["basic"] and r["tab"] == "study" and r["tools"], "«Analizar» lo devuelve todo para analizar")
+    pg.evaluate("window.prompt = () => 'Mis aperturas'; settings.multipv = 2")
+    pg.click("#wsSave")
+    w = pg.evaluate("(settings.workspaces || []).map(x => ({ n: x.name, m: x.cfg.multipv }))")
+    comprobar(len(w) == 1 and "Mis aperturas" in w[0]["n"] and w[0]["m"] == 2 and not pg.is_disabled("#wsDelete"), "se puede guardar el espacio de trabajo actual con un nombre (y borrarlo)")
+    pg.keyboard.press("Escape")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_salir_del_entrenamiento(browser):
     print("Salir de cada entrenamiento con los botones de la sesión")
     ctx = contexto(browser)
@@ -3471,7 +3522,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

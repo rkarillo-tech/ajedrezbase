@@ -629,6 +629,22 @@ details > summary { cursor: pointer; color: var(--muted); font-size: .84rem; mar
 .import-details { margin: 8px 0 4px; background: var(--deep); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px 6px; }
 .import-details > summary { font-weight: 700; color: var(--text); cursor: pointer; padding: 4px 0; }
 .study-comment { margin-top: 6px; }
+/* 1.59: modo básico, estado de los servicios, comparar posiciones y espacios de trabajo */
+body.ui-basic :is(#drawBar, #varControls, #exportControls, #engineToolsBtn, #engineTools, #headersDetails, #analyseVarBtn, #typeMoveRow, #cmpBox, #moveViewBtn, #chartLegend) { display: none !important; }
+body.ui-basic .engine-lines .pv-line ~ .pv-line { display: none; }
+.services-btn { padding: 6px 9px; }
+.svc-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: var(--muted); vertical-align: middle; }
+.svc-dot.ok { background: #43a047; } .svc-dot.warn { background: #ffa726; } .svc-dot.bad { background: #e53935; }
+.svc-list { display: grid; gap: 6px; }
+.svc-row { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: start; padding: 6px 8px; background: var(--deep); border: 1px solid var(--border); border-radius: 7px; font-size: .86rem; }
+.svc-row b { display: block; }
+.cmp-grid { display: grid; grid-template-columns: auto auto 1fr; gap: 10px; align-items: start; margin: 6px 0; }
+.cmp-grid .mini-board { width: 120px; height: 120px; }
+.cmp-grid .mini-board span { font-size: 13px; }
+.cmp-cap { font-size: .78rem; text-align: center; margin-top: 2px; color: var(--muted); }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.cmp-table td, .cmp-table th { padding: 3px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+@media (max-width: 640px) { .cmp-grid { grid-template-columns: auto auto; } .cmp-grid > .cmp-info { grid-column: 1 / -1; } .services-btn { padding: 6px 7px; } }
 /* 1.57: qué estás haciendo */
 .mode-chip { padding: 3px 9px; border-radius: 6px; font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw; cursor: pointer;
   background: var(--panel2); border: 1px solid var(--border); color: var(--muted); }
@@ -984,6 +1000,7 @@ body.board-full #exportControls { order: 10; }
     <button id="syncChip" hidden></button>
     <button id="soundToggle" title="Sonido de las jugadas" aria-label="Sonido">🔊</button>
     <button id="cmdBtn" title="Buscar cualquier función, ajuste, lección, apertura o partida (Ctrl + K o /)" aria-label="Buscar funciones">🔎<span class="cmd-btn-lbl"> Buscar</span> <kbd class="cmd-kbd">Ctrl K</kbd></button>
+    <button id="servicesBtn" class="services-btn" title="Estado de los servicios: motor, profesor IA, conexión, Lichess, sincronización…" aria-label="Estado de los servicios"><span id="servicesDot" class="svc-dot" aria-hidden="true"></span></button>
     <button id="settingsBtn" title="Ajustes (motor, token de Lichess, análisis)" aria-label="Ajustes">⚙</button>
     <button id="installBtn" class="primary" hidden title="Instalar AjedrezBase como aplicación (funciona sin conexión)">⬇ Instalar</button>
     <button id="helpBtn" title="Guía completa y atajos (?)" aria-label="Ayuda">❓<span class="cmd-btn-lbl"> Ayuda</span></button>
@@ -1299,6 +1316,10 @@ body.board-full #exportControls { order: 10; }
           <button id="explainMoveBtn" class="sm-btn info-btn" title="El motor analiza la jugada y redacta un comentario en español">✍ Redactar comentario con el motor</button>
         </div>
       </div>
+      <details id="cmpBox" class="struct-box cmp-box">
+        <summary>⚖ Comparar dos posiciones</summary>
+        <div id="cmpBody"></div>
+      </details>
       <details id="structBox" class="struct-box" hidden>
         <summary>🏗 Estructura de peones: <b id="structName"></b></summary>
         <div id="structBody"></div>
@@ -1878,6 +1899,19 @@ body.board-full #exportControls { order: 10; }
     </div>
     <section class="set-sec" id="setSec-aspecto" data-set="aspecto" role="tabpanel" aria-labelledby="setTab-aspecto">
       <h3 class="set-h">🎨 Apariencia</h3>
+    <label for="setUiMode">Modo de la interfaz</label>
+    <select id="setUiMode">
+      <option value="full">🧰 Completo: todas las herramientas a la vista</option>
+      <option value="basic">🌱 Básico: menos botones (lo demás sigue en el buscador y en ⚙ Ajustes)</option>
+    </select>
+    <label for="wsSelect">🗂 Espacios de trabajo: la distribución y las herramientas para cada cosa</label>
+    <div class="gc-row">
+      <select id="wsSelect" aria-label="Espacio de trabajo"></select>
+      <button id="wsApply" class="sm-btn primary" type="button" title="Pone las herramientas y la pestaña de este espacio de trabajo">▶ Usar</button>
+      <button id="wsSave" class="sm-btn" type="button" title="Guarda cómo tienes ahora las herramientas como un espacio de trabajo con nombre">💾 Guardar el actual</button>
+      <button id="wsDelete" class="sm-btn warn-btn" type="button" title="Borra este espacio de trabajo (sólo los tuyos)">🗑</button>
+    </div>
+    <p class="small" id="wsNote" style="margin-top:2px"></p>
     <label for="setUiTheme">Aspecto de la aplicación</label>
     <select id="setUiTheme">
       <option value="dark">🌙 Oscuro</option>
@@ -2034,6 +2068,14 @@ body.board-full #exportControls { order: 10; }
       <div><label for="setLiveMs">Tiempo de análisis continuo (ms)</label><input id="setLiveMs" type="number" min="500" max="30000" step="500"></div>
     </div>
     </section>
+  </div>
+</div>
+
+<div class="modal-back" id="servicesModal" role="dialog" aria-modal="true" aria-labelledby="servicesTitle">
+  <div class="modal">
+    <h2 id="servicesTitle"><span>🔌 Estado de los servicios</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <p class="small">Qué está disponible ahora mismo en este dispositivo. Todo lo esencial (el tablero, el motor interno, la biblioteca, los cursos y los problemas) funciona sin conexión.</p>
+    <div id="servicesList" class="svc-list"></div>
   </div>
 </div>
 
