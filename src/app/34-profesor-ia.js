@@ -13,7 +13,7 @@ const AI_PROVIDERS = {
 };
 // Modelos de Claude que admiten la reserva automática en el servidor (fallbacks) y el control de esfuerzo
 const AI_CLAUDE_CURRENT = /^claude-(fable-5-[12]|opus-5-5|opus-5|sonnet-5-5)$/;
-const AI = { busy: false, sdk: null, token: 0, arrow: null };
+const AI = { busy: false, sdk: null, token: 0, arrow: null, hist: { key: "", items: [] } };
 const aiProvider = () => (AI_PROVIDERS[settings.aiProvider] && settings.aiProvider !== "none" ? settings.aiProvider : "");
 const aiModel = () => (settings.aiModel || "").trim() || (AI_PROVIDERS[aiProvider()] || {}).model || "";
 
@@ -83,7 +83,8 @@ function aiTutorRole(where) {
 - Eres un tutor de ajedrez paciente y exigente que acompaña a un alumno ${where}. Tu objetivo no es darle la jugada, sino enseñarle a pensar: que entienda el porqué y sepa aplicarlo en sus propias partidas.
 - Cómo enseñas: parte de lo que pregunta y de lo que se ve en el tablero (amenazas, piezas sueltas, seguridad del rey); da la idea principal y su porqué con conceptos de ajedrez (principios de apertura, estructura de peones, piezas buenas y malas, casillas débiles, columnas, iniciativa, jugadas forzadas); relaciónala con un principio general que pueda reutilizar; y, si ayuda, termina con una pregunta corta que le haga pensar o con qué debe mirar en su próxima jugada.
 - Eres honesto: si algo no está claro en los datos, lo dices. Animas sin adular: reconoces lo que el alumno hace bien y corriges con claridad.
-- Te apoyas en Stockfish como un profesor en un buen libro de referencia: el motor da las jugadas y las valoraciones exactas; tú pones las ideas, los planes y el porqué.`;
+- Te apoyas en Stockfish como un profesor en un buen libro de referencia: el motor da las jugadas y las valoraciones exactas; tú pones las ideas, los planes y el porqué.
+- Tú no juegas la partida: nunca digas «mi dama», «mis piezas» ni «yo juego». Habla siempre de «tus piezas» (las del alumno) y de «las del rival», o de «las blancas» y «las negras».`;
 }
 function aiSystem() {
   const lvl = { basic: "INICIACIÓN: tono cálido y sencillo, sin cifras de valoración ni términos técnicos sin explicar; termina con una regla general para recordar.",
@@ -218,25 +219,40 @@ async function aiAsk(question) {
       if (token !== AI.token || cur() !== node) return;
     }
     const propText = aiProposalsText(checked);
+    // Las jugadas que el alumno menciona en la pregunta («¿y si juego Ae3?»), valoradas por el motor
+    const alt = await aiMovesInQuestion(node, question, facts.lines[0] ? aiEv(facts.lines[0]) : null).catch(() => ({ items: [], text: "" }));
+    if (token !== AI.token || cur() !== node) return;
+    // Lo ya preguntado en esta misma posición, para poder encadenar preguntas
+    if (AI.hist.key !== node.key) AI.hist = { key: node.key, items: [] };
+    const histText = AI.hist.items.slice(-3).map(h => `Alumno: ${h.q}\nProfesor: ${h.a}`).join("\n");
     status(`⏳ Preguntando a ${AI_PROVIDERS[aiProvider()].name.split(" (")[0]}…`);
     // Lo que diga de las piezas se comprueba en el tablero (y en las primeras jugadas de las líneas conocidas)
-    const states = [node.state, ...facts.lines.flatMap(l => aiLineStates(node.state, l.pv)), ...checked.filter(p => p.ucis && p.ucis.length).flatMap(p => aiLineStates(p.state0, p.ucis))];
-    const { text, errs: claimErrs } = await aiCallChecked(aiSystem(), `${facts.text}${propText ? "\n\n" + propText : ""}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}\n\nPregunta del alumno: ${question}`, states, aiStudentSide(node));
+    const states = [node.state, ...facts.lines.flatMap(l => aiLineStates(node.state, l.pv)), ...checked.filter(p => p.ucis && p.ucis.length).flatMap(p => aiLineStates(p.state0, p.ucis)), ...alt.items.flatMap(a => [a.after, ...aiLineStates(a.after, a.reply || [])])];
+    const { text, errs: claimErrs } = await aiCallChecked(aiSystem(), `${facts.text}${propText ? "\n\n" + propText : ""}${alt.text ? "\n\nJugadas que menciona el alumno, valoradas por el motor:\n" + alt.text : ""}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}${histText ? "\n\nConversación anterior sobre esta misma posición:\n" + histText : ""}\n\nPregunta del alumno: ${question}`, states, aiStudentSide(node));
+    AI.hist.items.push({ q: question, a: String(text).replace(/\s+/g, " ").slice(0, 500) });
     if (token !== AI.token) return;
     // Lo que cuenta como comprobado: el motor, las propuestas legales con su refutación, el contexto y la partida
-    const allowed = aiAllowedMoves([facts.text, ctx.text, ...checked.filter(p => p.status !== "ilegal").map(p => `${p.text} ${p.refutation ? p.refutation.text : ""}`)]);
+    const allowed = aiAllowedMoves([facts.text, ctx.text, alt.text, ...checked.filter(p => p.status !== "ilegal").map(p => `${p.text} ${p.refutation ? p.refutation.text : ""}`)]);
     const stats = {};
     const resolver = aiMoveResolver(node, [...facts.lines.map(l => ({ state: node.state, ucis: l.pv })),
       ...checked.filter(p => p.ucis && p.ucis.length).map(p => ({ state: p.state0, ucis: p.ucis })),
       ...checked.filter(p => p.refutation).map(p => ({ state: p.refutation.state, ucis: p.refutation.pv })),
-      ...(ctx.games || []).filter(g => g.afterLine).map(g => g.afterLine)]);
+      ...(ctx.games || []).filter(g => g.afterLine).map(g => g.afterLine),
+      ...alt.items.map(a => ({ state: node.state, ucis: [a.uci, ...(a.reply || [])] }))]);
     const answer = aiMarkClaims(aiFormat(text, html => aiMoveMarkup(html, allowed, resolver, stats)), claimErrs);
     box.innerHTML = `<div class="retry-head">🤖 Profesor IA <span class="small">· ${esc(AI_PROVIDERS[aiProvider()].name.split(" (")[0])} (${esc(aiModel())})</span></div>
       <div class="ai-q small">❓ ${esc(question)}</div><div class="ai-text">${answer}</div>
       ${aiProposalsHtml(checked)}${props && props.error ? `<div class="small">🧪 No se pudieron obtener las propuestas de la IA (${esc(props.error)}); la respuesta usa sólo el motor.</div>` : ""}
       ${stats.flagged ? `<div class="small ai-unverified-note">⚠ ${stats.flagged === 1 ? "Una jugada de la respuesta no está comprobada" : `${stats.flagged} jugadas de la respuesta no están comprobadas`} por el motor: tómala${stats.flagged === 1 ? "" : "s"} con cautela.</div>` : ""}
       ${ctx.games.length ? `<div class="ai-models small">♟ Partidas modelo: ${ctx.games.map((g, i) => `<button class="sm-btn" data-ai-model="${i}" title="Abrir en esta posición">${esc(g.title)}</button>`).join(" ")}</div>` : ""}
+      <div class="controls"><button class="sm-btn" data-ai-save title="Guarda esta respuesta en el comentario de la jugada">💾 Añadir como comentario</button>${AI.hist.items.length > 1 ? `<span class="small">💬 Recuerda ${AI.hist.items.length - 1} pregunta${AI.hist.items.length === 2 ? "" : "s"} anterior${AI.hist.items.length === 2 ? "" : "es"} sobre esta posición</span>` : ""}</div>
       <div class="small">Las jugadas y valoraciones salen de ${esc(Engine.name || "el motor")}${ctx.sources.length ? `; contexto: ${esc(ctx.sources.join(" · "))}` : ""}. La explicación es de la IA, que puede equivocarse.</div>`;
+    box.querySelector("[data-ai-save]").onclick = () => {
+      const note = `Profesor IA (${question}): ${String(text).replace(/\*\*/g, "").replace(/[{}]/g, "").replace(/\s+/g, " ").trim()}`;
+      node.comment = node.comment ? `${node.comment} ${note}` : note;
+      markDirty(); render();
+      toast(ui.libId ? "💾 Añadido al comentario de la jugada (se guarda solo)." : "Añadido al comentario de la jugada. Guarda la partida en la biblioteca para conservarlo.", 4000);
+    };
     box.querySelectorAll("[data-ai-model]").forEach(b => b.onclick = () => aiOpenModel(ctx.games[+b.dataset.aiModel]));
   } catch (e) {
     if (token !== AI.token) return;
