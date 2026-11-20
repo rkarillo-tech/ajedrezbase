@@ -270,12 +270,27 @@ function coachHintIsSafe(t, ex) {
 }
 /* Posiciones en las que puede ser cierto lo que diga la IA de las piezas: la del ejercicio y las primeras jugadas de las líneas */
 const coachStates = ex => [ex.node.state, ...aiLineStates(ex.node.state, ex.line), ...(ex.lines || []).flatMap(l => aiLineStates(ex.node.state, l.pv))];
+/* Los datos del ejercicio para la IA. Siempre la posición DEL EJERCICIO (antes de la jugada del alumno): antes se usaba
+   la del tablero, que tras acertar ya tenía la jugada hecha, y la IA leía «la mejor era Cxd2» con el caballo ya en d2 */
+const COACH_VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+function coachMaterial(st) { let w = 0, b = 0; for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } const p = st.b[i]; if (p === ".") continue; if (p === p.toUpperCase()) w += COACH_VAL[p.toLowerCase()]; else b += COACH_VAL[p]; } return w - b; }
+/* Qué cambia de verdad en el material al final de la línea del motor (para que no se invente sacrificios ni ganancias) */
+function coachMaterialText(ex) {
+  const s0 = ex.node.state, states = aiLineStates(s0, ex.line, 8);
+  if (!states.length) return "";
+  const d = coachMaterial(states[states.length - 1]) - coachMaterial(s0), me = s0.t, gain = d * me;
+  const who = me === 1 ? "las blancas" : "las negras";
+  return `Material al final de la línea del motor (${states.length} medias jugadas): ${gain > 0 ? `${who} ganan ${gain} punto${gain === 1 ? "" : "s"} de material` : gain < 0 ? `${who} entregan ${-gain} punto${gain === -1 ? "" : "s"} de material (a cambio de otra ventaja)` : "el material queda igual"} (peón 1, caballo y alfil 3, torre 5, dama 9).`;
+}
 function coachFacts(ex, secret) {
   const s = ex.node.state;
   const lines = (ex.lines || []).map((l, i) => `${i + 1}. ${fmtEval(aiEv(l))}: ${lineText(s, l.pv, 8)}`).join("\n");
-  return [aiPositionText(cur()),
+  const played = game.current && game.current.parent === ex.node && Coach.state === "solved" ? coachSan(s, game.current.uci) : "";
+  return ["Posición del ejercicio (antes de la jugada del alumno):", aiPositionText(ex.node),
+    played ? `El alumno ha jugado ${played} desde esta posición.` : "",
     ex.kind === "drill" ? `Es una posición de una partida del alumno: allí jugó ${coachSan(s, ex.wrong)}, que fue un error.` : `Es un problema de táctica (tema: ${ex.p ? puzzleThemesText(ex.p) : "táctica"}).`,
     `Mejor jugada según el motor${secret ? " (NO la reveles)" : ""}: ${coachSan(s, ex.best)}; línea: ${lineText(s, ex.line, 8)}; valoración ${fmtEval(ex.bestEv)}.`,
+    coachMaterialText(ex),
     lines ? `Líneas del motor:\n${lines}` : ""].filter(Boolean).join("\n");
 }
 async function coachSolved(move, san, loss) {
