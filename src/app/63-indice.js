@@ -27,14 +27,14 @@ function gidxMatHash(s) {
 /* Lee una partida y resume su línea principal (se ejecuta en el worker o, si no hay, aquí mismo) */
 function gidxGame(g, lang) {
   const r = Pgn.parseGame(g, { lang });
-  const root = r.game.root, k = [], pw = [], mt = [], u = [], sn = [];
+  const root = r.game.root, k = [], pw = [], mt = [], st = [], u = [], sn = [];
   for (let n = root; ; n = n.children[0]) {
-    k.push(Chess.hash(n.state)); pw.push(gidxPawnHash(n.state)); mt.push(gidxMatHash(n.state));
+    k.push(Chess.hash(n.state)); pw.push(gidxPawnHash(n.state)); mt.push(gidxMatHash(n.state)); st.push(pawnStruct(n.state.b));
     if (!n.children.length) break;
     u.push(n.children[0].uci); sn.push(n.children[0].san);
   }
   const fen = Chess.toFen(root.state);
-  return { k: Float64Array.from(k), pw: Float64Array.from(pw), mt: Float64Array.from(mt), u: u.join(" "), sn: sn.join(" "), fen: fen === Chess.START_FEN ? "" : fen };
+  return { k: Float64Array.from(k), pw: Float64Array.from(pw), mt: Float64Array.from(mt), st: Uint8Array.from(st), u: u.join(" "), sn: sn.join(" "), fen: fen === Chess.START_FEN ? "" : fen };
 }
 /* Varios workers a la vez (según los núcleos del dispositivo) para que la primera vez tarde menos */
 function gidxWorkers() {
@@ -42,9 +42,9 @@ function gidxWorkers() {
   GIdx.workers = [];
   const n = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1));
   try {
-    const src = [$("coreLib").textContent, $("pgnLib").textContent, gidxStrHash, gidxPawnHash, gidxMatHash, gidxGame].map(String).join("\n") +
+    const src = [$("coreLib").textContent, $("pgnLib").textContent, gidxStrHash, gidxPawnHash, gidxMatHash, pawnStruct, gidxGame].map(String).join("\n") +
       `\nself.onmessage = e => { const { id, items } = e.data; const out = items.map(it => { try { return gidxGame(it.g, it.lang); } catch (err) { return null; } });
-        self.postMessage({ id, out }, out.filter(Boolean).flatMap(o => [o.k.buffer, o.pw.buffer, o.mt.buffer])); };`;
+        self.postMessage({ id, out }, out.filter(Boolean).flatMap(o => [o.k.buffer, o.pw.buffer, o.mt.buffer, o.st.buffer])); };`;
     const url = URL.createObjectURL(new Blob([src], { type: "application/javascript" }));
     for (let i = 0; i < n; i++) {
       const w = new Worker(url);
@@ -97,7 +97,7 @@ async function gameIndex(onProgress, opts = {}) {
         while (next < parts.length) {
           const part = parts[next++];
           const out = await gidxRun(part.map(t => ({ g: t.g, lang: t.lang })), slot);
-          part.forEach((t, j) => { const e = out[j] || { k: new Float64Array(0), pw: new Float64Array(0), mt: new Float64Array(0), u: "", sn: "", fen: "" }; if (t.lib) GIdx.lib.set(gidxLibKey(t.lib), e); else GIdx.coll.set(t.coll, e); });
+          part.forEach((t, j) => { const e = out[j] || { k: new Float64Array(0), pw: new Float64Array(0), mt: new Float64Array(0), st: new Uint8Array(0), u: "", sn: "", fen: "" }; if (t.lib) GIdx.lib.set(gidxLibKey(t.lib), e); else GIdx.coll.set(t.coll, e); });
           done += part.length;
           if (onProgress) onProgress(done, todo.length);
         }

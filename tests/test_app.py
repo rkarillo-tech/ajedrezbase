@@ -2753,6 +2753,44 @@ def prueba_v153_distribucion(browser):
     ctx.close()
 
 
+def prueba_estructuras(browser):
+    print("1.54: estructuras de peones, sus planes y partidas modelo")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    # Una partida con la estructura Carlsbad en la biblioteca, para las partidas modelo
+    pg.fill("#moveInput", "[White \"Modelo\"]\n[Black \"Carlsbad\"]\n1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. cxd5 exd5 5. Bg5 c6 6. e3 Be7 7. Bd3 O-O 8. Qc2 Nbd7 9. Nf3 Re8 10. O-O Nf8 11. Rab1 a5 12. a3 g6 13. b4 axb4 14. axb4 Ne6")
+    pg.click("#importBtn")
+    pg.click("#saveGame")
+    pg.wait_for_function("Lib.games.size === 1")
+    pg.click("#newGame")
+    comprobar(pg.is_hidden("#structBox"), "en la posición inicial no aparece ninguna estructura")
+    pg.fill("#moveInput", "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. cxd5 exd5 5. Bg5 c6 6. e3 Be7")
+    pg.click("#importBtn")
+    pg.evaluate("document.activeElement.blur(); goTo(Pgn.mainlineFrom(game.root).pop())")
+    comprobar(pg.is_visible("#structBox") and "Carlsbad" in pg.inner_text("#structName"), "en el Gambito de Dama con cambio reconoce la estructura Carlsbad")
+    pg.click("#structBox > summary")
+    txt = pg.inner_text("#structBody")
+    comprobar("Plan de las blancas" in txt and "b2–b4–b5" in txt and "Plan de las negras" in txt, "explica el plan de cada bando (el ataque de minorías)")
+    pg.click("#structShowBtn")
+    comprobar(pg.locator("#arrowsGroup circle").count() >= 3 and not pg.evaluate("(cur().shapes || []).length"), "«Ver las casillas clave» las rodea sin guardarlas en la partida")
+    pg.click("#structModelsBtn")
+    pg.wait_for_selector("#structModels .struct-model", timeout=15000)
+    modelos = pg.inner_text("#structModels")
+    comprobar("Modelo – Carlsbad" in modelos and "tu biblioteca" in modelos, "encuentra partidas modelo con la misma estructura en tu biblioteca")
+    code = pg.evaluate("Struct.code")
+    pg.locator("#structModels .struct-model", has_text="tu biblioteca").locator("[data-sm]").click()
+    pg.wait_for_timeout(300)
+    r = pg.evaluate("({ code: pawnStruct(cur().state.b), prev: cur().parent ? pawnStruct(cur().parent.state.b) : 0, name: $('gameName').value, tab: ui.activeTab })")
+    comprobar(r["code"] == code and r["prev"] != code and "Carlsbad" in r["name"] and r["tab"] == "study", "«Abrir» lleva a la partida modelo justo cuando aparece la estructura")
+    pg.evaluate("setGame(Pgn.parseGame('1. d4 d5 2. c4 e6 3. Nc3 c5 4. cxd5 exd5 5. Nf3 Nc6 6. g3 Nf6 7. Bg2 Be7 8. O-O O-O 9. dxc5 Bxc5', { lang: 'en' }).game, { noConfirm: true }); goTo(Pgn.mainlineFrom(game.root).pop())")
+    comprobar("Peón aislado" in pg.inner_text("#structName") and "d5" in pg.inner_text("#structName"), "con el peón aislado de las negras, las casillas se giran (aislado en d5)")
+    ctxt = pg.evaluate("aiContext(cur()).then(c => ({ text: c.text, sources: c.sources }))")
+    comprobar("Peón aislado de dama" in ctxt["text"] and "Plan típico de las negras" in ctxt["text"] and any("estructura" in x for x in ctxt["sources"]),
+              "el profesor IA recibe la estructura y sus planes como contexto")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_salir_del_entrenamiento(browser):
     print("Salir de cada entrenamiento con los botones de la sesión")
     ctx = contexto(browser)
@@ -3240,7 +3278,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
