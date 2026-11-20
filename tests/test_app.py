@@ -1408,7 +1408,7 @@ def prueba_marcadores_y_velocidad(browser):
     pg.evaluate("setGame(Pgn.parseGame('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 *', { lang: 'en' }).game, { noConfirm: true, name: 'Española de prueba' })")
     comprobar(pg.is_hidden("#gameMarksBox"), "sin marcadores no aparece el recuadro de marcadores")
     pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[4])")
-    pg.click("#markBtn2")
+    pg.click("#markBtn")   # 1.53: con las jugadas en la columna derecha, el de debajo de la lista se oculta (es el mismo)
     pg.wait_for_selector("#markModal.open")
     comprobar("Marcar jugada" in pg.inner_text("#markTitle") and "tras 3.Ab5" in pg.inner_text("#markWhere"), "«📌 Marcar jugada» abre el cuadro para esa jugada (guardando antes la partida)")
     pg.locator("#markCats .cat-chip", has_text="Favorita").click()
