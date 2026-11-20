@@ -1105,6 +1105,7 @@ body.board-full #exportControls { order: 10; }
         <button class="sm-btn" data-ai-depth="short" title="Lo esencial, en pocas frases">Breves</button><button class="sm-btn" data-ai-depth="normal" title="El porqué de lo importante">Normales</button><button class="sm-btn" data-ai-depth="deep" title="A fondo: el porqué de cada jugada, ideas de fondo y planes">Detalladas</button>
       </div>
       <details class="ai-ctx small"><summary>📚 Cómo piensa el profesor y qué consulta, además del motor</summary>
+        <label title="Más rápida con modelos en tu ordenador (Ollama): una sola consulta a la IA. Por defecto, activada con Ollama y desactivada con Claude y Gemini"><input type="checkbox" id="aiWatch"> ⚡ Vigilancia en una sola consulta: la IA responde libremente y Stockfish revisa después las jugadas que recomienda; sólo si alguna es mala se le pide corregir (sustituye a la siguiente)</label>
         <label><input type="checkbox" id="aiPropose"> 🧪 La IA propone sus propias jugadas (pensadas sin ver al motor) y Stockfish las comprueba antes de enseñarlas (una consulta más a la IA)</label>
         <label><input type="checkbox" id="aiCtxRep"> 🗂 Tu repertorio (si la posición está en tus líneas o dónde te saliste)</label>
         <label><input type="checkbox" id="aiCtxModels"> ♟ Los cursos: partidas modelo y la apertura explicada (y tus partidas modelo, si marcas la siguiente)</label>

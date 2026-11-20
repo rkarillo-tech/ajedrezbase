@@ -221,9 +221,11 @@ function aiOpenModel(g) {
 /* Casillas «Usar como contexto» del recuadro del profesor */
 function syncAiCtxForm() {
   for (const [id, k] of [["aiPropose", "aiPropose"], ["aiCtxRep", "aiCtxRep"], ["aiCtxModels", "aiCtxModels"], ["aiCtxGames", "aiCtxGames"], ["aiCtxLichess", "aiCtxLichess"]]) if ($(id)) $(id).checked = !!settings[k];
+  if ($("aiWatch")) { $("aiWatch").checked = aiWatchOn(); if ($("aiPropose")) $("aiPropose").disabled = aiWatchOn(); }
   if ($("aiCtxLichessNote")) $("aiCtxLichessNote").hidden = !settings.aiCtxLichess || !!settings.token;
 }
 for (const id of ["aiPropose", "aiCtxRep", "aiCtxModels", "aiCtxGames", "aiCtxLichess"]) {
   $(id).onchange = e => { settings[id] = e.target.checked; saveSettings(); AICtx.cache.clear(); syncAiCtxForm(); };
 }
+$("aiWatch").onchange = e => { settings.aiWatch = e.target.checked; saveSettings(); syncAiCtxForm(); };
 syncAiCtxForm();

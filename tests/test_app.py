@@ -1999,6 +1999,7 @@ def prueba_ayudas_profesor(browser):
     pg.evaluate("setGame(Pgn.parseGame('1. e4 e5', { lang: 'en' }).game, { noConfirm: true, current: Pgn.parseGame('1. e4 e5', { lang: 'en' }).game.root }); goEnd()")
     pg.click("#settingsBtn")
     revelar(pg, "#setAiProvider") or pg.select_option("#setAiProvider", "ollama")
+    pg.evaluate("settings.aiWatch = false")   # 1.58: esta prueba mira las reglas del modo de siempre, no la vigilancia
     comprobar(pg.is_visible("#aiUrlRow") and not pg.is_visible("#aiKeyRow") and "tu ordenador" in pg.inner_text("#aiNote"), "Ajustes: con Ollama se pide la dirección y no una clave")
     revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
     pg.wait_for_function("$('aiTestResult').textContent.includes('Funciona')", timeout=15000)
@@ -2176,7 +2177,7 @@ def prueba_buscador_y_contexto_ia(browser):
       setGame(g, { name: 'Mi e4', tags: ['repertorio'], noConfirm: true });
       await saveToLibrary({ silent: true, force: true });
       setCollection(pgn, false, 'carlsen.pgn');
-      Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', token: 'lip_prueba' }); renderAiBox(); syncAiCtxForm();
+      Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', token: 'lip_prueba' }); renderAiBox(); syncAiCtxForm();
       const g2 = Pgn.parseGame('1. e4 c6 2. d4 d5', { lang: 'en' }).game;
       setGame(g2, { noConfirm: true, current: Pgn.mainlineFrom(g2.root).pop() });
     }""", carlsen)
@@ -2225,7 +2226,7 @@ def prueba_propuestas_ia(browser):
     ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false }); renderAiBox(); syncAiCtxForm();"
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false }); renderAiBox(); syncAiCtxForm();"
                 "const g = Pgn.parseGame('1. e4 e5', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
     pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
     pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=90000)
@@ -2364,7 +2365,7 @@ def prueba_entrenador_ia(browser):
     pg.click("#coachBox [data-co=end]")
     comprobar(not pg.evaluate("Coach.active") and not pg.is_visible("#coachBox"), "«Volver a tu partida» termina la clase")
     # Con la IA: presentación, pistas que no pueden revelar la solución y explicación que comenta tu razonamiento
-    pg.evaluate("Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b' }); renderAiBox()")
+    pg.evaluate("Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b' }); renderAiBox()")
     pg.click('.tab-btn[data-tab="tools"]')
     if not pg.is_visible("#coachStartBtn"): pg.click('#trainMenu [data-train-open="coach"]')
     pg.click("#coachStartBtn"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
@@ -2487,7 +2488,7 @@ def prueba_notacion_ia(browser):
     ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, lang: 'es' }); renderAiBox();"
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false, lang: 'es' }); renderAiBox();"
                 "const g = Pgn.parseGame('1. e4 e5', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
     pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
     pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=90000)
@@ -2532,7 +2533,7 @@ def prueba_piezas_ia(browser):
     ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false }); renderAiBox();"
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false }); renderAiBox();"
                 "const g = Pgn.parseGame('1. d4 d5 2. c4 c6 3. Nf3 Nf6 4. Nc3 e6 5. e3 Nbd7', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() }); ui.flipped = true; render()")
     pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
     pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
@@ -2567,7 +2568,7 @@ def prueba_repaso_y_preguntas(browser):
     ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false, analysisMs: 300 }); renderAiBox();"
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false, analysisMs: 300 }); renderAiBox();"
                 "loadPgnText('[White \"Yo\"]\\n[Black \"Rival\"]\\n\\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 4. Nxe5 Qg5 5. Nxf7 Qxg2 6. Rf1 Qxe4+ 7. Be2 Nf3# 0-1', { endAtEnd: true })")
     pg.evaluate("analyseGame()")
     pg.wait_for_function("ui.report && !ui.analysing && $('aiReviewBtn')", timeout=120000)
@@ -2939,6 +2940,45 @@ def prueba_v157_actividad_y_ajustes(browser):
     pg.click("#engineSourceBadge")
     comprobar(pg.is_visible("#engineStatus"), "pulsar el estado del motor abre los ajustes en «Motor»")
     pg.keyboard.press("Escape")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_vigilancia_ia(browser):
+    print("1.58: vigilancia en una sola consulta (la IA responde y Stockfish revisa después)")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    llamadas = []
+    respuesta = {"txt": ""}
+    def chat(r):
+        m = json.loads(r.request.post_data)
+        llamadas.append(m)
+        u = m["messages"][-1]["content"]
+        txt = "Mejor **Cc6**, que defiende el peón de e5." if "no son buenas" in u else respuesta["txt"]
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
+    ctx.route("http://localhost:11434/api/chat", chat)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: true, aiWatch: null }); renderAiBox(); syncAiCtxForm();"
+                "const g = Pgn.parseGame('1. e4 e5 2. Nf3', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+    comprobar(pg.evaluate("aiWatchOn()"), "con Ollama, la vigilancia en una sola consulta viene activada")
+    # 1) Recomienda una jugada mala: el motor la revisa y se le pide corregir (2 consultas, sin la de propuestas)
+    respuesta["txt"] = "Te recomiendo **Aa3**, que ataca el flanco de dama."
+    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=120000)
+    txt = pg.inner_text("#aiAnswer")
+    comprobar(len(llamadas) == 2 and not any("SÓLO con JSON" in m["messages"][0]["content"] for m in llamadas), f"recomendaba una jugada mala: una consulta más para corregir y ninguna de propuestas ({len(llamadas)})")
+    comprobar("Cc6" in pg.inner_text("#aiAnswer .ai-text") and "se le pidió corregir" in txt and "Aa3" in txt, "la respuesta corregida se enseña y se dice qué se corrigió")
+    # 2) Recomienda una jugada buena (y desaconseja una mala): una sola consulta
+    llamadas.clear()
+    respuesta["txt"] = "Juega **Cc6**, que defiende e5. No juegues Aa3, que pierde el alfil."
+    pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=120000)
+    comprobar(len(llamadas) == 1 and "Vigilancia" in pg.inner_text("#aiAnswer"), "si lo que recomienda está bien, basta una sola consulta (y lo que desaconseja no se cuenta)")
+    # 3) Desactivada: vuelve el modo de las propuestas comprobadas antes
+    llamadas.clear()
+    pg.click(".ai-ctx summary"); pg.uncheck("#aiWatch")
+    comprobar(not pg.is_disabled("#aiPropose") and pg.evaluate("settings.aiWatch") is False, "se puede desactivar, y entonces vuelve la casilla de las propuestas")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -3431,7 +3471,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

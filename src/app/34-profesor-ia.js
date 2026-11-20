@@ -86,7 +86,9 @@ function aiTutorRole(where) {
 - Te apoyas en Stockfish como un profesor en un buen libro de referencia: el motor da las jugadas y las valoraciones exactas; tú pones las ideas, los planes y el porqué.
 - Tú no juegas la partida: nunca digas «mi dama», «mis piezas» ni «yo juego». Habla siempre de «tus piezas» (las del alumno) y de «las del rival», o de «las blancas» y «las negras».`;
 }
-function aiSystem() {
+/* ⚡ Vigilancia en una sola consulta (1.58): por defecto, con los modelos locales (Ollama), que son los lentos */
+const aiWatchOn = () => (settings.aiWatch == null ? aiProvider() === "ollama" : !!settings.aiWatch);
+function aiSystem(opts = {}) {
   const lvl = { basic: "INICIACIÓN: tono cálido y sencillo, sin cifras de valoración ni términos técnicos sin explicar; termina con una regla general para recordar.",
     club: "CLUB: terminología de ajedrez precisa pero accesible (clavadas, horquillas, columnas abiertas, estructura de peones).",
     advanced: "AVANZADO: análisis concreto, con variantes y valoraciones, y los matices estratégicos." }[settings.explainLevel] || "";
@@ -94,7 +96,7 @@ function aiSystem() {
 ${aiTutorRole("mientras estudia sus partidas y posiciones en AjedrezBase")}
 Nivel del alumno: ${lvl}
 Reglas estrictas:
-1. Las únicas jugadas que puedes recomendar o citar como buenas son las de las «Mejores líneas del motor» y, si las hay, las de «Tus propuestas» marcadas como BUENA o JUGABLE. No inventes jugadas ni variantes y no contradigas al motor; si algo no está en los datos, dilo.
+${opts.watch ? "1. Apóyate en las «Mejores líneas del motor», pero puedes recomendar también otras jugadas si las ves buenas: el motor revisará después cada jugada que recomiendes, así que recomienda sólo jugadas que de verdad propondrías. Si citas una jugada como mala, dilo claramente («no juegues…», «sería un error…»). No inventes valoraciones: las cifras son del motor." : "1. Las únicas jugadas que puedes recomendar o citar como buenas son las de las «Mejores líneas del motor» y, si las hay, las de «Tus propuestas» marcadas como BUENA o JUGABLE. No inventes jugadas ni variantes y no contradigas al motor; si algo no está en los datos, dilo."}
 1a. Tus propuestas las pensaste tú sin motor y el motor las ha juzgado: defiende las buenas con tus ideas; las DUDOSAS o ERROR no las recomiendes, pero explica por qué fallan usando la refutación del motor (eso enseña mucho); las ILEGALES ni las menciones.
 1b. Además del motor puedes recibir contexto comprobado: el repertorio del alumno, estadísticas del explorador y partidas modelo. Úsalo como lo haría un entrenador: relaciona la posición con su repertorio, con lo que juegan los maestros y con los planes de las partidas modelo, y cítalo siempre diciendo de dónde sale («en tu repertorio…», «los maestros juegan…», «en la partida X–Y se siguió…»). Si la jugada del repertorio o la más jugada no coincide con la mejor del motor, dilo con claridad. Las partidas con la misma estructura de peones sirven para explicar planes, no jugadas concretas de esta posición.
 2. Escribe las jugadas en notación algebraica española (R rey, D dama, T torre, A alfil, C caballo; por ejemplo Cf3, Axc6, O-O). Nunca uses las letras inglesas (K, Q, B, N, ni R para la torre).
@@ -204,10 +206,11 @@ async function aiAsk(question) {
     // la IA piensa sus jugadas mientras el motor analiza, y sin ver lo que dice el motor
     const status = t => { if (token === AI.token) box.querySelector(".small").textContent = t; };
     const ctxP = aiContext(node).catch(() => ({ text: "", sources: [], games: [] }));
-    const propP = settings.aiPropose && !gameStatus(node).over
+    const watch = aiWatchOn();
+    const propP = settings.aiPropose && !watch && !gameStatus(node).over
       ? ctxP.then(ctx => aiPropose(node, ctx, question)).catch(e => ({ error: e.message || String(e) }))
       : Promise.resolve([]);
-    if (settings.aiPropose) status("⏳ El motor analiza mientras la IA piensa sus propias jugadas (sin ver al motor)…");
+    if (settings.aiPropose && !watch) status("⏳ El motor analiza mientras la IA piensa sus propias jugadas (sin ver al motor)…");
     const aboutMove = /por qu[eé] se jug|compar|alternativ|en vez de|mejor que|[uú]ltima jugada|fue buena/i.test(question);
     const [facts, ctx, props, moveFacts] = await Promise.all([aiFacts(node), ctxP, propP, aboutMove ? aiMoveFacts(node).catch(() => "") : Promise.resolve("")]);
     if (moveFacts) facts.text += "\n" + moveFacts;
@@ -228,21 +231,39 @@ async function aiAsk(question) {
     status(`⏳ Preguntando a ${AI_PROVIDERS[aiProvider()].name.split(" (")[0]}…`);
     // Lo que diga de las piezas se comprueba en el tablero (y en las primeras jugadas de las líneas conocidas)
     const states = [node.state, ...facts.lines.flatMap(l => aiLineStates(node.state, l.pv)), ...checked.filter(p => p.ucis && p.ucis.length).flatMap(p => aiLineStates(p.state0, p.ucis)), ...alt.items.flatMap(a => [a.after, ...aiLineStates(a.after, a.reply || [])])];
-    const { text, errs: claimErrs } = await aiCallChecked(aiSystem(), `${facts.text}${propText ? "\n\n" + propText : ""}${alt.text ? "\n\nJugadas que menciona el alumno, valoradas por el motor:\n" + alt.text : ""}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}${histText ? "\n\nConversación anterior sobre esta misma posición:\n" + histText : ""}\n\nPregunta del alumno: ${question}`, states, aiStudentSide(node));
+    const userMsg = `${facts.text}${propText ? "\n\n" + propText : ""}${alt.text ? "\n\nJugadas que menciona el alumno, valoradas por el motor:\n" + alt.text : ""}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}${histText ? "\n\nConversación anterior sobre esta misma posición:\n" + histText : ""}\n\nPregunta del alumno: ${question}`;
+    let { text, errs: claimErrs } = await aiCallChecked(aiSystem({ watch }), userMsg, states, aiStudentSide(node));
+    // ⚡ Vigilancia: Stockfish revisa las jugadas que recomienda la respuesta; sólo si alguna es mala se le pide corregir
+    let watched = null;
+    if (watch && token === AI.token) {
+      status(`⏳ ${Engine.name || "El motor"} revisa las jugadas que recomienda la IA…`);
+      watched = await aiWatchCheck(node, text, facts.lines).catch(() => null);
+      if (watched && watched.bad.length && token === AI.token) {
+        status(`⏳ La IA recomendaba ${watched.bad.map(b => b.san).join(", ")}, que el motor no ve bien: se le pide que corrija…`);
+        const fix = await aiCallChecked(aiSystem({ watch }), `${userMsg}\n\nTu respuesta anterior fue:\n«${text}»\nEl motor ha revisado las jugadas que recomiendas y no son buenas:\n${watched.bad.map(b => "- " + b.text).join("\n")}\nEscribe de nuevo la respuesta: no las recomiendes (puedes explicar por qué fallan con lo que dice el motor) y apóyate en las mejores líneas del motor.`, states, aiStudentSide(node)).catch(() => null);
+        if (fix && token === AI.token) {
+          const again = await aiWatchCheck(node, fix.text, facts.lines).catch(() => null);
+          watched.fixed = watched.bad.map(b => b.san);
+          text = fix.text; claimErrs = fix.errs;
+          watched.items = again ? again.items : []; watched.bad = again ? again.bad : [];
+        }
+      }
+    }
     AI.hist.items.push({ q: question, a: String(text).replace(/\s+/g, " ").slice(0, 500) });
     if (token !== AI.token) return;
     // Lo que cuenta como comprobado: el motor, las propuestas legales con su refutación, el contexto y la partida
-    const allowed = aiAllowedMoves([facts.text, ctx.text, alt.text, ...checked.filter(p => p.status !== "ilegal").map(p => `${p.text} ${p.refutation ? p.refutation.text : ""}`)]);
+    const allowed = aiAllowedMoves([facts.text, ctx.text, alt.text, ...checked.filter(p => p.status !== "ilegal").map(p => `${p.text} ${p.refutation ? p.refutation.text : ""}`), ...(watched ? watched.items.filter(i => !i.isBad).map(i => i.text) : [])]);
     const stats = {};
     const resolver = aiMoveResolver(node, [...facts.lines.map(l => ({ state: node.state, ucis: l.pv })),
       ...checked.filter(p => p.ucis && p.ucis.length).map(p => ({ state: p.state0, ucis: p.ucis })),
       ...checked.filter(p => p.refutation).map(p => ({ state: p.refutation.state, ucis: p.refutation.pv })),
       ...(ctx.games || []).filter(g => g.afterLine).map(g => g.afterLine),
-      ...alt.items.map(a => ({ state: node.state, ucis: [a.uci, ...(a.reply || [])] }))]);
+      ...alt.items.map(a => ({ state: node.state, ucis: [a.uci, ...(a.reply || [])] })),
+      ...(watched ? watched.items.map(a => ({ state: node.state, ucis: [a.uci, ...(a.reply || [])] })) : [])]);
     const answer = aiMarkClaims(aiFormat(text, html => aiMoveMarkup(html, allowed, resolver, stats)), claimErrs);
     box.innerHTML = `<div class="retry-head">🤖 Profesor IA <span class="small">· ${esc(AI_PROVIDERS[aiProvider()].name.split(" (")[0])} (${esc(aiModel())})</span></div>
       <div class="ai-q small">❓ ${esc(question)}</div><div class="ai-text">${answer}</div>
-      ${aiProposalsHtml(checked)}${props && props.error ? `<div class="small">🧪 No se pudieron obtener las propuestas de la IA (${esc(props.error)}); la respuesta usa sólo el motor.</div>` : ""}
+      ${aiProposalsHtml(checked)}${watched ? aiWatchHtml(watched) : ""}${props && props.error ? `<div class="small">🧪 No se pudieron obtener las propuestas de la IA (${esc(props.error)}); la respuesta usa sólo el motor.</div>` : ""}
       ${stats.flagged ? `<div class="small ai-unverified-note">⚠ ${stats.flagged === 1 ? "Una jugada de la respuesta no está comprobada" : `${stats.flagged} jugadas de la respuesta no están comprobadas`} por el motor: tómala${stats.flagged === 1 ? "" : "s"} con cautela.</div>` : ""}
       ${ctx.games.length ? `<div class="ai-models small">♟ Partidas modelo: ${ctx.games.map((g, i) => `<button class="sm-btn" data-ai-model="${i}" title="Abrir en esta posición">${esc(g.title)}</button>`).join(" ")}</div>` : ""}
       <div class="controls"><button class="sm-btn" data-ai-save title="Guarda esta respuesta en el comentario de la jugada">💾 Añadir como comentario</button>${AI.hist.items.length > 1 ? `<span class="small">💬 Recuerda ${AI.hist.items.length - 1} pregunta${AI.hist.items.length === 2 ? "" : "s"} anterior${AI.hist.items.length === 2 ? "" : "es"} sobre esta posición</span>` : ""}</div>

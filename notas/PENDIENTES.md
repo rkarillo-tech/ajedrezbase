@@ -30,7 +30,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
   Lo que ya hay: `77-entrenador-ia.js` usa los temas flojos y los errores, pero no guarda un historial propio. El repaso espaciado de otros ejercicios se puede reutilizar.
 - ✅ **C3** (1.55.0). **Comentar tu repertorio.** El profesor IA comenta tus líneas de repertorio jugada a jugada: la idea de cada una y qué hacer si el rival se sale. Stockfish revisa antes las jugadas dudosas y los comentarios se guardan en el PGN del repertorio.
   Lo que ya hay: «🩺 Revisar» (jugadas dudosas) y «💾 Añadir como comentario» (1.52.0).
-- **C4. «Vigilancia en una sola consulta»** para modelos locales: la IA responde libremente, Stockfish revisa después las jugadas que recomienda y solo se le pide corregir si alguna es mala. Es la alternativa que no se eligió para acelerar las propuestas. Solo si siguen siendo lentas.
+- ✅ **C4** (1.58.0). **«Vigilancia en una sola consulta»** para modelos locales: la IA responde libremente, Stockfish revisa después las jugadas que recomienda y solo se le pide corregir si alguna es mala. Es la alternativa que no se eligió para acelerar las propuestas. Solo si siguen siendo lentas.
 - **C5. Más adelante.** Modo básico/avanzado. Estado de los servicios (qué motor, IA y recursos en línea hay disponibles). Comparar dos posiciones. Espacios de trabajo personalizados.
 
 ## D. Calidad y mantenimiento
