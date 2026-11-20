@@ -191,6 +191,16 @@ document.querySelectorAll(".modal-back").forEach(m => {
 $("settingsBtn").onclick = () => openModal("settingsModal");
 $("engineSourceBadge").onclick = () => openModal("settingsModal");
 $("engineSourceBadge").onkeydown = e => { if (e.key === "Enter") openModal("settingsModal"); };
+/* Herramientas de análisis plegadas (1.53): lo esencial del motor siempre a la vista y el resto a un clic; se recuerda abierto o cerrado */
+function setEngineTools(open) {
+  $("engineTools").hidden = !open;
+  $("engineToolsBtn").setAttribute("aria-expanded", String(open));
+}
+$("engineToolsBtn").onclick = () => { settings.engineTools = $("engineTools").hidden; saveSettings(); setEngineTools(settings.engineTools); };
+setEngineTools(!!settings.engineTools);
+/* Importar / exportar plegable en Estudio: cerrado deja sitio al comentario; se recuerda */
+$("importDetails").open = !!settings.importOpen;
+$("importDetails").addEventListener("toggle", () => { if (settings.importOpen !== $("importDetails").open) { settings.importOpen = $("importDetails").open; saveSettings(); } });
 $("engineHelpBtn").onclick = () => { const h = $("engineHelp"); h.hidden = !h.hidden; $("engineHelpBtn").setAttribute("aria-expanded", !h.hidden); };
 $("retryEngineBtn").onclick = () => { if (settings.engine !== "auto") { settings.engine = "auto"; saveSettings(); $("setEngine").value = "auto"; } Engine.init(); renderEngineStatus(); toast("🔄 Cargando Stockfish 19…"); };
 $("versionsBtn").onclick = openVersions;
