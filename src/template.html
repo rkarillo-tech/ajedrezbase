@@ -644,8 +644,14 @@ body.ui-basic .engine-lines .pv-line ~ .pv-line { display: none; }
 .cmp-cap { font-size: .78rem; text-align: center; margin-top: 2px; color: var(--muted); }
 .cmp-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
 .cmp-table td, .cmp-table th { padding: 3px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-@media (max-width: 640px) { .cmp-grid { grid-template-columns: auto auto; } .cmp-grid > .cmp-info { grid-column: 1 / -1; } .services-btn { padding: 6px 7px; } }
+@media (max-width: 640px) { .cmp-grid { grid-template-columns: auto auto; } .cmp-grid > .cmp-info { grid-column: 1 / -1; } .header-actions > button { padding: 6px 7px; } .header-actions > .services-btn { padding: 6px 5px; } }
 /* 1.57: qué estás haciendo */
+@media (min-width: 981px) {   /* en el ordenador, la cabecera nunca salta de línea: la etiqueta y la apertura se acortan */
+  header { flex-wrap: nowrap; }
+  .brand-title { flex: 1 1 auto; min-width: 0; }
+  .header-actions { flex: none; flex-wrap: nowrap; }
+  .brand-title .eco-banner, .brand-title .mode-chip { flex: 0 1 auto; min-width: 0; }
+}
 .mode-chip { padding: 3px 9px; border-radius: 6px; font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw; cursor: pointer;
   background: var(--panel2); border: 1px solid var(--border); color: var(--muted); }
 .mode-chip:not([data-kind="study"]) { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--panel2)); }

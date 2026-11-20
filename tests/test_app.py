@@ -1056,7 +1056,7 @@ def prueba_mis_repertorios(browser):
     ancho = lambda: pg.evaluate("document.getElementById('board').getBoundingClientRect().width")
     antes = ancho()
     pg.click("#settingsBtn")
-    pg.locator("#setBoardSize").fill("70")
+    revelar(pg, "#setBoardSize"); pg.locator("#setBoardSize").fill("70")
     comprobar(abs(ancho() - antes * 0.7) < antes * 0.06 and "70 %" in pg.inner_text("#boardSizeVal"), "en Ajustes se puede hacer el tablero más pequeño")
     revelar(pg, "#boardSizeReset") or pg.click("#boardSizeReset")
     comprobar(abs(ancho() - antes) < 2 and pg.evaluate("settings.boardSize") == 100, "«Automático» devuelve el tablero a su tamaño")

@@ -16,6 +16,7 @@ function puzzleRatingStep(R, rating, ok) {
 }
 function trainerUserTurn() { return trainer.side === 0 || cur().state.t === trainer.side; }
 function trainFeedback(html, kind) {
+  if (typeof renderActivity === "function") setTimeout(renderActivity, 0);   // 1.57: la etiqueta «qué estás haciendo», al día
   const el = $("trainFeedback");
   el.hidden = false;
   el.innerHTML = html;
