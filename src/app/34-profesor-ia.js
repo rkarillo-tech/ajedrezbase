@@ -188,7 +188,7 @@ function aiFormat(text, mark = h => h) {
 async function aiAsk(question) {
   question = String(question || "").trim();
   if (!question) { $("aiQuestion").focus(); return; }
-  if (!aiProvider()) { toast("Elige antes un proveedor en ⚙ Ajustes › 🤖 Profesor IA."); openModal("settingsModal"); return; }
+  if (!aiProvider()) { toast("Elige antes un proveedor en ⚙ Ajustes › 🤖 Profesor IA."); openSettings("ia"); return; }
   const blocked = helpBlocked();
   if (blocked) { toast(blocked); return; }
   if (AI.busy) return;

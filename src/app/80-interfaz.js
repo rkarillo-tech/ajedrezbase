@@ -140,6 +140,8 @@ $("fullBtn").onclick = () => fullBoard(!ui.full);
 
 function openModal(id) {
   if (id === "settingsModal") {
+    settingsTab(SetTabs.cur);
+    syncEngineSpeed();
     $("setEngine").value = settings.engine;
     $("setAnalysisMs").value = settings.analysisMs;
     $("setMultipv").value = settings.multipv;
@@ -189,8 +191,10 @@ document.querySelectorAll(".modal-back").forEach(m => {
   m.addEventListener("click", e => { if (e.target === m || e.target.hasAttribute("data-close")) closeModals(); });
 });
 $("settingsBtn").onclick = () => openModal("settingsModal");
-$("engineSourceBadge").onclick = () => openModal("settingsModal");
-$("engineSourceBadge").onkeydown = e => { if (e.key === "Enter") openModal("settingsModal"); };
+$("engineSourceBadge").onclick = () => openSettings("motor");
+$("engineSourceBadge").onkeydown = e => { if (e.key === "Enter") openSettings("motor"); };
+/* Abre los ajustes en una pestaña concreta */
+function openSettings(tab) { if (tab) SetTabs.cur = tab; openModal("settingsModal"); }
 /* Herramientas de análisis plegadas (1.53): lo esencial del motor siempre a la vista y el resto a un clic; se recuerda abierto o cerrado */
 function setEngineTools(open) {
   $("engineTools").hidden = !open;
@@ -208,9 +212,40 @@ $("copyGameBtn").onclick = () => saveToLibrary({ copy: true, force: true });
 $("licBtn").onclick = () => openModal("licModal");
 $("helpBtn").onclick = () => openHelp();
 $("setEngine").onchange = e => { settings.engine = e.target.value; saveSettings(); Engine.init(); };
-$("setAnalysisMs").onchange = e => { settings.analysisMs = Math.max(200, Math.min(10000, +e.target.value || 1000)); saveSettings(); };
+$("setAnalysisMs").onchange = e => { settings.analysisMs = Math.max(200, Math.min(10000, +e.target.value || 1000)); saveSettings(); syncEngineSpeed(); };
 $("setMultipv").onchange = e => { settings.multipv = +e.target.value; saveSettings(); ui.liveNode = null; requestLive(); };
-$("setLiveMs").onchange = e => { settings.liveMs = Math.max(500, Math.min(30000, +e.target.value || 4000)); saveSettings(); };
+$("setLiveMs").onchange = e => { settings.liveMs = Math.max(500, Math.min(30000, +e.target.value || 4000)); saveSettings(); syncEngineSpeed(); };
+/* 1.57: «Profundidad del análisis» en palabras; los milisegundos exactos quedan en 🔧 Avanzado */
+const ENGINE_SPEEDS = { fast: { analysisMs: 500, liveMs: 2000 }, balanced: { analysisMs: 1000, liveMs: 4000 }, deep: { analysisMs: 2500, liveMs: 10000 } };
+function syncEngineSpeed() {
+  const k = Object.keys(ENGINE_SPEEDS).find(x => ENGINE_SPEEDS[x].analysisMs === +settings.analysisMs && ENGINE_SPEEDS[x].liveMs === +settings.liveMs) || "custom";
+  $("setEngineSpeed").value = k;
+}
+$("setEngineSpeed").onchange = e => {
+  const v = ENGINE_SPEEDS[e.target.value];
+  if (!v) return;
+  Object.assign(settings, v);
+  saveSettings();
+  $("setAnalysisMs").value = settings.analysisMs;
+  $("setLiveMs").value = settings.liveMs;
+};
+/* 1.57: los ajustes, por categorías (pestañas dentro del cuadro); se recuerda la última que miraste */
+const SetTabs = { cur: (() => { try { return localStorage.getItem("ajedrezAjustesPestana") || "aspecto"; } catch { return "aspecto"; } })() };
+function settingsTab(k) {
+  if (!document.querySelector(`.set-sec[data-set="${k}"]`)) k = "aspecto";
+  SetTabs.cur = k;
+  try { localStorage.setItem("ajedrezAjustesPestana", k); } catch {}
+  document.querySelectorAll(".set-sec").forEach(x => x.classList.toggle("set-on", x.dataset.set === k));
+  ariaTabsSync(".set-tab", b => b.dataset.setTab === k);
+}
+/* Enseña la pestaña de los ajustes en la que está un control (el buscador y los enlaces de la ayuda) */
+function settingsReveal(id) {
+  const el = typeof id === "string" ? $(id) : id, sec = el && el.closest(".set-sec");
+  if (sec) settingsTab(sec.dataset.set);
+}
+ariaTabs(document.querySelector(".set-tabs"), ".set-tab", b => $("setSec-" + b.dataset.setTab));
+document.querySelectorAll(".set-tab").forEach(b => b.onclick = () => settingsTab(b.dataset.setTab));
+settingsTab(SetTabs.cur);
 $("setToken").onchange = e => { settings.token = e.target.value.trim(); saveSettings(); explorerCache.clear(); refreshExplorer(); };
 $("setCoords").onchange = e => { settings.coords = e.target.checked; saveSettings(); renderBoard(); };
 $("setBoard3d").onchange = e => { settings.board3d = e.target.checked; B3.failed = false; saveSettings(); renderBoard(); };

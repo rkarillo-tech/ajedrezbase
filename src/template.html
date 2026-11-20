@@ -629,6 +629,23 @@ details > summary { cursor: pointer; color: var(--muted); font-size: .84rem; mar
 .import-details { margin: 8px 0 4px; background: var(--deep); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px 6px; }
 .import-details > summary { font-weight: 700; color: var(--text); cursor: pointer; padding: 4px 0; }
 .study-comment { margin-top: 6px; }
+/* 1.57: qué estás haciendo */
+.mode-chip { padding: 3px 9px; border-radius: 6px; font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw; cursor: pointer;
+  background: var(--panel2); border: 1px solid var(--border); color: var(--muted); }
+.mode-chip:not([data-kind="study"]) { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--panel2)); }
+@media (max-width: 640px) {
+  .mode-chip { max-width: 60vw; font-size: .74rem; }
+  .mode-chip[data-kind="study"] { display: none; }               /* en el móvil, sólo cuando hay una actividad, */
+  body.in-activity .eco-banner { display: none; }                /* y entonces en lugar de la apertura */
+}
+/* 1.57: ajustes por categorías */
+.set-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 10px; position: sticky; top: -1px; z-index: 2; background: var(--panel); padding: 4px 0; border-bottom: 1px solid var(--border); }
+.set-tab { padding: 5px 9px; font-size: .82rem; border-radius: 6px; background: var(--panel2); border: 1px solid var(--border); color: var(--text); cursor: pointer; }
+.set-tab[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.set-sec { display: none; }
+.set-sec.set-on { display: block; }
+.set-h { margin: 2px 0 6px; font-size: 1rem; }
+@media (max-width: 640px) { .set-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .set-tab { flex: none; } }
 /* 1.56: clase corta del día en «Hoy» */
 .coach-daily { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; padding: 6px 8px; background: var(--deep); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; font-size: .86rem; }
 .coach-daily.ok { border-left-color: var(--muted); }
@@ -960,6 +977,7 @@ body.board-full #exportControls { order: 10; }
   <div class="brand-title">
     <h1>♞ AjedrezBase</h1>
     <span id="ecoBanner" class="eco-banner" role="button" tabindex="0" title="Apertura detectada (reconoce transposiciones). Pulsa para leer qué es y cómo se juega">Posición inicial</span>
+    <span id="modeChip" class="mode-chip" role="button" tabindex="0" aria-live="polite" data-kind="study">📖 Analizando</span>
   </div>
   <div class="header-actions">
     <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor (nivel, estilo, ventaja y reloj) o contra otra persona en este dispositivo">🤖 Jugar vs CPU</button>
@@ -1848,6 +1866,23 @@ body.board-full #exportControls { order: 10; }
 <div class="modal-back" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="modal">
     <h2 id="settingsTitle"><span>⚙ Ajustes</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div class="set-tabs" role="tablist" aria-label="Categorías de los ajustes">
+      <button type="button" class="set-tab" role="tab" id="setTab-aspecto" aria-controls="setSec-aspecto" data-set-tab="aspecto"><span aria-hidden="true">🎨</span> Apariencia</button>
+      <button type="button" class="set-tab" role="tab" id="setTab-tablero" aria-controls="setSec-tablero" data-set-tab="tablero"><span aria-hidden="true">♟</span> Tablero</button>
+      <button type="button" class="set-tab" role="tab" id="setTab-motor" aria-controls="setSec-motor" data-set-tab="motor"><span aria-hidden="true">⚙</span> Motor</button>
+      <button type="button" class="set-tab" role="tab" id="setTab-ia" aria-controls="setSec-ia" data-set-tab="ia"><span aria-hidden="true">🤖</span> Profesor IA</button>
+      <button type="button" class="set-tab" role="tab" id="setTab-datos" aria-controls="setSec-datos" data-set-tab="datos"><span aria-hidden="true">💾</span> Datos</button>
+      <button type="button" class="set-tab" role="tab" id="setTab-acceso" aria-controls="setSec-acceso" data-set-tab="acceso"><span aria-hidden="true">♿</span> Accesibilidad</button>
+      <button type="button" class="set-tab" role="tab" id="setTab-avanzado" aria-controls="setSec-avanzado" data-set-tab="avanzado"><span aria-hidden="true">🔧</span> Avanzado</button>
+    </div>
+    <section class="set-sec" id="setSec-aspecto" data-set="aspecto" role="tabpanel" aria-labelledby="setTab-aspecto">
+      <h3 class="set-h">🎨 Apariencia</h3>
+    <label for="setUiTheme">Aspecto de la aplicación</label>
+    <select id="setUiTheme">
+      <option value="dark">🌙 Oscuro</option>
+      <option value="light">☀ Claro</option>
+      <option value="auto">🌓 Automático (como el sistema)</option>
+    </select>
     <div class="grid3">
       <div><label for="pieceStyleSelect">Diseño de las piezas</label>
         <select id="pieceStyleSelect">
@@ -1871,66 +1906,6 @@ body.board-full #exportControls { order: 10; }
           <option value="coral">Coral</option>
         </select></div>
     </div>
-    <label for="setEngine">Motor de análisis</label>
-    <select id="setEngine">
-      <option value="auto">Automático: Stockfish 19 Lite (recomendado; descarga 1,9 MB la primera vez), con Stockfish 10 y el motor interno de respaldo</option>
-      <option value="sf10">Stockfish 10 (más antiguo y débil; para navegadores sin WebAssembly)</option>
-      <option value="internal">Sólo motor interno (100 % sin conexión, más débil)</option>
-    </select>
-    <div class="grid3">
-      <div><label for="setAnalysisMs">Tiempo por jugada al analizar (ms)</label><input id="setAnalysisMs" type="number" min="200" max="10000" step="100"></div>
-      <div><label for="setMultipv">Líneas del motor</label><select id="setMultipv"><option>1</option><option>2</option><option>3</option></select></div>
-      <div><label for="setLiveMs">Tiempo de análisis continuo (ms)</label><input id="setLiveMs" type="number" min="500" max="30000" step="500"></div>
-    </div>
-    <label for="setToken">Token personal de Lichess (para el explorador de aperturas)</label>
-    <div class="gc-row">
-      <input id="setToken" type="password" autocomplete="off" placeholder="lip_…">
-      <button id="testTokenBtn" class="sm-btn info-btn">🔌 Probar token</button>
-    </div>
-    <div id="tokenResult" class="small"></div>
-    <label>Estado del motor</label>
-    <div class="note-box small" id="engineStatus" style="margin-top:2px"></div>
-    <div class="controls"><button id="retryEngineBtn" class="sm-btn info-btn" title="Vuelve a intentar cargar Stockfish 19 (desde jsDelivr y, si no, desde unpkg)">🔄 Reintentar Stockfish 19</button></div>
-    <p class="small">Lichess exige ahora un token gratuito para su explorador. Créalo <b>sin marcar ningún permiso</b> en
-      <a href="https://lichess.org/account/oauth/token/create?description=AjedrezBase" target="_blank" rel="noopener">lichess.org › API access tokens</a>
-      (<a href="#" class="help-link" data-help="help-token">ver pasos</a>). Se guarda sólo en este navegador y sólo se envía a Lichess.</p>
-    <div class="chk-row" style="margin-top:10px">
-      <label><input type="checkbox" id="setCoords"> Coordenadas</label>
-      <label title="Piezas Staunton en relieve con Three.js: se descargan unos 1,1 MB la primera vez. Pulsa la pieza y después la casilla; arrastra para girar la vista."><input type="checkbox" id="setBoard3d"> 🧊 Tablero en 3D</label>
-      <label><input type="checkbox" id="setLegal"> Mostrar jugadas legales</label>
-      <label title="Al elegir una pieza, el motor colorea sus jugadas: verde la mejor, verde claro buena, amarillo imprecisión, naranja error y rojo error grave. No funciona en los ejercicios; contra la CPU cuenta como ayuda (tecla C)"><input type="checkbox" id="setMoveColors"> 🎨 Colorear las jugadas de la pieza elegida</label>
-      <label title="Anillos rojos en las piezas del bando que mueve que están en peligro (atacadas y sin defensa, atacadas por una pieza de menos valor o con más atacantes que defensores) y azules en las del rival que se pueden ganar. No funciona en los ejercicios; contra la CPU cuenta como ayuda (tecla R)"><input type="checkbox" id="setRadar"> 🛡 Radar de piezas en peligro</label>
-      <label><input type="checkbox" id="setAutosave"> Recordar la partida al recargar</label>
-      <label><input type="checkbox" id="setAnimate"> Animar las piezas</label>
-      <label><input type="checkbox" id="setWheel"> Rueda del ratón para avanzar/retroceder</label>
-    </div>
-    <label for="setExplainLevel">Nivel de las explicaciones (🧠 Piensa conmigo y el profesor IA)</label>
-    <select id="setExplainLevel">
-      <option value="basic">🌱 Iniciación: sin cifras, lo esencial y una regla para recordar</option>
-      <option value="club">♟ Club: la explicación completa</option>
-      <option value="advanced">🎓 Avanzado: más alternativas, valoraciones y la línea completa</option>
-    </select>
-    <div class="chk-row" id="voiceRow"><label title="Lee en voz alta cada explicación nueva (Piensa conmigo, lecciones, ejercicios…). En cada recuadro hay además un botón 🔊 para leerlo cuando quieras"><input type="checkbox" id="setVoiceAuto"> 🔊 Leer automáticamente las explicaciones</label></div>
-    <label for="setAiDepth">📏 Profundidad de las respuestas del profesor IA y del entrenador</label>
-    <select id="setAiDepth">
-      <option value="short">Breves: lo esencial y su porqué, en pocas frases</option>
-      <option value="normal">Normales: el porqué de lo importante</option>
-      <option value="deep">Detalladas: el porqué de cada jugada, ideas de fondo y planes de los dos bandos</option>
-    </select>
-    <label id="aiLabel" for="setAiProvider">🤖 Profesor IA (opcional): preguntas libres sobre la posición</label>
-    <select id="setAiProvider">
-      <option value="none">Desactivado</option>
-      <option value="ollama">Ollama: un modelo en tu ordenador (privado y gratuito)</option>
-      <option value="claude">Claude (Anthropic), con tu clave</option>
-      <option value="gemini">Gemini (Google), con tu clave</option>
-    </select>
-    <div class="grid2">
-      <div id="aiModelRow"><label for="setAiModel">Modelo</label><input id="setAiModel" autocomplete="off" spellcheck="false" list="aiModelList"><datalist id="aiModelList"></datalist></div>
-      <div id="aiKeyRow"><label for="setAiKey">Clave de la API</label><input id="setAiKey" type="password" autocomplete="off" placeholder="Se guarda sólo en este navegador"></div>
-      <div id="aiUrlRow"><label for="setAiUrl">Dirección de Ollama</label><input id="setAiUrl" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434"></div>
-    </div>
-    <div class="controls"><button id="aiTestBtn" class="sm-btn info-btn">🔌 Probar</button><span id="aiTestResult" class="small"></span></div>
-    <p class="small" id="aiNote"></p>
     <label for="setBoard3dLook">Aspecto del tablero en 3D</label>
     <select id="setBoard3dLook">
       <option value="wood">🪵 Madera de torneo (piezas de boj y nogal, casillas blancas y negras)</option>
@@ -1948,17 +1923,16 @@ body.board-full #exportControls { order: 10; }
       <label>Casillas claras <input type="color" id="b3c_sl"></label>
       <label>Casillas oscuras <input type="color" id="b3c_sd"></label>
     </div>
-    <label for="setUiTheme">Aspecto de la aplicación</label>
-    <select id="setUiTheme">
-      <option value="dark">🌙 Oscuro</option>
-      <option value="light">☀ Claro</option>
-      <option value="auto">🌓 Automático (como el sistema)</option>
-    </select>
-    <label id="syncLabel">🔄 Sincronizar entre dispositivos</label>
-    <div class="note-box small" id="syncStatus" style="margin-top:2px" aria-labelledby="syncLabel"></div>
-    <div class="controls" id="syncBtns"></div>
-    <p class="small" style="margin-top:2px">Vincula un archivo <code>.json</code> que esté en una carpeta de <b>Google Drive, OneDrive o Dropbox</b> y haz lo mismo en tus otros dispositivos: partidas, marcadores, progreso y ajustes se guardan ahí solos y se combinan al abrir la aplicación
-      (<a href="#" class="help-link" data-help="help-sync">cómo se hace</a>). El token de Lichess, el motor y el tamaño del tablero son de cada dispositivo y no viajan.</p>
+    </section>
+    <section class="set-sec" id="setSec-tablero" data-set="tablero" role="tabpanel" aria-labelledby="setTab-tablero">
+      <h3 class="set-h">♟ Tablero</h3>
+    <div class="chk-row">
+      <label><input type="checkbox" id="setCoords"> Coordenadas</label>
+      <label title="Piezas Staunton en relieve con Three.js: se descargan unos 1,1 MB la primera vez. Pulsa la pieza y después la casilla; arrastra para girar la vista."><input type="checkbox" id="setBoard3d"> 🧊 Tablero en 3D</label>
+      <label><input type="checkbox" id="setLegal"> Mostrar jugadas legales</label>
+      <label title="Al elegir una pieza, el motor colorea sus jugadas: verde la mejor, verde claro buena, amarillo imprecisión, naranja error y rojo error grave. No funciona en los ejercicios; contra la CPU cuenta como ayuda (tecla C)"><input type="checkbox" id="setMoveColors"> 🎨 Colorear las jugadas de la pieza elegida</label>
+      <label title="Anillos rojos en las piezas del bando que mueve que están en peligro (atacadas y sin defensa, atacadas por una pieza de menos valor o con más atacantes que defensores) y azules en las del rival que se pueden ganar. No funciona en los ejercicios; contra la CPU cuenta como ayuda (tecla R)"><input type="checkbox" id="setRadar"> 🛡 Radar de piezas en peligro</label>
+    </div>
     <label for="setAutoSpeed">Velocidad del modo Auto (▶ Auto)</label>
     <select id="setAutoSpeed">
       <option value="500">Muy rápida (½ s por jugada)</option>
@@ -1967,12 +1941,98 @@ body.board-full #exportControls { order: 10; }
       <option value="3500">Lenta (3,5 s)</option>
       <option value="6000">Muy lenta (6 s)</option>
     </select>
+    </section>
+    <section class="set-sec" id="setSec-motor" data-set="motor" role="tabpanel" aria-labelledby="setTab-motor">
+      <h3 class="set-h">⚙ Motor</h3>
+    <label for="setEngine">Motor de análisis</label>
+    <select id="setEngine">
+      <option value="auto">Automático: Stockfish 19 Lite (recomendado; descarga 1,9 MB la primera vez), con Stockfish 10 y el motor interno de respaldo</option>
+      <option value="sf10">Stockfish 10 (más antiguo y débil; para navegadores sin WebAssembly)</option>
+      <option value="internal">Sólo motor interno (100 % sin conexión, más débil)</option>
+    </select>
+    <label for="setEngineSpeed">Profundidad del análisis</label>
+    <select id="setEngineSpeed">
+      <option value="fast">⚡ Rápido: respuestas al momento (½ s por jugada al analizar)</option>
+      <option value="balanced">⚖ Equilibrado (recomendado): 1 s por jugada</option>
+      <option value="deep">🔬 Profundo: más preciso, más lento (2,5 s por jugada)</option>
+      <option value="custom" hidden>Personalizado (en 🔧 Avanzado)</option>
+    </select>
+    <div><label for="setMultipv">Líneas del motor</label><select id="setMultipv"><option>1</option><option>2</option><option>3</option></select></div>
+    <label>Estado del motor</label>
+    <div class="note-box small" id="engineStatus" style="margin-top:2px"></div>
+    <div class="controls"><button id="retryEngineBtn" class="sm-btn info-btn" title="Vuelve a intentar cargar Stockfish 19 (desde jsDelivr y, si no, desde unpkg)">🔄 Reintentar Stockfish 19</button></div>
+    </section>
+    <section class="set-sec" id="setSec-ia" data-set="ia" role="tabpanel" aria-labelledby="setTab-ia">
+      <h3 class="set-h">🤖 Profesor IA</h3>
+    <label id="aiLabel" for="setAiProvider">🤖 Profesor IA (opcional): preguntas libres sobre la posición</label>
+    <select id="setAiProvider">
+      <option value="none">Desactivado</option>
+      <option value="ollama">Ollama: un modelo en tu ordenador (privado y gratuito)</option>
+      <option value="claude">Claude (Anthropic), con tu clave</option>
+      <option value="gemini">Gemini (Google), con tu clave</option>
+    </select>
+    <div class="grid2">
+      <div id="aiModelRow"><label for="setAiModel">Modelo</label><input id="setAiModel" autocomplete="off" spellcheck="false" list="aiModelList"><datalist id="aiModelList"></datalist></div>
+      <div id="aiKeyRow"><label for="setAiKey">Clave de la API</label><input id="setAiKey" type="password" autocomplete="off" placeholder="Se guarda sólo en este navegador"></div>
+      <div id="aiUrlRow"><label for="setAiUrl">Dirección de Ollama</label><input id="setAiUrl" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434"></div>
+    </div>
+    <div class="controls"><button id="aiTestBtn" class="sm-btn info-btn">🔌 Probar</button><span id="aiTestResult" class="small"></span></div>
+    <p class="small" id="aiNote"></p>
+    <label for="setAiDepth">📏 Profundidad de las respuestas del profesor IA y del entrenador</label>
+    <select id="setAiDepth">
+      <option value="short">Breves: lo esencial y su porqué, en pocas frases</option>
+      <option value="normal">Normales: el porqué de lo importante</option>
+      <option value="deep">Detalladas: el porqué de cada jugada, ideas de fondo y planes de los dos bandos</option>
+    </select>
+    <label for="setExplainLevel">Nivel de las explicaciones (🧠 Piensa conmigo y el profesor IA)</label>
+    <select id="setExplainLevel">
+      <option value="basic">🌱 Iniciación: sin cifras, lo esencial y una regla para recordar</option>
+      <option value="club">♟ Club: la explicación completa</option>
+      <option value="advanced">🎓 Avanzado: más alternativas, valoraciones y la línea completa</option>
+    </select>
+    </section>
+    <section class="set-sec" id="setSec-datos" data-set="datos" role="tabpanel" aria-labelledby="setTab-datos">
+      <h3 class="set-h">💾 Datos, sincronización y cuentas</h3>
+    <div class="chk-row">
+      <label><input type="checkbox" id="setAutosave"> Recordar la partida al recargar</label>
+    </div>
+    <label id="syncLabel">🔄 Sincronizar entre dispositivos</label>
+    <div class="note-box small" id="syncStatus" style="margin-top:2px" aria-labelledby="syncLabel"></div>
+    <div class="controls" id="syncBtns"></div>
+    <p class="small" style="margin-top:2px">Vincula un archivo <code>.json</code> que esté en una carpeta de <b>Google Drive, OneDrive o Dropbox</b> y haz lo mismo en tus otros dispositivos: partidas, marcadores, progreso y ajustes se guardan ahí solos y se combinan al abrir la aplicación
+      (<a href="#" class="help-link" data-help="help-sync">cómo se hace</a>). El token de Lichess, el motor y el tamaño del tablero son de cada dispositivo y no viajan.</p>
+    <label for="setToken">Token personal de Lichess (para el explorador de aperturas)</label>
+    <div class="gc-row">
+      <input id="setToken" type="password" autocomplete="off" placeholder="lip_…">
+      <button id="testTokenBtn" class="sm-btn info-btn">🔌 Probar token</button>
+    </div>
+    <div id="tokenResult" class="small"></div>
+    <p class="small">Lichess exige ahora un token gratuito para su explorador. Créalo <b>sin marcar ningún permiso</b> en
+      <a href="https://lichess.org/account/oauth/token/create?description=AjedrezBase" target="_blank" rel="noopener">lichess.org › API access tokens</a>
+      (<a href="#" class="help-link" data-help="help-token">ver pasos</a>). Se guarda sólo en este navegador y sólo se envía a Lichess.</p>
+    </section>
+    <section class="set-sec" id="setSec-acceso" data-set="acceso" role="tabpanel" aria-labelledby="setTab-acceso">
+      <h3 class="set-h">♿ Accesibilidad</h3>
+    <div class="chk-row" id="voiceRow"><label title="Lee en voz alta cada explicación nueva (Piensa conmigo, lecciones, ejercicios…). En cada recuadro hay además un botón 🔊 para leerlo cuando quieras"><input type="checkbox" id="setVoiceAuto"> 🔊 Leer automáticamente las explicaciones</label></div>
+    <div class="chk-row">
+      <label><input type="checkbox" id="setAnimate"> Animar las piezas</label>
+      <label><input type="checkbox" id="setWheel"> Rueda del ratón para avanzar/retroceder</label>
+    </div>
     <label for="setBoardSize">Tamaño del tablero: <b id="boardSizeVal">automático</b></label>
     <div class="gc-row">
       <input id="setBoardSize" type="range" min="60" max="130" step="5" style="flex:1">
       <button id="boardSizeReset" class="sm-btn" title="Vuelve al tamaño automático: el más grande que cabe">Automático</button>
     </div>
     <p class="small" style="margin-top:2px">El tamaño automático (100 %) es el más grande que cabe en la pantalla. Puedes hacerlo más pequeño para dejar más sitio a las jugadas y la lección; por encima del 100 % sólo crece en pantallas grandes del ordenador, hasta la altura disponible. Se guarda en cada dispositivo.</p>
+    </section>
+    <section class="set-sec" id="setSec-avanzado" data-set="avanzado" role="tabpanel" aria-labelledby="setTab-avanzado">
+      <h3 class="set-h">🔧 Avanzado</h3>
+    <p class="small">Los valores exactos del motor, para quien quiera afinarlos. «Profundidad del análisis» (⚙ Motor) los ajusta por ti.</p>
+    <div class="grid2">
+      <div><label for="setAnalysisMs">Tiempo por jugada al analizar (ms)</label><input id="setAnalysisMs" type="number" min="200" max="10000" step="100"></div>
+      <div><label for="setLiveMs">Tiempo de análisis continuo (ms)</label><input id="setLiveMs" type="number" min="500" max="30000" step="500"></div>
+    </div>
+    </section>
   </div>
 </div>
 

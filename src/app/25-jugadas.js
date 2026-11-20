@@ -399,6 +399,7 @@ function render() {
   updateButtons();
   updateSaveState();
   renderLesson();
+  renderActivity();
   renderAiBox();
   requestLive();
   if (ui.activeTab === "explorer") refreshExplorer();
