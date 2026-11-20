@@ -146,8 +146,15 @@ const EXPLORER_ERR = { token: "Falta tu token de Lichess (⚙ Ajustes); mientras
 /* Evalúa una posición suelta con el motor; devuelve las líneas con la puntuación desde las blancas.
    Si otro cálculo la cancela por el camino (por ejemplo, el análisis en vivo al reanudarse), se repite: antes
    devolvía vacío y el profesor IA o el entrenador se quedaban sin las líneas del motor */
-async function evalState(state, ms, multipv = 1) {
-  if (!Chess.legal(state).length) return { lines: [{ cp: Chess.inCheck(state) ? -3000 * state.t : 0, pv: [] }] };
+let EvalQueue = Promise.resolve();
+function evalState(state, ms, multipv = 1) {
+  if (!Chess.legal(state).length) return Promise.resolve({ lines: [{ cp: Chess.inCheck(state) ? -3000 * state.t : 0, pv: [] }] });
+  // En cola: dos cálculos pedidos a la vez (por ejemplo, la posición y la jugada anterior) se cancelaban entre sí
+  const run = EvalQueue.then(() => evalStateNow(state, ms, multipv));
+  EvalQueue = run.catch(() => {});
+  return run;
+}
+async function evalStateNow(state, ms, multipv) {
   for (let t = 0; t < 4; t++) {
     const r = await new Promise(resolve => Engine.start({ purpose: "batch", fen: Chess.toFen(state), moves: [], stm: state.t, movetime: ms, multipv, resolve }));
     if (r && r.lines && r.lines.some(l => l && l.pv && l.pv.length)) return r;

@@ -137,7 +137,8 @@ async function coachStart() {
 }
 function coachSystem() {
   const lvl = { basic: "INICIACIÓN: tono cálido y sencillo, sin cifras ni términos técnicos sin explicar.", club: "CLUB: terminología precisa pero accesible.", advanced: "AVANZADO: concreto, con variantes y matices." }[settings.explainLevel] || "";
-  return `Eres el entrenador de ajedrez de AjedrezBase y estás dando una clase particular. Hablas siempre en español de España, de tú, con frases cortas, cercano y exigente a la vez (unas 80 palabras como máximo).
+  return `Eres el entrenador de ajedrez de AjedrezBase y estás dando una clase particular. Hablas siempre en español de España, de tú, cercano y exigente a la vez (unas ${aiDepth().coach} palabras como máximo). ${aiDepth().how}
+${aiTutorRole("en una clase particular: le planteas posiciones, le dejas pensar, le das pistas sin regalarle la solución y le explicas la idea cuando la encuentra")}
 Nivel del alumno: ${lvl}
 Reglas estrictas:
 1. Las únicas jugadas que puedes citar son las que aparecen en los datos (calculadas por el motor). No inventes jugadas ni variantes. No inventes jugadas.

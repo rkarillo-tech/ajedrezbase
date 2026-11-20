@@ -400,7 +400,8 @@ function renderGameReport() {
   if (!R) { box.innerHTML = ""; return; }
   const h = game.headers, nm = c => esc(c === 1 ? h.White || "Blancas" : h.Black || "Negras");
   const pcell = v => (v == null ? "–" : v + "%");
-  let html = `<h3>📝 Resumen</h3><p class="rep-summary">${esc(R.summary)}</p>`;
+  let html = (aiProvider() ? `<div class="controls"><button id="aiReviewBtn" class="sm-btn primary" title="El profesor IA comenta los momentos clave como un entrenador">🤖 Que la comente el profesor</button></div><div id="aiReviewBox" class="retry-box think-box" hidden aria-live="polite"></div>` : "") +
+    `<h3>📝 Resumen</h3><p class="rep-summary">${esc(R.summary)}</p>`;
   html += `<h3>📍 Momentos clave</h3>`;
   if (R.key.length) {
     html += `<ol class="rep-key">` + R.key.map((x, i) => {
@@ -414,6 +415,7 @@ function renderGameReport() {
   html += `<h3>🎯 Qué practicar</h3>` + R.players.map(pl => `<div class="rep-player"><b>${esc(pl.verdict)}</b>${pl.practice.length ? `<ul>${pl.practice.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<div class="small">Nada destacable: ¡buena partida!</div>`}</div>`).join("");
   box.innerHTML = html;
   box.querySelectorAll("[data-k]").forEach(a => a.onclick = e => { e.preventDefault(); const x = R.key[+a.dataset.k]; if (x && !quiz()) goTo(x.n); });
+  if ($("aiReviewBtn")) $("aiReviewBtn").onclick = () => aiGameReview($("aiReviewBox"), 0);
   box.querySelectorAll("[data-tm]").forEach(a => a.onclick = e => { e.preventDefault(); const n = Pgn.findById(game.root, +a.dataset.tm); if (n && !quiz()) goTo(n); });
 }
 

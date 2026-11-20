@@ -16,13 +16,13 @@ const AI_VERDICT = {
 };
 
 function aiProposeSystem(side) {
-  return `Eres un entrenador de ajedrez fuerte. Piensa la posición por tu cuenta (no tienes motor de análisis) y propón las jugadas que tú jugarías o enseñarías para responder a la pregunta del alumno.
+  return `Eres un entrenador de ajedrez fuerte que hace de tutor. Piensa la posición por tu cuenta (no tienes motor de análisis), como lo haría un buen profesor delante del tablero: mira primero las amenazas, las piezas sueltas y los jaques, y después el plan. Propón las jugadas que tú jugarías o enseñarías para responder a la pregunta del alumno, cada una con su porqué; un motor las comprobará después.
 Responde SÓLO con JSON, sin ningún texto alrededor, con este formato exacto:
 {"lineas":[{"jugadas":"Cf3 Cc6 Ab5","idea":"desarrollar y presionar e5"}]}
 Reglas:
 - De 1 a 3 líneas distintas, cada una de 1 a 6 medias jugadas, empezando por una jugada de las ${side}.
 - Jugadas en notación algebraica española (R rey, D dama, T torre, A alfil, C caballo), separadas por espacios y sin números de jugada.
-- "idea": la idea de la línea en menos de 15 palabras.`;
+- "idea": la idea de la línea y su porqué en menos de 25 palabras.`;
 }
 /* Saca las líneas del JSON aunque venga entre ```json, con texto alrededor o con razonamiento <think> */
 function aiParseProposals(text) {
@@ -37,8 +37,11 @@ function aiParseProposals(text) {
 }
 async function aiPropose(node, ctx, question) {
   const side = node.state.t === 1 ? "blancas" : "negras";
-  const user = `${aiPositionText(node)}${ctx && ctx.text ? "\n\nContexto (datos comprobados):\n" + ctx.text : ""}\n\nPregunta del alumno: ${question}`;
-  return aiParseProposals(await aiCall(aiProposeSystem(side), user));
+  // Consulta interna y rápida: sólo unas pocas líneas en JSON (con un límite de longitud) y del contexto lo más útil
+  // (repertorio y apertura); la explicación larga es la de la respuesta final
+  const ctxShort = ctx && ctx.text ? ctx.text.split("\n").filter(l => /^(Repertorio|Apertura explicada)/.test(l)).map(l => aiClip(l, 400)).join("\n") : "";
+  const user = `${aiPositionText(node)}${ctxShort ? "\n\nContexto (datos comprobados):\n" + ctxShort : ""}\n\nPregunta del alumno: ${question}`;
+  return aiParseProposals(await aiCall(aiProposeSystem(side), user, { maxTokens: 450 }));
 }
 
 /* Valoración desde el punto de vista del que mueve en `state` (0-100) */

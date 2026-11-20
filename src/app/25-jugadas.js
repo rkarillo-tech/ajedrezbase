@@ -315,7 +315,8 @@ function showEngineFor(node, job) {
 }
 const requestLive = debounce(() => {
   const node = cur();
-  if (!settings.live || editor.active || quiz() || Threat.busy || MoveQ.busy || ui.analysing || ExpEval.busy || ui.cpu.thinking || Compare.busy || !Engine.ready) {
+  // Mientras el profesor IA o su comentario de la partida usan el motor, el análisis en vivo espera (si no, se cancelaban mutuamente)
+  if (!settings.live || editor.active || quiz() || Threat.busy || MoveQ.busy || ui.analysing || ExpEval.busy || ui.cpu.thinking || Compare.busy || AI.busy || AIRev.busy || !Engine.ready) {
     Engine.cancel("live");
     return;
   }
