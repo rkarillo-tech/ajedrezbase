@@ -258,6 +258,73 @@ function aiCheckClaims(text, states, me) {
       : `la pieza de ${sqName} es ${p === p.toUpperCase() ? "blanca" : "negra"} (${who(p === p.toUpperCase() ? 1 : -1)})`;
     if (!errs.some(e => e.why === why)) errs.push({ text: all.trim(), why });
   }
+  aiCheckFacts(plain, states, me).forEach(e => { if (!errs.some(x => x.why === e.why)) errs.push(e); });
+  return errs;
+}
+/* 1.55: otras afirmaciones que se pueden comprobar en el tablero sin dudas: amenazas de mate, jaques, piezas sin
+   defensa o clavadas y el enroque. Como con las piezas, basta con que sean ciertas en la posición o en las primeras
+   jugadas de las líneas conocidas; ante la duda, no se marca nada (mejor dejar pasar un error que acusar sin razón) */
+const AI_FACT_PIECE = "(rey|dama|reina|torres?|alfil(?:es)?|caballos?|pe[oó]n(?:es)?)";
+const AI_HANG_RE = new RegExp(`\\b${AI_FACT_PIECE}\\s+(?:(?:blanc[oa]s?|negr[oa]s?|rival|enemig[oa]|contrari[oa])\\s+)?(?:de|en)\\s+([a-h][1-8])\\s+(?:(?:est[aá]|queda|se queda|sigue|ya est[aá])\\s+)?(colgad[oa]|indefens[oa]|sin defensa|sin defender|sin proteger|desprotegid[oa]|clavad[oa])\\b`, "gi");
+const AI_CHECK_RE = /\b(?:(el rey blanco|las blancas)|(el rey negro|las negras)|(tu rey|est[aá]s)|(el rey rival|el rival))\s+(?:est[aá]n?|queda|se queda)\s+en\s+jaque\b/gi;
+const AI_MATE_RE = /\b(amenaza(?:n|s)?(?:\s+con)?\s+(?:dar\s+)?(?:(?:jaque\s+)?mate|un\s+mate)|amenaza\s+de\s+mate|mate\s+en\s+(?:una|1|uno)(?:\s+jugada)?)\b/gi;
+const AI_CASTLE_RE = /(?:\b(las blancas|el rey blanco)|\b(las negras|el rey negro)|\b(tu rey|t[uú]))?\s*\b(ya no puede[ns]?|no puede[ns]?|todav[ií]a puede[ns]?|a[uú]n puede[ns]?|puede[ns]?)\s+enrocar\b/gi;
+const AI_DIRS = { r: [-16, 16, -1, 1], b: [-17, -15, 15, 17] };
+/* ¿Está clavada la pieza de sq? Un alfil, torre o dama rival la ataca y detrás está su rey o una pieza de más valor */
+function aiIsPinned(b, sq) {
+  const p = b[sq], c = Chess.color(p), VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+  for (const [kind, dirs] of Object.entries(AI_DIRS)) for (const d of dirs) {
+    let x = sq + d, front = -1, back = -1;
+    while (!(x & 0x88)) { if (b[x] !== ".") { front = x; break; } x += d; }
+    x = sq - d;
+    while (!(x & 0x88)) { if (b[x] !== ".") { back = x; break; } x -= d; }
+    if (front < 0 || back < 0) continue;
+    const att = b[front], beh = b[back];
+    if (Chess.color(att) !== -c || Chess.color(beh) !== c) continue;
+    const at = att.toLowerCase();
+    if (!(at === "q" || at === kind)) continue;
+    if (VAL[beh.toLowerCase()] > VAL[p.toLowerCase()]) return true;
+  }
+  return false;
+}
+/* ¿Puede el bando c dar mate en una o dos jugadas si le tocara mover? (búsqueda corta del motor interno) */
+function aiMateSoon(s, c) {
+  if (Chess.inCheck(s, -c)) return true;                 // el otro rey ya está en jaque: nada que discutir
+  if (s.t !== c) { if (Chess.inCheck(s, s.t)) return false; s = Object.assign(Chess.clone(s), { t: c, ep: -1 }); }
+  if (!Chess.legal(s).length) return false;
+  try { const r = Chess.search(s, { depth: 4, movetime: 150 }); return r.score >= Chess.MATE - 50; } catch { return true; }
+}
+function aiCheckFacts(plain, states, me) {
+  const errs = [], s0 = states[0], colorName = c => (c === 1 ? "blancas" : "negras");
+  for (const m of plain.matchAll(AI_HANG_RE)) {
+    const [all, word, sqName, what] = m;
+    const type = aiPieceType(word), sq = Chess.sqIdx(sqName);
+    if (!type) continue;
+    const pinned = /clavad/i.test(what);
+    const holds = st => { const p = st.b[sq]; if (p === "." || p.toLowerCase() !== type) return null; return pinned ? aiIsPinned(st.b, sq) : !Chess.attackers(st.b, sq, Chess.color(p)).length; };
+    const res = states.map(holds);
+    if (res.some(x => x === true) || res.every(x => x === null)) continue;   // cierta en alguna, o la pieza no está (eso ya lo dice la otra comprobación)
+    const p = s0.b[sq];
+    const why = pinned ? `${aiNameOf(p).replace(/^(un|una) /, "el ").replace(/^el (dama|torre)/, "la $1")} de ${sqName} no está clavad${aiFem(p.toLowerCase()) ? "a" : "o"}`
+      : `${aiNameOf(p).replace(/^(un|una) /, "el ").replace(/^el (dama|torre)/, "la $1")} de ${sqName} está defendid${aiFem(p.toLowerCase()) ? "a" : "o"}`;
+    if (!errs.some(e => e.why === why)) errs.push({ text: all.trim(), why });
+  }
+  for (const m of plain.matchAll(AI_CHECK_RE)) {
+    const c = m[1] ? 1 : m[2] ? -1 : m[3] ? me : -me;
+    if (states.some(st => Chess.inCheck(st, c))) continue;
+    errs.push({ text: m[0].trim(), why: `el rey de las ${colorName(c)} no está en jaque` });
+  }
+  const mate = plain.match(AI_MATE_RE);
+  if (mate && !states.some(st => aiMateSoon(st, 1) || aiMateSoon(st, -1)))
+    errs.push({ text: mate[0].trim(), why: "no hay ninguna amenaza de mate inmediata: ningún bando puede dar mate en una o dos jugadas" });
+  for (const m of plain.matchAll(AI_CASTLE_RE)) {
+    // De quién habla: el sujeto, o «puedes» (el alumno); con «puede» sin sujeto no se sabe y no se comprueba
+    const c = m[1] ? 1 : m[2] ? -1 : m[3] || /puedes$/i.test(m[4]) ? me : 0, can = !/no puede/i.test(m[4]);
+    if (!c) continue;
+    const rights = (s0.c & (c === 1 ? 3 : 12)) !== 0;
+    if (can === rights) continue;
+    errs.push({ text: m[0].trim(), why: rights ? `las ${colorName(c)} todavía pueden enrocar (no han perdido el derecho)` : `las ${colorName(c)} ya no pueden enrocar (han movido el rey o las torres)` });
+  }
   return errs;
 }
 /* Pregunta a la IA y comprueba lo que dice de las piezas; si se equivoca, le pide una corrección (una vez) */

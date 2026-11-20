@@ -344,6 +344,31 @@ seccion("🏗 Estructuras de peones", () => {
   comprobar(/Carlsbad/.test(t) && /Plan típico de las blancas: .*b2–b4–b5/.test(t) && /Plan típico de las negras/.test(t), "el profesor IA recibe la estructura y el plan de cada bando");
 });
 
+seccion("🤖 Más afirmaciones de la IA, comprobadas en el tablero (1.55)", () => {
+  const r = E.ev(`(() => {
+    const at = pgn => { const g = Pgn.parseGame(pgn, { lang: "en" }).game; let n = g.root; while (n.children.length) n = n.children[0]; return n.state; };
+    const chk = (pgn, txt, me = 1) => aiCheckClaims(txt, [at(pgn)], me).map(e => e.why);
+    return {
+      mateNo: chk("1. e4 e5", "Cuidado: las blancas amenazan mate."),
+      mateSi: chk("1. e4 e5 2. Bc4 Nc6 3. Qh5", "La dama y el alfil amenazan mate en f7.", -1),
+      jaqueSi: chk("1. e4 f5 2. Qh5+", "El rey negro está en jaque.", -1),
+      jaqueNo: chk("1. e4 f5 2. Qh5+", "El rey blanco está en jaque.", -1),
+      colgadoNo: chk("1. e4 e5 2. Nf3 Nc6", "El caballo de c6 está indefenso.", -1),
+      colgadoSi: chk("1. e4 e5 2. Nf3", "El peón de e5 está colgado.", -1),
+      clavadaSi: chk("1. d4 Nf6 2. c4 e6 3. Nc3 Bb4", "Tu caballo de c3 está clavado."),
+      clavadaNo: chk("1. e4 e5 2. Nf3 Nc6 3. Bb5", "El caballo de c6 está clavado.", -1),
+      enroqueNo: chk("1. e4 e5", "Las blancas ya no pueden enrocar."),
+      enroqueNo2: chk("1. e4 e5 2. Ke2 Nc6", "Las blancas todavía pueden enrocar."),
+      enroqueSi: chk("1. e4 e5", "Puedes enrocar pronto.")
+    };
+  })()`);
+  comprobar(r.mateNo.length === 1 && /amenaza de mate/.test(r.mateNo[0]) && !r.mateSi.length, "«amenaza mate» se marca sólo si nadie puede dar mate en una o dos jugadas (sí en 3.Dh5 contra f7)");
+  comprobar(!r.jaqueSi.length && r.jaqueNo.length === 1 && /blancas no está en jaque/.test(r.jaqueNo[0]), "«está en jaque» se comprueba para el rey del que se habla");
+  comprobar(r.colgadoNo.length === 1 && /c6 está defendido/.test(r.colgadoNo[0]) && !r.colgadoSi.length, "una pieza «indefensa» o «colgada» tiene que estar sin defensa");
+  comprobar(!r.clavadaSi.length && r.clavadaNo.length === 1 && /no está clavado/.test(r.clavadaNo[0]), "«clavada»: sí el caballo de c3 en la Nimzoindia; no el de c6 en la Española (lo cubre el peón de d7)");
+  comprobar(r.enroqueNo.length === 1 && /todavía pueden enrocar/.test(r.enroqueNo[0]) && r.enroqueNo2.length === 1 && /ya no pueden enrocar/.test(r.enroqueNo2[0]) && !r.enroqueSi.length, "lo que dice del enroque se comprueba con los derechos de enroque");
+});
+
 seccion("🤖 Lo que la IA dice de las piezas", () => {
   const r = JSON.parse(E.ev(`JSON.stringify((() => {
     const s = Chess.parseFen("r1bqkb1r/pp1n1ppp/2p1pn2/n2p4/2PP4/2N1PN2/PP3PPP/R1BQKB1R w KQkq - 0 7");
