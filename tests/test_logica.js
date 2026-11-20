@@ -332,7 +332,7 @@ seccion("🤖 Lo que la IA dice de las piezas", () => {
   comprobar(r.mal.join(" | ") === "en d7 hay un caballo negro, no un alfil | en a4 no hay ninguna pieza", "detecta «el alfil de d7» (es un caballo) y «el caballo de a4» (no hay nada)");
   comprobar(r.bien === 0, "no marca lo que es cierto (piezas, casillas y colores correctos)");
   comprobar(r.color[0] === "la pieza de d7 es negra (del rival)", "detecta cuando dice «tu» de una pieza del rival");
-  comprobar(r.lista.includes("Piezas de las negras: rey en e8; dama en d8; torres en a8, h8; alfiles en c8, f8; caballos en d7, f6, a5"), "la lista de piezas en palabras que recibe la IA");
+  comprobar(r.lista.includes("Piezas de las negras: rey negro en e8; dama negra en d8; torre negra en a8; torre negra en h8; alfil negro en c8; alfil negro en f8; caballo negro en d7; caballo negro en f6; caballo negro en a5;") && r.lista.includes("peón blanco en c4"), "la lista de piezas que recibe la IA, cada una con su color pegado");
 });
 
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }

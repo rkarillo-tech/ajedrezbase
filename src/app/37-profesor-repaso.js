@@ -44,6 +44,8 @@ async function aiGameReview(box, side) {
   if (!R) { toast("Analiza antes la partida («🤖 Analizar y comentar»)."); return; }
   if (!aiProvider()) { toast("Elige antes un proveedor en ⚙ Ajustes › 🤖 Profesor IA."); openModal("settingsModal"); return; }
   if (AIRev.busy) return;
+  // Sin color indicado, si la partida lleva el nombre del alumno, se comenta desde su lado
+  if (!side) { try { const names = myNameList(), h = game.headers; if (names.length) { if (names.includes(norm(h.White || "").trim())) side = 1; else if (names.includes(norm(h.Black || "").trim())) side = -1; } } catch {} }
   const F = aiReviewFacts(R, side);
   if (!F.moments.length) { box.innerHTML = `<div class="small">No hubo errores importantes${side ? " tuyos" : ""}: no hay momentos clave que comentar. ¡Buena partida!</div>`; return; }
   AIRev.busy = true;

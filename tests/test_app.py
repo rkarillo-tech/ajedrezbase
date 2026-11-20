@@ -2493,21 +2493,24 @@ def prueba_piezas_ia(browser):
         llamadas.append(m)
         u = m["messages"][1]["content"]
         if "SÓLO con JSON" in m["messages"][0]["content"]: txt = '{"lineas":[]}'
-        elif "Tiene errores sobre la posición" in u and estado["corrige"]: txt = "El caballo de d7 defiende e5 y tu caballo de f3 presiona d4."
+        elif "Tiene errores sobre la posición" in u and estado["corrige"]: txt = "Tu caballo de d7 defiende e5 y el caballo blanco de f3 presiona d4."
         else: txt = "Cuidado: el alfil de d7 es peligroso y tu caballo de a4 está amenazado."
         r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
     ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
     pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false }); renderAiBox();"
-                "const g = Pgn.parseGame('1. d4 d5 2. c4 c6 3. Nf3 Nf6 4. Nc3 e6 5. e3 Nbd7', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+                "const g = Pgn.parseGame('1. d4 d5 2. c4 c6 3. Nf3 Nf6 4. Nc3 e6 5. e3 Nbd7', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() }); ui.flipped = true; render()")
     pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
     pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
     primera = llamadas[0]["messages"][1]["content"]
-    comprobar("Piezas de las negras:" in primera and "caballos en d7, f6" in primera, "la IA recibe la lista de piezas en palabras (no sólo la FEN)")
+    comprobar("caballo negro en d7; caballo negro en f6" in primera and primera.index("Piezas de las blancas") < primera.index("FEN"), "la IA recibe la lista de piezas en palabras, cada una con su color, antes que la FEN")
+    comprobar("El alumno juega con las negras" in primera and "le toca al rival del alumno" in primera, "y se le dice con qué color juega el alumno (aquí, las negras: el tablero girado) y a quién le toca")
+    comprobar(pg.evaluate("game.headers.White = 'Yo Mismo'; settings.myNames = 'Yo Mismo'; aiStudentSide(cur())") == 1 and pg.evaluate("settings.myNames = ''; aiStudentSide(cur())") == -1,
+              "si la partida lleva tu nombre, ése es tu color; si no, el del lado del tablero que tienes abajo")
     comprobar(len(llamadas) == 2 and "en d7 hay un caballo negro, no un alfil" in llamadas[1]["messages"][1]["content"] and "en a4 no hay ninguna pieza" in llamadas[1]["messages"][1]["content"],
               "si se equivoca sobre las piezas («el alfil de d7», «tu caballo de a4»), se le pide que corrija diciéndole qué hay de verdad")
-    comprobar("caballo de d7 defiende" in pg.inner_text("#aiAnswer .ai-text") and pg.locator("#aiAnswer .ai-unverified").count() == 0, "y se muestra su respuesta corregida")
+    comprobar("caballo de d7 defiende" in pg.inner_text("#aiAnswer .ai-text") and "caballo blanco de f3" in pg.inner_text("#aiAnswer .ai-text") and pg.locator("#aiAnswer .ai-unverified").count() == 0, "y se muestra su respuesta corregida")
     estado["corrige"] = False; llamadas.clear()
     pg.click("#aiAskBtn")
     pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
