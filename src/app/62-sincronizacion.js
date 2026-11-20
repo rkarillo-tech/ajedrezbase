@@ -74,7 +74,15 @@ const SYNC_LS = {
   },
   ajedrezCpuAdaptativa: { obj: true, merge: (a, b) => ((b.games || []).length > (a.games || []).length ? b : a) },
   ajedrezVisRecords: { obj: true, merge: maxNums },
-  ajedrezContrarreloj: { obj: true, merge: maxNums }
+  ajedrezContrarreloj: { obj: true, merge: maxNums },
+  // Memoria del entrenador: las clases se juntan (sin repetir) y, de cada posición para repetir, gana lo más reciente
+  ajedrezEntrenador: { obj: true, merge: (a, b) => {
+    const ses = new Map();
+    (a.sessions || []).concat(b.sessions || []).forEach(x => ses.set(x.t, x));
+    const retry = Object.assign({}, a.retry || {});
+    for (const [k, r] of Object.entries(b.retry || {})) if (!retry[k] || (r.t || 0) > (retry[k].t || 0)) retry[k] = r;
+    return { sessions: [...ses.values()].sort((x, y) => x.t - y.t).slice(-80), retry };
+  } }
 };
 
 /* --- Lo que viaja: una foto completa de este dispositivo --- */

@@ -2853,6 +2853,46 @@ def prueba_comentar_repertorio(browser):
     ctx.close()
 
 
+def prueba_memoria_entrenador(browser):
+    print("1.56: el entrenador recuerda tus clases, repite lo fallado y propone una clase corta en «Hoy»")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true")
+    pg.click('.tab-btn[data-tab="tools"]')
+    comprobar("Clase corta del día" in pg.inner_text("#todayBox") and pg.is_visible("#coachDailyBtn"), "«Hoy» propone la clase corta del día con el entrenador")
+    pg.click("#coachDailyBtn")
+    pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
+    comprobar(pg.evaluate("Coach.queue.length") == 4, "la clase del día tiene 4 posiciones")
+    pids = []
+    for i in range(4):
+        pids.append(pg.evaluate("Coach.ex.pid || ''"))
+        pg.click("#coachBox [data-co=skip]")
+        pg.wait_for_function(f"Coach.state === 'ask' || Coach.state === 'summary'", timeout=30000)
+    txt = pg.inner_text("#coachBox")
+    comprobar("volverán dentro de 3 días" in txt, "el resumen dice que lo fallado volverá dentro de 3 días")
+    mem = pg.evaluate("(() => { const m = LS.get('ajedrezEntrenador', {}); return { ses: (m.sessions || []).length, retry: Object.values(m.retry || {}).filter(r => !r.done).length }; })()")
+    comprobar(mem["ses"] == 1 and mem["retry"] == 4, "la clase queda en la memoria del entrenador, con sus 4 posiciones para repetir")
+    pg.click("#coachBox [data-co=end]")
+    comprobar("hecha" in pg.inner_text("#todayBox"), "en «Hoy» la clase del día aparece como hecha")
+    # Cuatro días después: tocan las posiciones falladas
+    pg.evaluate("(() => { const m = LS.get('ajedrezEntrenador'); for (const r of Object.values(m.retry)) r.due = Date.now() - 1000; LS.set('ajedrezEntrenador', m); })()")
+    pg.click('#trainMenu [data-train-open="coach"]') if pg.is_visible('#trainMenu [data-train-open="coach"]') else entrenar(pg, "coach")
+    pg.evaluate("coachRenderStart()")
+    comprobar("Hoy repetimos 4 posiciones" in pg.inner_text("#coachDiag") and "Lo que recuerdo de tus clases" in pg.inner_text("#coachDiag"), "el entrenador recuerda la clase anterior y avisa de lo que toca repetir")
+    pg.select_option("#coachLen", "4"); pg.click("#coachStartBtn")
+    pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
+    q = pg.evaluate("Coach.queue.map(x => ({ again: !!x.again, pid: x.pid || '' }))")
+    comprobar(q[0]["again"] and q[1]["again"] and q[0]["pid"] in pids and q[1]["pid"] in pids, "la nueva clase empieza por posiciones que fallaste en la anterior")
+    pg.evaluate("playMove(Chess.moveFromUci(Coach.ex.node.state, Coach.ex.best), 'user')")
+    pg.wait_for_function("Coach.state === 'solved'", timeout=30000)
+    pid0 = q[0]["pid"]
+    comprobar(pg.evaluate(f"!!LS.get('ajedrezEntrenador').retry['p:{pid0}'].done"), "al acertarla a la primera sale de la lista de repetir")
+    pg.click("#coachBox [data-co=end]") if pg.is_visible("#coachBox [data-co=end]") else pg.evaluate("coachEnd()")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_salir_del_entrenamiento(browser):
     print("Salir de cada entrenamiento con los botones de la sesión")
     ctx = contexto(browser)
@@ -3340,7 +3380,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

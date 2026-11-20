@@ -369,6 +369,53 @@ seccion("🤖 Más afirmaciones de la IA, comprobadas en el tablero (1.55)", () 
   comprobar(r.enroqueNo.length === 1 && /todavía pueden enrocar/.test(r.enroqueNo[0]) && r.enroqueNo2.length === 1 && /ya no pueden enrocar/.test(r.enroqueNo2[0]) && !r.enroqueSi.length, "lo que dice del enroque se comprueba con los derechos de enroque");
 });
 
+seccion("🧑‍🏫 Memoria del entrenador entre clases (1.56)", () => {
+  E.localStorage.removeItem("ajedrezEntrenador");
+  const r = E.ev(`(() => {
+    const P = PUZZLES.find(p => puzzleThemeKeys(p).includes("fork")) || PUZZLES[0];
+    const Q = PUZZLES.find(p => p !== P && puzzleThemeKeys(p).includes("fork")) || PUZZLES[1];
+    const ex = p => ({ kind: "puzzle", pid: p.id, p, theme: puzzleThemeKeys(p)[0] });
+    const out = {};
+    coachMemRecord(ex(P), false);
+    out.focusP = coachFocusOf(ex(P));
+    out.dueHoy = coachMemSummary().due.length;
+    out.dueLuego = coachMemSummary(Date.now() + 3 * 864e5 + 1000).due.length;
+    // Una clase con 5 posiciones de táctica de material: sólo 1 a la primera
+    Coach.focus = { key: "material" };
+    Coach.results = [true, false, false, false, false].map(ok => ({ ex: ex(P), ok, solved: true }));
+    coachMemSession();
+    const M = coachMemSummary();
+    out.sesiones = M.sessions;
+    out.debil = M.weak[0] && M.weak[0].k;
+    out.pct = M.weak[0] && M.weak[0].pct;
+    const f = coachChooseFocus({ byTheme: { mateMissed: 9 }, weak: [], mem: M });
+    out.elige = f.key; out.porque = f.why;
+    // A los 3 días, la clase empieza por lo que toca repetir
+    const M2 = coachMemSummary(Date.now() + 4 * 864e5);
+    const q = coachBuildQueue({ drills: [], mem: M2 }, { key: "material" }, 4);
+    out.cola = q.map(x => (x.again ? "R:" : "") + x.kind + (x.pid ? ":" + x.pid : ""));
+    out.pid = P.id;
+    coachMemRecord(ex(P), true);   // acertada a la primera: sale de la lista
+    out.trasAcertar = coachMemSummary(Date.now() + 4 * 864e5).retry.length;
+    out.marcada = !!coachMem().retry["p:" + P.id].done;
+    // Sincronización: se juntan las clases y gana lo más reciente de cada posición
+    const a = { sessions: [{ t: 1, n: 4 }, { t: 2, n: 4 }], retry: { "p:x": { due: 5, t: 10, done: true } } };
+    const b = { sessions: [{ t: 2, n: 4 }, { t: 3, n: 6 }], retry: { "p:x": { due: 9, t: 5 }, "p:y": { due: 7, t: 6 } } };
+    const m = SYNC_LS.ajedrezEntrenador.merge(a, b);
+    out.sync = { ses: m.sessions.map(x => x.t), x: !!m.retry["p:x"].done, y: !!m.retry["p:y"] };
+    out.texto = coachProfileText({ games: 0, byTheme: {}, byPhase: {}, weak: [], rating: 1200, rated: false, mem: coachMemSummary() }, { key: "material", why: "x" });
+    return out;
+  })()`);
+  comprobar(r.focusP === "material" && r.dueHoy === 0 && r.dueLuego === 1, "una posición fallada vuelve a la clase al cabo de 3 días (y se cuenta en su tema)");
+  comprobar(r.sesiones === 1 && r.debil === "material" && r.pct === 20, "cada clase deja su resumen y recuerda el tema que cuesta (20 % a la primera)");
+  comprobar(r.elige === "material" && /últimas clases/.test(r.porque), "el entrenador elige el tema que más cuesta en las clases, antes que el error de las partidas");
+  comprobar(r.cola[0] === "R:puzzle:" + r.pid && r.cola.length === 4, "la clase empieza por las posiciones que toca repetir");
+  comprobar(r.trasAcertar === 0 && r.marcada, "al acertarla a la primera sale de la lista (marcada, para que la sincronización no la resucite)");
+  comprobar(igual(r.sync, { ses: [1, 2, 3], x: true, y: true }), "al sincronizar se juntan las clases sin repetir y gana lo más reciente de cada posición");
+  comprobar(/Historial de clases con el entrenador: 1/.test(r.texto) && /Acierto a la primera por tema/.test(r.texto), "la IA recibe el historial de clases");
+  E.localStorage.removeItem("ajedrezEntrenador");
+});
+
 seccion("🤖 Lo que la IA dice de las piezas", () => {
   const r = JSON.parse(E.ev(`JSON.stringify((() => {
     const s = Chess.parseFen("r1bqkb1r/pp1n1ppp/2p1pn2/n2p4/2PP4/2N1PN2/PP3PPP/R1BQKB1R w KQkq - 0 7");

@@ -26,7 +26,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 
 - ✅ **C1** (1.54.0). **Planes por estructura de peones.** Reconocer la estructura (Carlsbad, peón aislado de dama, Maroczy, cadenas de la Francesa, India de Rey…). Explicar el plan típico de cada bando y enseñar partidas modelo con el índice de posiciones. Sin conexión, y como contexto para el profesor IA.
   Lo que ya hay: `63-indice.js` calcula una firma de la estructura de peones y `30-analisis.js` detecta peones aislados. Falta el catálogo de estructuras con sus planes.
-- **C2. Entrenador con memoria entre sesiones.** Recordar qué temas cuestan de una clase a otra, no solo con las partidas analizadas. Proponer una sesión corta diaria desde «📅 Hoy» y repetir los ejercicios fallados al cabo de unos días.
+- ✅ **C2** (1.56.0). **Entrenador con memoria entre sesiones.** Recordar qué temas cuestan de una clase a otra, no solo con las partidas analizadas. Proponer una sesión corta diaria desde «📅 Hoy» y repetir los ejercicios fallados al cabo de unos días.
   Lo que ya hay: `77-entrenador-ia.js` usa los temas flojos y los errores, pero no guarda un historial propio. El repaso espaciado de otros ejercicios se puede reutilizar.
 - ✅ **C3** (1.55.0). **Comentar tu repertorio.** El profesor IA comenta tus líneas de repertorio jugada a jugada: la idea de cada una y qué hacer si el rival se sale. Stockfish revisa antes las jugadas dudosas y los comentarios se guardan en el PGN del repertorio.
   Lo que ya hay: «🩺 Revisar» (jugadas dudosas) y «💾 Añadir como comentario» (1.52.0).
@@ -47,5 +47,5 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 2. ✅ 1.53.0: B1, B2 y B3.
 3. ✅ 1.54.0: C1.
 4. ✅ 1.55.0: C3 y A3.
-5. 1.56.0: C2.
+5. ✅ 1.56.0: C2.
 6. Después: B4 a B6, C4 y C5, y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
