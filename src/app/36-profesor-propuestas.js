@@ -216,14 +216,18 @@ const AI_PIECE_NAME = { k: ["un rey", "rey", "rey"], q: ["una dama", "dama", "da
 const aiFem = t => t === "q" || t === "r";
 const aiNameOf = p => { const t = p.toLowerCase(), white = p !== t; return `${AI_PIECE_NAME[t][0]} ${white ? (aiFem(t) ? "blanca" : "blanco") : aiFem(t) ? "negra" : "negro"}`; };
 const aiPieceType = word => AI_PIECE_WORD[norm(word).replace(/^peones$/, "peon").replace(/^alfiles$/, "alfil").replace(/s$/, "")];
-/* La lista de piezas en palabras, para que la IA no tenga que leer la FEN */
+/* La lista de piezas en palabras, cada una con su color pegado («rey blanco en e1»), para que la IA no tenga que leer
+   la FEN ni arrastrar el color de un título: a los modelos pequeños les cuesta mucho menos */
 function aiPiecesText(s) {
   const out = [];
   for (const [color, up] of [["blancas", true], ["negras", false]]) {
-    const by = { k: [], q: [], r: [], b: [], n: [], p: [] };
-    for (let i = 0; i < 128; i++) { if (i & 0x88) { i += 7; continue; } const p = s.b[i]; if (p !== "." && (p === p.toUpperCase()) === up) by[p.toLowerCase()].push(Chess.sqName(i)); }
-    const part = "kqrbnp".split("").filter(t => by[t].length).map(t => `${AI_PIECE_NAME[t][by[t].length === 1 ? 1 : 2]} en ${by[t].join(", ")}`);
-    out.push(`Piezas de las ${color}: ${part.join("; ")}.`);
+    const items = [];
+    for (const t of "kqrbnp") for (let i = 0; i < 128; i++) {
+      if (i & 0x88) { i += 7; continue; }
+      const p = s.b[i];
+      if (p !== "." && (p === p.toUpperCase()) === up && p.toLowerCase() === t) items.push(`${aiNameOf(p).replace(/^(un|una) /, "")} en ${Chess.sqName(i)}`);
+    }
+    out.push(`Piezas de las ${color}: ${items.join("; ")}.`);
   }
   return out.join("\n");
 }

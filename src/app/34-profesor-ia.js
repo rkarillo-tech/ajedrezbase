@@ -18,9 +18,22 @@ const aiProvider = () => (AI_PROVIDERS[settings.aiProvider] && settings.aiProvid
 const aiModel = () => (settings.aiModel || "").trim() || (AI_PROVIDERS[aiProvider()] || {}).model || "";
 
 /* Lo que se le da a la IA: hechos calculados aquí, nunca inventados por ella */
+/* Con qué color juega el alumno (para que «tú / tus piezas» sea siempre lo mismo): en la partida contra la CPU, su
+   color; en el entrenador, el bando que mueve; si la partida lleva su nombre, ese color; si no, el lado del tablero
+   que tiene abajo. Antes no se decía y la IA suponía que el alumno era quien movía, mezclando blancas y negras */
+function aiStudentSide(node) {
+  if (Coach.active && Coach.ex) return Coach.ex.node.state.t;
+  if (ui.cpu.on && !ui.cpu.two) return -ui.cpu.side;
+  try {
+    const names = myNameList(), h = game.headers;
+    if (names.length) { const w = norm(h.White || "").trim(), b = norm(h.Black || "").trim(); if (names.includes(w)) return 1; if (names.includes(b)) return -1; }
+  } catch {}
+  return ui.flipped ? -1 : 1;
+}
 /* La posición sin nada del motor: lo que ve la IA cuando propone sus propias jugadas */
 function aiPositionText(node) {
-  const s = node.state, me = s.t;
+  const s = node.state, me = s.t, student = aiStudentSide(node);
+  const col = c => (c === 1 ? "blancas" : "negras");
   const side = me === 1 ? "blancas" : "negras";
   const path = Pgn.pathTo(node).slice(1);
   const moves = path.length ? lineText(game.root.state, path.map(n => n.uci), 400) : "(ninguna: posición inicial de la lección o de la partida)";
@@ -29,13 +42,14 @@ function aiPositionText(node) {
   const chances = piecesInDanger(s, -me).map(x => `${PIECE_ES[s.b[x.sq].toLowerCase()]} de ${Chess.sqName(x.sq)} (${x.why})`);
   const st = gameStatus(node);
   return [
-    `Posición (FEN): ${Chess.toFen(s)}`,
+    `El alumno juega con las ${col(student)}: cuando le hables de «tú», «tus piezas» o «tu alfil», son siempre las ${col(student)}; las ${col(-student)} son las del rival.`,
     aiPiecesText(s),
-    `Juegan las ${side}.${st.over ? " " + st.text + "." : Chess.inCheck(s) ? " Están en jaque." : ""}`,
+    `Turno: mueven las ${side}${me === student ? " (le toca al alumno)" : " (le toca al rival del alumno)"}.${st.over ? " " + st.text + "." : Chess.inCheck(s) ? ` Las ${side} están en jaque.` : ""}`,
     `Jugadas hasta aquí: ${moves}`,
     eco ? `Apertura: ${eco.entry.eco} ${eco.entry.name}.` : "",
-    danger.length ? `Piezas de las ${side} en peligro: ${danger.join("; ")}.` : `Ninguna pieza de las ${side} está en peligro inmediato.`,
-    chances.length ? `Piezas del rival que se pueden ganar: ${chances.join("; ")}.` : ""
+    danger.length ? `Piezas de las ${side} (el bando que mueve) en peligro: ${danger.join("; ")}.` : `Ninguna pieza de las ${side} (el bando que mueve) está en peligro inmediato.`,
+    chances.length ? `Piezas de las ${col(-me)} que se pueden ganar: ${chances.join("; ")}.` : "",
+    `FEN (referencia técnica; para saber qué pieza hay en cada casilla usa la lista de piezas de arriba): ${Chess.toFen(s)}`
   ].filter(Boolean).join("\n");
 }
 async function aiFacts(node) {
@@ -207,7 +221,7 @@ async function aiAsk(question) {
     status(`⏳ Preguntando a ${AI_PROVIDERS[aiProvider()].name.split(" (")[0]}…`);
     // Lo que diga de las piezas se comprueba en el tablero (y en las primeras jugadas de las líneas conocidas)
     const states = [node.state, ...facts.lines.flatMap(l => aiLineStates(node.state, l.pv)), ...checked.filter(p => p.ucis && p.ucis.length).flatMap(p => aiLineStates(p.state0, p.ucis))];
-    const { text, errs: claimErrs } = await aiCallChecked(aiSystem(), `${facts.text}${propText ? "\n\n" + propText : ""}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}\n\nPregunta del alumno: ${question}`, states, node.state.t);
+    const { text, errs: claimErrs } = await aiCallChecked(aiSystem(), `${facts.text}${propText ? "\n\n" + propText : ""}${ctx.text ? "\n\nContexto (datos comprobados, no del motor):\n" + ctx.text : ""}\n\nPregunta del alumno: ${question}`, states, aiStudentSide(node));
     if (token !== AI.token) return;
     // Lo que cuenta como comprobado: el motor, las propuestas legales con su refutación, el contexto y la partida
     const allowed = aiAllowedMoves([facts.text, ctx.text, ...checked.filter(p => p.status !== "ilegal").map(p => `${p.text} ${p.refutation ? p.refutation.text : ""}`)]);
