@@ -71,15 +71,31 @@ function renderToday() {
   }
   box.innerHTML = `<div class="today-head"><span class="streak" title="Días seguidos entrenando">🔥 <b>${st.cur}</b> día${st.cur === 1 ? "" : "s"} seguido${st.cur === 1 ? "" : "s"}</span><span class="small">Mejor racha: ${st.best} · ${st.days} día${st.days === 1 ? "" : "s"} entrenando</span></div>
     <div class="goals">${goals.map(g => `<div class="goal${g.ok ? " ok" : ""}"><span>${g.ok ? "✔ " : ""}${esc(g.txt)}</span><div class="meter"><div style="width:${Math.round(g.frac * 100)}%"></div></div></div>`).join("")}</div>
+    ${coachDailyHtml(today)}
     <div class="controls"><button id="todayNextBtn" class="primary">${all ? "🏆 Objetivo cumplido · seguir entrenando ▶" : "▶ Siguiente tarea de hoy"}</button>
       <label class="small">Problemas al día: <select id="goalPuzzlesSel" style="width:auto">${[3, 5, 10, 15, 20].map(n => `<option${n === gP ? " selected" : ""}>${n}</option>`).join("")}</select></label></div>
     <div class="cal" aria-label="Actividad de las últimas semanas">${cells.join("")}</div>
     <div class="small cal-legend">Últimas 16 semanas · <i class="cal-d l0"></i> nada <i class="cal-d l1"></i><i class="cal-d l2"></i><i class="cal-d l3"></i><i class="cal-d l4"></i> mucho</div>`;
   $("todayNextBtn").onclick = nextTask;
+  if ($("coachDailyBtn")) $("coachDailyBtn").onclick = coachDaily;
   $("goalPuzzlesSel").onchange = e => { settings.goalPuzzles = +e.target.value; saveSettings(); renderToday(); };
   const badge = $("streakBadge");
   if (badge) { badge.textContent = st.cur ? `🔥${st.cur}` : ""; badge.hidden = !st.cur; }
   renderWeek();
+}
+
+/* 🧑‍🏫 La clase corta del día (1.56): 4 posiciones elegidas por el entrenador, con lo que toca repetir de otras clases */
+const COACH_DAILY_N = 4;
+function coachDailyHtml(today) {
+  let M = null;
+  try { M = coachMemSummary(); } catch { return ""; }
+  const done = (today.coach || 0) >= 1;
+  return `<div class="coach-daily${done ? " ok" : ""}"><span>${done ? "✔ " : ""}🧑‍🏫 <b>Clase corta del día</b> (${COACH_DAILY_N} posiciones, ≈ 5 min)${done ? ": hecha" : ""}${M.due.length ? ` · 🔁 ${M.due.length} para repetir de otras clases` : M.weak[0] ? ` · te cuesta «${esc(COACH_FOCUS[M.weak[0].k].name)}»` : ""}</span>
+    <button id="coachDailyBtn" class="sm-btn${done ? "" : " primary"}" type="button" title="Una clase corta con el entrenador: lo que te cuesta y lo que fallaste en clases anteriores">${done ? "Otra" : "▶ Empezar"}</button></div>`;
+}
+function coachDaily() {
+  if (typeof openTrainSection === "function") { switchTab("tools"); openTrainSection("coach"); }
+  coachStart({ n: COACH_DAILY_N });
 }
 
 /* ---------- 26w. Tu semana: resumen de los últimos 7 días y qué practicar ----------
@@ -185,6 +201,7 @@ function nextTask() {
   }
   if (due.cards) { startCards(false); return; }
   if (due.drills) { startDrills("due"); return; }
+  if (!(today.coach >= 1) && coachMemSummary().due.length) { coachDaily(); return; }
   const nl = nextLesson();
   if (nl && !(today.lesson >= 1)) { switchTab("courses"); openLesson(nl.course.id, nl.i); toast(`📘 Lección del día: ${nl.l.title}`); return; }
   $("puzzleCount").value = "10";
