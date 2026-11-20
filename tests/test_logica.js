@@ -320,6 +320,30 @@ seccion("Código: sin funciones con el mismo nombre", () => {
   comprobar(!rep.length, "cada función de primer nivel tiene un nombre único" + (rep.length ? ": " + rep.join("; ") : ""));
 });
 
+seccion("🏗 Estructuras de peones", () => {
+  const casos = [
+    ["", 0, "posición inicial"],
+    ["1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. cxd5 exd5 5. Bg5 c6 6. e3", "carlsbad", "Gambito de Dama con cambio: Carlsbad de las blancas"],
+    ["1. d4 d5 2. c4 e6 3. Nc3 c5 4. cxd5 exd5 5. Nf3 Nc6 6. g3 Nf6 7. Bg2 Be7 8. O-O O-O 9. dxc5 Bxc5", "pad", "Tarrasch: peón aislado de las negras"],
+    ["1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 g6 5. c4", "maroczy", "Siciliana acelerada: bind de Maróczy"],
+    ["1. e4 e6 2. d4 d5 3. e5", "francesa", "Francesa, variante del avance"],
+    ["1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. Nf3 O-O 6. Be2 e5 7. O-O Nc6 8. d5", "indiarey", "India de Rey con d5"],
+    ["1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6", "benoni", "Benoni moderna"],
+    ["1. c4 c5 2. Nf3 Nf6 3. Nc3 e6 4. g3 b6 5. Bg2 Bb7 6. O-O Be7 7. d4 cxd4 8. Qxd4 d6 9. e4 a6", "erizo", "erizo de las negras (antes que el Maróczy)"],
+    ["1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be2 e5", "boleslavsky", "Najdorf con …e5: Boleslavsky"],
+    ["1. e4 c5 2. Nf3 e6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 d6", "scheveningen", "Scheveningen"],
+    ["1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 d5 5. Nf3 c6", "stonewall", "Holandesa Stonewall de las negras"],
+    ["1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. a3 Bxc3+ 5. bxc3", "doblados", "Nimzoindia Sämisch: peones doblados en c"]
+  ];
+  const r = E.ev(`(${JSON.stringify(casos)}).map(([pgn, , ]) => { const g = Pgn.parseGame(pgn, { lang: "en" }).game; let n = g.root; while (n.children.length) n = n.children[0];
+      const c = pawnStruct(n.state.b), i = structInfo(c); return i ? { id: i.id, black: i.black, short: i.short, about: i.about } : null; })`);
+  casos.forEach(([, id, msg], k) => comprobar(id ? r[k] && r[k].id === id : r[k] === null, `${msg}${r[k] ? ` (${r[k].id}, ${r[k].black ? "negras" : "blancas"})` : ""}`));
+  comprobar(r[2].black && r[2].short === "peón aislado en d5" && r[10].black && r[1].about.startsWith("Las blancas"),
+    "las casillas y los colores se giran cuando la estructura es de las negras");
+  const t = E.ev(`(() => { const g = Pgn.parseGame("1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. cxd5 exd5 5. Bg5 c6 6. e3", { lang: "en" }).game; let n = g.root; while (n.children.length) n = n.children[0]; return structText(n); })()`);
+  comprobar(/Carlsbad/.test(t) && /Plan típico de las blancas: .*b2–b4–b5/.test(t) && /Plan típico de las negras/.test(t), "el profesor IA recibe la estructura y el plan de cada bando");
+});
+
 seccion("🤖 Lo que la IA dice de las piezas", () => {
   const r = JSON.parse(E.ev(`JSON.stringify((() => {
     const s = Chess.parseFen("r1bqkb1r/pp1n1ppp/2p1pn2/n2p4/2PP4/2N1PN2/PP3PPP/R1BQKB1R w KQkq - 0 7");

@@ -389,6 +389,7 @@ function render() {
   renderStatus();
   renderMoves();
   renderComment();
+  renderStructure();
   renderEco();
   renderEvalChart();
   if (!editor.active) {

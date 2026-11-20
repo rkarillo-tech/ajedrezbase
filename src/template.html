@@ -629,6 +629,16 @@ details > summary { cursor: pointer; color: var(--muted); font-size: .84rem; mar
 .import-details { margin: 8px 0 4px; background: var(--deep); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px 6px; }
 .import-details > summary { font-weight: 700; color: var(--text); cursor: pointer; padding: 4px 0; }
 .study-comment { margin-top: 6px; }
+/* 1.54: estructura de peones */
+.struct-box { margin: 8px 0 4px; background: var(--deep); border: 1px solid var(--border); border-left: 3px solid var(--info); border-radius: 8px; padding: 4px 10px 6px; }
+.struct-box[hidden] { display: none; }
+.struct-box > summary { cursor: pointer; padding: 4px 0; color: var(--text); }
+.struct-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: .86rem; }
+.struct-plans ul { margin: 4px 0 6px; padding-left: 18px; }
+.struct-plans li { margin: 2px 0; }
+@media (max-width: 640px) { .struct-plans { grid-template-columns: 1fr; } }
+.struct-models { margin-top: 4px; }
+.struct-model { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; border-top: 1px dashed var(--border); font-size: .85rem; }
 .rescue-box { margin-top: 6px; padding: 6px 8px; border-left: 3px solid var(--warn); background: var(--panel2); border-radius: 4px; font-size: .8rem; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 .rescue-box[hidden] { display: none; }
 .rescue-box > span { flex: 1 1 100%; }
@@ -1267,6 +1277,10 @@ body.board-full #exportControls { order: 10; }
           <button id="explainMoveBtn" class="sm-btn info-btn" title="El motor analiza la jugada y redacta un comentario en español">✍ Redactar comentario con el motor</button>
         </div>
       </div>
+      <details id="structBox" class="struct-box" hidden>
+        <summary>🏗 Estructura de peones: <b id="structName"></b></summary>
+        <div id="structBody"></div>
+      </details>
       <div id="reportBox" class="report">
         <table>
           <thead><tr><th></th><th id="repWName">Blancas</th><th id="repBName">Negras</th></tr></thead>

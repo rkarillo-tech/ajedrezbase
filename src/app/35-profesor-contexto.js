@@ -121,7 +121,8 @@ async function aiModelGames(node) {
   const usePawns = ply >= 12 && pk !== "|";   // en la apertura la estructura de peones se repite demasiado
   const sig = `${key}|${settings.aiCtxGames}|${Lib.games.size}|${Coll.games.length}|${ui.libId}`;
   if (AICtx.cache.has(sig)) return AICtx.cache.get(sig);
-  const exact = [], pawns = [];
+  const exact = [], pawns = [], structs = [];
+  const SC = ply >= 12 ? pawnStruct(s.b) : 0;
   const item = (src, h, kind, label, after, comment, path) => Object.assign({
     kind, h, path,
     title: src.course ? `${(COURSES.find(c => c.id === src.course) || {}).name || "Curso"} · ${h.Title || "Lección"}` : `${h.White || "?"} – ${h.Black || "?"}`,
@@ -136,11 +137,13 @@ async function aiModelGames(node) {
       let at = -1, kind = "";
       for (let i = 0; i < e.k.length; i++) if (e.k[i] === H) { at = i; kind = "exact"; break; }
       if (at < 0 && P != null && pawns.length < 6) for (let i = 10; i < e.pw.length; i++) if (e.pw[i] === P) { at = i; kind = "pawns"; break; }
+      if (at < 0 && SC && e.st && structs.length < 6) for (let i = 10; i < e.st.length; i++) if (e.st[i] === SC) { at = i; kind = "struct"; break; }
       if (at < 0) continue;
       const u = gidxUcis(e), st = gidxStateAt(e, at);
       const it = item(src, gidxHeaders(src), kind, gidxLabel(e, at), lineText(st, u.slice(at, at + 10), 10), "", u.slice(0, at));
       it.afterLine = { state: st, ucis: u.slice(at, at + 10) };
-      (kind === "exact" ? exact : pawns).push(it);
+      if (kind === "struct") it.sc = SC;
+      (kind === "exact" ? exact : kind === "pawns" ? pawns : structs).push(it);
       if (exact.length >= 12) break;
     }
   }
@@ -167,6 +170,7 @@ async function aiModelGames(node) {
   const rank = x => (x.course ? 0 : 1) + (x.comment ? 1 : 0) + (x.h.WhiteElo ? 1 : 0);
   const games = exact.sort((a, b) => rank(b) - rank(a)).slice(0, 5);
   if (games.length < 3) games.push(...pawns.slice(0, 3 - games.length));
+  if (games.length < 3) games.push(...structs.slice(0, 3 - games.length));
   const out = { games, partial: false };
   AICtx.cache.set(sig, out);
   if (AICtx.cache.size > 60) AICtx.cache.delete(AICtx.cache.keys().next().value);
@@ -177,7 +181,7 @@ function aiModelGamesText(mg) {
   const de = w => (w.startsWith("el ") ? "del " + w.slice(3) : "de " + w);
   return "Partidas modelo (" + [...new Set(mg.games.map(g => de(g.where)))].join(", ") + "):\n" + mg.games.map((g, i) => {
     const h = g.h, meta = [h.Result && h.Result !== "*" ? h.Result : "", (h.Date || "").slice(0, 4).replace(/\?+/, ""), h.Event && !["?", "Estudio"].includes(h.Event) && !g.course ? h.Event : ""].filter(Boolean).join(", ");
-    return `${i + 1}. ${g.title}${meta ? ` (${meta})` : ""}, ${de(g.where)}: ${g.kind === "exact" ? `llega a esta misma posición tras ${g.label}` : `misma estructura de peones (otra posición), tras ${g.label}`}.` +
+    return `${i + 1}. ${g.title}${meta ? ` (${meta})` : ""}, ${de(g.where)}: ${g.kind === "exact" ? `llega a esta misma posición tras ${g.label}` : g.kind === "struct" ? `el mismo tipo de estructura (${(structInfo(g.sc) || {}).name || "de peones"}), tras ${g.label}` : `misma estructura de peones (otra posición), tras ${g.label}`}.` +
       (g.after ? ` Después se jugó: ${g.after}.` : "") + (g.comment ? ` Comentario: «${g.comment}».` : "");
   }).join("\n");
 }
@@ -188,6 +192,8 @@ async function aiContext(node) {
   let games = [];
   const oa = settings.aiCtxModels ? openingArticleText(node) : "";
   if (oa) { parts.push(oa); sources.push("📖 apertura explicada"); }
+  const stx = structText(node);   // sin conexión y comprobado: se deduce de los peones del tablero
+  if (stx) { parts.push(stx); sources.push("🏗 estructura: " + structOfNode(node).name); }
   if (settings.aiCtxRep) {
     const r = aiRepertoireFacts(node);
     if (r) { parts.push("Repertorio: " + r.text); if (r.source) sources.push(r.source); }

@@ -19,11 +19,11 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 - **B5**. Ajustes por categorías: Apariencia, Tablero, Motor, IA, Datos y sincronización, Accesibilidad y Avanzado. Tiempo del motor como «Rápido / Equilibrado / Profundo»; los milisegundos, en Avanzado.
 - **B6**. Tablero manejable con teclado: las casillas no son enfocables. Moverse con flechas, Enter para elegir origen y destino, Esc para cancelar.
 
-- **B7**. El motor sigue debajo del tablero, en la columna izquierda. Con 900 px de alto solo se ve su barra, no las líneas. Hay dos opciones: llevarlo también a la columna derecha, encima de las jugadas, o compactar la navegación para que suba.
+- **B7**. Lo que está debajo del tablero en el ordenador: el motor, el recuadro de la partida contra la CPU (con Piensa conmigo, Colores, Radar, Profesor…) y el profesor IA. Con 900 px de alto o menos hay que bajar para verlo. Opciones: llevar a la columna derecha lo que se está haciendo (partida contra la CPU, motor, profesor), encima de las jugadas, o compactar la navegación. Se deja así de momento (decisión del 20/11/2026).
 
 ## C. Funciones nuevas
 
-- **C1. Planes por estructura de peones.** Reconocer la estructura (Carlsbad, peón aislado de dama, Maroczy, cadenas de la Francesa, India de Rey…). Explicar el plan típico de cada bando y enseñar partidas modelo con el índice de posiciones. Sin conexión, y como contexto para el profesor IA.
+- ✅ **C1** (1.54.0). **Planes por estructura de peones.** Reconocer la estructura (Carlsbad, peón aislado de dama, Maroczy, cadenas de la Francesa, India de Rey…). Explicar el plan típico de cada bando y enseñar partidas modelo con el índice de posiciones. Sin conexión, y como contexto para el profesor IA.
   Lo que ya hay: `63-indice.js` calcula una firma de la estructura de peones y `30-analisis.js` detecta peones aislados. Falta el catálogo de estructuras con sus planes.
 - **C2. Entrenador con memoria entre sesiones.** Recordar qué temas cuestan de una clase a otra, no solo con las partidas analizadas. Proponer una sesión corta diaria desde «📅 Hoy» y repetir los ejercicios fallados al cabo de unos días.
   Lo que ya hay: `77-entrenador-ia.js` usa los temas flojos y los errores, pero no guarda un historial propio. El repaso espaciado de otros ejercicios se puede reutilizar.
@@ -34,7 +34,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 
 ## D. Calidad y mantenimiento
 
-- **D1**. Revisar los 34 artículos de aperturas de la 1.46.0. Los redactó la IA; necesita a un jugador con buen nivel.
+- **D1**. Revisar los 34 artículos de aperturas de la 1.46.0 y los planes de las 13 estructuras de peones de la 1.54.0 (`src/app/38-estructuras.js`). Los redactó la IA; necesita a un jugador con buen nivel.
 - **D2**. Probar la parte del profesor IA que usa Claude. Necesita el SDK de Anthropic aparte y en la CI solo se ejecuta si está configurado.
 - **D3**. Pruebas de fallos: CDN caída, sin conexión la primera vez, cambio de motor durante un análisis.
 - **D4**. Revisar los usos de `innerHTML` donde se pinta texto de PGN o comentarios importados (hay unos 160).
@@ -44,7 +44,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 
 1. ✅ 1.52.1: A1 y A2.
 2. ✅ 1.53.0: B1, B2 y B3.
-3. 1.54.0: C1.
+3. ✅ 1.54.0: C1.
 4. 1.55.0: C3 y A3.
 5. 1.56.0: C2.
 6. Después: B4 a B6, C4 y C5, y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
