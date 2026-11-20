@@ -2373,6 +2373,10 @@ def prueba_entrenador_ia(browser):
     comprobar(True, "si la idea empieza por una jugada («Cf3 porque…»), Intro la juega")
     comprobar("ataca dos piezas" in llamadas[-1]["messages"][1]["content"] and "Funciona porque" in pg.inner_text("#coachBox") and pg.locator("#coachBox .ai-unverified").count() == 1,
               "la IA explica la jugada comentando tu razonamiento, y lo no comprobado lleva ⚠")
+    exp = [m for m in llamadas if "Explica en 2 a 4 frases" in m["messages"][1]["content"]][-1]["messages"][1]["content"]
+    fen_ej = pg.evaluate("Chess.toFen(Coach.ex.node.state)")
+    comprobar("Posición del ejercicio (antes de la jugada del alumno)" in exp and fen_ej in exp and "(le toca al alumno)" in exp and "El alumno ha jugado" in exp and "Material al final de la línea del motor" in exp,
+              "la explicación usa la posición del ejercicio (antes de tu jugada), lo que jugaste y lo que gana de verdad la línea (antes usaba la de después)")
     comprobar("No inventes jugadas" in llamadas[-1]["messages"][0]["content"], "con la orden de no inventar jugadas")
     pg.click("#coachBox [data-co=end]")
     pg.evaluate("Object.assign(settings, { aiProvider: 'none', myNames: '' }); ['coach0', 'coach1', 'coach2'].forEach(k => Lib.games.delete(k)); renderAiBox()")
