@@ -16,8 +16,8 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 - ✅ **B1** (1.53.0). Jugadas y comentario junto al tablero en Estudio, y el cuadro de PGN (importar/exportar) en una sección plegable. En la 1.52.0, la lista de jugadas (`#moves`) empieza en y≈1098 px, también a 1920×1080. Hoy queda debajo del motor, en la columna del tablero.
 - ✅ **B2** (1.53.0). Herramientas del motor: dejar visibles Analizar, Flecha, la evaluación y la mejor jugada. Radar, Colores, Nube, Amenaza, Habla con tus piezas y Piensa conmigo van a un desplegable «Herramientas». Renombrar «⚡ Jugar» (por ejemplo, «⚡ Hacer la mejor») para no confundirlo con «Jugar vs CPU».
 - ✅ **B3** (1.53.0). Móvil: bienvenida compacta (ocupa 456 px antes del tablero a 390×844) y etiquetas de las pestañas más legibles (`.tab-btn` a `.6rem`).
-- **B4**. Indicar claramente qué estás haciendo: «Analizando una partida», «Problema 3 de 10», «Jugando contra la CPU».
-- **B5**. Ajustes por categorías: Apariencia, Tablero, Motor, IA, Datos y sincronización, Accesibilidad y Avanzado. Tiempo del motor como «Rápido / Equilibrado / Profundo»; los milisegundos, en Avanzado.
+- ✅ **B4** (1.57.0). Indicar claramente qué estás haciendo: «Analizando una partida», «Problema 3 de 10», «Jugando contra la CPU».
+- ✅ **B5** (1.57.0). Ajustes por categorías: Apariencia, Tablero, Motor, IA, Datos y sincronización, Accesibilidad y Avanzado. Tiempo del motor como «Rápido / Equilibrado / Profundo»; los milisegundos, en Avanzado.
 - **B6**. Tablero manejable con teclado: las casillas no son enfocables. Moverse con flechas, Enter para elegir origen y destino, Esc para cancelar.
 
 - **B7**. Lo que está debajo del tablero en el ordenador: el motor, el recuadro de la partida contra la CPU (con Piensa conmigo, Colores, Radar, Profesor…) y el profesor IA. Con 900 px de alto o menos hay que bajar para verlo. Opciones: llevar a la columna derecha lo que se está haciendo (partida contra la CPU, motor, profesor), encima de las jugadas, o compactar la navegación. Se deja así de momento (decisión del 20/11/2026).
@@ -30,8 +30,8 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
   Lo que ya hay: `77-entrenador-ia.js` usa los temas flojos y los errores, pero no guarda un historial propio. El repaso espaciado de otros ejercicios se puede reutilizar.
 - ✅ **C3** (1.55.0). **Comentar tu repertorio.** El profesor IA comenta tus líneas de repertorio jugada a jugada: la idea de cada una y qué hacer si el rival se sale. Stockfish revisa antes las jugadas dudosas y los comentarios se guardan en el PGN del repertorio.
   Lo que ya hay: «🩺 Revisar» (jugadas dudosas) y «💾 Añadir como comentario» (1.52.0).
-- **C4. «Vigilancia en una sola consulta»** para modelos locales: la IA responde libremente, Stockfish revisa después las jugadas que recomienda y solo se le pide corregir si alguna es mala. Es la alternativa que no se eligió para acelerar las propuestas. Solo si siguen siendo lentas.
-- **C5. Más adelante.** Modo básico/avanzado. Estado de los servicios (qué motor, IA y recursos en línea hay disponibles). Comparar dos posiciones. Espacios de trabajo personalizados.
+- ✅ **C4** (1.58.0). **«Vigilancia en una sola consulta»** para modelos locales: la IA responde libremente, Stockfish revisa después las jugadas que recomienda y solo se le pide corregir si alguna es mala. Es la alternativa que no se eligió para acelerar las propuestas. Solo si siguen siendo lentas.
+- ✅ **C5** (1.59.0). **Más adelante.** Modo básico/avanzado. Estado de los servicios (qué motor, IA y recursos en línea hay disponibles). Comparar dos posiciones. Espacios de trabajo personalizados.
 
 ## D. Calidad y mantenimiento
 
@@ -48,4 +48,5 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 3. ✅ 1.54.0: C1.
 4. ✅ 1.55.0: C3 y A3.
 5. ✅ 1.56.0: C2.
-6. Después: B4 a B6, C4 y C5, y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
+6. ✅ 1.57.0: B4 y B5 · ✅ 1.58.0: C4 · ✅ 1.59.0: C5.
+7. Después: B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.

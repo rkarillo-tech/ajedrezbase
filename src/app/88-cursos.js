@@ -197,6 +197,7 @@ function lessonLine() {
 }
 /* Panel de la lección: la explicación completa de la posición y los botones para seguir */
 function renderLesson() {
+  if (typeof renderActivity === "function") setTimeout(renderActivity, 0);   // 1.57: la etiqueta «qué estás haciendo», al día
   const box = $("lessonBox");
   const L = ui.lesson;
   if (!L || L.game !== game || quiz() || editor.active) { box.hidden = true; return; }

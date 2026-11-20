@@ -537,6 +537,7 @@ function coachEnd(silent) {
 
 /* ---------- El recuadro ---------- */
 function coachPanel(wait) {
+  if (typeof renderActivity === "function") setTimeout(renderActivity, 0);   // 1.57: la etiqueta «qué estás haciendo», al día
   const box = $("coachBox");
   if (!box || !Coach.active) return;
   const n = Coach.queue.length, ex = Coach.ex;

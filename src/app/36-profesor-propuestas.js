@@ -348,6 +348,39 @@ function aiMarkClaims(html, errs) {
   return html + `<div class="small ai-unverified-note">⚠ La IA se ha equivocado sobre la posición: ${errs.map(e => esc(e.why)).join("; ")}.</div>`;
 }
 
+/* ⚡ Vigilancia en una sola consulta (1.58): las jugadas que la respuesta recomienda y que no son de las líneas del
+   motor se valoran con Stockfish. Se ignoran las que cita como malas («no juegues…», «sería un error…»), para no
+   pedirle que corrija lo que ya desaconseja. Es mala si pierde 8 puntos de probabilidad de ganar o más (dudosa o error) */
+const AI_NEG_BEFORE = /(no\s+(?:juegues|jugar[ií]a|conviene|es buena|vale)|evita[rs]?|un error|error|mala|malo|pierde|perder[ií]as?|falla|dudosa|cuidado con|peor|en lugar de|en vez de)[^.!?]{0,30}$/i;
+async function aiWatchCheck(node, text, engineLines) {
+  const s = node.state, plain = String(text).replace(/\*\*/g, ""), engineFirst = new Set((engineLines || []).map(l => l.pv && l.pv[0]).filter(Boolean));
+  const picked = [], seen = new Set();
+  for (const m of plain.matchAll(AI_MOVE_RE)) {
+    if (AI_NEG_BEFORE.test(plain.slice(Math.max(0, m.index - 45), m.index))) continue;
+    let move = null;
+    for (const tok of [m[2], m[2].replace(/^R/, "K")]) { try { move = Chess.parseMove(s, tok, "auto").move; break; } catch {} }
+    if (!move) continue;
+    const uci = Chess.uci(move);
+    if (seen.has(uci)) continue;
+    seen.add(uci);
+    if (engineFirst.has(uci)) continue;   // ya está en las líneas del motor: comprobada
+    picked.push(lineText(s, [uci], 1));
+    if (picked.length >= 3) break;
+  }
+  const bestEv = engineLines && engineLines[0] ? aiEv(engineLines[0]) : null;
+  const r = picked.length ? await aiMovesInQuestion(node, picked.join(" "), bestEv) : { items: [] };
+  const items = r.items.map(it => Object.assign(it, { san: lineText(s, [it.uci], 1), isBad: it.loss != null && it.loss >= 8 }));
+  return { items, bad: items.filter(i => i.isBad), fixed: null };
+}
+function aiWatchHtml(w) {
+  const icon = l => (l == null ? "•" : l < 3 ? "✔" : l < 8 ? "≈" : l < 15 ? "?!" : "✗");
+  const parts = [];
+  parts.push(w.items.length ? `Stockfish ha revisado ${w.items.length === 1 ? "la jugada" : `las ${w.items.length} jugadas`} que la IA recomienda fuera de sus líneas: ${w.items.map(i => `${icon(i.loss)} ${esc(i.san)}`).join(", ")}` : "las jugadas que recomienda la IA son las del motor");
+  if (w.fixed && w.fixed.length) parts.push(`se le pidió corregir la respuesta porque recomendaba ${esc(w.fixed.join(", "))}`);
+  if (w.bad.length) parts.push(`⚠ aun así recomienda ${esc(w.bad.map(b => b.san).join(", "))}, que el motor ve mal: no le hagas caso en eso`);
+  return `<div class="small ai-watch">⚡ Vigilancia en una sola consulta: ${parts.join(" · ")}.</div>`;
+}
+
 /* Jugadas que el alumno menciona en su pregunta («¿y si juego Ae3?», «¿por qué no Dxd5?»), valoradas por el motor
    desde la posición dada: así la IA puede contestar con datos y no a ojo */
 async function aiMovesInQuestion(node, question, bestEv) {

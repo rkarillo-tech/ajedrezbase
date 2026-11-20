@@ -43,7 +43,7 @@ function repAiParse(text) {
 async function commentRepertoire(id) {
   const rec = Lib.games.get(id);
   if (!rec) return;
-  if (!aiProvider()) { toast("Para comentar el repertorio hace falta el profesor IA: elige un proveedor en ⚙ Ajustes › 🤖 Profesor IA."); openModal("settingsModal"); return; }
+  if (!aiProvider()) { toast("Para comentar el repertorio hace falta el profesor IA: elige un proveedor en ⚙ Ajustes › 🤖 Profesor IA."); openSettings("ia"); return; }
   if (RepAI.busy || RepReview.busy) { toast("Ya hay una revisión en marcha."); return; }
   if (!Engine.ready) { toast("Espera a que el motor esté listo."); return; }
   const side = repSideOf(rec);

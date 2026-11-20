@@ -118,7 +118,7 @@ async function fetchExplorer() {
       </ol>
       Mientras tanto: <a href="#" data-use-local>usar «Mi biblioteca + .pgn abierto»</a> (sin conexión) o la enciclopedia ECO de abajo.</div></td></tr>`;
     gbody.innerHTML = `<tr><td colspan="5" class="small">—</td></tr>`;
-    tbody.querySelector("[data-open-settings]").onclick = e => { e.preventDefault(); openModal("settingsModal"); };
+    tbody.querySelector("[data-open-settings]").onclick = e => { e.preventDefault(); openSettings("datos"); };
     tbody.querySelector("[data-use-local]").onclick = e => { e.preventDefault(); $("explorerDbSelect").value = "local"; $("explorerDbSelect").dispatchEvent(new Event("change")); };
     return;
   }

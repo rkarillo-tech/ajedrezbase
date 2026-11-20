@@ -390,6 +390,7 @@ function render() {
   renderMoves();
   renderComment();
   renderStructure();
+  renderCmp();
   renderEco();
   renderEvalChart();
   if (!editor.active) {
@@ -399,6 +400,7 @@ function render() {
   updateButtons();
   updateSaveState();
   renderLesson();
+  renderActivity();
   renderAiBox();
   requestLive();
   if (ui.activeTab === "explorer") refreshExplorer();

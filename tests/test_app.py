@@ -94,6 +94,11 @@ def contexto(browser, **kw):
     return ctx
 
 
+def revelar(pg, sel):
+    """1.57: los ajustes van por pestañas; antes de tocar un control, se abre la pestaña en la que está"""
+    pg.evaluate(f"settingsReveal({json.dumps(sel.lstrip('#'))})")
+
+
 def entrenar(pg, seccion):
     """Abre la pestaña Entrenar y, dentro, la actividad indicada (puzzles, rep, drill, cards, guess o blind)."""
     pg.click('.tab-btn[data-tab="tools"]')
@@ -278,9 +283,9 @@ def prueba_ayuda_y_movil(browser):
     comprobar(not pg.is_visible("#pieceStyleSelect") and pg.is_visible("#soundToggle") and cab < 100, "en el móvil la cabecera es compacta (piezas, notación y colores están en ⚙ Ajustes)")
     pg.click("#settingsBtn")
     comprobar(pg.is_visible("#pieceStyleSelect") and pg.is_visible("#displayLang") and pg.is_visible("#themeSelect"), "⚙ Ajustes reúne el diseño de las piezas, la notación y los colores del tablero")
-    pg.select_option("#themeSelect", "green"); pg.select_option("#pieceStyleSelect", "neo"); pg.select_option("#displayLang", "en")
+    revelar(pg, "#themeSelect") or pg.select_option("#themeSelect", "green"); revelar(pg, "#pieceStyleSelect") or pg.select_option("#pieceStyleSelect", "neo"); revelar(pg, "#displayLang") or pg.select_option("#displayLang", "en")
     comprobar(pg.evaluate("document.body.dataset.theme === 'green' && settings.pieceStyle === 'neo'") and "Nf3" in pg.inner_text("#moves"), "y los cambios se aplican al momento")
-    pg.select_option("#themeSelect", "wood"); pg.select_option("#pieceStyleSelect", "staunton"); pg.select_option("#displayLang", "es")
+    revelar(pg, "#themeSelect") or pg.select_option("#themeSelect", "wood"); revelar(pg, "#pieceStyleSelect") or pg.select_option("#pieceStyleSelect", "staunton"); revelar(pg, "#displayLang") or pg.select_option("#displayLang", "es")
     pg.keyboard.press("Escape")
     barra = pg.evaluate("""() => { const r = document.querySelector('.mode-tabs').getBoundingClientRect(); const b = [...document.querySelectorAll('.mode-tabs .tab-btn')];
       return { abajo: r.bottom, alto: r.height, fija: getComputedStyle(document.querySelector('.mode-tabs')).position, n: b.filter(e => e.offsetParent !== null || getComputedStyle(e).display !== 'none').length,
@@ -1051,9 +1056,9 @@ def prueba_mis_repertorios(browser):
     ancho = lambda: pg.evaluate("document.getElementById('board').getBoundingClientRect().width")
     antes = ancho()
     pg.click("#settingsBtn")
-    pg.locator("#setBoardSize").fill("70")
+    revelar(pg, "#setBoardSize"); pg.locator("#setBoardSize").fill("70")
     comprobar(abs(ancho() - antes * 0.7) < antes * 0.06 and "70 %" in pg.inner_text("#boardSizeVal"), "en Ajustes se puede hacer el tablero más pequeño")
-    pg.click("#boardSizeReset")
+    revelar(pg, "#boardSizeReset") or pg.click("#boardSizeReset")
     comprobar(abs(ancho() - antes) < 2 and pg.evaluate("settings.boardSize") == 100, "«Automático» devuelve el tablero a su tamaño")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
@@ -1136,14 +1141,14 @@ def prueba_tactil_y_tema(browser):
     pg.wait_for_timeout(150)
     comprobar(pg.evaluate("cur().san") == "e4", "un desplazamiento claro de la rueda sí avanza una jugada")
     pg.click("#settingsBtn")
-    pg.select_option("#setUiTheme", "light")
+    revelar(pg, "#setUiTheme") or pg.select_option("#setUiTheme", "light")
     fondo = pg.evaluate("getComputedStyle(document.body).backgroundColor")
     comprobar(pg.evaluate("document.documentElement.dataset.ui") == "light" and fondo == "rgb(242, 244, 247)", "en Ajustes se puede elegir el tema claro")
     pg.reload()
     pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
     comprobar(pg.evaluate("document.documentElement.dataset.ui") == "light" and pg.evaluate("document.getElementById('setUiTheme').value") == "light", "el tema claro se recuerda al volver a abrir")
     pg.click("#settingsBtn")
-    pg.select_option("#setUiTheme", "dark")
+    revelar(pg, "#setUiTheme") or pg.select_option("#setUiTheme", "dark")
     comprobar(pg.evaluate("document.documentElement.dataset.ui") is None, "y se puede volver al tema oscuro")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
@@ -1550,7 +1555,7 @@ def prueba_sincronizacion(browser):
     ctxB, B, errB = dispositivo("B")
     comprobar(not A.is_visible("#syncChip"), "sin archivo vinculado no hay indicador en la cabecera")
     A.evaluate(guardar, ["Uno", "1. e4 e5 2. Nf3 Nc6 *"])
-    A.click("#settingsBtn")
+    A.click("#settingsBtn"); revelar(A, "#syncStatus")
     comprobar("Sin archivo vinculado" in A.inner_text("#syncStatus") and A.is_visible('[data-sync="new"]'), "Ajustes ofrece vincular un archivo")
     A.click('[data-sync="new"]')
     A.wait_for_function("syncState === 'ok' && !syncBusy && !syncDirty", timeout=10000)
@@ -1564,7 +1569,7 @@ def prueba_sincronizacion(browser):
     B.evaluate("LS.set('ajedrezProblemas', { p1: { reps: 3, due: 9, box: 2 }, p2: { reps: 1, due: 4, box: 1 } }); LS.set('ajedrezActividad', { '2026-11-01': { puzzle: 4 } })")
     A.evaluate("LS.set('ajedrezProblemas', { p1: { reps: 1, due: 5, box: 1 } }); LS.set('ajedrezActividad', { '2026-11-01': { puzzle: 2, card: 1 } })")
     al_dia(A)
-    B.click("#settingsBtn"); B.click('[data-sync="open"]')
+    B.click("#settingsBtn"); revelar(B, "#syncStatus"); B.click('[data-sync="open"]')
     B.wait_for_function("syncState === 'ok' && !syncBusy && !syncDirty && Lib.games.size === 2", timeout=10000)
     B.keyboard.press("Escape")
     comprobar(titulos(B) == ["Dos", "Uno"], "al vincular el archivo en otro dispositivo se combinan las dos bibliotecas")
@@ -1598,7 +1603,7 @@ def prueba_sincronizacion(browser):
     comprobar(titulos(A) == ["Tres", "Uno"] and titulos(B) == ["Tres", "Uno"] and len(_json.loads(archivo["txt"])["games"]) == 2, "la misma partida guardada en los dos queda una sola vez")
     # Ajustes: viajan, salvo los propios de cada dispositivo
     B.evaluate("settings.token = 'lip_secreto'; saveSettings()")
-    B.click("#settingsBtn"); B.select_option("#themeSelect", "coral"); B.keyboard.press("Escape")
+    B.click("#settingsBtn"); revelar(B, "#themeSelect"); B.select_option("#themeSelect", "coral"); B.keyboard.press("Escape")
     B.wait_for_function("!syncBusy && !syncTimer && !syncDirty", timeout=10000)
     al_dia(A)
     comprobar(A.evaluate("settings.theme") == "coral" and A.evaluate("document.body.dataset.theme") == "coral" and A.evaluate("settings.token") == "", "los ajustes llegan y se aplican sin recargar")
@@ -1607,7 +1612,7 @@ def prueba_sincronizacion(browser):
     bueno = archivo["txt"]
     archivo["txt"] = '{"hola": 1}'; archivo["m"] += 1
     A.evaluate("syncCheck()"); A.wait_for_function("!syncBusy && syncErr", timeout=10000)
-    A.click("#settingsBtn")
+    A.click("#settingsBtn"); revelar(A, "#syncStatus")
     comprobar("no es un archivo de sincronización" in A.inner_text("#syncStatus") and archivo["txt"] == '{"hola": 1}' and A.inner_text("#syncChip") == "⚠", "un archivo ajeno no se sobrescribe y se avisa")
     archivo["txt"] = bueno; archivo["m"] += 1
     A.click('[data-sync="now"]'); A.wait_for_function("!syncBusy && !syncErr", timeout=10000)
@@ -1993,9 +1998,10 @@ def prueba_ayudas_profesor(browser):
     ctx.route("http://localhost:11434/api/tags", lambda r: r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"models": [{"name": "qwen2.5:7b"}]})))
     pg.evaluate("setGame(Pgn.parseGame('1. e4 e5', { lang: 'en' }).game, { noConfirm: true, current: Pgn.parseGame('1. e4 e5', { lang: 'en' }).game.root }); goEnd()")
     pg.click("#settingsBtn")
-    pg.select_option("#setAiProvider", "ollama")
+    revelar(pg, "#setAiProvider") or pg.select_option("#setAiProvider", "ollama")
+    pg.evaluate("settings.aiWatch = false")   # 1.58: esta prueba mira las reglas del modo de siempre, no la vigilancia
     comprobar(pg.is_visible("#aiUrlRow") and not pg.is_visible("#aiKeyRow") and "tu ordenador" in pg.inner_text("#aiNote"), "Ajustes: con Ollama se pide la dirección y no una clave")
-    pg.click("#aiTestBtn")
+    revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
     pg.wait_for_function("$('aiTestResult').textContent.includes('Funciona')", timeout=15000)
     pg.keyboard.press("Escape")
     comprobar(pg.is_visible("#aiBox"), "con un proveedor elegido aparece el recuadro de preguntas")
@@ -2074,10 +2080,10 @@ def prueba_ollama(browser):
     pg, errores = nueva_pagina(ctx)
     pg.evaluate("$('welcomeBox').hidden = true")
     pg.click("#settingsBtn")
-    pg.select_option("#setAiProvider", "ollama")
+    revelar(pg, "#setAiProvider") or pg.select_option("#setAiProvider", "ollama")
     comprobar("paso a paso" in pg.inner_text("#aiNote"), "al elegir Ollama, Ajustes enlaza los pasos para darle permiso a la página")
-    pg.fill("#setAiModel", "deepseek-r1:8b"); pg.dispatch_event("#setAiModel", "change")
-    pg.click("#aiTestBtn")
+    revelar(pg, "#setAiModel") or pg.fill("#setAiModel", "deepseek-r1:8b"); revelar(pg, "#setAiModel") or pg.dispatch_event("#setAiModel", "change")
+    revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
     pg.wait_for_function("$('aiTestResult').textContent.includes('❌')", timeout=15000)
     msg = pg.inner_text("#aiTestResult")
     comprobar("OLLAMA_ORIGINS" in msg and "no deja entrar a esta página" in msg and pg.locator("#aiTestResult .help-link").count() == 1,
@@ -2088,20 +2094,20 @@ def prueba_ollama(browser):
     pg.keyboard.press("Escape")
     estado["bloqueado"] = False
     pg.click("#settingsBtn")
-    pg.fill("#setAiModel", "qwen2.5:7b"); pg.dispatch_event("#setAiModel", "change")
-    pg.click("#aiTestBtn")
+    revelar(pg, "#setAiModel") or pg.fill("#setAiModel", "qwen2.5:7b"); revelar(pg, "#setAiModel") or pg.dispatch_event("#setAiModel", "change")
+    revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
     pg.wait_for_function("$('aiTestResult').textContent.includes('Tus modelos')", timeout=15000)
     msg = pg.inner_text("#aiTestResult")
     opciones = pg.evaluate("[...$('aiModelList').options].map(o => o.value)")
     comprobar("no tiene el modelo «qwen2.5:7b»" in msg and "gemma4:12b" in msg and "nomic-embed-text" not in msg and "nomic-embed-text:v1.5" not in opciones and len(opciones) == 8,
               "con un modelo que no está, la prueba dice cuáles hay para conversar (sin los de embeddings) y los pone en la lista de la casilla")
     for nombre in ("deepseek-r1:8b", "gemma4:12b"):
-        pg.fill("#setAiModel", nombre); pg.dispatch_event("#setAiModel", "change")
-        pg.click("#aiTestBtn")
+        revelar(pg, "#setAiModel") or pg.fill("#setAiModel", nombre); revelar(pg, "#setAiModel") or pg.dispatch_event("#setAiModel", "change")
+        revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
         pg.wait_for_function("$('aiTestResult').textContent.includes('Funciona')", timeout=15000)
         comprobar("«Hola»" in pg.inner_text("#aiTestResult") and "think" not in pg.inner_text("#aiTestResult"), f"con «{nombre}» funciona" + (" (sin enseñar su razonamiento <think>)" if nombre.startswith("deepseek") else ""))
-    pg.fill("#setAiModel", "qwen3.5"); pg.dispatch_event("#setAiModel", "change")
-    pg.click("#aiTestBtn")
+    revelar(pg, "#setAiModel") or pg.fill("#setAiModel", "qwen3.5"); revelar(pg, "#setAiModel") or pg.dispatch_event("#setAiModel", "change")
+    revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
     pg.wait_for_function("$('aiTestResult').textContent.includes('❌') || $('aiTestResult').textContent.includes('Funciona') || $('aiTestResult').textContent.includes('Tus modelos')", timeout=15000)
     comprobar("Funciona" in pg.inner_text("#aiTestResult") and pg.input_value("#setAiModel") == "qwen3.5:9b" and pg.evaluate("settings.aiModel") == "qwen3.5:9b",
               "escribir el modelo sin la etiqueta («qwen3.5») se completa solo con la versión instalada (qwen3.5:9b)")
@@ -2171,7 +2177,7 @@ def prueba_buscador_y_contexto_ia(browser):
       setGame(g, { name: 'Mi e4', tags: ['repertorio'], noConfirm: true });
       await saveToLibrary({ silent: true, force: true });
       setCollection(pgn, false, 'carlsen.pgn');
-      Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', token: 'lip_prueba' }); renderAiBox(); syncAiCtxForm();
+      Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', token: 'lip_prueba' }); renderAiBox(); syncAiCtxForm();
       const g2 = Pgn.parseGame('1. e4 c6 2. d4 d5', { lang: 'en' }).game;
       setGame(g2, { noConfirm: true, current: Pgn.mainlineFrom(g2.root).pop() });
     }""", carlsen)
@@ -2220,7 +2226,7 @@ def prueba_propuestas_ia(browser):
     ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false }); renderAiBox(); syncAiCtxForm();"
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false }); renderAiBox(); syncAiCtxForm();"
                 "const g = Pgn.parseGame('1. e4 e5', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
     pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
     pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=90000)
@@ -2359,7 +2365,7 @@ def prueba_entrenador_ia(browser):
     pg.click("#coachBox [data-co=end]")
     comprobar(not pg.evaluate("Coach.active") and not pg.is_visible("#coachBox"), "«Volver a tu partida» termina la clase")
     # Con la IA: presentación, pistas que no pueden revelar la solución y explicación que comenta tu razonamiento
-    pg.evaluate("Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b' }); renderAiBox()")
+    pg.evaluate("Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b' }); renderAiBox()")
     pg.click('.tab-btn[data-tab="tools"]')
     if not pg.is_visible("#coachStartBtn"): pg.click('#trainMenu [data-train-open="coach"]')
     pg.click("#coachStartBtn"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
@@ -2482,7 +2488,7 @@ def prueba_notacion_ia(browser):
     ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, lang: 'es' }); renderAiBox();"
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false, lang: 'es' }); renderAiBox();"
                 "const g = Pgn.parseGame('1. e4 e5', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
     pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
     pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=90000)
@@ -2527,7 +2533,7 @@ def prueba_piezas_ia(browser):
     ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false }); renderAiBox();"
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false }); renderAiBox();"
                 "const g = Pgn.parseGame('1. d4 d5 2. c4 c6 3. Nf3 Nf6 4. Nc3 e6 5. e3 Nbd7', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() }); ui.flipped = true; render()")
     pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
     pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
@@ -2562,7 +2568,7 @@ def prueba_repaso_y_preguntas(browser):
     ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false, analysisMs: 300 }); renderAiBox();"
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false, analysisMs: 300 }); renderAiBox();"
                 "loadPgnText('[White \"Yo\"]\\n[Black \"Rival\"]\\n\\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 4. Nxe5 Qg5 5. Nxf7 Qxg2 6. Rf1 Qxe4+ 7. Be2 Nf3# 0-1', { endAtEnd: true })")
     pg.evaluate("analyseGame()")
     pg.wait_for_function("ui.report && !ui.analysing && $('aiReviewBtn')", timeout=120000)
@@ -2893,6 +2899,141 @@ def prueba_memoria_entrenador(browser):
     ctx.close()
 
 
+def prueba_v157_actividad_y_ajustes(browser):
+    print("1.57: qué estás haciendo (cabecera) y ajustes por categorías")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true")
+    chip = lambda: (pg.wait_for_timeout(250), pg.inner_text("#modeChip"))[1]
+    comprobar("Analizando" in chip() and pg.is_visible("#modeChip"), "la cabecera dice qué estás haciendo: analizar una partida")
+    entrenar(pg, "puzzles")
+    pg.evaluate("startPuzzles()")
+    pg.wait_for_function("trainer.active && trainer.puzzle", timeout=10000)
+    t = chip()
+    comprobar("Problema 1 de" in t and "Problema 1 de" in pg.title(), "con los problemas: «Problema 1 de N», también en el título de la pestaña")
+    pg.click("#modeChip")
+    pg.evaluate("stopTraining(true)")
+    pg.evaluate("openLesson(COURSES[0].id, 0)")
+    comprobar("Lección" in chip(), "con una lección abierta, lo dice")
+    # Ajustes por categorías
+    pg.click("#settingsBtn")
+    tabs = pg.locator(".set-tab").count()
+    vis = pg.evaluate("[...document.querySelectorAll('.set-sec')].filter(x => x.offsetParent).map(x => x.dataset.set)")
+    comprobar(tabs == 7 and len(vis) == 1, "los ajustes van en 7 pestañas y se ve una cada vez")
+    pg.click("#setTab-motor")
+    comprobar(pg.is_visible("#setEngineSpeed") and not pg.is_visible("#setAiProvider") and pg.get_attribute("#setTab-motor", "aria-selected") == "true", "cada pestaña enseña sólo lo suyo")
+    pg.select_option("#setEngineSpeed", "deep")
+    r = pg.evaluate("({ a: settings.analysisMs, l: settings.liveMs, inp: $('setAnalysisMs').value })")
+    comprobar(r["a"] == 2500 and r["l"] == 10000 and r["inp"] == "2500", "«Profundo» ajusta el tiempo del motor; los milisegundos están en Avanzado")
+    pg.click("#setTab-avanzado")
+    pg.fill("#setAnalysisMs", "1700"); pg.dispatch_event("#setAnalysisMs", "change")
+    pg.click("#setTab-motor")
+    comprobar(pg.input_value("#setEngineSpeed") == "custom", "si cambias los milisegundos a mano, la profundidad pasa a «Personalizado»")
+    pg.keyboard.press("Escape")
+    pg.click("#settingsBtn")
+    comprobar(pg.is_visible("#setEngineSpeed"), "al volver a abrir los ajustes, sigue en la última pestaña")
+    pg.keyboard.press("Escape")
+    pg.evaluate("cmdUse('setAiProvider', false)")
+    pg.wait_for_timeout(300)
+    comprobar(pg.is_visible("#setAiProvider"), "el buscador abre la pestaña en la que está el ajuste")
+    pg.keyboard.press("Escape")
+    pg.click("#engineSourceBadge")
+    comprobar(pg.is_visible("#engineStatus"), "pulsar el estado del motor abre los ajustes en «Motor»")
+    pg.keyboard.press("Escape")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_vigilancia_ia(browser):
+    print("1.58: vigilancia en una sola consulta (la IA responde y Stockfish revisa después)")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    llamadas = []
+    respuesta = {"txt": ""}
+    def chat(r):
+        m = json.loads(r.request.post_data)
+        llamadas.append(m)
+        u = m["messages"][-1]["content"]
+        txt = "Mejor **Cc6**, que defiende el peón de e5." if "no son buenas" in u else respuesta["txt"]
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
+    ctx.route("http://localhost:11434/api/chat", chat)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: true, aiWatch: null }); renderAiBox(); syncAiCtxForm();"
+                "const g = Pgn.parseGame('1. e4 e5 2. Nf3', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
+    comprobar(pg.evaluate("aiWatchOn()"), "con Ollama, la vigilancia en una sola consulta viene activada")
+    # 1) Recomienda una jugada mala: el motor la revisa y se le pide corregir (2 consultas, sin la de propuestas)
+    respuesta["txt"] = "Te recomiendo **Aa3**, que ataca el flanco de dama."
+    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=120000)
+    txt = pg.inner_text("#aiAnswer")
+    comprobar(len(llamadas) == 2 and not any("SÓLO con JSON" in m["messages"][0]["content"] for m in llamadas), f"recomendaba una jugada mala: una consulta más para corregir y ninguna de propuestas ({len(llamadas)})")
+    comprobar("Cc6" in pg.inner_text("#aiAnswer .ai-text") and "se le pidió corregir" in txt and "Aa3" in txt, "la respuesta corregida se enseña y se dice qué se corrigió")
+    # 2) Recomienda una jugada buena (y desaconseja una mala): una sola consulta
+    llamadas.clear()
+    respuesta["txt"] = "Juega **Cc6**, que defiende e5. No juegues Aa3, que pierde el alfil."
+    pg.click("#aiAskBtn")
+    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=120000)
+    comprobar(len(llamadas) == 1 and "Vigilancia" in pg.inner_text("#aiAnswer"), "si lo que recomienda está bien, basta una sola consulta (y lo que desaconseja no se cuenta)")
+    # 3) Desactivada: vuelve el modo de las propuestas comprobadas antes
+    llamadas.clear()
+    pg.click(".ai-ctx summary"); pg.uncheck("#aiWatch")
+    comprobar(not pg.is_disabled("#aiPropose") and pg.evaluate("settings.aiWatch") is False, "se puede desactivar, y entonces vuelve la casilla de las propuestas")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_v159_herramientas(browser):
+    print("1.59: modo básico, estado de los servicios, comparar dos posiciones y espacios de trabajo")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true")
+    # Estado de los servicios
+    comprobar(pg.is_visible("#servicesBtn") and "svc-dot" in (pg.get_attribute("#servicesDot", "class") or ""), "en la cabecera hay un indicador del estado de los servicios")
+    pg.click("#servicesBtn")
+    t = pg.inner_text("#servicesList")
+    comprobar(all(x in t for x in ["Motor", "Conexión", "Profesor IA", "Lichess", "Sincronización"]), "el cuadro dice cómo están el motor, la conexión, el profesor IA, Lichess y la sincronización")
+    pg.locator("#servicesList .svc-row", has_text="Profesor IA").locator("button").click()
+    comprobar(pg.is_visible("#setAiProvider"), "desde el estado de un servicio se va a su ajuste")
+    pg.keyboard.press("Escape")
+    # Modo básico
+    revelar(pg, "#setUiMode")
+    pg.click("#settingsBtn"); revelar(pg, "#setUiMode"); pg.select_option("#setUiMode", "basic")
+    pg.keyboard.press("Escape")
+    comprobar(pg.evaluate("document.body.classList.contains('ui-basic')") and not pg.is_visible("#exportControls") and not pg.is_visible("#engineToolsBtn"), "en modo básico se ocultan los botones menos usados")
+    comprobar(pg.is_visible("#liveToggle") and pg.is_visible("#moves"), "lo esencial sigue a la vista (motor y jugadas)")
+    pg.reload(); pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+    comprobar(pg.evaluate("document.body.classList.contains('ui-basic')"), "el modo básico se recuerda")
+    pg.evaluate("setUiMode('full')")
+    # Comparar dos posiciones
+    pg.evaluate("$('welcomeBox').hidden = true; const g = Pgn.parseGame('1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. cxd5 exd5 5. Bg5 c6 6. e3', { lang: 'en' }).game; setGame(g, { noConfirm: true }); goTo(resolvePath(g.root, ['d2d4', 'd7d5', 'c2c4', 'e7e6']))")
+    pg.click("#cmpBox > summary"); pg.click("#cmpSetA")
+    pg.evaluate("goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.wait_for_timeout(200)
+    t = pg.inner_text("#cmpBody")
+    comprobar("De A a B" in t and "3.Cc3" in t and "Carlsbad" in t, "compara A con el tablero: las jugadas entre ambas y la estructura (Carlsbad en B)")
+    comprobar("peón e2 → e3" in t and "peón c4 ✗" in t and "Ac1 → g5" in t, "dice qué piezas han cambiado de sitio (sin emparejar peones de columnas lejanas)")
+    pg.click("#cmpGoA")
+    comprobar(pg.evaluate("Pgn.pathTo(cur()).length") == 5, "«Ir a A» vuelve a la posición fijada")
+    # Espacios de trabajo
+    pg.click("#settingsBtn"); revelar(pg, "#wsSelect")
+    opts = pg.evaluate("[...$('wsSelect').options].map(o => o.value)")
+    comprobar(opts[:3] == ["analizar", "jugar", "entrenar"], "hay tres espacios de trabajo de serie: Analizar, Jugar y Entrenar")
+    pg.select_option("#wsSelect", "entrenar"); pg.click("#wsApply")
+    r = pg.evaluate("({ live: settings.live, basic: document.body.classList.contains('ui-basic'), tab: ui.activeTab, arrow: settings.arrow })")
+    comprobar(not r["live"] and r["basic"] and r["tab"] == "tools" and not r["arrow"], "«Entrenar» quita el análisis en vivo y la flecha, pone el modo básico y abre Entrenar")
+    pg.select_option("#wsSelect", "analizar"); pg.click("#wsApply")
+    r = pg.evaluate("({ live: settings.live, basic: document.body.classList.contains('ui-basic'), tab: ui.activeTab, tools: settings.engineTools })")
+    comprobar(r["live"] and not r["basic"] and r["tab"] == "study" and r["tools"], "«Analizar» lo devuelve todo para analizar")
+    pg.evaluate("window.prompt = () => 'Mis aperturas'; settings.multipv = 2")
+    pg.click("#wsSave")
+    w = pg.evaluate("(settings.workspaces || []).map(x => ({ n: x.name, m: x.cfg.multipv }))")
+    comprobar(len(w) == 1 and "Mis aperturas" in w[0]["n"] and w[0]["m"] == 2 and not pg.is_disabled("#wsDelete"), "se puede guardar el espacio de trabajo actual con un nombre (y borrarlo)")
+    pg.keyboard.press("Escape")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_salir_del_entrenamiento(browser):
     print("Salir de cada entrenamiento con los botones de la sesión")
     ctx = contexto(browser)
@@ -2961,6 +3102,7 @@ def prueba_pantalla_completa(browser):
     pg.click("#backBtn")
     comprobar(jugada == "d4" and pg.evaluate("cur() === game.root"), "se mueve y se navega igual")
     pg.evaluate("openModal('settingsModal')")
+    revelar(pg, "#setBoard3d")
     comprobar(pg.is_visible("#setBoard3d"), "los cuadros de diálogo se ven por encima")
     pg.keyboard.press("Escape")
     comprobar(pg.evaluate("ui.full") and not pg.is_visible("#setBoard3d"), "Esc cierra primero el cuadro")
@@ -3095,7 +3237,7 @@ def prueba_tablero3d(browser):
     pg, errores = nueva_pagina(ctx)
     pg.evaluate("$('welcomeBox').hidden = true; setGame(Pgn.newGame(), { noConfirm: true })")
     pg.click("#settingsBtn")
-    pg.check("#setBoard3d")
+    revelar(pg, "#setBoard3d") or pg.check("#setBoard3d")
     pg.keyboard.press("Escape")
     pg.wait_for_function("B3.active", timeout=20000)
     comprobar(pg.is_visible("#board3d canvas") and pg.evaluate("getComputedStyle($('board')).visibility") == "hidden" and pg.evaluate("B3.meshes.size") == 32,
@@ -3175,13 +3317,13 @@ def prueba_tablero3d(browser):
     comprobar(pg.evaluate("B3.active"), "y al cerrarlo vuelve el 3D")
     pg.click("#settingsBtn")
     comprobar(pg.evaluate("'#' + B3.model.matB.color.getHexString()") == "#7b4a28" and pg.evaluate("settings.board3dLook") == "wood", "por defecto, piezas de madera (boj y nogal) sobre casillas blancas y negras")
-    pg.select_option("#setBoard3dLook", "contrast")
+    revelar(pg, "#setBoard3dLook") or pg.select_option("#setBoard3dLook", "contrast")
     comprobar(pg.evaluate("'#' + B3.model.matW.color.getHexString()") == "#ffffff" and not pg.is_visible("#b3Custom"), "se puede elegir otro aspecto (alto contraste)")
-    pg.select_option("#setBoard3dLook", "custom")
+    revelar(pg, "#setBoard3dLook") or pg.select_option("#setBoard3dLook", "custom")
     pg.evaluate("const i = $('b3c_pb'); i.value = '#224488'; i.dispatchEvent(new Event('input'))")
     comprobar(pg.is_visible("#b3Custom") and pg.evaluate("'#' + B3.model.matB.color.getHexString()") == "#224488" and pg.evaluate("settings.board3dColors.pb") == "#224488", "y poner los colores a mano")
-    pg.select_option("#setBoard3dLook", "wood")
-    pg.uncheck("#setBoard3d")
+    revelar(pg, "#setBoard3dLook") or pg.select_option("#setBoard3dLook", "wood")
+    revelar(pg, "#setBoard3d") or pg.uncheck("#setBoard3d")
     pg.keyboard.press("Escape")
     comprobar(not pg.evaluate("B3.active") and pg.is_visible(".square"), "al desactivarlo vuelve el tablero plano")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
@@ -3380,7 +3522,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
