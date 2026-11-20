@@ -8,7 +8,8 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 
 - ✅ **A1** (1.52.1). Guardado al pasar a otra partida. Si fallaba la escritura, los cambios se perdían. Si la partida se había modificado en otra pestaña, se descartaban sin avisar. Ahora se rescatan (↩ Recuperar), o se pregunta y se guardan como copia.
 - ✅ **A2** (1.52.1). Pestañas accesibles: `aria-controls` / `aria-labelledby`, tabulación solo en la activa, y ← → Inicio Fin con el foco en ellas.
-- **A3**. Ampliar la comprobación de lo que dice la IA (`aiCheckClaims`). Hoy solo detecta «pieza de/en casilla» y «mi dama». Faltan «amenaza mate», «gana material», «pieza colgada» y similares, que se pueden comprobar con el motor y las reglas.
+- ✅ **A3** (1.55.0). Ampliar la comprobación de lo que dice la IA (`aiCheckClaims`). Hoy solo detecta «pieza de/en casilla» y «mi dama». Faltan «amenaza mate», «gana material», «pieza colgada» y similares, que se pueden comprobar con el motor y las reglas.
+  Hecho: amenaza de mate (en una o dos jugadas), jaque, pieza sin defensa o clavada y derechos de enroque. Queda sin comprobar «gana material» o «gana una pieza» a varias jugadas vista: para no acusar sin razón haría falta seguir las líneas del motor.
 
 ## B. Distribución y experiencia de uso
 
@@ -27,7 +28,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
   Lo que ya hay: `63-indice.js` calcula una firma de la estructura de peones y `30-analisis.js` detecta peones aislados. Falta el catálogo de estructuras con sus planes.
 - **C2. Entrenador con memoria entre sesiones.** Recordar qué temas cuestan de una clase a otra, no solo con las partidas analizadas. Proponer una sesión corta diaria desde «📅 Hoy» y repetir los ejercicios fallados al cabo de unos días.
   Lo que ya hay: `77-entrenador-ia.js` usa los temas flojos y los errores, pero no guarda un historial propio. El repaso espaciado de otros ejercicios se puede reutilizar.
-- **C3. Comentar tu repertorio.** El profesor IA comenta tus líneas de repertorio jugada a jugada: la idea de cada una y qué hacer si el rival se sale. Stockfish revisa antes las jugadas dudosas y los comentarios se guardan en el PGN del repertorio.
+- ✅ **C3** (1.55.0). **Comentar tu repertorio.** El profesor IA comenta tus líneas de repertorio jugada a jugada: la idea de cada una y qué hacer si el rival se sale. Stockfish revisa antes las jugadas dudosas y los comentarios se guardan en el PGN del repertorio.
   Lo que ya hay: «🩺 Revisar» (jugadas dudosas) y «💾 Añadir como comentario» (1.52.0).
 - **C4. «Vigilancia en una sola consulta»** para modelos locales: la IA responde libremente, Stockfish revisa después las jugadas que recomienda y solo se le pide corregir si alguna es mala. Es la alternativa que no se eligió para acelerar las propuestas. Solo si siguen siendo lentas.
 - **C5. Más adelante.** Modo básico/avanzado. Estado de los servicios (qué motor, IA y recursos en línea hay disponibles). Comparar dos posiciones. Espacios de trabajo personalizados.
@@ -45,6 +46,6 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 1. ✅ 1.52.1: A1 y A2.
 2. ✅ 1.53.0: B1, B2 y B3.
 3. ✅ 1.54.0: C1.
-4. 1.55.0: C3 y A3.
+4. ✅ 1.55.0: C3 y A3.
 5. 1.56.0: C2.
 6. Después: B4 a B6, C4 y C5, y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.

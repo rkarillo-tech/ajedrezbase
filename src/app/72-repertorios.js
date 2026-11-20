@@ -33,12 +33,14 @@ function renderMyReps() {
         <button class="sm-btn" data-rep-edit="${rec.id}" title="Ábrelo en el tablero: juega jugadas para añadir líneas y variantes; se guarda solo">✏ Editar</button>
         <button class="sm-btn primary" data-rep-train="${rec.id}" ${pos ? "" : "disabled"}>▶ Entrenar</button>
         <button class="sm-btn info-btn" data-rep-review="${rec.id}" ${pos ? "" : "disabled"} title="Busca huecos, jugadas dudosas y cómo te va en tus partidas">🩺 Revisar</button>
+        <button class="sm-btn info-btn" data-rep-ai="${rec.id}" ${pos ? "" : "disabled"} title="El profesor IA explica la idea de cada jugada tuya y qué hacer si el rival se sale; Stockfish revisa antes las jugadas dudosas. Los comentarios se guardan en el repertorio">🤖 Comentar</button>
         <button class="sm-btn" data-rep-side="${rec.id}" title="Cambia el bando con el que juegas este repertorio">${side === 1 ? "⚪→⚫" : "⚫→⚪"}</button>
       </div></div>`;
   }).join("");
   box.querySelectorAll("[data-rep-edit]").forEach(b => b.onclick = () => editMyRep(+b.dataset.repEdit || b.dataset.repEdit));
   box.querySelectorAll("[data-rep-train]").forEach(b => b.onclick = () => trainMyRep(+b.dataset.repTrain || b.dataset.repTrain));
   box.querySelectorAll("[data-rep-review]").forEach(b => b.onclick = () => { const rec = Lib.games.get(+b.dataset.repReview || b.dataset.repReview); if (rec) reviewRepertoire({ lib: rec.id, title: rec.title, g: Pgn.parseGame(rec.pgn, { lang: "en" }).game, side: repSideOf(rec) }); });
+  box.querySelectorAll("[data-rep-ai]").forEach(b => b.onclick = () => commentRepertoire(+b.dataset.repAi || b.dataset.repAi));
   box.querySelectorAll("[data-rep-side]").forEach(b => b.onclick = () => toggleRepSide(+b.dataset.repSide || b.dataset.repSide));
 }
 function editMyRep(id) {

@@ -17,6 +17,7 @@ import http.server
 import os
 import json
 import pathlib
+import re
 import signal
 import sys
 import time
@@ -2791,6 +2792,67 @@ def prueba_estructuras(browser):
     ctx.close()
 
 
+def prueba_comentar_repertorio(browser):
+    print("1.55: el profesor IA comenta tu repertorio (con Stockfish antes) y se comprueba lo que dice")
+    ctx = contexto(browser)
+    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+    estado = {"consultas": 0, "correcciones": 0}
+    def chat(r):
+        cuerpo = json.loads(r.request.post_data)
+        texto = cuerpo["messages"][-1]["content"]
+        estado["consultas"] += 1
+        ids = re.findall(r"^\[(n\d+)\]", texto, re.M) or re.findall(r"\[(n\d+)\] «", texto)
+        if "errores sobre la posición" in texto:
+            estado["correcciones"] += 1
+            arr = [{"id": i, "comentario": "Corregido: desarrolla el alfil y prepara el enroque.", "siSeSale": ""} for i in re.findall(r"^\[(n\d+)\] «", texto, re.M)]
+        else:
+            # El primer comentario se equivoca sobre la posición (en h5 no hay nada): la aplicación debe pedir que lo corrija
+            arr = [{"id": i, "comentario": ("El caballo de h5 está indefenso." if k == 0 else "Desarrolla una pieza y lucha por el centro."), "siSeSale": "Si juega otra cosa, sigue con el desarrollo."} for k, i in enumerate(ids)]
+        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": "Aquí tienes:\n" + json.dumps(arr, ensure_ascii=False)}}))
+    ctx.route("http://localhost:11434/api/chat", chat)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    entrenar(pg, "rep")
+    pg.fill("#repNewName", "Blancas: prueba IA")
+    pg.click("#repNewBtn")
+    pg.wait_for_function("ui.libId && ui.activeTab === 'study'")
+    jugar = lambda camino, ucis: pg.evaluate(f"""(() => {{ goTo(resolvePath(game.root, {json.dumps(camino)})); for (const u of {json.dumps(ucis)}) playMove(Chess.moveFromUci(cur().state, u), 'user'); }})()""")
+    jugar([], ["e2e4", "e7e5", "g1f3", "b8c6", "f1b5"])
+    jugar(["e2e4"], ["e7e6", "f1a6"])
+    pg.evaluate("goTo(resolvePath(game.root, ['e2e4', 'e7e5', 'g1f3'])); cur().comment = 'Mi nota: la jugada de siempre'; markDirty()")
+    pg.wait_for_function("!ui.dirty", timeout=5000)
+    rep_id = pg.evaluate("ui.libId")
+    pg.evaluate("settings.aiProvider = 'ollama'; settings.aiModel = 'prueba:1b'; saveSettings()")
+    entrenar(pg, "rep")
+    pg.locator("[data-rep-ai]").first.click()
+    pg.wait_for_function("!RepAI.busy && $('repReviewOut').textContent.includes('Comentarios de')", timeout=240000)
+    out = pg.inner_text("#repReviewOut")
+    pg.wait_for_function("!ui.dirty", timeout=8000)
+    res = pg.evaluate(f"""(() => {{
+      const rec = Lib.games.get({json.dumps(rep_id)});
+      const g = Pgn.parseGame(rec.pgn, {{ lang: 'en' }}).game;
+      const at = p => resolvePath(g.root, p);
+      return {{ e4: at(['e2e4']).comment || '', nf3: at(['e2e4', 'e7e5', 'g1f3']).comment || '', ba6: at(['e2e4', 'e7e6', 'f1a6']).comment || '',
+               orig: !!rec.orig, open: ui.libId === {json.dumps(rep_id)} }};
+    }})()""")
+    comprobar("jugadas comentadas" in out or "jugada comentada" in out, "el resumen dice cuántas jugadas se han comentado")
+    comprobar(res["nf3"].startswith("Mi nota: la jugada de siempre") and "🤖" in res["nf3"], "los comentarios de la IA (con 🤖) se añaden sin borrar los tuyos")
+    comprobar("⚠ Stockfish" in res["ba6"] and "era mejor 2." in res["ba6"], "Stockfish avisa en el comentario de la jugada dudosa (2.Aa6) y dice la mejor")
+    comprobar(estado["correcciones"] >= 1 and "h5" not in res["e4"] and ("Corregido" in res["e4"] or "🤖" not in res["e4"]),
+              "si la IA se equivoca sobre la posición se le pide corregir, y lo erróneo no se guarda")
+    comprobar("Si juega otra cosa" in res["nf3"] and "Si el rival se sale: Si" not in res["nf3"], "incluye qué hacer si el rival se sale")
+    comprobar(res["orig"] and res["open"], "el repertorio se guarda solo y la versión anterior queda en 🕘 Versiones")
+    # Volver a comentarlo sustituye los de la IA en vez de acumularlos
+    entrenar(pg, "rep")
+    pg.locator("[data-rep-ai]").first.click()
+    pg.wait_for_function("!RepAI.busy && $('repReviewOut').textContent.includes('Comentarios de')", timeout=240000)
+    pg.wait_for_function("!ui.dirty", timeout=5000)
+    nf3 = pg.evaluate(f"resolvePath(Pgn.parseGame(Lib.games.get({json.dumps(rep_id)}).pgn, {{ lang: 'en' }}).game.root, ['e2e4', 'e7e5', 'g1f3']).comment")
+    comprobar(nf3.count("Desarrolla una pieza") == 1 and nf3.startswith("Mi nota"), "al volver a comentarlo, los comentarios de la IA se sustituyen y no se acumulan")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_salir_del_entrenamiento(browser):
     print("Salir de cada entrenamiento con los botones de la sesión")
     ctx = contexto(browser)
@@ -3278,7 +3340,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
