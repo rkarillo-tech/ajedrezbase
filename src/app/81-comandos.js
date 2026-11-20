@@ -19,6 +19,7 @@ function revealEl(el) {
   const modal = el.closest(".modal-back");
   if (modal && !modal.classList.contains("open")) openModal(modal.id);
   for (let d = el.closest("details"); d; d = d.parentElement && d.parentElement.closest("details")) d.open = true;
+  if (el.closest("#engineTools") && $("engineTools").hidden) setEngineTools(true);
   if (el.closest(".board-side") && !el.offsetParent) document.querySelector(".board-side").classList.add("more-open");
   return true;
 }

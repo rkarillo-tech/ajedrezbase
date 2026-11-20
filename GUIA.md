@@ -6,16 +6,16 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 [▶️ Abrir AjedrezBase](https://rkarillo-tech.github.io/ajedrezbase/) · [Volver al README](README.md)
 
 ## 🧭 1. De un vistazo: cómo está organizada la pantalla
-- **Columna izquierda**: el tablero con la **barra de evaluación** (a su izquierda), los nombres de los jugadores con el material capturado, el **panel del motor**, el **gráfico de la partida**, los botones de navegación y la **lista de jugadas** con sus variantes.
-- **Columna derecha**, arriba: la **barra de la partida actual** (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, seis pestañas:
-**📖 Estudio** (importar, comentar, analizar), **📘 Cursos** (lecciones paso a paso), **🌍 Aperturas**, **📚 Biblioteca** (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), **👑 Finales** y **🎯 Entrenar** (el plan de hoy y un menú con cada actividad: problemas, repertorios, errores de tus partidas, tarjetas, adivina la jugada y visualización; cada tarjeta abre la suya y **← Todas las actividades** vuelve al menú).
+- **Columna izquierda**: el tablero con la **barra de evaluación** (a su izquierda), los nombres de los jugadores con el material capturado, los botones de navegación, el **panel del motor** y el **gráfico de la partida**.
+- **Columna derecha**, arriba: la **barra de la partida actual** (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar) y, justo debajo, la **lista de jugadas** con sus variantes, siempre al lado del tablero. Debajo, seis pestañas:
+**📖 Estudio** (comentar, analizar e importar o exportar), **📘 Cursos** (lecciones paso a paso), **🌍 Aperturas**, **📚 Biblioteca** (tus partidas, marcadores, búsquedas, ficheros .pgn, 📊 estadísticas y 🔍 búsqueda de posiciones), **👑 Finales** y **🎯 Entrenar** (el plan de hoy y un menú con cada actividad: problemas, repertorios, errores de tus partidas, tarjetas, adivina la jugada y visualización; cada tarjeta abre la suya y **← Todas las actividades** vuelve al menú).
 - **👋 Primeros pasos**: la primera vez que abres la aplicación, un panel sobre el tablero te ofrece cinco accesos directos (analizar una partida tuya, traer tus partidas de Lichess, resolver problemas, hacer un curso o jugar). Se cierra al usarlo y vuelve con **Primeros pasos**, al pie de la página.
 - **En el móvil** (en vertical) las pestañas son una barra fija abajo, siempre a mano; **♟ Tablero** te devuelve arriba. Bajo el tablero quedan la navegación, las jugadas y el motor; el botón **⋯** despliega lo demás: colocar piezas, cortar, dibujar flechas, promover variantes, escribir la jugada, imagen, imprimir y enlace.
 - **🔎 Buscar** (barra superior, `Ctrl` + `K` o `/`): escribe en vez de buscar entre menús. Encuentra cualquier función («radar», «imprimir», «contrarreloj»), ajuste («3D», «tema oscuro», «token»), apartado de esta ayuda, curso o lección («Lucena»), apertura de la enciclopedia («siciliana», que la pone en el tablero) y partidas de tu biblioteca o del .pgn abierto por jugador, torneo o año («Carlsen Nakamura»). Si escribes una jugada legal («Cf3», «e4», «O-O») te ofrece jugarla, y si pegas una FEN, cargarla. También entiende **órdenes escritas**: «jugar con negras nivel 5 a 5+3» (abre la partida contra la CPU con todo elegido; también «humano 1600», «adaptativo» o «dos jugadores»), «ir a la jugada 20» (o «20...» para la de las negras), «partidas de Carlsen» o «Carlsen contra Nakamura» (filtra tu biblioteca o el .pgn abierto), «modo oscuro», «activar 3D», «quita el radar». Perdona las erratas («sicilana», «najdrof»), al abrirlo te enseña primero lo último que usaste y, si no encuentra nada, te ofrece preguntárselo al profesor IA o buscarlo en esta ayuda. Elige con `↑` `↓` y pulsa `Intro`: te lleva a la pestaña o al ajuste y lo resalta, o hace directamente la acción. Funciona sin conexión.
 - **Barra superior**: jugar contra la CPU, sonido 🔊, ajustes ⚙ (donde están también el diseño de las piezas, la notación en pantalla y los colores del tablero), esta ayuda ❓ y «Nueva» partida.
 - **En el móvil y la tableta**, en vertical: debajo del tablero tienes los botones para avanzar y retroceder y la lista de jugadas, y más abajo el motor y el gráfico. El diseño de las piezas, la notación y los colores están en **⚙ Ajustes**. En horizontal (también en tabletas), el tablero ocupa la izquierda, siempre entero, y las jugadas, la lección y el motor la derecha. Si lo quieres más pequeño, cambia el **tamaño del tablero** en ⚙ Ajustes.
 
-> **Ejemplo rápido (2 minutos):** pega una partida en «📖 Estudio» → pulsa **Importar** → recórrela con las flechas `←` `→` → pulsa **🤖 Analizar y comentar** → si te gusta, **💾 Guardar en biblioteca**.
+> **Ejemplo rápido (2 minutos):** pega una partida en «📖 Estudio» › **📥 Importar / exportar** → pulsa **Importar** → recórrela con las flechas `←` `→` → pulsa **🤖 Analizar y comentar** → si te gusta, **💾 Guardar en biblioteca**.
 
 ## ♟ 2. Mover piezas y recorrer la partida
 - **Mover**: arrastra la pieza, o haz clic en la pieza y luego en la casilla de destino. Los puntos verdes indican las jugadas legales (se pueden ocultar en ⚙ Ajustes).
@@ -33,7 +33,7 @@ Se genera automáticamente a partir de `src/help.html` con `python3 build.py`.
 - La aplicación detecta jaque mate, ahogado, triple repetición, regla de 50 jugadas y material insuficiente; lo verás en la línea de estado bajo los botones.
 
 ## 📥 3. Importar partidas, PGN y posiciones FEN
-En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cualquier cosa. Pega y pulsa **Importar**.
+En **📖 Estudio**, despliega **📥 Importar / exportar** (debajo del comentario; la aplicación recuerda si lo dejas abierto): su recuadro «Jugadas, PGN completo o FEN» acepta casi cualquier cosa. Pega y pulsa **Importar**. También puedes pegar con `Ctrl`+`V` fuera de los recuadros, sin desplegarlo.
 
 - **Notación española**: `1. e4 e5 2. Cf3 Cc6 3. Ab5` (C caballo, A alfil, T torre, D dama, R rey).
 - **Notación inglesa**: `1. e4 e5 2. Nf3 Nc6 3. Bb5`.
@@ -69,7 +69,8 @@ En **📖 Estudio**, el recuadro «Jugadas, PGN completo o FEN» acepta casi cua
 
 ## ⚙ 5. El motor: análisis en vivo, «Piensa conmigo», «Habla con tus piezas», nube y etiquetas
 - **Analizar** (o tecla `E`) activa el análisis continuo de cada posición que visitas. Verás hasta 3 líneas: evaluación + jugadas sugeridas. Pulsa una línea para jugar su primera jugada.
-- **Flecha** muestra en morado la mejor jugada del motor. **⚡ Jugar** la ejecuta.
+- **Flecha** muestra en morado la mejor jugada del motor. **⚡ Hacer la mejor** la juega en el tablero (para jugar una partida contra la CPU, usa **🤖 Jugar vs CPU**, arriba).
+- **🧰 Herramientas** despliega el resto: 🎨 Colores, 🛡 Radar, 🔎 Lee el tablero, 🗣 Habla con tus piezas, 🧠 Piensa conmigo, 👁 Amenaza y ☁ Nube. La aplicación recuerda si lo dejas abierto, y los atajos de teclado funcionan aunque esté cerrado.
 - **🔎 Lee el tablero** (o tecla `L`): el método que recomiendan los entrenadores **antes de calcular**, en cinco pasos, con flechas en el tablero: **1) el material** (cuánto vas por delante o por detrás y, por tanto, qué necesitas buscar); **2) los reyes** (casillas de escape, casillas vecinas atacadas, escudo de peones y columnas abiertas); **3) lo que amenaza el rival**, como si le tocara a él: qué ataca, qué ve con **rayos X** (cada torre, alfil y dama mirada hasta el borde del tablero), sus **baterías** y **clavadas**, y tus piezas en peligro o sin defensa; **4) lo mismo con tus piezas**, incluidos los jaques a la descubierta que tienes preparados; y **5) las jugadas forzadas**: todos los jaques, las capturas (con lo que ganan a primera vista) y las amenazas. Son las candidatas a calcular primero, en ese orden: casi todas las combinaciones empiezan con una de ellas. No usa el motor (sólo las reglas), así que no te da la solución: te enseña a mirar. Al final, «🧠 Comprobar con Piensa conmigo» te dice cuál funciona y por qué. También está en los problemas (cuenta como pista) y en las partidas contra la CPU (cuenta como ayuda).
 - **🧠 Piensa conmigo** (o tecla `T`): el motor explica su razonamiento en palabras, como lo haría un entrenador: **la situación** (valoración, material y la amenaza del rival), **la mejor jugada y su idea** (gana material, cubre una amenaza, lleva al mate…), **lo que va a pasar** jugada a jugada (tu jugada, la mejor respuesta del rival, la tuya… con qué hace cada una), **por qué no las otras** candidatas y **la jugada tentadora** que parece buena pero falla, con su refutación. Desde ahí puedes jugar la jugada o añadir la línea como variante. Tarda unos segundos.
 - **Nivel de las explicaciones** (selector en el propio recuadro de «Piensa conmigo» o en ⚙ Ajustes): **🌱 Iniciación** (sin cifras de valoración, sólo lo esencial y una regla para recordar, como «enroca pronto» o «antes de comer, mira qué puede responder el rival»), **♟ Club** (la explicación completa) o **🎓 Avanzado** (más alternativas, cada una con su línea, y la línea completa con la profundidad del cálculo).
@@ -388,7 +389,7 @@ Con el 🤖 profesor IA configurado, la IA es la que habla: presenta la clase co
 | `?` | Abrir esta ayuda |
 | `Esc` | Cerrar ventanas |
 
-Los atajos no funcionan mientras escribes en un recuadro de texto.
+Los atajos no funcionan mientras escribes en un recuadro de texto. Con el foco en las pestañas (llegas a ellas con `Tab`), `←` `→` `Inicio` `Fin` cambian de pestaña en vez de jugada.
 
 ## 📤 24. Imagen, impresión y enlaces para compartir
 - **🖼 Imagen**: descarga la posición del tablero como PNG, con sus flechas y círculos y un pie con la partida y la jugada. Si el navegador lo permite, además la copia al portapapeles para pegarla en un correo, un chat o un documento.
@@ -429,7 +430,11 @@ Lichess limita las consultas seguidas. La aplicación hace una cada vez y, si Li
 
 **«Esta partida se ha modificado en otra pestaña»**
 
-Tienes la aplicación abierta en dos pestañas o ventanas. Para no perder nada, no se guarda encima de los cambios de la otra: vuelve a abrir la partida desde la biblioteca, o pulsa 💾 si quieres quedarte con la versión de esta pestaña.
+Tienes la aplicación abierta en dos pestañas o ventanas. Para no perder nada, no se guarda encima de los cambios de la otra: vuelve a abrir la partida desde la biblioteca, o pulsa 💾 si quieres quedarte con la versión de esta pestaña. Si en ese momento pasas a otra partida, se te pregunta: puedes guardar tus cambios como una **copia aparte** (la versión de la otra pestaña queda como está) o volver a la partida.
+
+**«Los cambios de … no se pudieron guardar»**
+
+Al pasar a otra partida, la anterior se guarda sola; si el navegador no deja guardar (por falta de espacio, por ejemplo), tus cambios no se pierden: quedan a salvo, también si recargas la página, y debajo del título aparece un aviso con **↩ Recuperar** (vuelve a abrir la partida con tus cambios e intenta guardarlos de nuevo), **⬇ Descargar .pgn** y **✖ Descartar**. Si falta espacio, exporta y borra partidas antiguas de la biblioteca antes de recuperar.
 
 **«Motor interno ⚠» en vez de Stockfish**
 

@@ -5,7 +5,7 @@ function showWelcome(on) {
   if (!on && !settings.welcomed) { settings.welcomed = true; saveSettings(); }
 }
 const WELCOME = {
-  analyse() { switchTab("study"); $("moveInput").focus(); $("moveInput").select(); toast("Pega aquí tu partida (PGN o jugadas sueltas) y pulsa «Importar». Después, «🤖 Analizar y comentar».", 7000); },
+  analyse() { switchTab("study"); $("importDetails").open = true; $("moveInput").focus(); $("moveInput").select(); toast("Pega aquí tu partida (PGN o jugadas sueltas) y pulsa «Importar». Después, «🤖 Analizar y comentar».", 7000); },
   lichess() { switchTab("library"); switchSub("collection"); $("lichessImport").open = true; $("liUser").focus(); },
   puzzles() { switchTab("tools"); openTrainSection("puzzles"); },
   courses() { switchTab("courses"); },
