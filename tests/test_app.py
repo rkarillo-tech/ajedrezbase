@@ -1555,7 +1555,7 @@ def prueba_sincronizacion(browser):
     ctxB, B, errB = dispositivo("B")
     comprobar(not A.is_visible("#syncChip"), "sin archivo vinculado no hay indicador en la cabecera")
     A.evaluate(guardar, ["Uno", "1. e4 e5 2. Nf3 Nc6 *"])
-    A.click("#settingsBtn")
+    A.click("#settingsBtn"); revelar(A, "#syncStatus")
     comprobar("Sin archivo vinculado" in A.inner_text("#syncStatus") and A.is_visible('[data-sync="new"]'), "Ajustes ofrece vincular un archivo")
     A.click('[data-sync="new"]')
     A.wait_for_function("syncState === 'ok' && !syncBusy && !syncDirty", timeout=10000)
@@ -1569,7 +1569,7 @@ def prueba_sincronizacion(browser):
     B.evaluate("LS.set('ajedrezProblemas', { p1: { reps: 3, due: 9, box: 2 }, p2: { reps: 1, due: 4, box: 1 } }); LS.set('ajedrezActividad', { '2026-11-01': { puzzle: 4 } })")
     A.evaluate("LS.set('ajedrezProblemas', { p1: { reps: 1, due: 5, box: 1 } }); LS.set('ajedrezActividad', { '2026-11-01': { puzzle: 2, card: 1 } })")
     al_dia(A)
-    B.click("#settingsBtn"); B.click('[data-sync="open"]')
+    B.click("#settingsBtn"); revelar(B, "#syncStatus"); B.click('[data-sync="open"]')
     B.wait_for_function("syncState === 'ok' && !syncBusy && !syncDirty && Lib.games.size === 2", timeout=10000)
     B.keyboard.press("Escape")
     comprobar(titulos(B) == ["Dos", "Uno"], "al vincular el archivo en otro dispositivo se combinan las dos bibliotecas")
@@ -1603,7 +1603,7 @@ def prueba_sincronizacion(browser):
     comprobar(titulos(A) == ["Tres", "Uno"] and titulos(B) == ["Tres", "Uno"] and len(_json.loads(archivo["txt"])["games"]) == 2, "la misma partida guardada en los dos queda una sola vez")
     # Ajustes: viajan, salvo los propios de cada dispositivo
     B.evaluate("settings.token = 'lip_secreto'; saveSettings()")
-    B.click("#settingsBtn"); B.select_option("#themeSelect", "coral"); B.keyboard.press("Escape")
+    B.click("#settingsBtn"); revelar(B, "#themeSelect"); B.select_option("#themeSelect", "coral"); B.keyboard.press("Escape")
     B.wait_for_function("!syncBusy && !syncTimer && !syncDirty", timeout=10000)
     al_dia(A)
     comprobar(A.evaluate("settings.theme") == "coral" and A.evaluate("document.body.dataset.theme") == "coral" and A.evaluate("settings.token") == "", "los ajustes llegan y se aplican sin recargar")
@@ -1612,7 +1612,7 @@ def prueba_sincronizacion(browser):
     bueno = archivo["txt"]
     archivo["txt"] = '{"hola": 1}'; archivo["m"] += 1
     A.evaluate("syncCheck()"); A.wait_for_function("!syncBusy && syncErr", timeout=10000)
-    A.click("#settingsBtn")
+    A.click("#settingsBtn"); revelar(A, "#syncStatus")
     comprobar("no es un archivo de sincronización" in A.inner_text("#syncStatus") and archivo["txt"] == '{"hola": 1}' and A.inner_text("#syncChip") == "⚠", "un archivo ajeno no se sobrescribe y se avisa")
     archivo["txt"] = bueno; archivo["m"] += 1
     A.click('[data-sync="now"]'); A.wait_for_function("!syncBusy && !syncErr", timeout=10000)
