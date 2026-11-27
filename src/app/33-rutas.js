@@ -57,7 +57,7 @@ const ROUTES = [
       go: () => routeTrain("drill"), target: "#drillDueBtn", done: () => routeHad("drill-start") },
     { t: "Haz de ello un hábito", why: "«📅 Hoy», al principio de la pestaña Entrenar, propone cada día una sesión corta con lo que te toca repasar. La contrarreloj sirve para ganar velocidad.",
       go: () => routeTrain("menu"), target: "#todayBox", done: null }
-  ], next: "El «🧑‍🏫 Entrenador IA» prepara clases a tu medida con lo que más te cuesta." },
+  ], next: "El «🧑‍🏫 Entrenador» prepara clases a tu medida con lo que más te cuesta." },
 
   { id: "finales", icon: "👑", name: "Estudiar finales", desc: "Los finales básicos, explicados y practicados contra la defensa perfecta", steps: [
     { t: "Aprende los finales básicos", why: "Abre el curso «👑 Finales» y sigue sus lecciones: cada una explica la idea y luego te deja practicarla.",
@@ -101,7 +101,7 @@ const ROUTES = [
       go: () => routeTrain("menu"), target: "#todayBox", done: null },
     { t: "Haz la siguiente tarea", why: "«▶ Siguiente tarea» te lleva directamente a lo que toca ahora. Al terminar, vuelve a «Hoy» y pulsa otra vez hasta completarlo.",
       go: () => routeTrain("menu"), target: ["#todayNextBtn", "#todayBox"], done: () => routeHad("today-next") },
-    { t: "Una clase con el entrenador", why: "El «🧑‍🏫 Entrenador IA» mira tus errores, elige qué trabajar y te prepara una clase corta con problemas y posiciones de tus partidas.",
+    { t: "Una clase con el entrenador", why: "El «🧑‍🏫 Entrenador» mira tus errores, elige qué trabajar y te prepara una clase corta con problemas y posiciones de tus partidas.",
       go: () => routeTrain("coach"), target: "#coachStartBtn", done: () => routeHad("coach-start") },
     { t: "Repasa tus errores", why: "«🎯 Errores de tus partidas» te pone las posiciones donde fallaste; las que aciertes volverán cada vez más espaciadas.",
       go: () => routeTrain("drill"), target: "#drillDueBtn", done: () => routeHad("drill-start") }

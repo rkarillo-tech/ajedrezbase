@@ -1927,7 +1927,7 @@ def prueba_colores_jugadas(browser):
 
 
 def prueba_ayudas_profesor(browser):
-    print("Novedades 1.43: radar, voz, nivel de las explicaciones, modo profesor y profesor IA")
+    print("Novedades 1.43: radar, voz, nivel de las explicaciones y modo profesor")
     ctx = contexto(browser)
     # Voz: se sustituye la síntesis del navegador para ver qué se leería
     ctx.add_init_script("""(() => { window.__dicho = []; const synth = { speak(u) { window.__dicho.push(u.text); setTimeout(() => u.onend && u.onend(), 30); }, cancel() {}, getVoices() { return [{ lang: 'es-ES', name: 'prueba' }]; }, onvoiceschanged: null };
@@ -1957,6 +1957,8 @@ def prueba_ayudas_profesor(browser):
     pg.wait_for_function("!Think.busy && $('thinkBox').textContent.includes('Línea completa')", timeout=60000)
     comprobar(pg.evaluate("settings.explainLevel") == "advanced" and "profundidad" in pg.inner_text("#thinkBox"), "el selector del propio recuadro cambia al nivel avanzado: más detalle y la línea completa")
     pg.evaluate("setExplainLevel('club')")
+    comprobar(pg.evaluate("$('setExplainLevel').closest('.set-sec').dataset.set") == "motor" and pg.input_value("#setExplainLevel") == "club",
+              "el nivel de las explicaciones está en ⚙ Ajustes › Motor (antes iba con el profesor IA) y sigue al selector del recuadro")
     comprobar(pg.locator("#thinkBox .speak-btn").count() == 1, "cada explicación tiene su botón 🔊")
     pg.click("#thinkBox .speak-btn")
     pg.wait_for_function("window.__dicho.length > 0")
@@ -1988,159 +1990,18 @@ def prueba_ayudas_profesor(browser):
     pg.wait_for_function("cur().state.t === 1 && !ui.cpu.thinking && !ui.cpu.checking", timeout=30000)
     comprobar(pg.evaluate("!ui.cpu.coach") and not pg.is_visible(".coach-banner") and pg.evaluate("Pgn.mainlineFrom(game.root).length") == jugadas + 2, "una buena jugada (2.Cf3) no se interrumpe: la CPU responde")
     pg.evaluate("stopCpu(true); settings.cpuCoach = false")
-    # 4. Profesor IA (Ollama y Gemini simulados)
-    comprobar(not pg.is_visible("#aiBox"), "sin proveedor, el recuadro del profesor IA no aparece y no se envía nada")
-    pedido = {}
-    def ollama(r):
-        pedido["ollama"] = json.loads(r.request.post_data)
-        r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"message": {"role": "assistant", "content": "**Desarrolla** el caballo con Cf3.\n- Controla el centro.\n<img src=x onerror=alert(1)>"}}))
-    ctx.route("http://localhost:11434/api/chat", ollama)
-    ctx.route("http://localhost:11434/api/tags", lambda r: r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"models": [{"name": "qwen2.5:7b"}]})))
-    pg.evaluate("setGame(Pgn.parseGame('1. e4 e5', { lang: 'en' }).game, { noConfirm: true, current: Pgn.parseGame('1. e4 e5', { lang: 'en' }).game.root }); goEnd()")
-    pg.click("#settingsBtn")
-    revelar(pg, "#setAiProvider") or pg.select_option("#setAiProvider", "ollama")
-    pg.evaluate("settings.aiWatch = false")   # 1.58: esta prueba mira las reglas del modo de siempre, no la vigilancia
-    comprobar(pg.is_visible("#aiUrlRow") and not pg.is_visible("#aiKeyRow") and "tu ordenador" in pg.inner_text("#aiNote"), "Ajustes: con Ollama se pide la dirección y no una clave")
-    revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
-    pg.wait_for_function("$('aiTestResult').textContent.includes('Funciona')", timeout=15000)
-    pg.keyboard.press("Escape")
-    comprobar(pg.is_visible("#aiBox"), "con un proveedor elegido aparece el recuadro de preguntas")
-    pg.click("#aiBox [data-aiq]")
-    pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=60000)
-    u = pedido["ollama"]["messages"][1]["content"]
-    ok = "FEN" in u and "Mejores líneas del motor" in u and "Pregunta del alumno" in u and pedido["ollama"]["model"] == "qwen2.5:7b" and "No inventes jugadas" in pedido["ollama"]["messages"][0]["content"]
-    if not ok: print("    (lo que recibió la IA:)", u[:600].replace("\n", " | "))
-    comprobar(ok, "a la IA se le da la posición, las líneas del motor y la pregunta, con la orden de no inventar jugadas")
-    comprobar(pg.locator("#aiAnswer .ai-text b").count() == 1 and pg.locator("#aiAnswer img").count() == 0 and "<img" in pg.inner_text("#aiAnswer"), "la respuesta se muestra como texto: las negritas sí, el HTML no se ejecuta")
-    comprobar(pg.locator("#aiAnswer .speak-btn").count() == 1, "la respuesta también se puede leer en voz alta")
-    def gemini(r):
-        pedido["gemini"] = (r.request.headers.get("x-goog-api-key"), json.loads(r.request.post_data))
-        r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"candidates": [{"content": {"parts": [{"text": "Juega **Cf3**."}]}}]}))
-    ctx.route("https://generativelanguage.googleapis.com/**", gemini)
-    pg.evaluate("settings.aiProvider = 'gemini'; settings.aiKey = 'clave-de-prueba'; settings.aiModel = ''")
-    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
-    pg.wait_for_function("$('aiAnswer').textContent.includes('Cf3') && $('aiAnswer').textContent.includes('Gemini')", timeout=60000)
-    comprobar(pedido["gemini"][0] == "clave-de-prueba" and "No inventes" in pedido["gemini"][1]["systemInstruction"]["parts"][0]["text"], "con Gemini, la clave va en su cabecera y se envía la misma información")
-    comprobar("aiKey" not in pg.evaluate("JSON.stringify(syncPayload().ls.ajedrezSettings)"), "la clave no viaja con la sincronización ni en las copias de seguridad")
-    # Claude: con el SDK oficial de Anthropic (servido en local) y la API simulada
-    sdk = os.environ.get("ANTHROPIC_SDK_FILE")
-    if sdk and pathlib.Path(sdk).exists():
-        cuerpo = pathlib.Path(sdk).read_bytes()
-        ctx.route("**/@anthropic-ai/sdk@*/+esm", lambda r: r.fulfill(status=200, body=cuerpo, headers={"Content-Type": "application/javascript", "Access-Control-Allow-Origin": "*"}))
-        def claude(r):
-            pedido["claude"] = (r.request.all_headers(), json.loads(r.request.post_data))
-            r.fulfill(status=200, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "request-id": "req_prueba"}, body=json.dumps({
-                "id": "msg_prueba", "type": "message", "role": "assistant", "model": "claude-opus-5-5", "stop_reason": "end_turn", "stop_sequence": None,
-                "content": [{"type": "text", "text": "Lo mejor es **Cf3**: desarrolla y ataca e5."}], "usage": {"input_tokens": 10, "output_tokens": 10}}))
-        ctx.route("https://api.anthropic.com/**", claude)
-        pg.evaluate("settings.aiProvider = 'claude'; settings.aiKey = 'sk-ant-prueba'; settings.aiModel = ''; AI.sdk = null")
-        pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
-        pg.wait_for_function("$('aiAnswer').textContent.includes('desarrolla y ataca')", timeout=60000)
-        h, b = pedido["claude"]
-        comprobar(b["model"] == "claude-opus-5-5" and b["fallbacks"] == "default" and b["output_config"]["effort"] == "low" and "server-side-fallback-2026-07-01" in h.get("anthropic-beta", "")
-                  and h.get("authorization") == "Bearer sk-ant-prueba" and h.get("anthropic-dangerous-direct-browser-access") == "true" and "sk-ant-prueba" not in json.dumps(b),
-                  "con Claude se usa el SDK oficial: claude-opus-5-5, reserva automática ante rechazos, esfuerzo bajo y la clave sólo en la cabecera de autorización")
-        def claude_mal(r):
-            r.fulfill(status=401, headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, body=json.dumps({"type": "error", "error": {"type": "authentication_error", "message": "invalid x-api-key"}}))
-        ctx.unroute("https://api.anthropic.com/**"); ctx.route("https://api.anthropic.com/**", claude_mal)
-        pg.click("#aiAskBtn")
-        pg.wait_for_function("$('aiAnswer').textContent.includes('rechaza la clave')", timeout=60000)
-        comprobar(True, "si la clave no vale, se dice claramente")
-    else:
-        print("  (se omite la parte de Claude: define ANTHROPIC_SDK_FILE con el SDK de Anthropic empaquetado para el navegador)")
-    pg.evaluate("settings.aiProvider = 'none'; settings.aiKey = ''; renderAiBox()")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
 
-def prueba_ollama(browser):
-    print("Novedades 1.43.1: conectar Ollama (permiso de la página, lista de modelos y modelos que razonan)")
+def prueba_buscador(browser):
+    print("Novedades 1.44.0: buscador de comandos (Ctrl + K)")
     ctx = contexto(browser)
     cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
-    estado = {"bloqueado": True}
-    modelos = ["deepseek-r1:8b", "qwen2.5-coder:7b", "qwen3.5-hermes:latest", "gemma4:12b", "nomic-embed-text:v1.5", "qwen3.5:9b", "dolphin3:8b", "sin-think:1b", "solo-razona:1b"]
-    def tags(r):
-        if estado["bloqueado"]: r.abort()   # como hace el navegador cuando Ollama no da permiso a la página (CORS)
-        else: r.fulfill(status=200, headers=cab, body=json.dumps({"models": [{"name": n, "model": n} for n in modelos]}))
-    def chat(r):
-        if estado["bloqueado"]: r.abort(); return
-        cuerpo = json.loads(r.request.post_data)
-        estado["ultimo"] = cuerpo
-        m = cuerpo["model"]
-        if m == "solo-razona:1b": r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": "", "thinking": "mmm..."}})); return
-        if m == "sin-think:1b":
-            if "think" in cuerpo: r.fulfill(status=400, headers=cab, body=json.dumps({"error": f'"{m}" does not support thinking'})); return
-            r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": "Hola"}})); return
-        if m not in modelos: r.fulfill(status=404, headers=cab, body=json.dumps({"error": f"model '{m}' not found"})); return
-        if "embed" in m: r.fulfill(status=400, headers=cab, body=json.dumps({"error": f'"{m}" does not support chat'})); return
-        txt = "<think>\nEl usuario quiere un saludo.\n</think>\n\nHola" if m.startswith("deepseek") else "Hola"
-        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
-    ctx.route("http://localhost:11434/api/tags", tags)
-    ctx.route("http://localhost:11434/api/chat", chat)
-    pg, errores = nueva_pagina(ctx)
-    pg.evaluate("$('welcomeBox').hidden = true")
-    pg.click("#settingsBtn")
-    revelar(pg, "#setAiProvider") or pg.select_option("#setAiProvider", "ollama")
-    comprobar("paso a paso" in pg.inner_text("#aiNote"), "al elegir Ollama, Ajustes enlaza los pasos para darle permiso a la página")
-    revelar(pg, "#setAiModel") or pg.fill("#setAiModel", "deepseek-r1:8b"); revelar(pg, "#setAiModel") or pg.dispatch_event("#setAiModel", "change")
-    revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
-    pg.wait_for_function("$('aiTestResult').textContent.includes('❌')", timeout=15000)
-    msg = pg.inner_text("#aiTestResult")
-    comprobar("OLLAMA_ORIGINS" in msg and "no deja entrar a esta página" in msg and pg.locator("#aiTestResult .help-link").count() == 1,
-              "si Ollama no deja entrar a la página, se explica (permiso con OLLAMA_ORIGINS) y se enlazan los pasos")
-    pg.click("#aiTestResult .help-link")
-    pg.wait_for_timeout(300)
-    comprobar(pg.is_visible("#help-ollama") and "setx OLLAMA_ORIGINS" in pg.inner_text("#helpModal"), "«Ver los pasos» abre la ayuda en «Conectar Ollama», con los pasos para Windows, macOS y Linux")
-    pg.keyboard.press("Escape")
-    estado["bloqueado"] = False
-    pg.click("#settingsBtn")
-    revelar(pg, "#setAiModel") or pg.fill("#setAiModel", "qwen2.5:7b"); revelar(pg, "#setAiModel") or pg.dispatch_event("#setAiModel", "change")
-    revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
-    pg.wait_for_function("$('aiTestResult').textContent.includes('Tus modelos')", timeout=15000)
-    msg = pg.inner_text("#aiTestResult")
-    opciones = pg.evaluate("[...$('aiModelList').options].map(o => o.value)")
-    comprobar("no tiene el modelo «qwen2.5:7b»" in msg and "gemma4:12b" in msg and "nomic-embed-text" not in msg and "nomic-embed-text:v1.5" not in opciones and len(opciones) == 8,
-              "con un modelo que no está, la prueba dice cuáles hay para conversar (sin los de embeddings) y los pone en la lista de la casilla")
-    for nombre in ("deepseek-r1:8b", "gemma4:12b"):
-        revelar(pg, "#setAiModel") or pg.fill("#setAiModel", nombre); revelar(pg, "#setAiModel") or pg.dispatch_event("#setAiModel", "change")
-        revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
-        pg.wait_for_function("$('aiTestResult').textContent.includes('Funciona')", timeout=15000)
-        comprobar("«Hola»" in pg.inner_text("#aiTestResult") and "think" not in pg.inner_text("#aiTestResult"), f"con «{nombre}» funciona" + (" (sin enseñar su razonamiento <think>)" if nombre.startswith("deepseek") else ""))
-    revelar(pg, "#setAiModel") or pg.fill("#setAiModel", "qwen3.5"); revelar(pg, "#setAiModel") or pg.dispatch_event("#setAiModel", "change")
-    revelar(pg, "#aiTestBtn") or pg.click("#aiTestBtn")
-    pg.wait_for_function("$('aiTestResult').textContent.includes('❌') || $('aiTestResult').textContent.includes('Funciona') || $('aiTestResult').textContent.includes('Tus modelos')", timeout=15000)
-    comprobar("Funciona" in pg.inner_text("#aiTestResult") and pg.input_value("#setAiModel") == "qwen3.5:9b" and pg.evaluate("settings.aiModel") == "qwen3.5:9b",
-              "escribir el modelo sin la etiqueta («qwen3.5») se completa solo con la versión instalada (qwen3.5:9b)")
-    pg.keyboard.press("Escape")
-    pg.evaluate("settings.aiProvider = 'none'; settings.aiModel = ''; renderAiBox()")
-    # Ajustes para los modelos locales: sin razonamiento interno y con la ventana de contexto a la medida de la pregunta
-    pg.evaluate("settings.aiProvider = 'ollama'; settings.aiModel = 'qwen3.5:9b'")
-    r = pg.evaluate("aiCall('Sistema', 'x'.repeat(30000)).then(t => t)")
-    u = estado["ultimo"]
-    comprobar(u.get("think") is False and u["options"]["num_ctx"] >= 12288 and u["options"]["num_ctx"] % 2048 == 0,
-              f"a Ollama se le pide no razonar por dentro y una ventana de contexto a la medida de la pregunta ({u['options']['num_ctx']} tokens)")
-    pg.evaluate("settings.aiModel = 'sin-think:1b'")
-    comprobar(pg.evaluate("aiCall('s', 'di hola')") == "Hola" and "think" not in estado["ultimo"], "si el modelo no admite esa opción, se repite sin ella")
-    pg.evaluate("settings.aiModel = 'solo-razona:1b'")
-    msg = pg.evaluate("aiCall('s', 'di hola').then(() => '', e => e.message)")
-    comprobar("se ha quedado razonando" in msg, "si el modelo sólo razona y no responde, se dice claramente")
-    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
-    ctx.close()
-
-
-def prueba_buscador_y_contexto_ia(browser):
-    print("Novedades 1.44.0: buscador de comandos (Ctrl + K) y contexto del profesor IA (repertorio, explorador y partidas modelo)")
-    ctx = contexto(browser)
-    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
-    pedido = {}
-    def chat(r):
-        pedido["m"] = json.loads(r.request.post_data)
-        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": "Juega **Cc3**, como en tu repertorio."}}))
     def explorador(r):
         r.fulfill(status=200, headers=cab, body=json.dumps({"white": 500, "draws": 300, "black": 200, "opening": {"eco": "B12", "name": "Caro-Kann Defense"},
             "moves": [{"san": "Nc3", "white": 200, "draws": 100, "black": 80}, {"san": "e5", "white": 150, "draws": 100, "black": 60}],
             "topGames": [{"id": "abc", "white": {"name": "Kasparov, Garry", "rating": 2800}, "black": {"name": "Karpov, Anatoly", "rating": 2750}, "year": 1990, "winner": "white"}]}))
-    ctx.route("http://localhost:11434/api/chat", chat)
     ctx.route("https://explorer.lichess.ovh/**", explorador)
     pg, errores = nueva_pagina(ctx)
     pg.evaluate("$('welcomeBox').hidden = true")
@@ -2170,103 +2031,9 @@ def prueba_buscador_y_contexto_ia(browser):
     pg.wait_for_function("settings.radar === true", timeout=5000)
     comprobar(True, "y las funciones se ejecutan directamente")
     pg.evaluate("setRadar(false)")
-    # 2. Contexto del profesor IA: repertorio propio, .pgn abierto (partida modelo) y explorador de Lichess
-    carlsen = '[White "Carlsen, Magnus"]\n[Black "Nakamura, Hikaru"]\n[Result "1-0"]\n[Date "2019.01.01"]\n\n1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Bf5 5. Ng3 Bg6 {La retirada del alfil.} 6. h4 h6 1-0\n'
-    pg.evaluate("""async (pgn) => {
-      const g = Pgn.parseGame('1. e4 c6 2. d4 d5 3. Nc3 (3. e5 Bf5) dxe4', { lang: 'en' }).game;
-      setGame(g, { name: 'Mi e4', tags: ['repertorio'], noConfirm: true });
-      await saveToLibrary({ silent: true, force: true });
-      setCollection(pgn, false, 'carlsen.pgn');
-      Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', token: 'lip_prueba' }); renderAiBox(); syncAiCtxForm();
-      const g2 = Pgn.parseGame('1. e4 c6 2. d4 d5', { lang: 'en' }).game;
-      setGame(g2, { noConfirm: true, current: Pgn.mainlineFrom(g2.root).pop() });
-    }""", carlsen)
-    comprobar(pg.locator(".ai-ctx input[type=checkbox]:checked").count() == 5, "las cuatro fuentes de contexto y las propuestas de la IA vienen activadas")
-    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
-    pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=60000)
-    u = pedido["m"]["messages"][1]["content"]
-    comprobar("tu repertorio «Mi e4»" in u and "Jugada preparada: Cc3" in u, "a la IA se le dice que la posición está en tu repertorio y qué tienes preparado")
-    comprobar("partidas de maestros: 1000" in u and "Kasparov, Garry" in u, "y lo que juegan los maestros, con sus partidas destacadas (explorador de Lichess)")
-    comprobar("Carlsen, Magnus – Nakamura, Hikaru" in u and "Después se jugó: 3.Cc3" in u and "los cursos" in u, "y partidas modelo del .pgn abierto y de los cursos, con lo que se jugó después")
-    comprobar("contexto comprobado" in pedido["m"]["messages"][0]["content"] and "No inventes jugadas" in pedido["m"]["messages"][0]["content"], "con la orden de citar de dónde sale cada dato y de no inventar jugadas")
-    comprobar("Mi e4" in pg.inner_text("#aiAnswer") and "maestros" in pg.inner_text("#aiAnswer"), "bajo la respuesta se ve qué fuentes se han consultado")
-    pg.evaluate("const g = Pgn.parseGame('1. e4 c6 2. d4 d5 3. f3', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
-    pg.click("#aiAskBtn")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=60000)
-    comprobar("Tú te saliste de tu repertorio «Mi e4»" in pedido["m"]["messages"][1]["content"], "si te sales del repertorio, se le dice en qué jugada y qué tenías preparado")
-    pg.evaluate("const g = Pgn.parseGame('1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Bf5 5. Ng3 Bg6', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
-    pg.click("#aiAskBtn")
-    pg.wait_for_function("$('aiAnswer').querySelector('[data-ai-model]')", timeout=60000)
-    pg.click("#aiAnswer [data-ai-model]")
-    pg.wait_for_function("game.headers.White === 'Carlsen, Magnus' && cur().san === 'Bg6'", timeout=5000)
-    comprobar(True, "una partida modelo se abre justo en la posición")
-    pg.click(".ai-ctx summary")
-    pg.uncheck("#aiPropose"); pg.uncheck("#aiCtxRep"); pg.uncheck("#aiCtxModels"); pg.uncheck("#aiCtxGames"); pg.uncheck("#aiCtxLichess")
-    pg.click("#aiAskBtn")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=60000)
-    comprobar("Contexto (datos" not in pedido["m"]["messages"][1]["content"], "sin fuentes marcadas, sólo se envía lo del motor")
-    pg.evaluate("Object.assign(settings, { aiProvider: 'none', token: '', aiCtxRep: true, aiCtxModels: true, aiCtxGames: true, aiCtxLichess: true, aiPropose: true }); renderAiBox(); syncAiCtxForm()")
-    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
-    ctx.close()
-
-
-def prueba_propuestas_ia(browser):
-    print("Novedades 1.45.0: la IA propone sus propias jugadas (sin ver al motor) y Stockfish las comprueba")
-    ctx = contexto(browser)
-    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
-    llamadas = []
-    def chat(r):
-        m = json.loads(r.request.post_data)
-        llamadas.append(m)
-        if "SÓLO con JSON" in m["messages"][0]["content"]:
-            txt = '```json\n{"lineas":[{"jugadas":"Cf3 Cc6 Ab5","idea":"desarrollo y presión en e5"},{"jugadas":"Aa6","idea":"atacar b7"},{"jugadas":"Axf7","idea":"sacrificio"}]}\n```'
-        else:
-            txt = "Juega **Cf3**. No juegues Aa6, que pierde el alfil. Otra idea sería Txh7."
-        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
-    ctx.route("http://localhost:11434/api/chat", chat)
-    pg, errores = nueva_pagina(ctx)
-    pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false }); renderAiBox(); syncAiCtxForm();"
-                "const g = Pgn.parseGame('1. e4 e5', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
-    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
-    pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=90000)
-    propuesta, final = llamadas[0], llamadas[-1]
-    comprobar(len(llamadas) == 2 and "Mejores líneas del motor" not in propuesta["messages"][1]["content"] and "FEN" in propuesta["messages"][1]["content"],
-              "primero la IA propone sus jugadas viendo la posición pero no al motor")
-    u = final["messages"][1]["content"]
-    comprobar("Tus propuestas" in u and "2.Cf3 Cc6 3.Ab5" in u and "BUENA" in u, "la línea buena llega juzgada a la respuesta final")
-    comprobar("2.Aa6" in u and "ERROR" in u and "refutación del motor" in u, "la que regala el alfil llega como error, con la refutación del motor")
-    comprobar("«Axf7»: ILEGAL" in u, "la ilegal se descarta y se le dice que no la mencione")
-    comprobar("BUENA o JUGABLE" in final["messages"][0]["content"] and "No inventes jugadas" in final["messages"][0]["content"], "sólo puede recomendar las del motor y sus propuestas buenas o jugables")
-    comprobar(propuesta.get("options", {}).get("num_predict") == 450 and "options" in final and "num_predict" not in final["options"],
-              "la consulta interna de propuestas es corta (con límite de longitud) y la respuesta que lees, no")
-    comprobar("unas 200 palabras" in final["messages"][0]["content"], "por defecto, respuestas normales (unas 200 palabras, con el porqué de lo importante)")
-    comprobar("Tu papel:" in final["messages"][0]["content"] and "enseñarle a pensar" in final["messages"][0]["content"] and "tutor" in propuesta["messages"][0]["content"],
-              "la IA recibe su papel: un tutor que enseña a pensar (también al proponer jugadas)")
-    pg.click("#aiBox [data-ai-depth=deep]")
-    llamadas.clear(); pg.click("#aiAskBtn")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
-    comprobar("unas 400 palabras" in llamadas[-1]["messages"][0]["content"] and "el porqué de cada jugada que cites" in llamadas[-1]["messages"][0]["content"] and pg.evaluate("settings.aiDepth") == "deep",
-              "📏 «Detalladas» pide explicar a fondo el porqué de cada jugada (y se recuerda)")
-    pg.click("#aiBox [data-ai-depth=normal]")
-    caja = pg.inner_text("#aiAnswer")
-    comprobar(pg.locator("#aiAnswer .ai-prop").count() == 3 and "✔ buena" in caja and "✗ error" in caja and "⛔ ilegal" in caja and "Refutación" in caja,
-              "bajo la respuesta se ven las propuestas con su veredicto y la refutación")
-    comprobar(pg.locator("#aiAnswer .ai-prop .pv-mv").count() >= 4, "las jugadas de las propuestas se pueden ver en el minitablero")
-    marcadas = pg.evaluate("[...document.querySelectorAll('#aiAnswer .ai-unverified')].map(x => x.textContent)")
-    comprobar(marcadas == ["Txh7⚠"] and "no están comprobadas" not in caja and "no está comprobada" in caja,
-              "una jugada de la respuesta que nadie ha comprobado se marca con ⚠ (y las comprobadas no)")
-    pg.click(".ai-ctx summary"); pg.uncheck("#aiPropose")
-    llamadas.clear()
-    pg.click("#aiAskBtn")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
-    comprobar(len(llamadas) == 1 and "Tus propuestas" not in llamadas[0]["messages"][1]["content"], "sin la casilla, una sola consulta y sin propuestas")
-    # Si otro cálculo (el análisis en vivo) interrumpe el del profesor, se repite en vez de quedarse sin líneas
-    r = pg.evaluate("""async () => { const s = cur().state; const p = evalState(s, 800, 2);
-      setTimeout(() => Engine.start({ purpose: 'live', fen: Chess.toFen(s), moves: [], stm: s.t, movetime: 300, multipv: 1, resolve() {} }), 60);
-      const out = await p; return !!(out && out.lines && out.lines.some(l => l.pv && l.pv.length)); }""")
-    comprobar(r, "si el análisis en vivo interrumpe el cálculo del profesor, se repite (antes se quedaba sin las líneas del motor)")
-    pg.evaluate("Object.assign(settings, { aiProvider: 'none', aiPropose: true, aiCtxLichess: true }); renderAiBox(); syncAiCtxForm()")
+    comprobar(not any(x["cat"] == "Profesor IA" for x in pg.evaluate("(() => { $('cmdInput').value = '¿qué plan tengo en esta posición?'; cmdRender(); return Cmd.shown.map(x => ({ cat: x.cat })); })()")),
+              "el buscador ya no ofrece preguntar al profesor IA")
+    pg.keyboard.press("Escape")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -2306,18 +2073,9 @@ def prueba_aperturas_explicadas(browser):
     ctx.close()
 
 
-def prueba_entrenador_ia(browser):
-    print("Novedades 1.47.0: entrenador IA (una clase guiada con tus errores y problemas del tema)")
+def prueba_entrenador(browser):
+    print("Novedades 1.47.0: entrenador (una clase guiada con tus errores y problemas del tema)")
     ctx = contexto(browser)
-    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
-    llamadas, pista = [], ["¿Qué pieza rival está sin defender?"]
-    def chat(r):
-        m = json.loads(r.request.post_data)
-        llamadas.append(m)
-        u = m["messages"][1]["content"]
-        txt = "Hoy toca **táctica**." if "presentación" in u else pista[0] if "pista número" in u else "Funciona porque gana material. Otra idea: Txh7." if "Explica" in u else "Buen trabajo."
-        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
-    ctx.route("http://localhost:11434/api/chat", chat)
     pg, errores = nueva_pagina(ctx)
     pg.wait_for_function("Engine.ready", timeout=30000)
     # Una partida tuya con un error ya analizado: la torre de a1 se deja tomar en vez de capturar la dama colgada
@@ -2345,17 +2103,18 @@ def prueba_entrenador_ia(browser):
     pg.wait_for_function("Coach.state === 'ask' && Coach.ex.kind === 'drill'", timeout=30000)
     comprobar("De tu partida" in pg.inner_text("#coachBox") and pg.evaluate("Coach.arrows.some(a => a.color === 'threat')"), "las posiciones de tus partidas enseñan el error que cometiste")
     pg.fill("#coachWhy", "quiero ganar material"); pg.press("#coachWhy", "Enter")
-    comprobar("Anotado" in pg.inner_text("#coachBox") and pg.evaluate("Coach.state") == "ask", "sin IA, Intro en «Tu idea» la anota y pide la jugada")
+    comprobar("Anotado" in pg.inner_text("#coachBox") and pg.evaluate("Coach.state") == "ask", "Intro en «Tu idea» la anota y pide la jugada")
     pg.evaluate("playMove(Chess.moveFromUci(Coach.ex.node.state, 'a1a8'), 'user')")
     comprobar("justo lo que se jugó en la partida" in pg.inner_text("#coachBox"), "repetir el error de la partida se detecta")
     pg.evaluate("playMove(Chess.moveFromUci(Coach.ex.node.state, 'd1d5'), 'user')")
     pg.wait_for_function("Coach.state === 'solved'", timeout=30000)
     pg.wait_for_timeout(300)
     comprobar(pg.evaluate("Object.values(Lib.games.get(Coach.ex.d.rec.id).drills || {}).length") == 1, "lo resuelto cuenta para el repaso de tus errores")
+    comprobar("Tu idea: «quiero ganar material»" in pg.inner_text("#coachBox"), "al resolver, tu idea anotada se enseña junto a la línea del motor para compararlas")
     comprobar(pg.locator("#coachAsk").count() == 1 and pg.locator("#coachBox [data-co-q]").count() >= 2, "al terminar el ejercicio se puede seguir preguntando (con preguntas rápidas)")
     pg.fill("#coachAsk", "¿y si juego Ta8+?"); pg.press("#coachAsk", "Enter")
     pg.wait_for_function("!Coach.chatBusy && Coach.chat.length === 1", timeout=30000)
-    comprobar("valoración" in pg.inner_text("#coachBox .coach-answer") and "Ta8" in pg.inner_text("#coachBox .coach-answer"), "sin IA, una pregunta sobre otra jugada se responde con la valoración del motor")
+    comprobar("valoración" in pg.inner_text("#coachBox .coach-answer") and "Ta8" in pg.inner_text("#coachBox .coach-answer"), "una pregunta sobre otra jugada se responde con la valoración del motor")
     pg.click("#coachBox [data-co=next]"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
     pg.click("#coachBox [data-co=show]")
     comprobar("La buena era" in pg.inner_text("#coachBox"), "«Solución» la enseña")
@@ -2364,47 +2123,23 @@ def prueba_entrenador_ia(browser):
     comprobar("de 4" in pg.inner_text("#coachBox") and "Mi consejo" in pg.inner_text("#coachBox"), "al final, un resumen con qué entrenar después")
     pg.click("#coachBox [data-co=end]")
     comprobar(not pg.evaluate("Coach.active") and not pg.is_visible("#coachBox"), "«Volver a tu partida» termina la clase")
-    # Con la IA: presentación, pistas que no pueden revelar la solución y explicación que comenta tu razonamiento
-    pg.evaluate("Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b' }); renderAiBox()")
+    # Si la idea empieza por una jugada («Cf3 porque…»), Intro la juega y el razonamiento se compara con la línea del motor
     pg.click('.tab-btn[data-tab="tools"]')
     if not pg.is_visible("#coachStartBtn"): pg.click('#trainMenu [data-train-open="coach"]')
+    comprobar("salen de Stockfish" in pg.inner_text("#coachDiag") and "IA" not in pg.inner_text("#coachDiag"), "el entrenador dice que las jugadas y las explicaciones salen de Stockfish (ya no hay IA)")
     pg.click("#coachStartBtn"); pg.wait_for_function("Coach.state === 'ask'", timeout=30000)
-    comprobar("Hoy toca" in pg.inner_text("#coachBox"), "con IA, la IA presenta la clase")
     buena = pg.evaluate("(() => { const s = Coach.ex.node.state, L = Chess.legal(s), m = Chess.moveFromUci(s, Coach.ex.best, L); return formatSan(Chess.san(s, m, L), 'es', s.t).replace(/[+#]/g, ''); })()")
-    pista[0] = f"Juega {buena} y ganas."
-    pg.click("#coachBox [data-co=hint]")
-    pg.wait_for_function("!$('coachBox').textContent.includes('piensa…')", timeout=30000)
-    comprobar(buena not in pg.inner_text("#coachBox .coach-hint"), "si la pista de la IA revela la solución, se descarta y se da la del entrenador")
-    pista[0] = "¿Qué pieza rival está sin defender?"
-    pg.click("#coachBox [data-co=hint]")
-    pg.wait_for_function("!$('coachBox').textContent.includes('piensa…')", timeout=30000)
-    comprobar("sin defender" in pg.inner_text("#coachBox .coach-hint") and pg.evaluate("Coach.hintSq") >= 0, "una pista que no la revela se muestra (y la segunda marca la pieza)")
-    pg.fill("#coachWhy", "creo que hay que atacar al rey"); pg.click("#coachBox [data-co=idea]")
-    pg.wait_for_function("$('coachBox').querySelector('.coach-idea') && !$('coachBox').textContent.includes('valora tu idea…')", timeout=30000)
-    comprobar("Valora su idea" in llamadas[-1]["messages"][1]["content"] and "Buen trabajo" in pg.inner_text("#coachBox .coach-idea") and pg.evaluate("Coach.state === 'ask' && Coach.ideaHelp"),
-              "con IA, «💬 Valorar mi idea» la comenta sin dar la solución (y cuenta como ayuda)")
     pg.fill("#coachWhy", f"{buena} porque ataca dos piezas"); pg.press("#coachWhy", "Enter")
-    pg.wait_for_function("Coach.state === 'solved' && !$('coachBox').textContent.includes('prepara la explicación')", timeout=30000)
-    comprobar(True, "si la idea empieza por una jugada («Cf3 porque…»), Intro la juega")
-    comprobar("ataca dos piezas" in llamadas[-1]["messages"][1]["content"] and "Funciona porque" in pg.inner_text("#coachBox") and pg.locator("#coachBox .ai-unverified").count() == 1,
-              "la IA explica la jugada comentando tu razonamiento, y lo no comprobado lleva ⚠")
-    pg.click("#coachBox [data-co-q]")
-    pg.wait_for_function("!Coach.chatBusy && Coach.chat.length === 1", timeout=30000)
-    seg = llamadas[-1]["messages"][1]["content"]
-    comprobar("Nueva pregunta del alumno: ¿Qué otras jugadas valían" in seg and "Conversación hasta ahora" in seg and "Explicación que ya le diste" in seg and pg.locator("#coachBox .coach-answer").count() == 1,
-              "con IA, tras el ejercicio el entrenador responde preguntas recordando la explicación y la conversación")
-    jug = pg.evaluate("(() => { const s = Coach.ex.node.state, L = Chess.legal(s); const m = L.find(m => Chess.uci(m) !== Coach.ex.best); return formatSan(Chess.san(s, m, L), 'es', s.t); })()")
-    pg.fill("#coachAsk", f"¿y si juego {jug}?"); pg.press("#coachAsk", "Enter")
-    pg.wait_for_function("!Coach.chatBusy && Coach.chat.length === 2", timeout=60000)
-    comprobar("Jugadas que menciona el alumno, valoradas por el motor" in llamadas[-1]["messages"][1]["content"] and "Alumno: ¿Qué otras jugadas valían" in llamadas[-1]["messages"][1]["content"],
-              "si pregunta por otra jugada, el motor la valora antes de que conteste la IA (y recuerda lo anterior)")
-    exp = [m for m in llamadas if "Explica en 2 a 4 frases" in m["messages"][1]["content"]][-1]["messages"][1]["content"]
-    fen_ej = pg.evaluate("Chess.toFen(Coach.ex.node.state)")
-    comprobar("Posición del ejercicio (antes de la jugada del alumno)" in exp and fen_ej in exp and "(le toca al alumno)" in exp and "El alumno ha jugado" in exp and "Material al final de la línea del motor" in exp,
-              "la explicación usa la posición del ejercicio (antes de tu jugada), lo que jugaste y lo que gana de verdad la línea (antes usaba la de después)")
-    comprobar("No inventes jugadas" in llamadas[-1]["messages"][0]["content"], "con la orden de no inventar jugadas")
+    pg.wait_for_function("Coach.state === 'solved'", timeout=30000)
+    comprobar("Tu idea: «ataca dos piezas»" in pg.inner_text("#coachBox") and "Línea" in pg.inner_text("#coachBox"),
+              "si la idea empieza por una jugada («Cf3 porque…»), Intro la juega y tu razonamiento se enseña junto a la línea del motor")
     pg.click("#coachBox [data-co=end]")
-    pg.evaluate("Object.assign(settings, { aiProvider: 'none', myNames: '' }); ['coach0', 'coach1', 'coach2'].forEach(k => Lib.games.delete(k)); renderAiBox()")
+    pg.evaluate("settings.myNames = ''; ['coach0', 'coach1', 'coach2'].forEach(k => Lib.games.delete(k))")
+    # Si otro cálculo (el análisis en vivo) interrumpe el del entrenador, se repite en vez de quedarse sin líneas
+    r = pg.evaluate("""async () => { const s = cur().state; const p = evalState(s, 800, 2);
+      setTimeout(() => Engine.start({ purpose: 'live', fen: Chess.toFen(s), moves: [], stm: s.t, movetime: 300, multipv: 1, resolve() {} }), 60);
+      const out = await p; return !!(out && out.lines && out.lines.some(l => l.pv && l.pv.length)); }""")
+    comprobar(r, "si el análisis en vivo interrumpe un cálculo del motor, se repite (antes se quedaba sin las líneas del motor)")
     # En el móvil: justo debajo del tablero y sin desbordar la página
     pg.set_viewport_size({"width": 390, "height": 844})
     pg.click('.tab-btn[data-tab="tools"]')
@@ -2472,130 +2207,6 @@ def prueba_velocidad_y_ordenes(browser):
     pg.keyboard.press("Control+k"); pg.fill("#cmdInput", "")
     comprobar(pg.evaluate("Cmd.shown[0].name") == "Radar de piezas en peligro", "lo último que usaste sale el primero")
     pg.keyboard.press("Escape")
-    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
-    ctx.close()
-
-
-def prueba_notacion_ia(browser):
-    print("Novedades 1.49.0: la notación de la IA, siempre la tuya, y jugadas pulsables")
-    ctx = contexto(browser)
-    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
-    def chat(r):
-        m = json.loads(r.request.post_data)
-        txt = '{"lineas":[{"jugadas":"Nf3 Nc6 Bb5","idea":"desarrollo"}]}' if "SÓLO con JSON" in m["messages"][0]["content"] else \
-              "Juega **Nf3**, luego Bb5. Tu última jugada 1.e4 fue buena; ojo con la casilla e5. Qh5 es mala idea y Bxf7+ un sacrificio."
-        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
-    ctx.route("http://localhost:11434/api/chat", chat)
-    pg, errores = nueva_pagina(ctx)
-    pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false, lang: 'es' }); renderAiBox();"
-                "const g = Pgn.parseGame('1. e4 e5', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
-    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
-    pg.wait_for_function("$('aiAnswer').querySelector('.ai-text')", timeout=90000)
-    t = pg.inner_text("#aiAnswer .ai-text")
-    comprobar("Cf3" in t and "Ab5" in t and "Dh5" in t and "Axf7+" in t and not any(x in t for x in ("Nf3", "Bb5", "Qh5", "Bxf7")),
-              "las jugadas que la IA escribe en inglés (Nf3, Bb5, Qh5) se muestran en tu notación (Cf3, Ab5, Dh5)")
-    comprobar(pg.evaluate("[...document.querySelectorAll('#aiAnswer .ai-text .ai-unverified')].map(x => x.textContent)") == ["Axf7+⚠"], "y la no comprobada sigue marcada con ⚠")
-    comprobar(pg.locator("#aiAnswer .ai-text .ai-mv").count() >= 4 and pg.locator("#aiAnswer .ai-text .ai-mv[data-board]").count() >= 2, "las jugadas de la respuesta se pueden pulsar")
-    pg.click("#aiAnswer .ai-text .ai-mv[data-board]")
-    pg.wait_for_function("!hoverTip.hidden && AI.arrow", timeout=3000)
-    pg.wait_for_timeout(150)   # el minitablero del clic se abre justo después de la flecha
-    comprobar(pg.evaluate("shapeList().some(s => s.color === 'blue')"), "al pulsar una jugada se ve en el minitablero y, si se puede jugar ya, con una flecha en el tablero")
-    pg.mouse.click(5, 5)
-    comprobar(pg.evaluate("hoverTip.hidden && !AI.arrow"), "pulsar fuera lo cierra")
-    pg.fill("#aiQuestion", "¿Y si juego Cc3?"); pg.click("#aiAskBtn")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
-    comprobar(pg.locator("#aiAnswer [data-ai-save]").count() == 1 and "Recuerda 1 pregunta anterior" in pg.inner_text("#aiAnswer"), "el profesor recuerda lo que ya le preguntaste en esta posición")
-    pg.click("#aiAnswer [data-ai-save]")
-    comprobar("Profesor IA (¿Y si juego Cc3?)" in pg.evaluate("cur().comment"), "«💾 Añadir como comentario» guarda la respuesta en la jugada")
-    pg.evaluate("settings.lang = 'en'; renderAiBox()")
-    pg.click("#aiAskBtn"); pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
-    comprobar("Nf3" in pg.inner_text("#aiAnswer .ai-text") and "Cf3" not in pg.inner_text("#aiAnswer .ai-text"), "con la notación inglesa elegida, se muestran en inglés")
-    pg.evaluate("Object.assign(settings, { aiProvider: 'none', lang: 'es', aiCtxLichess: true }); renderAiBox()")
-    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
-    ctx.close()
-
-
-def prueba_piezas_ia(browser):
-    print("Novedades 1.50.0: lo que la IA dice de las piezas se comprueba en el tablero")
-    ctx = contexto(browser)
-    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
-    estado = {"corrige": True}
-    llamadas = []
-    def chat(r):
-        m = json.loads(r.request.post_data)
-        llamadas.append(m)
-        u = m["messages"][1]["content"]
-        if "SÓLO con JSON" in m["messages"][0]["content"]: txt = '{"lineas":[]}'
-        elif "Tiene errores sobre la posición" in u and estado["corrige"]: txt = "Tu caballo de d7 defiende e5 y el caballo blanco de f3 presiona d4."
-        else: txt = "Cuidado: el alfil de d7 es peligroso y tu caballo de a4 está amenazado."
-        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
-    ctx.route("http://localhost:11434/api/chat", chat)
-    pg, errores = nueva_pagina(ctx)
-    pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false }); renderAiBox();"
-                "const g = Pgn.parseGame('1. d4 d5 2. c4 c6 3. Nf3 Nf6 4. Nc3 e6 5. e3 Nbd7', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() }); ui.flipped = true; render()")
-    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
-    primera = llamadas[0]["messages"][1]["content"]
-    comprobar("caballo negro en d7; caballo negro en f6" in primera and primera.index("Piezas de las blancas") < primera.index("FEN"), "la IA recibe la lista de piezas en palabras, cada una con su color, antes que la FEN")
-    comprobar("El alumno juega con las negras" in primera and "le toca al rival del alumno" in primera, "y se le dice con qué color juega el alumno (aquí, las negras: el tablero girado) y a quién le toca")
-    comprobar(pg.evaluate("game.headers.White = 'Yo Mismo'; settings.myNames = 'Yo Mismo'; aiStudentSide(cur())") == 1 and pg.evaluate("settings.myNames = ''; aiStudentSide(cur())") == -1,
-              "si la partida lleva tu nombre, ése es tu color; si no, el del lado del tablero que tienes abajo")
-    comprobar(len(llamadas) == 2 and "en d7 hay un caballo negro, no un alfil" in llamadas[1]["messages"][1]["content"] and "en a4 no hay ninguna pieza" in llamadas[1]["messages"][1]["content"],
-              "si se equivoca sobre las piezas («el alfil de d7», «tu caballo de a4»), se le pide que corrija diciéndole qué hay de verdad")
-    comprobar("caballo de d7 defiende" in pg.inner_text("#aiAnswer .ai-text") and "caballo blanco de f3" in pg.inner_text("#aiAnswer .ai-text") and pg.locator("#aiAnswer .ai-unverified").count() == 0, "y se muestra su respuesta corregida")
-    estado["corrige"] = False; llamadas.clear()
-    pg.click("#aiAskBtn")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
-    comprobar(pg.locator("#aiAnswer .ai-unverified").count() == 2 and "se ha equivocado sobre la posición" in pg.inner_text("#aiAnswer") and "hay un caballo negro" in pg.inner_text("#aiAnswer"),
-              "si insiste en el error, se marca con ⚠ y se dice qué hay de verdad en esa casilla")
-    pg.evaluate("Object.assign(settings, { aiProvider: 'none', aiCtxLichess: true, aiPropose: true }); renderAiBox()")
-    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
-    ctx.close()
-
-
-def prueba_repaso_y_preguntas(browser):
-    print("Novedades 1.51.0: el profesor comenta la partida y preguntas sin escribir")
-    ctx = contexto(browser)
-    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
-    llamadas = []
-    def chat(r):
-        m = json.loads(r.request.post_data)
-        llamadas.append(m)
-        txt = '{"lineas":[]}' if "SÓLO con JSON" in m["messages"][0]["content"] else "En el momento clave las blancas jugaron **Cxe5** y lo mejor era otra cosa. Lección: no comas un peón envenenado."
-        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
-    ctx.route("http://localhost:11434/api/chat", chat)
-    pg, errores = nueva_pagina(ctx)
-    pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiWatch: false, aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: false, analysisMs: 300 }); renderAiBox();"
-                "loadPgnText('[White \"Yo\"]\\n[Black \"Rival\"]\\n\\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 4. Nxe5 Qg5 5. Nxf7 Qxg2 6. Rf1 Qxe4+ 7. Be2 Nf3# 0-1', { endAtEnd: true })")
-    pg.evaluate("analyseGame()")
-    pg.wait_for_function("ui.report && !ui.analysing && $('aiReviewBtn')", timeout=120000)
-    pg.click("#aiReviewBtn")
-    pg.wait_for_function("$('aiReviewBox').querySelector('.ai-text')", timeout=60000)
-    u = llamadas[-1]["messages"][1]["content"]
-    comprobar("Momento clave 1:" in u and "Piezas de las blancas:" in u and "Lo mejor era" in u and "Comenta la partida como un entrenador" in u,
-              "«🤖 Que la comente el profesor» le da a la IA los momentos clave con su posición, lo jugado y lo que era mejor")
-    comprobar(pg.locator("#aiReviewBox [data-rv-go]").count() >= 1 and pg.locator("#aiReviewBox .ai-mv").count() >= 1, "el comentario enlaza los momentos clave y sus jugadas se pueden pulsar")
-    pg.click("#aiReviewBox [data-rv-go]")
-    comprobar(pg.evaluate("!!cur().parent && cur() !== Pgn.mainlineFrom(game.root).pop()"), "«Ir a» lleva al momento clave")
-    pg.click("#aiReviewBox [data-rv-save]")
-    comprobar("Comentario del profesor IA" in pg.evaluate("game.root.comment"), "se puede guardar como comentario de la partida")
-    # Preguntas sin escribir: dependen de la jugada seleccionada
-    pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[6])")   # 4.Cxe5
-    etiquetas = pg.evaluate("[...$('aiQuick').querySelectorAll('button')].map(b => b.textContent)")
-    comprobar("¿Por qué 4.Cxe5?" in etiquetas and "¿Qué amenaza el rival?" in etiquetas, f"las preguntas rápidas cambian con la jugada seleccionada ({', '.join(etiquetas)})")
-    pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[5]); playMove(Chess.moveFromUci(cur().state, 'b1c3'), 'user')")   # 4.Cc3 como variante
-    etiquetas = pg.evaluate("[...$('aiQuick').querySelectorAll('button')].map(b => b.textContent)")
-    comprobar("¿Cc3 o Cxe5?" in etiquetas, "con una variante aparece «¿Cc3 o Cxe5?» para compararlas")
-    llamadas.clear()
-    pg.click("#aiQuick button:has-text('¿Cc3 o Cxe5?')")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=90000)
-    u = llamadas[-1]["messages"][1]["content"]
-    comprobar("Compara 4.Cc3 con 4.Cxe5" in u and "Jugada elegida: 4.Cc3" in u and "Alternativa" in u and "4.Cxe5" in u,
-              "y la IA recibe la valoración del motor de las dos jugadas")
-    pg.evaluate("Object.assign(settings, { aiProvider: 'none', aiCtxLichess: true, aiPropose: true, analysisMs: 1000 }); renderAiBox()")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -3225,70 +2836,6 @@ def prueba_estructuras(browser):
     comprobar(r["code"] == code and r["prev"] != code and "Carlsbad" in r["name"] and r["tab"] == "study", "«Abrir» lleva a la partida modelo justo cuando aparece la estructura")
     pg.evaluate("setGame(Pgn.parseGame('1. d4 d5 2. c4 e6 3. Nc3 c5 4. cxd5 exd5 5. Nf3 Nc6 6. g3 Nf6 7. Bg2 Be7 8. O-O O-O 9. dxc5 Bxc5', { lang: 'en' }).game, { noConfirm: true }); goTo(Pgn.mainlineFrom(game.root).pop())")
     comprobar("Peón aislado" in pg.inner_text("#structName") and "d5" in pg.inner_text("#structName"), "con el peón aislado de las negras, las casillas se giran (aislado en d5)")
-    ctxt = pg.evaluate("aiContext(cur()).then(c => ({ text: c.text, sources: c.sources }))")
-    comprobar("Peón aislado de dama" in ctxt["text"] and "Plan típico de las negras" in ctxt["text"] and any("estructura" in x for x in ctxt["sources"]),
-              "el profesor IA recibe la estructura y sus planes como contexto")
-    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
-    ctx.close()
-
-
-def prueba_comentar_repertorio(browser):
-    print("1.55: el profesor IA comenta tu repertorio (con Stockfish antes) y se comprueba lo que dice")
-    ctx = contexto(browser)
-    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
-    estado = {"consultas": 0, "correcciones": 0}
-    def chat(r):
-        cuerpo = json.loads(r.request.post_data)
-        texto = cuerpo["messages"][-1]["content"]
-        estado["consultas"] += 1
-        ids = re.findall(r"^\[(n\d+)\]", texto, re.M) or re.findall(r"\[(n\d+)\] «", texto)
-        if "errores sobre la posición" in texto:
-            estado["correcciones"] += 1
-            arr = [{"id": i, "comentario": "Corregido: desarrolla el alfil y prepara el enroque.", "siSeSale": ""} for i in re.findall(r"^\[(n\d+)\] «", texto, re.M)]
-        else:
-            # El primer comentario se equivoca sobre la posición (en h5 no hay nada): la aplicación debe pedir que lo corrija
-            arr = [{"id": i, "comentario": ("El caballo de h5 está indefenso." if k == 0 else "Desarrolla una pieza y lucha por el centro."), "siSeSale": "Si juega otra cosa, sigue con el desarrollo."} for k, i in enumerate(ids)]
-        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": "Aquí tienes:\n" + json.dumps(arr, ensure_ascii=False)}}))
-    ctx.route("http://localhost:11434/api/chat", chat)
-    pg, errores = nueva_pagina(ctx)
-    pg.wait_for_function("Engine.ready", timeout=20000)
-    entrenar(pg, "rep")
-    pg.fill("#repNewName", "Blancas: prueba IA")
-    pg.click("#repNewBtn")
-    pg.wait_for_function("ui.libId && ui.activeTab === 'study'")
-    jugar = lambda camino, ucis: pg.evaluate(f"""(() => {{ goTo(resolvePath(game.root, {json.dumps(camino)})); for (const u of {json.dumps(ucis)}) playMove(Chess.moveFromUci(cur().state, u), 'user'); }})()""")
-    jugar([], ["e2e4", "e7e5", "g1f3", "b8c6", "f1b5"])
-    jugar(["e2e4"], ["e7e6", "f1a6"])
-    pg.evaluate("goTo(resolvePath(game.root, ['e2e4', 'e7e5', 'g1f3'])); cur().comment = 'Mi nota: la jugada de siempre'; markDirty()")
-    pg.wait_for_function("!ui.dirty", timeout=5000)
-    rep_id = pg.evaluate("ui.libId")
-    pg.evaluate("settings.aiProvider = 'ollama'; settings.aiModel = 'prueba:1b'; saveSettings()")
-    entrenar(pg, "rep")
-    pg.locator("[data-rep-ai]").first.click()
-    pg.wait_for_function("!RepAI.busy && $('repReviewOut').textContent.includes('Comentarios de')", timeout=240000)
-    out = pg.inner_text("#repReviewOut")
-    pg.wait_for_function("!ui.dirty", timeout=8000)
-    res = pg.evaluate(f"""(() => {{
-      const rec = Lib.games.get({json.dumps(rep_id)});
-      const g = Pgn.parseGame(rec.pgn, {{ lang: 'en' }}).game;
-      const at = p => resolvePath(g.root, p);
-      return {{ e4: at(['e2e4']).comment || '', nf3: at(['e2e4', 'e7e5', 'g1f3']).comment || '', ba6: at(['e2e4', 'e7e6', 'f1a6']).comment || '',
-               orig: !!rec.orig, open: ui.libId === {json.dumps(rep_id)} }};
-    }})()""")
-    comprobar("jugadas comentadas" in out or "jugada comentada" in out, "el resumen dice cuántas jugadas se han comentado")
-    comprobar(res["nf3"].startswith("Mi nota: la jugada de siempre") and "🤖" in res["nf3"], "los comentarios de la IA (con 🤖) se añaden sin borrar los tuyos")
-    comprobar("⚠ Stockfish" in res["ba6"] and "era mejor 2." in res["ba6"], "Stockfish avisa en el comentario de la jugada dudosa (2.Aa6) y dice la mejor")
-    comprobar(estado["correcciones"] >= 1 and "h5" not in res["e4"] and ("Corregido" in res["e4"] or "🤖" not in res["e4"]),
-              "si la IA se equivoca sobre la posición se le pide corregir, y lo erróneo no se guarda")
-    comprobar("Si juega otra cosa" in res["nf3"] and "Si el rival se sale: Si" not in res["nf3"], "incluye qué hacer si el rival se sale")
-    comprobar(res["orig"] and res["open"], "el repertorio se guarda solo y la versión anterior queda en 🕘 Versiones")
-    # Volver a comentarlo sustituye los de la IA en vez de acumularlos
-    entrenar(pg, "rep")
-    pg.locator("[data-rep-ai]").first.click()
-    pg.wait_for_function("!RepAI.busy && $('repReviewOut').textContent.includes('Comentarios de')", timeout=240000)
-    pg.wait_for_function("!ui.dirty", timeout=5000)
-    nf3 = pg.evaluate(f"resolvePath(Pgn.parseGame(Lib.games.get({json.dumps(rep_id)}).pgn, {{ lang: 'en' }}).game.root, ['e2e4', 'e7e5', 'g1f3']).comment")
-    comprobar(nf3.count("Desarrolla una pieza") == 1 and nf3.startswith("Mi nota"), "al volver a comentarlo, los comentarios de la IA se sustituyen y no se acumulan")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -3353,9 +2900,9 @@ def prueba_v157_actividad_y_ajustes(browser):
     pg.click("#settingsBtn")
     tabs = pg.locator(".set-tab").count()
     vis = pg.evaluate("[...document.querySelectorAll('.set-sec')].filter(x => x.offsetParent).map(x => x.dataset.set)")
-    comprobar(tabs == 7 and len(vis) == 1, "los ajustes van en 7 pestañas y se ve una cada vez")
+    comprobar(tabs == 6 and len(vis) == 1 and pg.locator("#setTab-ia").count() == 0, "los ajustes van en 6 pestañas (ya no hay la del profesor IA) y se ve una cada vez")
     pg.click("#setTab-motor")
-    comprobar(pg.is_visible("#setEngineSpeed") and not pg.is_visible("#setAiProvider") and pg.get_attribute("#setTab-motor", "aria-selected") == "true", "cada pestaña enseña sólo lo suyo")
+    comprobar(pg.is_visible("#setEngineSpeed") and not pg.is_visible("#setUiTheme") and pg.get_attribute("#setTab-motor", "aria-selected") == "true", "cada pestaña enseña sólo lo suyo")
     pg.select_option("#setEngineSpeed", "deep")
     r = pg.evaluate("({ a: settings.analysisMs, l: settings.liveMs, inp: $('setAnalysisMs').value })")
     comprobar(r["a"] == 2500 and r["l"] == 10000 and r["inp"] == "2500", "«Profundo» ajusta el tiempo del motor; los milisegundos están en Avanzado")
@@ -3367,9 +2914,9 @@ def prueba_v157_actividad_y_ajustes(browser):
     pg.click("#settingsBtn")
     comprobar(pg.is_visible("#setEngineSpeed"), "al volver a abrir los ajustes, sigue en la última pestaña")
     pg.keyboard.press("Escape")
-    pg.evaluate("cmdUse('setAiProvider', false)")
+    pg.evaluate("cmdUse('setToken', false)")
     pg.wait_for_timeout(300)
-    comprobar(pg.is_visible("#setAiProvider"), "el buscador abre la pestaña en la que está el ajuste")
+    comprobar(pg.is_visible("#setToken") and not pg.is_visible("#setEngineSpeed"), "el buscador abre la pestaña en la que está el ajuste")
     pg.keyboard.press("Escape")
     pg.click("#engineSourceBadge")
     comprobar(pg.is_visible("#engineStatus"), "pulsar el estado del motor abre los ajustes en «Motor»")
@@ -3378,41 +2925,22 @@ def prueba_v157_actividad_y_ajustes(browser):
     ctx.close()
 
 
-def prueba_vigilancia_ia(browser):
-    print("1.58: vigilancia en una sola consulta (la IA responde y Stockfish revisa después)")
+def prueba_sin_ia(browser):
+    print("1.68: sin el profesor IA (y sus ajustes guardados se borran)")
     ctx = contexto(browser)
-    cab = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
-    llamadas = []
-    respuesta = {"txt": ""}
-    def chat(r):
-        m = json.loads(r.request.post_data)
-        llamadas.append(m)
-        u = m["messages"][-1]["content"]
-        txt = "Mejor **Cc6**, que defiende el peón de e5." if "no son buenas" in u else respuesta["txt"]
-        r.fulfill(status=200, headers=cab, body=json.dumps({"message": {"role": "assistant", "content": txt}}))
-    ctx.route("http://localhost:11434/api/chat", chat)
+    # Un navegador que tenía configurado el profesor IA en una versión anterior
+    ctx.add_init_script("""(() => { if (!sessionStorage.getItem('__ia')) { sessionStorage.setItem('__ia', '1');
+      localStorage.setItem('ajedrezSettings', JSON.stringify({ aiProvider: 'claude', aiKey: 'sk-ant-secreta', aiModel: 'modelo', aiWatch: true, uiTheme: 'light', _m: 5 })); } })()""")
     pg, errores = nueva_pagina(ctx)
-    pg.wait_for_function("Engine.ready", timeout=30000)
-    pg.evaluate("$('welcomeBox').hidden = true; Object.assign(settings, { aiProvider: 'ollama', aiModel: 'qwen2.5:7b', aiCtxLichess: false, aiPropose: true, aiWatch: null }); renderAiBox(); syncAiCtxForm();"
-                "const g = Pgn.parseGame('1. e4 e5 2. Nf3', { lang: 'en' }).game; setGame(g, { noConfirm: true, current: Pgn.mainlineFrom(g.root).pop() })")
-    comprobar(pg.evaluate("aiWatchOn()"), "con Ollama, la vigilancia en una sola consulta viene activada")
-    # 1) Recomienda una jugada mala: el motor la revisa y se le pide corregir (2 consultas, sin la de propuestas)
-    respuesta["txt"] = "Te recomiendo **Aa3**, que ataca el flanco de dama."
-    pg.fill("#aiQuestion", "¿Qué hago?"); pg.click("#aiAskBtn")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=120000)
-    txt = pg.inner_text("#aiAnswer")
-    comprobar(len(llamadas) == 2 and not any("SÓLO con JSON" in m["messages"][0]["content"] for m in llamadas), f"recomendaba una jugada mala: una consulta más para corregir y ninguna de propuestas ({len(llamadas)})")
-    comprobar("Cc6" in pg.inner_text("#aiAnswer .ai-text") and "se le pidió corregir" in txt and "Aa3" in txt, "la respuesta corregida se enseña y se dice qué se corrigió")
-    # 2) Recomienda una jugada buena (y desaconseja una mala): una sola consulta
-    llamadas.clear()
-    respuesta["txt"] = "Juega **Cc6**, que defiende e5. No juegues Aa3, que pierde el alfil."
-    pg.click("#aiAskBtn")
-    pg.wait_for_function("!AI.busy && $('aiAnswer').querySelector('.ai-text')", timeout=120000)
-    comprobar(len(llamadas) == 1 and "Vigilancia" in pg.inner_text("#aiAnswer"), "si lo que recomienda está bien, basta una sola consulta (y lo que desaconseja no se cuenta)")
-    # 3) Desactivada: vuelve el modo de las propuestas comprobadas antes
-    llamadas.clear()
-    pg.click(".ai-ctx summary"); pg.uncheck("#aiWatch")
-    comprobar(not pg.is_disabled("#aiPropose") and pg.evaluate("settings.aiWatch") is False, "se puede desactivar, y entonces vuelve la casilla de las propuestas")
+    r = pg.evaluate("""(() => ({ ai: Object.keys(settings).filter(k => /^ai[A-Z]/.test(k)), theme: settings.uiTheme, ls: localStorage.getItem('ajedrezSettings'),
+      sync: JSON.stringify(syncPayload()) }))()""")
+    comprobar(not r["ai"] and r["theme"] == "light" and "sk-ant-secreta" not in r["ls"] and "aiProvider" not in r["ls"],
+              "los ajustes del profesor IA de una versión anterior (con la clave de la API) se borran al abrir; los demás se conservan")
+    comprobar("sk-ant-secreta" not in r["sync"], "la clave tampoco viaja con la sincronización")
+    queda = pg.evaluate("""(() => { const b = document.body.cloneNode(true); b.querySelectorAll('script, style').forEach(x => x.remove());
+      return { txt: (b.textContent.match(/.{0,40}(profesor IA|Profesor IA|Entrenador IA|Ollama).{0,40}/g) || []).slice(0, 3),
+               ids: ['aiBox', 'setAiProvider', 'setTab-ia', 'aiReviewBtn'].filter(id => document.getElementById(id)) }; })()""")
+    comprobar(not queda["txt"] and not queda["ids"], "no queda rastro del profesor IA en la página" + (f": {queda}" if queda["txt"] or queda["ids"] else ""))
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -3426,9 +2954,9 @@ def prueba_v159_herramientas(browser):
     comprobar(pg.is_visible("#servicesBtn") and "svc-dot" in (pg.get_attribute("#servicesDot", "class") or ""), "en la cabecera hay un indicador del estado de los servicios")
     pg.click("#servicesBtn")
     t = pg.inner_text("#servicesList")
-    comprobar(all(x in t for x in ["Motor", "Conexión", "Profesor IA", "Lichess", "Sincronización"]), "el cuadro dice cómo están el motor, la conexión, el profesor IA, Lichess y la sincronización")
-    pg.locator("#servicesList .svc-row", has_text="Profesor IA").locator("button").click()
-    comprobar(pg.is_visible("#setAiProvider"), "desde el estado de un servicio se va a su ajuste")
+    comprobar(all(x in t for x in ["Motor", "Conexión", "Lichess", "Sincronización"]) and "Profesor IA" not in t, "el cuadro dice cómo están el motor, la conexión, Lichess y la sincronización")
+    pg.locator("#servicesList .svc-row", has_text="Lichess").locator("button").click()
+    comprobar(pg.is_visible("#setToken"), "desde el estado de un servicio se va a su ajuste")
     pg.keyboard.press("Escape")
     # Modo básico
     revelar(pg, "#setUiMode")
@@ -3959,7 +3487,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_descriptiva, prueba_rutas, prueba_inyeccion_pgn, prueba_siguiente_paso, prueba_motivos, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_descriptiva, prueba_rutas, prueba_inyeccion_pgn, prueba_siguiente_paso, prueba_motivos, prueba_v153_distribucion, prueba_estructuras, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_sin_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_buscador, prueba_aperturas_explicadas, prueba_entrenador, prueba_velocidad_y_ordenes, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

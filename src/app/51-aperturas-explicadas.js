@@ -2,7 +2,7 @@
    Un artículo por familia de aperturas (qué es, sus ideas, cómo jugarla con cada color, errores y trampas típicos y
    su origen), con notas cortas para las variantes principales. Cubre todas las aperturas de la enciclopedia ECO
    local: cada entrada se asigna al primer artículo cuyo patrón encaja con su nombre (los específicos van antes).
-   Redactados con ayuda de IA para AjedrezBase; funcionan sin conexión y sin IA configurada.
+   Redactados con ayuda de IA para AjedrezBase; funcionan sin conexión.
    Las jugadas de «moves» van en SAN inglés y se muestran en la notación elegida. */
 const OPENING_ARTICLES = [
   // ===================== 1.e4 e5 =====================
@@ -313,13 +313,6 @@ function openingArticleOf(entry) {
   return { art, note: note ? note[1] : "" };
 }
 const openingArticleById = id => OPENING_ARTICLES.find(a => a.id === id) || null;
-/* Para el profesor IA: un resumen corto de la apertura de la posición */
-function openingArticleText(node) {
-  const d = ECO.detect(node);
-  const r = d && openingArticleOf(d.entry);
-  if (!r) return "";
-  return `Apertura explicada (${r.art.name}${d.entry.name !== r.art.name ? ` · ${d.entry.name}` : ""}): ${r.art.que}${r.note ? " " + r.note : ""} Ideas: ${r.art.ideas.join(" ")}`;
-}
 
 /* Lecciones de los cursos que hablan de esta apertura (por su nombre principal) */
 function openingLessons(art) {
@@ -359,7 +352,6 @@ function openOpeningArticle(id, entry) {
     <div class="controls oa-actions">
       <button class="sm-btn primary" data-oa-play>♟ Ver en el tablero</button>
       <button class="sm-btn" data-oa-explorer>🌍 Abrir en el explorador</button>
-      ${aiProvider() ? `<button class="sm-btn" data-oa-ask>🤖 Preguntar al profesor IA</button>` : ""}
     </div>
     <p class="small oa-note">Texto redactado con ayuda de IA para AjedrezBase. Si ves algún error, avísanos en el repositorio del proyecto.</p>`;
   const body = $("openingBody");
@@ -372,8 +364,6 @@ function openOpeningArticle(id, entry) {
   const inBoard = () => ECO.detect(cur()) && openingArticleOf(ECO.detect(cur()).entry) && openingArticleOf(ECO.detect(cur()).entry).art === art;
   body.querySelector("[data-oa-play]").onclick = () => { closeModals(); if (!inBoard()) setEntry(target); };
   body.querySelector("[data-oa-explorer]").onclick = () => { closeModals(); if (inBoard() || setEntry(target)) switchTab("explorer"); };
-  const ask = body.querySelector("[data-oa-ask]");
-  if (ask) ask.onclick = () => { closeModals(); if (inBoard() || setEntry(target)) { $("aiQuestion").value = `Explícame los planes típicos de la ${art.name} en esta posición.`; aiAsk($("aiQuestion").value); } };
   body.querySelectorAll("[data-oa-eco]").forEach(b => b.onclick = () => { const e = ECO.byKey.get(b.dataset.oaEco); if (e) { closeModals(); setEntry(e); } });
   body.querySelectorAll("[data-oa-lesson]").forEach(b => b.onclick = () => { const l = lessons[+b.dataset.oaLesson]; closeModals(); switchTab("courses"); openLesson(l.course.id, l.i); });
   openModal("openingModal");

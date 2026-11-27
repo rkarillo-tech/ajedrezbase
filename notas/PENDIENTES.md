@@ -20,7 +20,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 - ✅ **B5** (1.57.0). Ajustes por categorías: Apariencia, Tablero, Motor, IA, Datos y sincronización, Accesibilidad y Avanzado. Tiempo del motor como «Rápido / Equilibrado / Profundo»; los milisegundos, en Avanzado.
 - **B6**. Tablero manejable con teclado: las casillas no son enfocables. Moverse con flechas, Enter para elegir origen y destino, Esc para cancelar.
 
-- **B7**. Lo que está debajo del tablero en el ordenador: el motor, el recuadro de la partida contra la CPU (con Piensa conmigo, Colores, Radar, Profesor…) y el profesor IA. Con 900 px de alto o menos hay que bajar para verlo. Opciones: llevar a la columna derecha lo que se está haciendo (partida contra la CPU, motor, profesor), encima de las jugadas, o compactar la navegación. Se deja así de momento (decisión del 20/11/2026).
+- **B7**. Lo que está debajo del tablero en el ordenador: el motor, y el recuadro de la partida contra la CPU (con Piensa conmigo, Colores, Radar, Profesor…). Con 900 px de alto o menos hay que bajar para verlo. Opciones: llevar a la columna derecha lo que se está haciendo (partida contra la CPU, motor, profesor), encima de las jugadas, o compactar la navegación. Se deja así de momento (decisión del 20/11/2026).
 
 ## C. Funciones nuevas
 
@@ -36,7 +36,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 ## D. Calidad y mantenimiento
 
 - **D1**. Revisar los 34 artículos de aperturas de la 1.46.0 y los planes de las 13 estructuras de peones de la 1.54.0 (`src/app/38-estructuras.js`). Los redactó la IA; necesita a un jugador con buen nivel.
-- **D2**. Probar la parte del profesor IA que usa Claude. Necesita el SDK de Anthropic aparte y en la CI solo se ejecuta si está configurado.
+- ~~**D2**~~. Ya no aplica: la IA se quitó en la 1.68.0 (G3).
 - **D3**. Pruebas de fallos: CDN caída, sin conexión la primera vez, cambio de motor durante un análisis.
 - ✅ **D4** (1.65.0). Revisar los usos de `innerHTML` donde se pinta texto de PGN o comentarios importados (hay unos 170). Revisados por patrones: todo el texto importado pasa por `esc()`. En lugar de la revisión manual, una prueba (`prueba_inyeccion_pgn`) importa un PGN con código en cabeceras, comentarios, etiquetas y título, lo pasa por la lista de jugadas, la biblioteca, «Abrir .pgn», el buscador de notas y el informe, y comprueba que no se ejecuta ni se inserta nada (se comprobó que falla si se quita un `esc()`).
 - **D5**. Bibliotecas grandes: carga bajo demanda y lista virtualizada (hoy la biblioteca se carga entera; límite recomendado de 100 MB).
@@ -69,7 +69,7 @@ La IA local (Ollama) se equivocaba al explicar posiciones (piezas que no atacaba
 
 - ✅ **G1** (1.66.0). **Motivos tácticos sin IA** (`src/app/29-motivos.js`): qué consigue la buena (horquilla, clavada, ataque a la descubierta, captura de una pieza sin defensa, mate, material) y por qué falla la jugada (la pieza queda donde la capturan, deja otra sin defensa, permite una horquilla, una clavada o un ataque a la descubierta). En los comentarios del análisis, «⚖ Tu jugada frente a la del motor», «🧠 Piensa conmigo» y el entrenador (también sus pistas, que dicen el tipo de motivo sin la jugada).
 - ✅ **G2** (1.67.0). **Probabilidades** de Stockfish 19 (`UCI_ShowWDL`): «blancas ganan 62 % · tablas 30 % · negras 8 %», y en los errores «tus opciones de ganar bajan del 70 % al 15 %». Con el motor de respaldo, estimadas a partir de la evaluación.
-- **G3**. **Quitar la IA**: el profesor IA, sus ajustes y la parte de IA del entrenador, del informe y del repertorio, con la ayuda y las pruebas.
+- ✅ **G3** (1.68.0). **Quitar la IA**: el profesor IA, sus ajustes y la parte de IA del entrenador, del informe, de la partida contra la CPU y del repertorio, con la ayuda y las pruebas. Las utilidades del motor que usaban el entrenador y las estructuras pasan a `src/app/34-utilidades.js`. Los ajustes guardados de la IA (con la clave) se borran al abrir.
 
 ## Orden previsto
 
@@ -86,5 +86,5 @@ La IA local (Ollama) se equivocaba al explicar posiciones (piezas que no atacaba
 11. ✅ 1.63.0: E9.
 12. ✅ 1.64.0: F1.
 13. ✅ 1.65.0: F2, F3 y D4 (con una prueba).
-14. ✅ 1.66.0: G1 · 1.67.0: G2 · 1.68.0: G3.
-15. Después: B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
+14. ✅ 1.66.0: G1 · ✅ 1.67.0: G2 · ✅ 1.68.0: G3.
+15. Después: B6, B7 y la serie D (D3 y D5) según haga falta. D1 queda pendiente de que lo revise una persona.

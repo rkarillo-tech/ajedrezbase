@@ -278,7 +278,7 @@ function renderCompare(job) {
     if (canUserMove()) playMove(bm, "user");
   };
 }
-/* El porqué, sin IA: el motivo táctico de la jugada hecha y de la del motor (29-motivos.js) */
+/* El porqué: el motivo táctico de la jugada hecha y de la del motor (29-motivos.js) */
 function cmpWhy(p, n, after, bm) {
   const bad = after && after.pv && after.pv.length ? motifBad(p.state, n.move, after.pv, after) : "";
   const good = p.eval.pv && p.eval.pv.length ? motifGood(p.state, p.eval.pv, p.eval) : "";
@@ -330,8 +330,8 @@ function showEngineFor(node, job) {
 }
 const requestLive = debounce(() => {
   const node = cur();
-  // Mientras el profesor IA o su comentario de la partida usan el motor, el análisis en vivo espera (si no, se cancelaban mutuamente)
-  if (!settings.live || editor.active || quiz() || Threat.busy || MoveQ.busy || ui.analysing || ExpEval.busy || ui.cpu.thinking || Compare.busy || AI.busy || AIRev.busy || !Engine.ready) {
+  // Mientras otra herramienta usa el motor, el análisis en vivo espera (si no, se cancelaban mutuamente)
+  if (!settings.live || editor.active || quiz() || Threat.busy || MoveQ.busy || ui.analysing || ExpEval.busy || ui.cpu.thinking || Compare.busy || !Engine.ready) {
     Engine.cancel("live");
     return;
   }
@@ -418,7 +418,6 @@ function render() {
   updateSaveState();
   renderLesson();
   renderActivity();
-  renderAiBox();
   requestLive();
   if (ui.activeTab === "explorer") refreshExplorer();
   if (ui.activeTab === "library" && ui.librarySub === "position") renderPosTarget();

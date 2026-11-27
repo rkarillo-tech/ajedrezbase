@@ -340,33 +340,6 @@ seccion("🏗 Estructuras de peones", () => {
   casos.forEach(([, id, msg], k) => comprobar(id ? r[k] && r[k].id === id : r[k] === null, `${msg}${r[k] ? ` (${r[k].id}, ${r[k].black ? "negras" : "blancas"})` : ""}`));
   comprobar(r[2].black && r[2].short === "peón aislado en d5" && r[10].black && r[1].about.startsWith("Las blancas"),
     "las casillas y los colores se giran cuando la estructura es de las negras");
-  const t = E.ev(`(() => { const g = Pgn.parseGame("1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. cxd5 exd5 5. Bg5 c6 6. e3", { lang: "en" }).game; let n = g.root; while (n.children.length) n = n.children[0]; return structText(n); })()`);
-  comprobar(/Carlsbad/.test(t) && /Plan típico de las blancas: .*b2–b4–b5/.test(t) && /Plan típico de las negras/.test(t), "el profesor IA recibe la estructura y el plan de cada bando");
-});
-
-seccion("🤖 Más afirmaciones de la IA, comprobadas en el tablero (1.55)", () => {
-  const r = E.ev(`(() => {
-    const at = pgn => { const g = Pgn.parseGame(pgn, { lang: "en" }).game; let n = g.root; while (n.children.length) n = n.children[0]; return n.state; };
-    const chk = (pgn, txt, me = 1) => aiCheckClaims(txt, [at(pgn)], me).map(e => e.why);
-    return {
-      mateNo: chk("1. e4 e5", "Cuidado: las blancas amenazan mate."),
-      mateSi: chk("1. e4 e5 2. Bc4 Nc6 3. Qh5", "La dama y el alfil amenazan mate en f7.", -1),
-      jaqueSi: chk("1. e4 f5 2. Qh5+", "El rey negro está en jaque.", -1),
-      jaqueNo: chk("1. e4 f5 2. Qh5+", "El rey blanco está en jaque.", -1),
-      colgadoNo: chk("1. e4 e5 2. Nf3 Nc6", "El caballo de c6 está indefenso.", -1),
-      colgadoSi: chk("1. e4 e5 2. Nf3", "El peón de e5 está colgado.", -1),
-      clavadaSi: chk("1. d4 Nf6 2. c4 e6 3. Nc3 Bb4", "Tu caballo de c3 está clavado."),
-      clavadaNo: chk("1. e4 e5 2. Nf3 Nc6 3. Bb5", "El caballo de c6 está clavado.", -1),
-      enroqueNo: chk("1. e4 e5", "Las blancas ya no pueden enrocar."),
-      enroqueNo2: chk("1. e4 e5 2. Ke2 Nc6", "Las blancas todavía pueden enrocar."),
-      enroqueSi: chk("1. e4 e5", "Puedes enrocar pronto.")
-    };
-  })()`);
-  comprobar(r.mateNo.length === 1 && /amenaza de mate/.test(r.mateNo[0]) && !r.mateSi.length, "«amenaza mate» se marca sólo si nadie puede dar mate en una o dos jugadas (sí en 3.Dh5 contra f7)");
-  comprobar(!r.jaqueSi.length && r.jaqueNo.length === 1 && /blancas no está en jaque/.test(r.jaqueNo[0]), "«está en jaque» se comprueba para el rey del que se habla");
-  comprobar(r.colgadoNo.length === 1 && /c6 está defendido/.test(r.colgadoNo[0]) && !r.colgadoSi.length, "una pieza «indefensa» o «colgada» tiene que estar sin defensa");
-  comprobar(!r.clavadaSi.length && r.clavadaNo.length === 1 && /no está clavado/.test(r.clavadaNo[0]), "«clavada»: sí el caballo de c3 en la Nimzoindia; no el de c6 en la Española (lo cubre el peón de d7)");
-  comprobar(r.enroqueNo.length === 1 && /todavía pueden enrocar/.test(r.enroqueNo[0]) && r.enroqueNo2.length === 1 && /ya no pueden enrocar/.test(r.enroqueNo2[0]) && !r.enroqueSi.length, "lo que dice del enroque se comprueba con los derechos de enroque");
 });
 
 seccion("🧑‍🏫 Memoria del entrenador entre clases (1.56)", () => {
@@ -403,7 +376,6 @@ seccion("🧑‍🏫 Memoria del entrenador entre clases (1.56)", () => {
     const b = { sessions: [{ t: 2, n: 4 }, { t: 3, n: 6 }], retry: { "p:x": { due: 9, t: 5 }, "p:y": { due: 7, t: 6 } } };
     const m = SYNC_LS.ajedrezEntrenador.merge(a, b);
     out.sync = { ses: m.sessions.map(x => x.t), x: !!m.retry["p:x"].done, y: !!m.retry["p:y"] };
-    out.texto = coachProfileText({ games: 0, byTheme: {}, byPhase: {}, weak: [], rating: 1200, rated: false, mem: coachMemSummary() }, { key: "material", why: "x" });
     return out;
   })()`);
   comprobar(r.focusP === "material" && r.dueHoy === 0 && r.dueLuego === 1, "una posición fallada vuelve a la clase al cabo de 3 días (y se cuenta en su tema)");
@@ -412,25 +384,7 @@ seccion("🧑‍🏫 Memoria del entrenador entre clases (1.56)", () => {
   comprobar(r.cola[0] === "R:puzzle:" + r.pid && r.cola.length === 4, "la clase empieza por las posiciones que toca repetir");
   comprobar(r.trasAcertar === 0 && r.marcada, "al acertarla a la primera sale de la lista (marcada, para que la sincronización no la resucite)");
   comprobar(igual(r.sync, { ses: [1, 2, 3], x: true, y: true }), "al sincronizar se juntan las clases sin repetir y gana lo más reciente de cada posición");
-  comprobar(/Historial de clases con el entrenador: 1/.test(r.texto) && /Acierto a la primera por tema/.test(r.texto), "la IA recibe el historial de clases");
   E.localStorage.removeItem("ajedrezEntrenador");
-});
-
-seccion("🤖 Lo que la IA dice de las piezas", () => {
-  const r = JSON.parse(E.ev(`JSON.stringify((() => {
-    const s = Chess.parseFen("r1bqkb1r/pp1n1ppp/2p1pn2/n2p4/2PP4/2N1PN2/PP3PPP/R1BQKB1R w KQkq - 0 7");
-    // La respuesta real que dio un modelo pequeño: dos piezas que no están donde dice
-    const mal = "Tu idea va bien, pero hay un problema: el alfil de d7 es peligroso. El caballo de a4 también está amenazado. Lo más eficiente es capturar el alfil de d7 con el caballo de a4.";
-    const bien = "Tu caballo de f3 está bien, el caballo negro de f6 defiende d5 y la dama de d8 vigila; tu alfil de f1 aún no ha salido.";
-    const color = "Tu caballo de d7 está mal colocado.";
-    const primera = aiCheckClaims("La clave es la debilidad del rey negro contra mi dama en g6.", [s], 1).map(e => e.why);
-    return { primera, mal: aiCheckClaims(mal, [s], 1).map(e => e.why), bien: aiCheckClaims(bien, [s], 1).length, color: aiCheckClaims(color, [s], 1).map(e => e.why), lista: aiPiecesText(s) };
-  })())`));
-  comprobar(r.mal.join(" | ") === "en d7 hay un caballo negro, no un alfil | en a4 no hay ninguna pieza", "detecta «el alfil de d7» (es un caballo) y «el caballo de a4» (no hay nada)");
-  comprobar(r.primera.length >= 1 && r.primera[0].includes("primera persona"), "detecta cuando el tutor habla como si jugara («mi dama»)");
-  comprobar(r.bien === 0, "no marca lo que es cierto (piezas, casillas y colores correctos)");
-  comprobar(r.color[0] === "la pieza de d7 es negra (del rival)", "detecta cuando dice «tu» de una pieza del rival");
-  comprobar(r.lista.includes("Piezas de las negras: rey negro en e8; dama negra en d8; torre negra en a8; torre negra en h8; alfil negro en c8; alfil negro en f8; caballo negro en d7; caballo negro en f6; caballo negro en a5;") && r.lista.includes("peón blanco en c4"), "la lista de piezas que recibe la IA, cada una con su color pegado");
 });
 
 seccion("Correcciones de la auditoría (1.59.1)", () => {

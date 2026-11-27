@@ -161,13 +161,6 @@ function structInfo(code) {
 }
 const structOfNode = n => structInfo(pawnStruct(n.state.b));
 
-/* Para el profesor IA: la estructura y sus planes, en pocas líneas */
-function structText(node) {
-  const st = structOfNode(node);
-  if (!st) return "";
-  return `Estructura de peones: ${st.name}${st.name.toLowerCase().includes(st.short.toLowerCase()) ? "" : ` (${st.short})`}. ${st.about}\nPlan típico de las ${st.owner}: ${st.own.join(" ")}\nPlan típico de las ${st.other}: ${st.opp.join(" ")}\nRupturas típicas: ${st.breaks}.`;
-}
-
 /* ---------- El recuadro «Estructura de peones» de Estudio ---------- */
 const Struct = { code: -1, models: null, busy: false, shown: null };
 function renderStructure() {
@@ -219,7 +212,7 @@ async function structModelGames(code, max = 8) {
       out.push(Object.assign({ title: `${h.White || "?"} – ${h.Black || "?"}`, h, where: src.lib != null ? "tu biblioteca" : "el .pgn abierto", label: gidxLabel(e, at), len, path: gidxUcis(e).slice(0, at) }, src));
     }
   }
-  for (const id of AI_CTX_COURSES) {
+  for (const id of MODEL_COURSES) {
     const ls = courseLessons(id);
     for (let i = 0; i < ls.length; i++) {
       let g;
@@ -228,7 +221,7 @@ async function structModelGames(code, max = 8) {
       for (let n = g.root; n; n = n.children[0], ply++) { if (ply >= 8 && pawnStruct(n.state.b) === code) { if (!at) at = n; len++; } if (!n.children.length) break; }
       if (!at || len < 4) continue;
       const c = COURSES.find(x => x.id === id) || {};
-      out.push({ course: id, i, h: g.headers, title: `${c.name || "Curso"} · ${g.headers.Title || "Lección"}`, where: "los cursos", label: at.parent ? `${numPrefix(at.parent.state)}${aiSan(at.parent.state, at.uci)}` : "el inicio", len, path: Pgn.pathTo(at).slice(1).map(x => x.uci) });
+      out.push({ course: id, i, h: g.headers, title: `${c.name || "Curso"} · ${g.headers.Title || "Lección"}`, where: "los cursos", label: at.parent ? `${numPrefix(at.parent.state)}${sanOf(at.parent.state, at.uci)}` : "el inicio", len, path: Pgn.pathTo(at).slice(1).map(x => x.uci) });
     }
   }
   return out.sort((a, b) => (b.course ? 4 : 0) + Math.min(b.len, 40) - ((a.course ? 4 : 0) + Math.min(a.len, 40))).slice(0, max);
@@ -244,6 +237,6 @@ async function structShowModels(code) {
     if (Struct.code !== code) return;
     if (!list.length) { box.innerHTML = `<span class="small">No hay partidas con esta estructura en los cursos ni en tu biblioteca. Guarda partidas o abre un .pgn en 📚 Biblioteca › 🗂 Abrir .pgn para tener más ejemplos.</span>`; return; }
     box.innerHTML = list.map((g, k) => `<div class="struct-model"><span>${esc(g.title)}<span class="small"> · ${esc(g.where)}, desde ${esc(g.label)}${g.h && g.h.Result && g.h.Result !== "*" ? " · " + esc(g.h.Result) : ""}</span></span><button class="sm-btn" type="button" data-sm="${k}">Abrir</button></div>`).join("");
-    box.querySelectorAll("[data-sm]").forEach(b => b.onclick = () => aiOpenModel(list[+b.dataset.sm]));
+    box.querySelectorAll("[data-sm]").forEach(b => b.onclick = () => openModelGame(list[+b.dataset.sm]));
   } finally { Struct.busy = false; }
 }

@@ -1,5 +1,5 @@
 /* ---------- B13b. Índice de posiciones de tus partidas (biblioteca y .pgn abierto) ----------
-   Antes, el explorador de tus partidas, «Buscar posición», las partidas modelo del profesor IA y el rival humano
+   Antes, el explorador de tus partidas, «Buscar posición», las partidas modelo de las estructuras de peones y el rival humano
    volvían a leer y comprobar TODAS las partidas cada vez (unos 2,5 ms por partida: 13 s con 5.000).
    Ahora cada partida se lee una sola vez, en segundo plano (un Web Worker con core.js y pgn.js, como el motor
    interno), y se guarda un resumen compacto de su línea principal: una huella numérica de cada posición, de su

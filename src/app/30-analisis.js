@@ -526,8 +526,7 @@ function renderGameReport() {
   if (!R) { box.innerHTML = ""; return; }
   const h = game.headers, nm = c => esc(c === 1 ? h.White || "Blancas" : h.Black || "Negras");
   const pcell = v => (v == null ? "–" : v + "%");
-  let html = (aiProvider() ? `<div class="controls"><button id="aiReviewBtn" class="sm-btn primary" title="El profesor IA comenta los momentos clave como un entrenador">🤖 Que la comente el profesor</button></div><div id="aiReviewBox" class="retry-box think-box" hidden aria-live="polite"></div>` : "") +
-    `<h3>📝 Resumen</h3><p class="rep-summary">${esc(R.summary)}</p>`;
+  let html = `<h3>📝 Resumen</h3><p class="rep-summary">${esc(R.summary)}</p>`;
   if (R.prov && R.prov.text) html = `<p class="small rep-prov">🔍 <b>Cómo se ha obtenido:</b> ${esc(R.prov.text)}.${R.prov.mixed ? " ⚠ No todas las evaluaciones son del mismo motor o del mismo tiempo: tenlo en cuenta al comparar jugadas." : ""}${R.prov.change ? ` ⚠ ${esc(R.prov.change)}` : ""} Si una jugada te parece mal juzgada (o no coincide con otro análisis, como el de Lichess), pulsa <b>🔬 Más a fondo</b> para recalcular esa posición con más tiempo.</p>` + html;
   html += `<h3>📍 Momentos clave</h3>`;
   if (R.key.length) {
@@ -551,7 +550,6 @@ function renderGameReport() {
     if (!res) { b.disabled = false; b.textContent = "🔬 Más a fondo"; }
     else if (!(ui.analysedLine || []).includes(x.n)) toast(res.text, 9000);
   });
-  if ($("aiReviewBtn")) $("aiReviewBtn").onclick = () => aiGameReview($("aiReviewBox"), 0);
   box.querySelectorAll("[data-tm]").forEach(a => a.onclick = e => { e.preventDefault(); const n = Pgn.findById(game.root, +a.dataset.tm); if (n && !quiz()) goTo(n); });
 }
 

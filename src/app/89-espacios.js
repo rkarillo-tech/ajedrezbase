@@ -22,13 +22,7 @@ function servicesState() {
   else warn("⚙", "Motor", `${Engine.name || "Motor interno"}: funciona sin conexión, pero es más débil que Stockfish.${(Engine.fails || []).length ? " Stockfish no se ha podido cargar." : ""}`, ["motor", "Ver por qué"]);
   // Conexión
   if (online) ok("🌐", "Conexión", "Hay conexión a internet.", null);
-  else warn("🌐", "Conexión", "Sin conexión: funcionan el tablero, el motor, la biblioteca, los cursos y los problemas; no el explorador de Lichess, la nube ni la IA de Claude o Gemini.", null);
-  // Profesor IA
-  const p = aiProvider();
-  if (!p) off("🤖", "Profesor IA", "Desactivado. Es opcional: elige un proveedor para preguntarle sobre las posiciones.", ["ia", "Configurar"]);
-  else if (p === "ollama") ok("🤖", "Profesor IA", `Ollama en tu ordenador (${aiModel() || "sin modelo elegido"})${aiWatchOn() ? " · ⚡ vigilancia en una sola consulta" : ""}. Pulsa «Probar» en Ajustes para comprobar que responde.`, ["ia", "Probar"]);
-  else if (!settings.aiKey) warn("🤖", "Profesor IA", `${AI_PROVIDERS[p].name.split(" (")[0]}: falta la clave.`, ["ia", "Poner la clave"]);
-  else (online ? ok : warn)("🤖", "Profesor IA", `${AI_PROVIDERS[p].name.split(" (")[0]} (${aiModel()})${online ? "" : ": sin conexión no responderá"}.`, ["ia", "Probar"]);
+  else warn("🌐", "Conexión", "Sin conexión: funcionan el tablero, el motor, la biblioteca, los cursos y los problemas; no el explorador de Lichess ni la nube.", null);
   // Lichess
   const wait = typeof Lichess !== "undefined" && Lichess.waitSeconds ? Lichess.waitSeconds() : 0;
   if (wait) warn("♞", "Lichess", `Ha pedido una pausa: se podrá volver a consultar en ${wait} s.`, null);
@@ -54,7 +48,7 @@ function renderServicesDot() {
   const bad = !Engine.ready && Date.now() - (window.__t0 || 0) > 30000;
   const warnN = rows.filter(r => r.lvl === "warn").length;
   dot.className = "svc-dot " + (bad ? "bad" : warnN ? "warn" : "ok");
-  $("servicesBtn").title = `Estado de los servicios: ${warnN ? `${warnN} aviso${warnN === 1 ? "" : "s"}` : "todo bien"} (motor, profesor IA, conexión, Lichess, sincronización…)`;
+  $("servicesBtn").title = `Estado de los servicios: ${warnN ? `${warnN} aviso${warnN === 1 ? "" : "s"}` : "todo bien"} (motor, conexión, Lichess, sincronización…)`;
 }
 function renderServices() {
   const rows = servicesState();
