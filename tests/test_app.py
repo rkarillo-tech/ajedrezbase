@@ -248,7 +248,7 @@ def prueba_ayuda_y_movil(browser):
     pg.click("#licBtn")
     comprobar("MIT" in pg.inner_text("#licModal") and "Stockfish" in pg.inner_text("#licModal"), "licencia MIT y créditos de terceros visibles")
     pg.keyboard.press("Escape")
-    comprobar(pg.is_visible("#welcomeBox") and pg.locator("#welcomeBox [data-welcome]").count() == 5, "la primera vez se muestran los «Primeros pasos»")
+    comprobar(pg.is_visible("#welcomeBox") and pg.locator("#welcomeBox [data-welcome]").count() == 6, "la primera vez se muestran los «Primeros pasos» (también «Guíame paso a paso»)")
     pg.click('#welcomeBox [data-welcome="puzzles"]')
     comprobar(not pg.is_visible("#welcomeBox") and pg.is_visible("#puzzleStartBtn") and pg.evaluate("settings.welcomed === true"), "un acceso de «Primeros pasos» lleva a su sitio (problemas) y cierra el panel")
     pg.click("#welcomeBtn")
@@ -3019,6 +3019,7 @@ def prueba_rutas(browser):
     pg.evaluate("showWelcome(true)")
     pg.click('[data-welcome="routes"]')
     comprobar(pg.locator("#routeCard [data-route-start]").count() == 5, "también se abre desde la bienvenida")
+    comprobar(pg.evaluate("cmdCommands().filter(c => c.name.startsWith('🧭')).length") == 6, "y desde el buscador (Ctrl+K): «Guíame» y cada ruta")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 

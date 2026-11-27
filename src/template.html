@@ -370,7 +370,8 @@ body.dropping::after { content: "📄 Suelta aquí el fichero .pgn (o una copia 
 .cmd-foot { margin-top: 6px; color: var(--muted); }
 .cmd-item kbd, .cmd-kbd { font: 0.75rem ui-monospace, monospace; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; color: var(--muted); }
 .cmd-flash { outline: 3px solid var(--accent) !important; outline-offset: 2px; transition: outline-color .3s; }
-@media (max-width: 640px) { .cmd-btn-lbl, .cmd-kbd { display: none; } .modal-back.cmd-back { padding-top: 4vh; } }
+@media (max-width: 640px) { #routesBtn { display: none; }   /* en el móvil, desde la bienvenida y el buscador: la cabecera cabe en una línea */
+  .cmd-btn-lbl, .cmd-kbd { display: none; } .modal-back.cmd-back { padding-top: 4vh; } }
 .eco-banner[role=button] { cursor: pointer; }
 .eco-banner[role=button]:hover { text-decoration: underline; }
 .opening-body p { margin: 4px 0; line-height: 1.5; }
@@ -1056,7 +1057,7 @@ body.board-full #exportControls { order: 10; }
       <button type="button" class="train-card" data-welcome="lichess"><span class="tc-ico" aria-hidden="true">☁</span><span class="tc-body"><b>Traer mis partidas de Lichess</b><span class="small">Con tu nombre de usuario, sin contraseña</span></span></button>
       <button type="button" class="train-card" data-welcome="puzzles"><span class="tc-ico" aria-hidden="true">🧩</span><span class="tc-body"><b>Resolver problemas</b><span class="small">Táctica por temas y a tu nivel</span></span></button>
       <button type="button" class="train-card" data-welcome="courses"><span class="tc-ico" aria-hidden="true">📘</span><span class="tc-body"><b>Hacer un curso</b><span class="small">Lecciones comentadas paso a paso</span></span></button>
-      <button type="button" class="train-card" data-welcome="routes"><span class="tc-ico" aria-hidden="true">🧭</span><span class="tc-body"><b>Que me guíe paso a paso</b><span class="small">Revisar una partida, estudiar una apertura, táctica, finales…</span></span></button>
+      <button type="button" class="train-card" data-welcome="routes"><span class="tc-ico" aria-hidden="true">🧭</span><span class="tc-body"><b>Guíame paso a paso</b><span class="small">Elige un objetivo</span></span></button>
       <button type="button" class="train-card" data-welcome="cpu"><span class="tc-ico" aria-hidden="true">🤖</span><span class="tc-body"><b>Jugar una partida</b><span class="small">Contra la CPU o entre dos personas</span></span></button>
     </div>
     <div class="small welcome-foot">¿Prefieres leer antes? <button class="link-inline" id="welcomeHelp" type="button">Abre la guía</button>.</div>
