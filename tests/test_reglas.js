@@ -89,6 +89,40 @@ console.log("Triple repetición y captura al paso (1.59.1)");
   comprobar(Chess.repKey(s3) === Chess.repKey(s4) && Chess.repKey(Chess.parseFen("8/8/8/3Pp3/8/8/8/K5k1 w - e6 0 1")) !== Chess.repKey(Chess.parseFen("8/8/8/3Pp3/8/8/8/K5k1 w - - 0 1")), "sólo cuenta si la captura al paso es legal (no si deja al rey en jaque)");
 }
 
+console.log("Notación descriptiva española (1.63)");
+{
+  const opera = "1.P4R P4R 2.C3AR P3D 3.P4D A5CR 4.PxP AxC 5.DxA PxP 6.A4AD C3AR 7.D3CD D2R 8.C3A P3AD 9.A5CR P4CD 10.CxP PxC 11.AxPC+ CD2D 12.0-0-0 T1D 13.TxC TxT 14.T1D D3R 15.AxT+ CxA 16.D8C+ CxD 17.T8D++ 1-0";
+  const r = Pgn.parseGame(opera);
+  const sans = Pgn.mainlineFrom(r.game.root).map(n => n.san).join(" ");
+  comprobar(r.lang === "desc" && !r.error && sans === "e4 e5 Nf3 d6 d4 Bg4 dxe5 Bxf3 Qxf3 dxe5 Bc4 Nf6 Qb3 Qe7 Nc3 c6 Bg5 b5 Nxb5 cxb5 Bxb5+ Nbd7 O-O-O Rd8 Rxd7 Rxd7 Rd1 Qe6 Bxd7+ Nxd7 Qb8+ Nxb8 Rd8#",
+    "lee la Ópera de Morphy en descriptiva (se detecta sola), con las filas contadas desde cada bando");
+  comprobar(Pgn.mainlineFrom(r.game.root).map(n => Pgn.descFor(n.parent.state, n.move)).join(" ") === "P4R P4R C3AR P3D P4D A5C PxP AxC DxA PxP A4AD C3AR D3CD D2R C3A P3A A5CR P4C CxP PxC AxPC+ CD2D 0-0-0 T1D TxC TxT T1D D3R AxT+ CxA D8C+ CxD T8D++",
+    "escribe cada jugada en la forma más corta que no es ambigua (A4AD porque A4A también podría ser Af4)");
+  // Ida y vuelta: todas las jugadas legales de posiciones difíciles (enroques, al paso, coronaciones, clavadas)
+  let total = 0, malas = [];
+  for (const fen of [Chess.START_FEN, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+    "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 4 4",
+    "4k3/8/8/2pP4/8/8/8/4K3 w - c6 0 1", "1r2k3/2P5/8/8/8/8/8/4K3 w - - 0 1"]) {
+    const st = Chess.parseFen(fen), L = Chess.legal(st);
+    for (const m of L) { total++; const d = Pgn.descFor(st, m, L), f = Pgn.descMoves(st, d, L); if (f.length !== 1 || !Pgn.sameMove(f[0], m) || (f[0].promotion || "") !== (m.promotion || "")) malas.push(d); }
+  }
+  comprobar(!malas.length && total > 150, `ida y vuelta: las ${total} jugadas legales de 8 posiciones difíciles se escriben y se vuelven a leer como la misma jugada` + (malas.length ? ": " + malas.join(", ") : ""));
+  // Ambigua: se para, dice las opciones y sigue al elegir
+  const amb = Pgn.parseGame("1. P4R P4D 2. P4AD PxP 3. C3AD", { lang: "desc" });
+  comprobar(amb.count === 3 && JSON.stringify(amb.error.choices) === '["d5c4","d5e4"]' && amb.error.message.includes("admite 2 jugadas"), "«PxP» con dos capturas posibles: se para y dice cuáles encajan");
+  const r2 = amb.reparse({ [amb.error.key]: "d5e4" });
+  comprobar(!r2.error && Pgn.mainlineFrom(r2.game.root).map(n => n.san).join(" ") === "e4 d5 c4 dxe4 Nc3", "…y al elegir una sigue leyendo el resto de la partida");
+  // Formas de los libros: guiones, espacios, paréntesis, «a.p.», orden inverso, origen
+  const g = t => { const x = Pgn.parseGame(t, { lang: "auto" }); return x.error ? "ERROR " + x.error.message : Pgn.mainlineFrom(x.game.root).map(n => n.san).join(" "); };
+  comprobar(g("1. P-4R P-4R 2. C-3AR C-3AD 3. A-5C P-3TD 4. A x C PD x A 5. 0-0") === "e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6 O-O", "con guiones y capturas con espacios («A x C», «PD x A»)");
+  comprobar(g("1. P4R P4AD 2. P5R P4D 3. PxP a.p.") === "e4 c5 e5 d5 exd6", "captura al paso («a.p.»)");
+  comprobar(g("1. R4P? P4R") === "ERROR Jugada descriptiva no reconocida o ilegal: R4P?" && g("1. P4D C3AR 2. P4AD P3R 3. C3AD A5C 4. D2A 0-0 5. P4TD P4D 6. P5TD P4A 7. P6T") === "d4 Nf6 c4 e6 Nc3 Bb4 Qc2 O-O a4 d5 a5 c5 a6", "orden de los números, enroque y P6T sin flanco (sólo un peón puede)");
+  const prom = Chess.parseFen("1r2k3/2P5/8/8/8/8/8/4K3 w - - 0 1");
+  comprobar(Pgn.descMoves(prom, "P8AD").map(m => m.promotion).join() === "q" && Pgn.descMoves(prom, "P8A(C)").map(m => m.promotion).join() === "n" && Pgn.descMoves(prom, "PxT=T").map(m => Chess.uci(m)).join() === "c7b8r", "coronación: dama si no se dice, «(C)» o «=T» para otra pieza");
+  comprobar(Pgn.descMoves(Chess.parseFen("r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 4 4"), "CD4T").map(m => Chess.uci(m)).join() === "c6a5", "origen por flanco: CD4T (el caballo de dama, a5 es la cuarta fila de las negras)");
+  comprobar(Pgn.detectLang("1. e4 e5 2. Cf3 Cc6 3. Ab5 a6 4. O-O Cf6") === "es" && Pgn.detectLang("1. P4R P4R 2. C3AR C3AD") === "desc" && Pgn.looksDesc("PxP") && !Pgn.looksDesc("Cxe4") && !Pgn.looksDesc("e4"), "no confunde la algebraica española con la descriptiva");
+}
+
 console.log("Estructura y casillas fuertes");
 {
   const s1 = Chess.parseFen("4k3/8/8/3P4/8/2P5/2P1P3/4K3 w - - 0 1");

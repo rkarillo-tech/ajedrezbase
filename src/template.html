@@ -266,8 +266,8 @@ main {
 .board-side > :is(#navControls, #drawBar, #autoSpeedRow) { order: 1; }   /* la navegación, justo debajo del tablero (sin tener que bajar con la rueda) */
 .board-side > #statusText { order: 2; }
 .board-side > #coachBox { order: 0; }   /* el entrenador, siempre pegado al tablero */
-.board-side > :is(#retryBox, #cpuBox, #guessBox, #visBox, #scanBox) { order: 3; }
-@media (min-width: 981px) { .board-side > :is(#retryBox, #cpuBox, #guessBox, #visBox, #scanBox) { order: 0; } }   /* en el ordenador, lo que se está haciendo va pegado al tablero, antes de la navegación */
+.board-side > :is(#retryBox, #cpuBox, #guessBox, #visBox, #scanBox, #descPick) { order: 3; }
+@media (min-width: 981px) { .board-side > :is(#retryBox, #cpuBox, #guessBox, #visBox, #scanBox, #descPick) { order: 0; } }   /* en el ordenador, lo que se está haciendo va pegado al tablero, antes de la navegación */
 .b3-custom { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0 2px; }
 .b3-custom label { display: flex; align-items: center; gap: 6px; font-size: .85rem; }
 .b3-custom input[type=color] { width: 38px; height: 26px; padding: 0; border: 1px solid var(--border); background: none; }
@@ -509,6 +509,8 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .move-compare { padding: 6px 9px; font-size: .82rem; border-bottom: 1px solid var(--border); background: rgba(41,182,246,.06); }
 .move-compare .controls { margin-top: 4px; }
 .threat-info { padding: 5px 9px; border-bottom: 1px solid var(--border); font-size: .8rem; color: var(--bad-text); background: rgba(239,83,80,.08); }
+.mv-desc { color: var(--muted); font-size: .82em; margin-left: 3px; }
+#descViewBtn.on { border-color: var(--accent); }
 .flow-guide { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 6px 0; padding: 7px 34px 7px 10px; position: relative; border: 1px solid var(--accent); border-radius: 8px; background: var(--panel2); font-size: .86rem; }
 .flow-guide .flow-next { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .flow-guide .flow-close { position: absolute; top: 4px; right: 4px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: .85rem; padding: 4px 6px; }
@@ -634,7 +636,7 @@ details > summary { cursor: pointer; color: var(--muted); font-size: .84rem; mar
 .import-details > summary { font-weight: 700; color: var(--text); cursor: pointer; padding: 4px 0; }
 .study-comment { margin-top: 6px; }
 /* 1.59: modo básico, estado de los servicios, comparar posiciones y espacios de trabajo */
-body.ui-basic :is(#drawBar, #varControls, #exportControls, #engineToolsBtn, #engineTools, #headersDetails, #analyseVarBtn, #typeMoveRow, #cmpBox, #moveViewBtn, #chartLegend) { display: none !important; }
+body.ui-basic :is(#drawBar, #varControls, #exportControls, #engineToolsBtn, #engineTools, #headersDetails, #analyseVarBtn, #typeMoveRow, #cmpBox, #moveViewBtn, #descViewBtn, #chartLegend) { display: none !important; }
 body.ui-basic .engine-lines .pv-line ~ .pv-line { display: none; }
 .services-btn { padding: 6px 9px; }
 .svc-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: var(--muted); vertical-align: middle; }
@@ -858,7 +860,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #navControls { order: 1; }
   #drawBar { order: 1; }
   #statusText { order: 2; }
-  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox { order: 3; }
+  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox, #descPick { order: 3; }
   #coachBox { order: 0; }
   #flowGuide { order: 4; }
   #moves { order: 4; max-height: 32vh; }
@@ -913,7 +915,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #playBtn { font-size: .74rem; }
   #drawBar { order: 1; margin-top: 3px; }
   #statusText { order: 2; margin-top: 3px; }
-  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox { order: 3; }
+  #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox, #descPick { order: 3; }
   #coachBox { order: 0; }
   #flowGuide { order: 4; }
   #moves { order: 4; max-height: 52vh; max-height: 52dvh; min-height: 90px; margin-top: 4px; }
@@ -986,7 +988,7 @@ body.board-full :is(#navControls, #drawBar, #autoSpeedRow) { order: 1; }
 body.board-full #navControls { margin-top: 0; }
 body.board-full #statusText { order: 2; }
 body.board-full #coachBox { order: 0; }
-body.board-full :is(#retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox) { order: 3; }
+body.board-full :is(#retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox, #descPick) { order: 3; }
 body.board-full :is(#flowGuide, #moves) { order: 4; }
 body.board-full :is(#varControls, #gameMarksBox) { order: 5; }
 body.board-full #typeMoveRow { order: 6; }
@@ -1194,8 +1196,9 @@ body.board-full #exportControls { order: 10; }
     <div id="guessBox" class="retry-box" hidden aria-live="polite"></div>
     <div id="visBox" class="retry-box" hidden aria-live="polite"></div>
     <div id="lessonBox" class="retry-box lesson-box" hidden aria-live="polite"></div>
+    <div id="descPick" class="retry-box" role="status" aria-live="polite" hidden></div>
     <div class="type-move" id="typeMoveRow">
-      <input id="moveTyped" placeholder="⌨ Escribe una jugada (e4, Cf3, Axc6, O-O…) y pulsa Intro" aria-label="Escribir una jugada con el teclado" autocomplete="off" spellcheck="false">
+      <input id="moveTyped" placeholder="⌨ Escribe una jugada (e4, Cf3, Axc6, O-O… o como en los libros antiguos: P4R, C3AR) y pulsa Intro" aria-label="Escribir una jugada con el teclado" autocomplete="off" spellcheck="false">
     </div>
 
     <div id="flowGuide" class="flow-guide" role="status" aria-live="polite" hidden></div>
@@ -1209,7 +1212,7 @@ body.board-full #exportControls { order: 10; }
     </div>
     <div id="gameMarksBox" class="game-marks" hidden></div>
     <div class="controls" id="exportControls">
-      <button id="moveViewBtn" class="sm-btn" title="Cambiar entre lista continua y planilla de dos columnas">📋 Ver como planilla</button>
+      <button id="moveViewBtn" class="sm-btn" title="Cambiar entre lista continua y planilla de dos columnas">📋 Ver como planilla</button> <button id="descViewBtn" class="sm-btn" type="button" aria-pressed="false" title="Muestra cada jugada también en notación descriptiva, como en los libros antiguos (P4R junto a e4)">📜 Descriptiva</button>
       <button id="pngBtn" class="sm-btn" title="Descargar la posición como imagen PNG (y copiarla al portapapeles)">🖼 Imagen</button>
       <button id="printBtn" class="sm-btn" title="Imprimir o guardar como PDF la partida comentada, con diagramas">🖨 Imprimir</button>
       <button id="linkBtn" class="sm-btn" title="Copiar un enlace que abre esta partida en esta jugada">🔗 Enlace</button>
@@ -1381,6 +1384,7 @@ body.board-full #exportControls { order: 10; }
             <option value="es">Española (Cf3, Ab5, Rf1 = rey)</option>
             <option value="en">Inglesa (Nf3, Bb5, Rf1 = torre)</option>
             <option value="uci">Coordenadas (e2e4)</option>
+            <option value="desc">Descriptiva de libros antiguos (P4R, C3AR, PxP)</option>
           </select>
         </div>
         <div>

@@ -2,7 +2,7 @@
 const NAG_CLASS = { "!!": "nag-brilliant", "!": "nag-good", "!?": "nag-good", "?!": "nag-inacc", "?": "nag-mistake", "??": "nag-blunder" };
 /* Huella del contenido de la lista de jugadas: si no cambia, basta con mover el resaltado */
 function movesSignature(marked) {
-  let s = `${settings.lang}|${settings.moveView}|${quiz() ? "q" + cur().id : ""}|${game.root.comment || ""}|${[...marked].map(([k, m]) => k + m.cat + (m.note || "")).join()}|`;
+  let s = `${settings.lang}|${settings.moveView}|${settings.showDesc ? "d" : ""}|${quiz() ? "q" + cur().id : ""}|${game.root.comment || ""}|${[...marked].map(([k, m]) => k + m.cat + (m.note || "")).join()}|`;
   const st = [game.root];
   while (st.length) {
     const n = st.pop();
@@ -47,7 +47,7 @@ function renderMoves() {
     if (node.clk != null) { const sp = spentOn(node); b.title = `⏱ ${sp != null ? "tardó " + fmtSecs(sp) + " · " : ""}le quedaban ${fmtClock(node.clk * 1000)}`; }
     b.dataset.id = node.id;
     const mk = marked.get(node.id);
-    b.innerHTML = esc(dispSan(node)) + (node.nag ? `<span class="nag ${NAG_CLASS[node.nag] || ""}">${esc(node.nag)}</span>` : "") + (node.posNag ? `<span class="nag-pos">${esc(node.posNag)}</span>` : "") + (node.nags || []).map(c => `<span class="nag-pos" title="Símbolo PGN $${c}">${esc(Pgn.nagSymbol(c))}</span>`).join("") + (mk ? `<span class="mv-mark" title="${esc(CATS[mk.cat].name + (mk.note ? ": " + mk.note : ""))}">${CATS[mk.cat].icon}</span>` : "");
+    b.innerHTML = esc(dispSan(node)) + (settings.showDesc ? `<span class="mv-desc" title="En descriptiva">${esc(nodeDesc(node))}</span>` : "") + (node.nag ? `<span class="nag ${NAG_CLASS[node.nag] || ""}">${esc(node.nag)}</span>` : "") + (node.posNag ? `<span class="nag-pos">${esc(node.posNag)}</span>` : "") + (node.nags || []).map(c => `<span class="nag-pos" title="Símbolo PGN $${c}">${esc(Pgn.nagSymbol(c))}</span>`).join("") + (mk ? `<span class="mv-mark" title="${esc(CATS[mk.cat].name + (mk.note ? ": " + mk.note : ""))}">${CATS[mk.cat].icon}</span>` : "");
     ui.nodeMap.set(node.id, node);
     parentEl.append(b, " ");
   };
@@ -398,6 +398,7 @@ function render() {
   renderEco();
   renderEvalChart();
   renderFlow();
+  renderDescPick();
   if (!editor.active) {
     const running = Engine.running && Engine.running.purpose === "live" && !Engine.running.cancelled && ui.liveNode === cur() ? Engine.running : null;
     showEngineFor(cur(), running);
@@ -472,6 +473,7 @@ function importResultMsg(r, extra = "") {
     el.className = "small msg-ok";
     el.textContent = `✔ ${r.count} jugadas importadas.${r.nullSkipped ? ` Se han dejado fuera ${r.nullSkipped === 1 ? "una variante" : r.nullSkipped + " variantes"} con jugadas nulas («--»).` : ""}${extra}`;
   }
+  descImportAmbiguity(r);   // 📜 una jugada descriptiva ambigua (PxP): elegir en el tablero y seguir leyendo
   flowImported(r);   // 🧭 el siguiente paso, encima de las jugadas
 }
 function looksLikeFen(t) { return /^\s*[prnbqkPRNBQK1-8]+(\/[prnbqkPRNBQK1-8]+){7}\s+[wb]\b/.test(t); }
