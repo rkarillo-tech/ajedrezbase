@@ -3024,6 +3024,59 @@ def prueba_rutas(browser):
     ctx.close()
 
 
+PGN_MALICIOSO = """[Event "<img src=x onerror=\\"window.__xss=(window.__xss||0)+1\\">Torneo"]
+[Site "<svg onload=window.__xss=(window.__xss||0)+1>"]
+[White "<img src=x onerror=\\"window.__xss=(window.__xss||0)+1\\">Ana"]
+[Black "<script>window.__xss=(window.__xss||0)+1</script>Beto"]
+[Annotator "<b onmouseover=window.__xss=1>Kasparov</b>"]
+[Result "1-0"]
+
+1. e4 {<img src=x onerror="window.__xss=(window.__xss||0)+1"> idea} e5 (1... c5 {<iframe src=javascript:window.__xss=1></iframe>}) 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0
+"""
+
+
+def prueba_inyeccion_pgn(browser):
+    print("1.65: un PGN con código (HTML o JavaScript) en cabeceras o comentarios no se ejecuta")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.evaluate("window.__xss = 0; $('welcomeBox').hidden = true; settings.analysisMs = 200; settings.live = false; saveSettings()")
+    # Estudio: importar, lista de jugadas, comentario de la posición y cabeceras
+    pg.fill("#moveInput", PGN_MALICIOSO)
+    pg.click("#importBtn")
+    pg.evaluate("goTo(game.root.children[0]); $('headersDetails').open = true; syncHeaderForm()")
+    comprobar("<img src=x" in pg.inner_text("#moves") and "<img src=x" in pg.input_value("#annotation"), "el texto del PGN se ve tal cual (como texto) en la lista de jugadas y en el comentario")
+    pg.evaluate("goTo(game.root.children[0].children[1])")
+    # Título, etiquetas y guardado en la biblioteca
+    pg.fill("#gameTags", "<img src=x onerror=window.__xss=1>, normal")
+    pg.click("#saveGame")
+    pg.wait_for_function("Lib.games.size === 1")
+    pg.click('.tab-btn[data-tab="library"]')
+    pg.click('.sub-btn[data-sub="games"]')
+    comprobar("<img src=x" in pg.inner_text("#libBody"), "en la biblioteca, el título y las etiquetas se ven como texto")
+    # Buscar en los comentarios
+    pg.click('.sub-btn[data-sub="search"]')
+    pg.fill("#commentSearch", "idea")
+    pg.click("#commentSearchBtn")
+    pg.wait_for_timeout(300)
+    # Abrir .pgn: la lista de la colección
+    pg.evaluate("t => setCollection(t, false, '<img src=x onerror=window.__xss=1>.pgn')", PGN_MALICIOSO)
+    pg.click('.sub-btn[data-sub="collection"]')
+    comprobar("<img src=x" in pg.inner_text("#pgnDbBody"), "en «Abrir .pgn», los jugadores y el evento se ven como texto")
+    # Análisis e informe (nombres de los jugadores, momentos clave), etiqueta de actividad y recorrido guiado
+    pg.click('.tab-btn[data-tab="study"]')
+    pg.evaluate("openLibGame([...Lib.games.keys()][0])")
+    pg.click("#autoAnnotateBtn")
+    pg.wait_for_function("document.getElementById('reportBox').classList.contains('show')", timeout=180000)
+    pg.evaluate("renderActivity(); goTo(game.root)")
+    pg.wait_for_timeout(500)
+    comprobar("<script>" in pg.inner_text("#reportExtra") or "Beto" in pg.inner_text("#reportExtra"), "el informe usa los nombres de los jugadores como texto")
+    comprobar(pg.evaluate("window.__xss") == 0 and pg.evaluate("document.querySelectorAll('img[src=\"x\"], svg[onload], iframe[src^=\"javascript\"], b[onmouseover]').length") == 0,
+              "no se ha ejecutado ni insertado nada del código del PGN en ninguna de esas pantallas")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_v153_distribucion(browser):
     print("1.53: jugadas al lado del tablero, herramientas del motor plegadas y bienvenida compacta")
     ctx = contexto(browser, viewport={"width": 1440, "height": 900})
@@ -3826,7 +3879,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_descriptiva, prueba_rutas, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_descriptiva, prueba_rutas, prueba_inyeccion_pgn, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

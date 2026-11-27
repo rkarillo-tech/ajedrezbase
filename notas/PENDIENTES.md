@@ -38,7 +38,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 - **D1**. Revisar los 34 artículos de aperturas de la 1.46.0 y los planes de las 13 estructuras de peones de la 1.54.0 (`src/app/38-estructuras.js`). Los redactó la IA; necesita a un jugador con buen nivel.
 - **D2**. Probar la parte del profesor IA que usa Claude. Necesita el SDK de Anthropic aparte y en la CI solo se ejecuta si está configurado.
 - **D3**. Pruebas de fallos: CDN caída, sin conexión la primera vez, cambio de motor durante un análisis.
-- **D4**. Revisar los usos de `innerHTML` donde se pinta texto de PGN o comentarios importados (hay unos 160).
+- ✅ **D4** (1.65.0). Revisar los usos de `innerHTML` donde se pinta texto de PGN o comentarios importados (hay unos 170). Revisados por patrones: todo el texto importado pasa por `esc()`. En lugar de la revisión manual, una prueba (`prueba_inyeccion_pgn`) importa un PGN con código en cabeceras, comentarios, etiquetas y título, lo pasa por la lista de jugadas, la biblioteca, «Abrir .pgn», el buscador de notas y el informe, y comprueba que no se ejecuta ni se inserta nada (se comprobó que falla si se quita un `esc()`).
 - **D5**. Bibliotecas grandes: carga bajo demanda y lista virtualizada (hoy la biblioteca se carga entera; límite recomendado de 100 MB).
 
 ## E. Auditoría externa de la 1.59.0
