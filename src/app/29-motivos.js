@@ -1,4 +1,4 @@
-/* ---------- 18b. Motivos tácticos: por qué una jugada gana o pierde (sin IA) ----------
+/* ---------- 18b. Motivos tácticos: por qué una jugada gana o pierde ----------
    Con las reglas del ajedrez y la línea del motor, nada más. motifGood dice qué consigue una jugada buena (mate,
    horquilla, ataque a la descubierta, clavada, captura de una pieza sin defensa, material que gana); motifBad, por
    qué falla una jugada (la pieza queda donde la capturan, deja otra sin defensa, permite una horquilla, una clavada o

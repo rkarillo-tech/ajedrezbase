@@ -158,7 +158,6 @@ function openModal(id) {
     $("setMoveColors").checked = !!settings.moveColors;
     $("setRadar").checked = !!settings.radar;
     $("setVoiceAuto").checked = !!settings.voiceAuto;
-    syncAiSettingsForm();
     $("setExplainLevel").value = EXPLAIN_LEVELS[settings.explainLevel] ? settings.explainLevel : "club";
     $("setAutosave").checked = settings.autosave;
     $("setAnimate").checked = settings.animate;

@@ -65,7 +65,6 @@ function cmdCommands() {
     C("Piezas ocultas (a ciegas)", () => setBlind(!ui.blind), { key: "B", kw: "ciegas blind visualizacion" }),
     C("Pantalla completa", () => fullBoard(!ui.full), { key: "P", kw: "grande maximizar" }),
     C("Marcar esta jugada", openMarkDialog, { key: "M", kw: "marcador favorita idea tarjeta nota" }),
-    C("Preguntar al profesor IA", () => { if (!aiProvider()) { openModal("settingsModal"); setTimeout(() => cmdUse("setAiProvider", false), 80); toast("Primero elige un proveedor de IA."); return; } closeModals(); revealEl($("aiQuestion")); $("aiQuestion").focus(); flashEl($("aiBox")); }, { kw: "ia ollama claude gemini pregunta chatgpt inteligencia artificial ask" }),
     C("Guardar en la biblioteca", () => cmdUse("saveGame"), { kw: "guardar salvar" }),
     C("Copiar el PGN", () => cmdUse("copyPgnBtn"), { kw: "exportar portapapeles" }),
     C("Descargar la partida en .pgn", () => cmdUse("downloadPgnBtn"), { kw: "exportar archivo" }),
@@ -84,7 +83,7 @@ function cmdCommands() {
     C("Buscar esta posición en mis partidas", () => { closeModals(); switchTab("library"); switchSub("position"); }, { kw: "posicion estructura de peones material partidas modelo" }),
     C("Sorpresas y trampas de esta posición", () => cmdUse("surpriseBtn"), { kw: "trampa sorpresa apertura" }),
     C("Preparar un rival", () => cmdUse("rivalUser", false), { kw: "rival oponente preparacion lichess" }),
-    C("Entrenador IA (una clase a tu medida)", () => { closeModals(); switchTab("tools"); openTrainSection("coach"); coachRenderStart(); }, { kw: "entrenador coach clase profesor ia entrenar errores pistas modo entrenador" }),
+    C("Entrenador (una clase a tu medida)", () => { closeModals(); switchTab("tools"); openTrainSection("coach"); coachRenderStart(); }, { kw: "entrenador coach clase profesor ia entrenar errores pistas modo entrenador" }),
     C("Problemas de táctica", () => cmdUse("puzzleStartBtn", false), { kw: "puzzles ejercicios tactica" }),
     C("Contrarreloj de problemas", () => cmdUse("rushBtn3", false), { kw: "rush tiempo problemas rapidos" }),
     C("Examen de nivel", () => cmdUse("examStartBtn", false), { kw: "elo nivel examen medir" }),
@@ -110,7 +109,6 @@ function cmdCommands() {
     S("Notación (española, inglesa, figurines)", "displayLang", { kw: "idioma notacion figurines" }),
     S("Motor de análisis", "setEngine", { kw: "stockfish motor" }),
     S("Token de Lichess", "setToken", { kw: "lichess token explorador" }),
-    S("Profesor IA: proveedor y modelo", "setAiProvider", { kw: "ia ollama claude gemini clave" }),
     S("Nivel de las explicaciones", "setExplainLevel", { kw: "iniciacion club avanzado" }),
     S("Leer en voz alta automáticamente", "setVoiceAuto", { kw: "voz audio hablar" }),
     S("Sincronizar entre dispositivos", "syncLabel", { kw: "drive onedrive dropbox movil ordenador sincronizacion" })
@@ -118,7 +116,7 @@ function cmdCommands() {
 }
 /* Botones y ajustes de la página que no están en la lista anterior: aparecen solos, con el título de su sección */
 function cmdScraped(known) {
-  const out = [], skip = new Set(["cancelPromo", "welcomeClose", "welcomeHelp", "tabBoardBtn", "moreBtn", "startBtn", "backBtn", "forwardBtn", "endBtn", "aiAskBtn", "cmdBtn", "storageRefreshBtn", "engineHelpBtn", "drawClear",
+  const out = [], skip = new Set(["cancelPromo", "welcomeClose", "welcomeHelp", "tabBoardBtn", "moreBtn", "startBtn", "backBtn", "forwardBtn", "endBtn", "cmdBtn", "storageRefreshBtn", "engineHelpBtn", "drawClear",
     "thinkBtn", "talkBtn", "threatBtn", "scanBtn", "markBtn", "markBtn2", "flipBtn", "helpBtn", "toggleEditorModeBtn", "settingsBtn", "boardSizeReset"]);
   // Contexto: el último título (h2) anterior al botón dentro de su pestaña o modal, y la subpestaña de la biblioteca
   const ctxOf = el => {
@@ -194,7 +192,7 @@ function cmdBuild() {
   const known = new Set();
   // Los botones que ya tienen nombre propio no se repiten con el texto del botón
   cmds.forEach(c => { const m = String(c.run).match(/cmdUse\("([^"]+)"/); if (m) known.add(m[1]); });
-  ["setBoard3d", "setUiTheme", "pieceStyleSelect", "themeSelect", "displayLang", "setEngine", "setToken", "setAiProvider", "setExplainLevel", "setVoiceAuto", "liveToggle", "radarToggle", "setRadar", "moveColorsToggle", "setMoveColors"].forEach(id => known.add(id));
+  ["setBoard3d", "setUiTheme", "pieceStyleSelect", "themeSelect", "displayLang", "setEngine", "setToken", "setExplainLevel", "setVoiceAuto", "liveToggle", "radarToggle", "setRadar", "moveColorsToggle", "setMoveColors"].forEach(id => known.add(id));
   Cmd.items = cmds.concat(cmdScraped(known), cmdHelpItems(), cmdCourseItems(), cmdOpeningItems(), cmdGameItems())
     .map(it => Object.assign(it, { hay: cmdNorm(`${it.name} ${it.ctx || ""} ${it.kw || ""} ${it.cat}`), nm: cmdNorm(it.name) }));
 }
@@ -332,12 +330,11 @@ function cmdSearch(q) {
   scored.sort((a, b) => b[0] - a[0]);
   return scored.slice(0, 40).map(x => x[1]);
 }
-/* Si no hay nada (o casi), se ofrece preguntarlo al profesor IA o buscarlo en la ayuda */
+/* Si no hay nada, se ofrece buscarlo en la ayuda */
 function cmdFallback(q, n) {
   const txt = q.trim(), out = [];
   if (txt.length < 3) return out;
-  if (aiProvider() && (n === 0 || txt.split(/\s+/).length >= 3)) out.push({ cat: "Profesor IA", icon: "🤖", name: `Preguntar al profesor: «${aiClip(txt, 60)}»`, ctx: "sobre la posición del tablero", run: () => { closeModals(); $("aiQuestion").value = txt; revealEl($("aiQuestion")); aiAsk(txt); } });
-  if (n === 0) out.push({ cat: "Ayuda", icon: "❓", name: `Buscar «${aiClip(txt, 40)}» en la ayuda`, run: () => { closeModals(); openHelp(); $("helpSearch").value = txt; $("helpSearch").dispatchEvent(new Event("input")); } });
+  if (n === 0) out.push({ cat: "Ayuda", icon: "❓", name: `Buscar «${clipText(txt, 40)}» en la ayuda`, run: () => { closeModals(); openHelp(); $("helpSearch").value = txt; $("helpSearch").dispatchEvent(new Event("input")); } });
   return out;
 }
 function cmdRender() {
@@ -357,7 +354,7 @@ function cmdRender() {
 function cmdRun(i) {
   const it = Cmd.shown[i];
   if (!it) return;
-  if (it.cat !== "Orden" && it.cat !== "Jugada" && it.cat !== "Posición" && it.cat !== "Profesor IA") { try { LS.set("ajedrezCmdRecientes", [it.name].concat(cmdRecent().filter(n => n !== it.name)).slice(0, 5)); } catch {} }
+  if (it.cat !== "Orden" && it.cat !== "Jugada" && it.cat !== "Posición") { try { LS.set("ajedrezCmdRecientes", [it.name].concat(cmdRecent().filter(n => n !== it.name)).slice(0, 5)); } catch {} }
   closeModals();
   setTimeout(() => it.run(), 0);
 }

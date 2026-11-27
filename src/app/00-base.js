@@ -70,11 +70,15 @@ const DEFAULTS = {
   analysisMs: 1000, multipv: 3, liveMs: 4000, live: true, arrow: true, cpuLevel: 8,
   branchMode: "variation", notation: "auto", coords: true, showLegal: true, autosave: true, explorerDb: "masters",
   animate: true, wheel: true, moveView: "list", lichessUser: "", myNames: "",
-  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, autoplayMs: 2000, board3d: false, board3dLook: "wood", board3dColors: null, board3dLight: 100, board3dGloss: 30, moveColors: false, radar: false, explainLevel: "club", voiceAuto: false, cpuCoach: false, aiProvider: "none", aiModel: "", aiKey: "", aiUrl: "", aiCtxRep: true, aiCtxModels: true, aiCtxGames: true, aiCtxLichess: true, aiPropose: true, aiDepth: "normal", engineTools: false, importOpen: false, aiWatch: null, uiMode: "full", workspaces: [], workspace: ""
+  cpuStyle: "balanced", cpuClock: "", cpuColor: "board", cpuFrom: "new", goalPuzzles: 5, boardSize: 100, uiTheme: "dark", cpuOpponent: "cpu", cpuOdds: "", cpuAutoFlip: true, autoplayMs: 2000, board3d: false, board3dLook: "wood", board3dColors: null, board3dLight: 100, board3dGloss: 30, moveColors: false, radar: false, explainLevel: "club", voiceAuto: false, cpuCoach: false, engineTools: false, importOpen: false, uiMode: "full", workspaces: [], workspace: ""
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
 const saveSettings = () => { settings._m = Date.now(); return LS.set("ajedrezSettings", settings); };
+/* 1.68.0: se quitó el profesor IA. Sus ajustes (con la clave de la API) se borran de este navegador: antes no viajaban
+   con la sincronización ni con las copias de seguridad, y así no empiezan a hacerlo ahora */
+const OLD_AI_SETTINGS = ["aiProvider", "aiModel", "aiKey", "aiUrl", "aiCtxRep", "aiCtxModels", "aiCtxGames", "aiCtxLichess", "aiPropose", "aiDepth", "aiWatch"];
+if (OLD_AI_SETTINGS.some(k => k in settings)) { OLD_AI_SETTINGS.forEach(k => delete settings[k]); LS.set("ajedrezSettings", settings); }
 
 /* ---------- 2. Notación y nombres ---------- */
 const PIECE_ART = { p: "el peón", n: "el caballo", b: "el alfil", r: "la torre", q: "la dama", k: "el rey" };
@@ -212,7 +216,7 @@ const ui = {
   libId: null, dirty: false, rev: 0, saveError: "", recUpdated: 0, explorerAbort: null, fav: false, tags: [], legacyStudy: null, markCtx: null, librarySub: "games"
 };
 const trainer = { active: false, side: 1, errors: 0, hints: 0, correct: 0, hintLevel: 0, hintArrow: null, hintSq: -1, libId: null, markId: null, card: false, puzzle: false, busy: false };
-/* 🧑‍🏫 Entrenador IA (src/app/77-entrenador-ia.js) */
+/* 🧑‍🏫 Entrenador (src/app/77-entrenador.js) */
 const Coach = { active: false, busy: false, state: "", queue: [], i: 0, ex: null, results: [], arrows: [], hintSq: -1, hint: 0, attempts: 0, token: 0, target: 1200, streak: 0, focus: null };
 const editor = { active: false, state: null, tool: "MOVE", sel: null, origin: null };
 const cur = () => game.current;

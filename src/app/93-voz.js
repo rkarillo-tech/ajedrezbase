@@ -2,7 +2,7 @@
    Cada recuadro de explicación lleva un botón 🔊. La notación se convierte en palabras para que no se lea letra a letra
    («Cxf7+» → «caballo captura en f7, jaque»). Con «Leer automáticamente» (⚙ Ajustes) se lee cada explicación nueva. */
 const Voice = { ok: typeof window.speechSynthesis !== "undefined" && typeof window.SpeechSynthesisUtterance === "function", box: null, lastText: {} };
-const VOICE_BOXES = ["thinkBox", "talkBox", "scanBox", "lessonBox", "retryBox", "coachBox", "cpuBox", "trainFeedback", "aiAnswer"];
+const VOICE_BOXES = ["thinkBox", "talkBox", "scanBox", "lessonBox", "retryBox", "coachBox", "cpuBox", "trainFeedback"];
 const PIECE_WORDS = {
   es: { R: "rey", D: "dama", T: "torre", A: "alfil", C: "caballo" },
   en: { K: "rey", Q: "dama", R: "torre", B: "alfil", N: "caballo" },
