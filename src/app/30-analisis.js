@@ -236,9 +236,13 @@ async function analyseGame(opts = {}) {
     const term = terminalEval(n);
     if (term) n.eval = term;
     else if (!(n.eval && n.eval.source !== "pgn" && (n.eval.depth || 0) >= minDepth && (quick || n.eval.second !== undefined || Engine.kind !== "stockfish"))) {
-      const job = await Engine.analyse(n, quick
+      const ask = () => Engine.analyse(n, quick
         ? { purpose: "batch", movetime: Math.min(300, +settings.analysisMs), multipv: 1 }
         : { purpose: "batch", movetime: +settings.analysisMs, multipv: Engine.kind === "stockfish" ? 2 : 1 });
+      // Si el cálculo se corta (cambio de motor en ⚙ Ajustes, «Reintentar Stockfish 19»…), se repite una vez con el
+      // motor que haya entonces: antes esa posición se quedaba sin evaluar y su jugada sin juzgar
+      let job = await ask();
+      if (!job && !ui.cancelAnalysis) job = await ask();
       if (job) { storeEval(n, job, true); fresh.add(n); }
     }
     bar.style.width = ((i + 1) / nodes.length * 100).toFixed(1) + "%";
@@ -291,7 +295,8 @@ async function deepAnalyse(n) {
     for (const x of [p, n]) {
       const term = terminalEval(x);
       if (term) { x.eval = term; continue; }
-      const job = await Engine.analyse(x, { purpose: "deep", movetime: ms, multipv: Engine.kind === "stockfish" ? 2 : 1 });
+      const ask = () => Engine.analyse(x, { purpose: "deep", movetime: ms, multipv: Engine.kind === "stockfish" ? 2 : 1 });
+      const job = (await ask()) || (await ask());   // si se corta (cambio de motor…), se repite una vez
       if (job) storeEval(x, job, true); else ok = false;
     }
   } finally { ui.analysing = false; }

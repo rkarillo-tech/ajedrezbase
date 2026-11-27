@@ -40,7 +40,7 @@ async function querySyzygy() {
     }
     if (!(data.moves || []).length) tbody.innerHTML = `<tr><td colspan="4" class="small">No hay jugadas legales.</td></tr>`;
   } catch (e) {
-    status.textContent = "No se pudo consultar Syzygy (" + (e.message || "sin conexión") + ").";
+    status.textContent = "No se pudo consultar Syzygy (" + (isNetErr(e) ? netMsg() : e.message || "sin conexión") + ").";
   }
 }
 const debouncedSyzygy = debounce(querySyzygy, 300);

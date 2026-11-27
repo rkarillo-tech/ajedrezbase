@@ -322,7 +322,8 @@ async function humanCpuMove(node) {
   if (cur() !== node || !ui.cpu.on || ui.cpu.over) { ui.cpu.thinking = false; render(); return; }
   const strong = Engine.kind === "stockfish";
   const job = await Engine.analyse(node, { purpose: "cpu", movetime: Math.min(900, Math.max(200, wait * 0.6)), multipv: strong ? 5 : 1, skill: strong ? 20 : ui.cpu.level });
-  if (!job || !job.best) { ui.cpu.thinking = false; render(); return; }
+  if (!job || !job.best) { ui.cpu.thinking = false; if (!job && cpuRetryLater(node)) return; render(); return; }
+  ui.cpu.retries = 0;
   if (job.lines[0]) ui.cpu.lastEval = job.lines[0];
   done(strong ? humanPick(node, job.lines, elo) || job.best : job.best);
 }
@@ -397,6 +398,13 @@ function cpuThinkMs() {
   const left = clockLeft(ui.cpu.side);
   return Math.round(Math.max(60, Math.min(base, left / 40 + Clock.inc * 0.4)));
 }
+/* Si el cálculo de la CPU se corta (cambio de motor en ⚙ Ajustes, «Reintentar Stockfish 19», Stockfish que deja de
+   responder), se vuelve a pedir; antes la CPU no movía y la partida se quedaba parada. Hasta 3 veces seguidas. */
+function cpuRetryLater(node) {
+  if (cur() !== node || !ui.cpu.on || ui.cpu.over || (ui.cpu.retries = (ui.cpu.retries || 0) + 1) > 3) { ui.cpu.retries = 0; return false; }
+  setTimeout(maybeCpuMove, 200);
+  return true;
+}
 function maybeCpuMove() {
   if (!ui.cpu.on || ui.cpu.thinking || ui.cpu.over || ui.cpu.two) return;
   const node = cur();
@@ -409,6 +417,8 @@ function maybeCpuMove() {
   const styled = style !== "balanced" && Engine.kind === "stockfish";
   Engine.analyse(node, { purpose: "cpu", movetime: cpuThinkMs(), multipv: styled ? 4 : 1, skill: styled ? 20 : level }).then(job => {
     ui.cpu.thinking = false;
+    if (!job && cpuRetryLater(node)) return;
+    ui.cpu.retries = 0;
     if (!job || !job.best || cur() !== node || !ui.cpu.on || ui.cpu.over) { render(); return; }
     if (job.lines[0]) ui.cpu.lastEval = job.lines[0];
     const u = styled ? cpuPick(node.state, job.lines, style, level) || job.best : job.best;

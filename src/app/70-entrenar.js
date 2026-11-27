@@ -322,7 +322,7 @@ async function downloadPack(id) {
     try { await Packs.tx("readwrite", s => s.put({ id, puzzles: data.puzzles, date: Date.now() })); saved = !!Packs.db; } catch (e) { console.warn(e); saved = false; }
     toast(saved ? `📦 ${n} problemas añadidos. Quedan guardados en este navegador y funcionan sin conexión.` : `📦 ${n} problemas añadidos, pero este navegador no ha podido guardarlos: habrá que descargarlos otra vez al volver.`, 6000);
   } catch (e) {
-    toast(`No se pudo descargar el paquete (${e.message || e}). Hace falta conexión a internet.`, 6000);
+    toast(`No se pudo descargar el paquete (${isNetErr(e) ? netMsg() : e.message || e}). Hace falta conexión a internet.`, 6000);
   }
   Packs.busy = "";
   refreshPuzzleBank();
