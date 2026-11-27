@@ -217,6 +217,7 @@ async function analyseGame(opts = {}) {
   if (quiz()) { toast("Termina antes el ejercicio."); return; }
   ui.analysing = true;
   ui.cancelAnalysis = false;
+  flowAnalysing();
   Engine.cancel("live");
   $("autoAnnotateBtn").disabled = true;
   $("cancelAnalysisBtn").hidden = false;
@@ -244,8 +245,8 @@ async function analyseGame(opts = {}) {
   $("cancelAnalysisBtn").hidden = true;
   $("analysisProgress").classList.remove("show");
   bar.style.width = "0";
-  if (cancelled) { $("analysisStatus").textContent = "Análisis detenido. Las evaluaciones obtenidas se conservan."; render(); return; }
-  if (quick) { $("analysisStatus").textContent = "📈 Gráfico completado. Para marcar errores y redactar comentarios usa «🤖 Analizar y comentar»."; if (ui.libId) markDirty(); render(); return; }
+  if (cancelled) { $("analysisStatus").textContent = "Análisis detenido. Las evaluaciones obtenidas se conservan."; flowAnalysisCancelled(); render(); return; }
+  if (quick) { flowAnalysisCancelled(); $("analysisStatus").textContent = "📈 Gráfico completado. Para marcar errores y redactar comentarios usa «🤖 Analizar y comentar»."; if (ui.libId) markDirty(); render(); return; }
   renderReportTable(annotateNodes(nodes));
   $("repWName").textContent = game.headers.White || "Blancas";
   $("repBName").textContent = game.headers.Black || "Negras";
@@ -258,6 +259,7 @@ async function analyseGame(opts = {}) {
   renderGameReport();
   $("reportBox").classList.add("show");
   $("analysisStatus").textContent = `✔ Análisis ${opts.variation ? "de la variante " : ""}completado con ${Engine.name} en ${Math.round((Date.now() - t0) / 1000)} s. Se han marcado y comentado las jugadas críticas.`;
+  flowAnalysed();
   markDirty();
   render();
   renderRetryStart();

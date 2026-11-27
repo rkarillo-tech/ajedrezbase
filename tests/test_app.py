@@ -2871,6 +2871,49 @@ def prueba_origen_evaluacion(browser):
     ctx.close()
 
 
+def prueba_recorrido_guiado(browser):
+    print("1.62: recorrido guiado (importar → analizar → revisar → practicar)")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.evaluate("$('welcomeBox').hidden = true; settings.analysisMs = 200; settings.live = false; settings.myNames = ''; saveSettings()")
+    comprobar(pg.is_hidden("#flowGuide"), "sin partida importada no hay sugerencia")
+    pg.fill("#moveInput", '[White "Ana"]\n[Black "Beto"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0')
+    pg.click("#importBtn")
+    txt = pg.inner_text("#flowGuide")
+    comprobar(pg.is_visible("#flowGuide") and "Partida cargada" in txt and "7 jugadas" in txt and pg.locator("#flowGuide [data-flow=analyse]").count() == 1,
+              "tras importar, una confirmación que no desaparece («Partida cargada · 7 jugadas») y «🤖 Analizar y comentar»")
+    comprobar(pg.evaluate("$('flowGuide').parentElement.id") == "movesDock", "en el ordenador está junto a las jugadas, al lado del tablero")
+    pg.click("#flowGuide [data-flow=analyse]")
+    pg.wait_for_function("document.getElementById('reportBox').classList.contains('show')", timeout=180000)
+    txt = pg.inner_text("#flowGuide")
+    comprobar("Análisis terminado" in txt and "1 momento crítico" in txt and "1 error para practicar" in txt and pg.locator("#flowGuide [data-flow=first]").count() == 1 and pg.locator("#flowGuide [data-flow=practice]").count() == 1,
+              "al terminar el análisis: «📍 Revisar el primer momento crítico» y «🎯 Practicar»")
+    pg.click("#flowGuide [data-flow=first]")
+    comprobar(pg.evaluate("cur().san") == "Nf6" and "Momento crítico 1 de 1" in pg.inner_text("#flowGuide") and "3...Cf6??" in pg.inner_text("#flowGuide"),
+              "«Revisar el primer momento crítico» lleva el tablero a esa jugada (3...Cf6??)")
+    pg.click("#flowGuide [data-flow=practice]")
+    pg.wait_for_function("Retry.active", timeout=10000)
+    comprobar(pg.is_hidden("#flowGuide"), "«Practicar» empieza el repaso de los errores y la sugerencia se retira")
+    pg.evaluate("retryEnd(true)")
+    # Mis nombres: practica sólo los errores propios
+    pg.evaluate("settings.myNames = 'beto'; saveSettings(); Flow.step = 'analysed'; renderFlow()")
+    comprobar("mis errores (1)" in pg.inner_text("#flowGuide"), "si tu nombre está en «Mis nombres», propone practicar tus errores")
+    pg.click("#flowGuide [data-flow=close]")
+    comprobar(pg.is_hidden("#flowGuide"), "✖ la oculta")
+    # Se puede desactivar del todo
+    pg.fill("#moveInput", "1. d4 d5 2. c4 *")
+    pg.click("#importBtn")
+    comprobar(pg.is_visible("#flowGuide") and "3 jugadas" in pg.inner_text("#flowGuide"), "con otra partida vuelve a aparecer")
+    pg.evaluate("$('setFlowGuide').checked = false; $('setFlowGuide').dispatchEvent(new Event('change'))")
+    comprobar(pg.is_hidden("#flowGuide") and pg.evaluate("settings.flowGuide") is False, "se desactiva en ⚙ Ajustes")
+    pg.evaluate("$('setFlowGuide').checked = true; $('setFlowGuide').dispatchEvent(new Event('change'))")
+    pg.evaluate("setGame(Pgn.newGame(), { noConfirm: true })")
+    comprobar(pg.is_hidden("#flowGuide"), "al cambiar de partida se quita")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_v153_distribucion(browser):
     print("1.53: jugadas al lado del tablero, herramientas del motor plegadas y bienvenida compacta")
     ctx = contexto(browser, viewport={"width": 1440, "height": 900})
@@ -3673,7 +3716,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

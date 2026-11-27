@@ -397,6 +397,7 @@ function render() {
   renderCmp();
   renderEco();
   renderEvalChart();
+  renderFlow();
   if (!editor.active) {
     const running = Engine.running && Engine.running.purpose === "live" && !Engine.running.cancelled && ui.liveNode === cur() ? Engine.running : null;
     showEngineFor(cur(), running);
@@ -456,6 +457,7 @@ function setGame(g, opts = {}) {
   $("gameName").value = opts.name !== undefined ? opts.name : "";
   $("reportBox").classList.remove("show");
   $("analysisStatus").textContent = "";
+  flowReset();
   syncHeaderForm();
   render();
   if (Lib.ready && ui.activeTab === "library") renderLibrary();
@@ -470,6 +472,7 @@ function importResultMsg(r, extra = "") {
     el.className = "small msg-ok";
     el.textContent = `✔ ${r.count} jugadas importadas.${r.nullSkipped ? ` Se han dejado fuera ${r.nullSkipped === 1 ? "una variante" : r.nullSkipped + " variantes"} con jugadas nulas («--»).` : ""}${extra}`;
   }
+  flowImported(r);   // 🧭 el siguiente paso, encima de las jugadas
 }
 function looksLikeFen(t) { return /^\s*[prnbqkPRNBQK1-8]+(\/[prnbqkPRNBQK1-8]+){7}\s+[wb]\b/.test(t); }
 function loadPgnText(text, opts = {}) {
