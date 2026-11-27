@@ -38,7 +38,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 - **D1**. Revisar los 34 artículos de aperturas de la 1.46.0 y los planes de las 13 estructuras de peones de la 1.54.0 (`src/app/38-estructuras.js`). Los redactó la IA; necesita a un jugador con buen nivel.
 - **D2**. Probar la parte del profesor IA que usa Claude. Necesita el SDK de Anthropic aparte y en la CI solo se ejecuta si está configurado.
 - **D3**. Pruebas de fallos: CDN caída, sin conexión la primera vez, cambio de motor durante un análisis.
-- **D4**. Revisar los usos de `innerHTML` donde se pinta texto de PGN o comentarios importados (hay unos 160).
+- ✅ **D4** (1.65.0). Revisar los usos de `innerHTML` donde se pinta texto de PGN o comentarios importados (hay unos 170). Revisados por patrones: todo el texto importado pasa por `esc()`. En lugar de la revisión manual, una prueba (`prueba_inyeccion_pgn`) importa un PGN con código en cabeceras, comentarios, etiquetas y título, lo pasa por la lista de jugadas, la biblioteca, «Abrir .pgn», el buscador de notas y el informe, y comprueba que no se ejecuta ni se inserta nada (se comprobó que falla si se quita un `esc()`).
 - **D5**. Bibliotecas grandes: carga bajo demanda y lista virtualizada (hoy la biblioteca se carga entera; límite recomendado de 100 MB).
 
 ## E. Auditoría externa de la 1.59.0
@@ -60,8 +60,8 @@ Todos los puntos se han comprobado en el código. E1–E5 son fallos; E6–E9, m
 Hay muchas herramientas y no es fácil saber cuál usar en cada caso ni en qué orden.
 
 - ✅ **F1** (1.64.0). **Rutas por objetivo** («🧭 Guíame»): revisar una partida mía, estudiar una apertura, mejorar la táctica, estudiar finales y estudiar una partida de un libro o de un maestro. Tarjeta de pasos con «Llévame» (abre la pestaña y resalta el botón), avance automático cuando se puede comprobar y «Hecho» cuando no (`src/app/33-rutas.js`).
-- **F2**. **Sugerencias según el momento**: extender el recuadro «🧭 siguiente paso» (`31-recorrido.js`), que hoy sólo cubre importar → analizar → revisar → practicar, a otros momentos: al terminar una sesión de problemas o el examen, al acabar una partida contra la CPU, al terminar una lección o un curso y al abrir una partida de la biblioteca.
-- **F3**. Más rutas si hacen falta: preparar una partida contra un rival (Preparar un rival + sorpresas), entrenamiento diario (📅 Hoy + entrenador IA), mejorar el cálculo (a ciegas y visualización).
+- ✅ **F2** (1.65.0). **Sugerencias según el momento**: extender el recuadro «🧭 siguiente paso» (`31-recorrido.js`), que hoy sólo cubre importar → analizar → revisar → practicar, a otros momentos: al terminar una sesión de problemas o el examen, al acabar una partida contra la CPU, al terminar una lección o un curso y al abrir una partida de la biblioteca.
+- ✅ **F3** (1.65.0). Más rutas si hacen falta: preparar una partida contra un rival (Preparar un rival + sorpresas), entrenamiento diario (📅 Hoy + entrenador IA), mejorar el cálculo (a ciegas y visualización).
 
 ## Orden previsto
 
@@ -77,4 +77,5 @@ Hay muchas herramientas y no es fácil saber cuál usar en cada caso ni en qué 
 10. ✅ 1.62.0: E8.
 11. ✅ 1.63.0: E9.
 12. ✅ 1.64.0: F1.
-13. Después: F2 y F3; B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
+13. ✅ 1.65.0: F2, F3 y D4 (con una prueba).
+14. Después: B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.

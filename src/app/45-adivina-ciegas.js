@@ -196,6 +196,7 @@ function guessFinish() {
 
 /* ---------- 20c. A ciegas y visualización ---------- */
 function setBlind(on) {
+  if (on) routeEvent("blind");
   ui.blind = !!on;
   ui.peek = false;
   $("blindBtn").textContent = ui.blind ? "👁 Mostrar piezas" : "🙈 Ocultar piezas";
@@ -572,6 +573,7 @@ function visStop(silent) {
   if (!silent) renderBoard();
 }
 function visFinish() {
+  routeEvent("vis-done");
   if (!Vis.active) return;
   if (Vis.n || Vis.ok) logActivity("vis");
   const mode = Vis.mode, secs = Math.round((Date.now() - Vis.t0) / 1000);

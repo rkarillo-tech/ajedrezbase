@@ -181,6 +181,7 @@ function coachMemHtml(M) {
     ${M.due.length ? `<b>🔁 Hoy repetimos ${M.due.length} ${M.due.length === 1 ? "posición" : "posiciones"} que fallaste.</b>` : next ? (M.retry.length === 1 ? `La posición que fallaste volverá ${coachIn(next)}.` : `Las ${M.retry.length} posiciones que fallaste volverán ${coachIn(next)}.`) : ""}</div>`;
 }
 async function coachStart(opts = {}) {
+  routeEvent("coach-start");
   if (Batch.running) { toast("Espera a que termine el análisis de tus partidas (o detenlo)."); return; }
   if (!PUZZLES.length && !coachDrillItems().length) { toast("No hay posiciones para entrenar en esta versión."); return; }
   if (!stashBoard()) return;

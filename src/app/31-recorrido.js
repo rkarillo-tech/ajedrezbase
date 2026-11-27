@@ -15,6 +15,17 @@ function flowImported(r) {
   Object.assign(Flow, { step: "imported", game, count: Pgn.mainlineFrom(game.root).length, moments: [], i: -1, closed: false, error: r.error ? r.error.label : "" });
   renderFlow();
 }
+/* Al abrir una partida de la biblioteca: si no está analizada, analizarla; si lo está, ver su informe (se rehace al
+   momento con las evaluaciones guardadas) y practicar sus errores; y si le toca repaso, entrenarla */
+function flowLibrary(rec) {
+  if (!rec || ui.libId !== rec.id) return;
+  const line = Pgn.mainlineFrom(game.root);
+  const evals = line.filter(n => n.eval).length;   // las guardadas vuelven del PGN como [%eval]
+  const A = rec.analysis, errs = A && A.err ? A.err.length : 0;
+  Object.assign(Flow, { step: "library", game, count: line.length, moments: [], i: -1, closed: false, error: "",
+    lib: { title: rec.title, analysed: line.length > 0 && (!!analysisOf(game) || evals >= line.length * 0.9), errs, due: !!(rec.srs && rec.srs.due <= Date.now()), rep: (rec.tags || []).includes("repertorio") } });
+  renderFlow();
+}
 function flowAnalysing() { if (Flow.game === game) { Flow.step = "analysing"; renderFlow(); } }
 function flowAnalysisCancelled() { if (Flow.game === game && Flow.step === "analysing") { Flow.step = "imported"; renderFlow(); } }
 /* Al terminar «🤖 Analizar y comentar» (también si la partida no venía de importar: el análisis es el paso 2) */
@@ -69,7 +80,14 @@ function renderFlow() {
   const practice = (all ? `<button type="button" class="sm-btn${Flow.step === "reviewing" ? " primary" : ""}" data-flow="practice" title="Repasa como ejercicio los errores (? y ??): buscas tú la jugada buena">🎯 Practicar ${side && mine ? `mis errores (${mine})` : `los errores (${all})`}</button>` : "");
   const close = `<button type="button" class="flow-close" data-flow="close" title="Ocultar esta sugerencia (se desactiva del todo en ⚙ Ajustes › 🎨 Apariencia)" aria-label="Ocultar la sugerencia">✖</button>`;
   let html = "";
-  if (Flow.step === "imported") {
+  if (Flow.step === "library") {
+    const L = Flow.lib || {};
+    if (L.rep) { box.hidden = true; box.innerHTML = ""; return; }   // los repertorios tienen su propio entrenamiento
+    html = `<span class="flow-msg">📚 <b>${esc(L.title || "Partida de tu biblioteca")}</b> · ${Flow.count} jugada${Flow.count === 1 ? "" : "s"} · ${L.analysed ? `analizada${L.errs ? ` · ${L.errs} error${L.errs === 1 ? "" : "es"}` : ""}` : "sin analizar"}${L.due ? " · 📅 le toca repaso" : ""}</span>
+      <span class="flow-next">Siguiente paso: ${L.analysed
+        ? `<button type="button" class="sm-btn primary" data-flow="report" title="El informe se rehace al momento con las evaluaciones guardadas, sin volver a calcular">📋 Ver el informe y sus momentos críticos</button>`
+        : `<button type="button" class="sm-btn primary" data-flow="analyse" title="El motor evalúa cada jugada, marca los errores y escribe comentarios">🤖 Analizar y comentar</button>`}${L.due ? ` <button type="button" class="sm-btn" data-flow="train" title="Repasa la partida jugando tú sus jugadas (repetición espaciada)">🎯 Repasarla</button>` : ""}</span>`;
+  } else if (Flow.step === "imported") {
     const n = Flow.count;
     html = `<span class="flow-msg">✔ <b>Partida cargada</b> · ${n} jugada${n === 1 ? "" : "s"}${Flow.error ? ` · ⚠ se detuvo en «${esc(Flow.error)}»` : ""}</span>
       <span class="flow-next">Siguiente paso: <button type="button" class="sm-btn primary" data-flow="analyse" title="El motor evalúa cada jugada, marca los errores y escribe comentarios">🤖 Analizar y comentar</button></span>`;
@@ -97,6 +115,8 @@ $("flowGuide").addEventListener("click", e => {
   const a = b.dataset.flow;
   if (a === "close") { Flow.closed = true; renderFlow(); }
   else if (a === "analyse") analyseGame();
+  else if (a === "report") { if (!showStoredReport()) analyseGame(); }
+  else if (a === "train") { Flow.step = ""; renderFlow(); startTraining({}); }
   else if (a === "first") flowGo(0);
   else if (a === "next") flowGo(Flow.i + 1);
   else if (a === "here") flowGo(Flow.i);

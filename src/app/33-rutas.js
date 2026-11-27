@@ -81,7 +81,42 @@ const ROUTES = [
       go: () => switchTab("study"), target: "#annotation", done: () => routeHad("mark") || ui.dirty },
     { t: "Guárdala", why: "Guárdala en tu biblioteca con una etiqueta (por ejemplo, el nombre del libro). Si otro libro comenta la misma partida, se guardará como otra versión.",
       go: () => switchTab("study"), target: "#saveGame", done: () => !!ui.libId && !ui.dirty }
-  ], next: "En «🎯 Entrenar › 🧠 Tarjetas de tus marcadores» repasarás las posiciones que has marcado." }
+  ], next: "En «🎯 Entrenar › 🧠 Tarjetas de tus marcadores» repasarás las posiciones que has marcado." },
+
+  { id: "rival", icon: "🎯", name: "Preparar una partida contra un rival", desc: "Ver qué aperturas juega, buscar sorpresas y ensayar la línea", steps: [
+    { t: "Mira qué juega", why: "En «Preparar un rival», escribe su usuario de Lichess y pulsa «🔎 Preparar». Se descargan sus últimas partidas públicas (no hace falta contraseña).",
+      go: () => switchTab("explorer"), target: "#rivalUser", done: () => routeHad("rival") },
+    { t: "Elige la línea que vas a preparar", why: "El informe enseña sus aperturas con cada color, cómo le van, cómo suelen acabar sus partidas y qué líneas suyas no tienes en tu repertorio. Pulsa la que quieras preparar para ponerla en el tablero.",
+      go: () => switchTab("explorer"), target: ["#rivalOut", "#rivalUser"], done: null },
+    { t: "Busca sorpresas en esa línea", why: "«🔎 Buscar en esta posición» encuentra jugadas buenas que casi nadie juega y las respuestas en las que se suele fallar: justo lo que conviene llevar preparado.",
+      go: () => switchTab("explorer"), target: "#surpriseBtn", done: () => routeHad("surprises") },
+    { t: "Llévala a tu repertorio", why: "Crea un repertorio con esa línea (o añádela al que ya tengas) y entrénala: así la recordarás en la partida.",
+      go: () => routeTrain("rep"), target: "#repNewBtn", done: () => routeHad("rep-created") || routeHad("rep-train") },
+    { t: "Ensáyala contra la CPU", why: "Pon la línea en el tablero y abre «🤖 Jugar vs CPU» eligiendo «desde esta posición»: practicarás los planes que vienen después.",
+      go: () => switchTab("study"), target: "#playCpuToggle", done: () => routeHad("cpu-start") }
+  ], next: "Después de la partida, la ruta «🔍 Revisar una partida mía» te ayuda a sacarle partido." },
+
+  { id: "diario", icon: "📅", name: "Mi entrenamiento diario", desc: "Una sesión corta cada día con lo que te toca repasar", steps: [
+    { t: "Mira tu plan de hoy", why: "«📅 Hoy», arriba en la pestaña Entrenar, resume lo que te toca: problemas, una lección y los repasos pendientes, con tu racha de días.",
+      go: () => routeTrain("menu"), target: "#todayBox", done: null },
+    { t: "Haz la siguiente tarea", why: "«▶ Siguiente tarea» te lleva directamente a lo que toca ahora. Al terminar, vuelve a «Hoy» y pulsa otra vez hasta completarlo.",
+      go: () => routeTrain("menu"), target: ["#todayNextBtn", "#todayBox"], done: () => routeHad("today-next") },
+    { t: "Una clase con el entrenador", why: "El «🧑‍🏫 Entrenador IA» mira tus errores, elige qué trabajar y te prepara una clase corta con problemas y posiciones de tus partidas.",
+      go: () => routeTrain("coach"), target: "#coachStartBtn", done: () => routeHad("coach-start") },
+    { t: "Repasa tus errores", why: "«🎯 Errores de tus partidas» te pone las posiciones donde fallaste; las que aciertes volverán cada vez más espaciadas.",
+      go: () => routeTrain("drill"), target: "#drillDueBtn", done: () => routeHad("drill-start") }
+  ], next: "Vuelve mañana: la racha y los repasos espaciados hacen el resto." },
+
+  { id: "calculo", icon: "🧠", name: "Mejorar el cálculo", desc: "Leer la posición con orden, visualizar sin mover y calcular antes de ver", steps: [
+    { t: "Lee el tablero antes de calcular", why: "En cualquier posición (por ejemplo, la de un problema), «🔎 Lee el tablero» te guía por orden: material, reyes, amenazas del rival, tus oportunidades y jugadas forzadas.",
+      go: () => { switchTab("study"); if ($("engineTools").hidden) setEngineTools(true); }, target: "#scanBtn", done: () => routeHad("scan") },
+    { t: "Visualiza sin mover las piezas", why: "En «🙈 A ciegas y visualización», el ejercicio «Sigue la línea de memoria» te deja ver la posición, oculta las piezas y te pide seguir las jugadas de cabeza.",
+      go: () => routeTrain("blind"), target: "#visStartBtn", done: () => routeHad("vis-done") },
+    { t: "Juega con las piezas ocultas", why: "«🙈 Ocultar piezas» o una partida contra la CPU a ciegas: obliga a llevar la posición en la cabeza. Con «👁 Ojear» las ves un par de segundos.",
+      go: () => routeTrain("blind"), target: "#blindBtn", done: () => routeHad("blind") || routeHad("cpu-start") },
+    { t: "Calcula antes de ver la jugada", why: "«🔮 Adivina la jugada» con una partida de un maestro: calculas cada jugada antes de verla y comparas con la suya.",
+      go: () => routeTrain("guess"), target: "#guessStartBtn", done: () => routeHad("guess-done") }
+  ], next: "Los problemas sin pistas (el examen o la contrarreloj) también entrenan el cálculo." }
 ];
 const routeDef = () => ROUTES.find(r => r.id === Route.id);
 

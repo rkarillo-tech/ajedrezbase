@@ -311,6 +311,40 @@ async function deepAnalyse(n) {
   render();
   return { text, before: old ? old.cls : null, after: info.cls };
 }
+/* 📋 El informe de una partida que ya trae sus evaluaciones (guardada tras analizarla, o con el análisis de Lichess):
+   se rehace al momento, sin volver a calcular y sin tocar sus comentarios ni sus símbolos. Si le faltan evaluaciones,
+   devuelve false (entonces hay que analizarla). */
+function showStoredReport() {
+  if (ui.analysing || quiz()) return false;
+  const nodes = [game.root, ...Pgn.mainlineFrom(game.root)];
+  for (const n of nodes) if (!n.eval) { const t = terminalEval(n); if (t) n.eval = t; }
+  if (!nodes[0].eval && Chess.toFen(game.root.state) === Chess.START_FEN) nodes[0].eval = { cp: 20, depth: 0, source: "pgn" };
+  if (nodes.length < 2 || nodes.filter(n => n.eval).length < nodes.length * 0.9) return false;
+  const st = { 1: { acc: [], cpl: [], good: 0, inacc: 0, mistake: 0, blunder: 0 }, "-1": { acc: [], cpl: [], good: 0, inacc: 0, mistake: 0, blunder: 0 } };
+  for (const n of nodes.slice(1)) {
+    const info = classifyMove(n);
+    if (!info) continue;
+    const S = st[info.mover];
+    S.acc.push(info.acc); S.cpl.push(info.cpl);
+    if (info.cls === "!") S.good++; else if (info.cls === "?!") S.inacc++; else if (info.cls === "?") S.mistake++; else if (info.cls === "??") S.blunder++;
+  }
+  ui.analysedLine = nodes;
+  renderReportTable(st);
+  $("repWName").textContent = game.headers.White || "Blancas";
+  $("repBName").textContent = game.headers.Black || "Negras";
+  ui.report = buildGameReport(nodes);
+  const saved = game.analysis && game.analysis.prov;
+  ui.report.prov = saved ? { text: saved + " (análisis guardado con la partida)", mixed: false, change: "" } : analysisProvenance(nodes, new Set());
+  ui.reportRun = { fresh: new Set(), change: "", variation: false };
+  ui.deepNote = null;
+  renderGameReport();
+  $("reportBox").classList.add("show");
+  $("analysisStatus").textContent = "📋 Informe rehecho con las evaluaciones guardadas en la partida. Para recalcularlo, «🤖 Analizar y comentar».";
+  flowAnalysed();
+  render();
+  renderRetryStart();
+  return true;
+}
 /* Clasifica las jugadas (??, ?, ?!, !) y redacta los comentarios automáticos de una línea ya evaluada */
 function annotateNodes(nodes) {
   const st = { 1: { acc: [], cpl: [], good: 0, inacc: 0, mistake: 0, blunder: 0 }, "-1": { acc: [], cpl: [], good: 0, inacc: 0, mistake: 0, blunder: 0 } };

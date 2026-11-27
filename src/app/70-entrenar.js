@@ -506,6 +506,18 @@ function endBlindPuzzles() {
   $("blindPzAgain").onclick = () => startBlindPuzzles(secs);
   $("puzzlesBackBtn").onclick = () => { restoreStash(); };
 }
+/* 🧭 Qué hacer después de una sesión de problemas o del examen: tus temas flojos (si los hay) u otra sesión a tu nivel */
+function puzNextSteps(failed) {
+  renderPuzzleStats();
+  const weak = weakThemes();
+  return `<div class="flow-inline">🧭 <b>Siguiente paso:</b> ${weak.length ? `<button type="button" id="puzWeakBtn" class="sm-btn primary" title="Una sesión sólo con los temas en los que más fallas">⚠ Practicar tus temas flojos (${esc(weak.map(x => x.name).join(", "))})</button> ` : ""}<button type="button" id="puzAgainBtn" class="sm-btn${weak.length ? "" : " primary"}" title="Otra sesión de todos los temas, a tu nivel">🔁 Otra sesión${failed && !weak.length ? " (los fallados vuelven mañana)" : ""}</button> <button type="button" id="puzDrillBtn" class="sm-btn" title="Los errores de tus partidas analizadas, como ejercicios">🎯 Errores de tus partidas</button></div>`;
+}
+function puzNextWire() {
+  const go = theme => { const sel = $("puzzleTheme"); if ([...sel.options].some(o => o.value === theme)) sel.value = theme; startPuzzles(); };
+  if ($("puzWeakBtn")) $("puzWeakBtn").onclick = () => go("weak");
+  if ($("puzAgainBtn")) $("puzAgainBtn").onclick = () => go("");
+  if ($("puzDrillBtn")) $("puzDrillBtn").onclick = () => { restoreStash(); switchTab("tools"); openTrainSection("drill"); };
+}
 function endPuzzles() {
   routeEvent("puzzles-done", { theme: $("puzzleTheme").value });
   if (Puz.exam) { endExam(true); return; }
@@ -515,9 +527,11 @@ function endPuzzles() {
   if (Puz.blind) { endBlindPuzzles(); return; }
   const R = puzRating();
   trainFeedback(`🧩 Sesión terminada: <b>${Puz.ok}</b> de ${Puz.done} resueltos a la primera. Tu nivel: <b>${Math.round(R.r)}</b> (${Puz.delta >= 0 ? "+" : ""}${Puz.delta} en esta sesión).<br>
-    <span class="small">Los que has fallado vuelven mañana; los acertados se espacian (3, 7, 16… días).</span><br>
+    <span class="small">Los que has fallado vuelven mañana; los acertados se espacian (3, 7, 16… días).</span>
+    ${puzNextSteps(Puz.ok < Puz.done)}
     <button id="puzzlesBackBtn" class="sm-btn" style="margin-top:6px">↩ Volver a tu partida</button>`, Puz.ok === Puz.done ? "ok" : "");
   $("puzzlesBackBtn").onclick = () => { restoreStash(); };
+  puzNextWire();
   renderPuzzleInfo();
 }
 
@@ -690,8 +704,10 @@ function endExam(aborted) {
     ${good.length ? `💪 Puntos fuertes: ${esc(good.join(", "))}.<br>` : ""}${bad.length ? `⚠ Para trabajar: ${esc(bad.join(", "))} (los encontrarás en «⚠ Mis temas flojos»).<br>` : ""}
     <span class="small">Es una estimación con pocos problemas: repite el examen cada semana o dos para ver tu evolución.</span>
     ${hist.length > 1 ? `<div style="margin-top:6px;height:${Math.max(...hist.slice(-10).map(h => Math.round((h.r - 400) / 25))) + 4}px">${chart}</div><span class="small">Tus últimos exámenes</span>` : ""}
-    <div class="controls"><button id="examBackBtn" class="sm-btn primary">↩ Volver a tu partida</button></div>`, "ok");
+    ${puzNextSteps(true)}
+    <div class="controls"><button id="examBackBtn" class="sm-btn">↩ Volver a tu partida</button></div>`, "ok");
   $("examBackBtn").onclick = () => restoreStash();
+  puzNextWire();
   renderPuzzleInfo(); renderPuzzleStats(); renderExamInfo();
 }
 function renderExamInfo() {

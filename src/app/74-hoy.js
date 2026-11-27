@@ -76,7 +76,7 @@ function renderToday() {
       <label class="small">Problemas al día: <select id="goalPuzzlesSel" style="width:auto">${[3, 5, 10, 15, 20].map(n => `<option${n === gP ? " selected" : ""}>${n}</option>`).join("")}</select></label></div>
     <div class="cal" aria-label="Actividad de las últimas semanas">${cells.join("")}</div>
     <div class="small cal-legend">Últimas 16 semanas · <i class="cal-d l0"></i> nada <i class="cal-d l1"></i><i class="cal-d l2"></i><i class="cal-d l3"></i><i class="cal-d l4"></i> mucho</div>`;
-  $("todayNextBtn").onclick = nextTask;
+  $("todayNextBtn").onclick = () => { routeEvent("today-next"); nextTask(); };
   if ($("coachDailyBtn")) $("coachDailyBtn").onclick = coachDaily;
   $("goalPuzzlesSel").onchange = e => { settings.goalPuzzles = +e.target.value; saveSettings(); renderToday(); };
   const badge = $("streakBadge");

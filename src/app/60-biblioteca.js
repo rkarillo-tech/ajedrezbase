@@ -392,6 +392,7 @@ function openLibGame(id, path) {
   r.game.analysis = rec.analysis || null;
   setGame(r.game, { noConfirm: true, libId: id, name: rec.title, fav: rec.fav, tags: rec.tags, current: resolvePath(r.game.root, path) });
   if (r.error) toast("⚠ Esta partida tenía un error de lectura en " + r.error.label, 4000);
+  flowLibrary(rec);   // 🧭 qué hacer con ella: analizarla, ver su informe o repasarla
   return true;
 }
 
