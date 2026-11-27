@@ -74,6 +74,10 @@ const DEFAULTS = {
 };
 const settings = Object.assign({}, DEFAULTS, LS.get("ajedrezSettings", {}));
 try { const legacy = localStorage.getItem("ajedrezPieceStyle"); if (legacy && !localStorage.getItem("ajedrezSettings")) settings.pieceStyle = legacy; } catch {}
+/* Fallos de red en palabras claras: el navegador sólo dice «Failed to fetch» (Chrome), «NetworkError…» (Firefox) o
+   «Load failed» (Safari). isNetErr distingue esos fallos de los mensajes propios, que ya están en español */
+const isNetErr = e => /failed to fetch|networkerror|load failed|network request failed/i.test((e && e.message) || String(e || ""));
+const netMsg = () => (navigator.onLine === false ? "no hay conexión a internet" : "no se ha podido conectar (¿sin conexión o bloqueado por la red?)");
 const saveSettings = () => { settings._m = Date.now(); return LS.set("ajedrezSettings", settings); };
 /* 1.68.0: se quitó el profesor IA. Sus ajustes (con la clave de la API) se borran de este navegador: antes no viajaban
    con la sincronización ni con las copias de seguridad, y así no empiezan a hacerlo ahora */

@@ -37,7 +37,7 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 
 - **D1**. Revisar los 34 artículos de aperturas de la 1.46.0 y los planes de las 13 estructuras de peones de la 1.54.0 (`src/app/38-estructuras.js`). Los redactó la IA; necesita a un jugador con buen nivel.
 - ~~**D2**~~. Ya no aplica: la IA se quitó en la 1.68.0 (G3).
-- **D3**. Pruebas de fallos: CDN caída, sin conexión la primera vez, cambio de motor durante un análisis.
+- ✅ **D3** (1.69.0). Pruebas de fallos: CDN caída (503) o que no responde, sin conexión la primera vez y cambio de motor durante un análisis (`prueba_cdn_caida`, `prueba_sin_conexion_primera_vez`, `prueba_cambio_de_motor` y dos casos más en `prueba_stockfish19`). Encontraron y se corrigieron: la CPU no movía si su cálculo se cortaba (la partida se quedaba parada); «Analizar y comentar» dejaba sin evaluar la posición que se estaba calculando y «Analizar más a fondo» no terminaba; los mensajes «Failed to fetch» de la nube, Syzygy y los paquetes. Además, al volver la conexión se reintenta Stockfish 19 solo si no hay nada en marcha.
 - ✅ **D4** (1.65.0). Revisar los usos de `innerHTML` donde se pinta texto de PGN o comentarios importados (hay unos 170). Revisados por patrones: todo el texto importado pasa por `esc()`. En lugar de la revisión manual, una prueba (`prueba_inyeccion_pgn`) importa un PGN con código en cabeceras, comentarios, etiquetas y título, lo pasa por la lista de jugadas, la biblioteca, «Abrir .pgn», el buscador de notas y el informe, y comprueba que no se ejecuta ni se inserta nada (se comprobó que falla si se quita un `esc()`).
 - **D5**. Bibliotecas grandes: carga bajo demanda y lista virtualizada (hoy la biblioteca se carga entera; límite recomendado de 100 MB).
 
@@ -87,4 +87,5 @@ La IA local (Ollama) se equivocaba al explicar posiciones (piezas que no atacaba
 12. ✅ 1.64.0: F1.
 13. ✅ 1.65.0: F2, F3 y D4 (con una prueba).
 14. ✅ 1.66.0: G1 · ✅ 1.67.0: G2 · ✅ 1.68.0: G3.
-15. Después: B6, B7 y la serie D (D3 y D5) según haga falta. D1 queda pendiente de que lo revise una persona.
+15. ✅ 1.69.0: D3.
+16. Después: B6, B7 y D5 según haga falta. D1 queda pendiente de que lo revise una persona.

@@ -415,7 +415,11 @@ Los atajos no funcionan mientras escribes en un recuadro de texto. Con el foco e
 ## 🩺 26. Problemas frecuentes
 **Tengo conexión, pero sale «Stockfish 10» o «Motor interno» en vez de Stockfish 19**
 
-Stockfish 19 se descarga de jsDelivr o, si no responde, de unpkg. Si ninguno responde teniendo conexión, casi siempre es un bloqueador de anuncios (uBlock, AdBlock…), el antivirus o la red de una empresa o un centro de estudios. Permite **cdn.jsdelivr.net** y **unpkg.com** para esta página y, en **⚙ Ajustes**, pulsa **🔄 Reintentar Stockfish 19**. En Ajustes (o pulsando la etiqueta del motor) verás el motivo exacto. Una vez cargado, si tienes la aplicación instalada, se guarda y ya no hace falta descargarlo.
+Stockfish 19 se descarga de jsDelivr o, si no responde, de unpkg. Si ninguno responde teniendo conexión, casi siempre es un bloqueador de anuncios (uBlock, AdBlock…), el antivirus o la red de una empresa o un centro de estudios. Permite **cdn.jsdelivr.net** y **unpkg.com** para esta página y, en **⚙ Ajustes**, pulsa **🔄 Reintentar Stockfish 19**. En Ajustes (o pulsando la etiqueta del motor) verás el motivo exacto. Una vez cargado, si tienes la aplicación instalada, se guarda y ya no hace falta descargarlo. Si un CDN no responde, se le espera unos 30 segundos antes de probar el siguiente.
+
+**¿Puedo cambiar de motor (o reintentar Stockfish) en mitad de un análisis o de una partida?**
+
+Sí. El cálculo que estaba en marcha se repite con el motor nuevo: el análisis de la partida termina sin dejar jugadas sin juzgar (y el informe dice que el motor cambió por el camino), «🔬 Analizar más a fondo» acaba su cálculo y la CPU hace su jugada.
 
 **«Lichess ha rechazado la consulta: hace falta un token personal»**
 
@@ -435,7 +439,7 @@ Al pasar a otra partida, la anterior se guarda sola; si el navegador no deja gua
 
 **«Motor interno ⚠» en vez de Stockfish**
 
-El navegador no ha dejado arrancar Stockfish (pasa en vistas previas de archivos o sin conexión la primera vez). Abre la versión web ([rkarillo-tech.github.io/ajedrezbase](https://rkarillo-tech.github.io/ajedrezbase/)) o el archivo directamente con Chrome, Edge o Firefox (doble clic).
+El navegador no ha dejado arrancar Stockfish (pasa en vistas previas de archivos o sin conexión la primera vez). Si fue por la conexión, cuando vuelva Stockfish 19 se carga solo, salvo que estés en mitad de algo (un análisis, una partida contra la CPU, un ejercicio): entonces pulsa **🔄 Reintentar Stockfish 19** en **⚙ Ajustes › Motor** al terminar. Si no, abre la versión web ([rkarillo-tech.github.io/ajedrezbase](https://rkarillo-tech.github.io/ajedrezbase/)) o el archivo directamente con Chrome, Edge o Firefox (doble clic).
 
 **Las estadísticas dicen que no hay partidas mías**
 

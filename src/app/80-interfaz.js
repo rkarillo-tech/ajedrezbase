@@ -206,6 +206,14 @@ $("importDetails").open = !!settings.importOpen;
 $("importDetails").addEventListener("toggle", () => { if (settings.importOpen !== $("importDetails").open) { settings.importOpen = $("importDetails").open; saveSettings(); } });
 $("engineHelpBtn").onclick = () => { const h = $("engineHelp"); h.hidden = !h.hidden; $("engineHelpBtn").setAttribute("aria-expanded", !h.hidden); };
 $("retryEngineBtn").onclick = () => { if (settings.engine !== "auto") { settings.engine = "auto"; saveSettings(); $("setEngine").value = "auto"; } Engine.init(); renderEngineStatus(); toast("🔄 Cargando Stockfish 19…"); };
+/* Abierta sin conexión (o sin poder descargar Stockfish): cuando vuelve la conexión se reintenta Stockfish 19 solo,
+   si no hay nada en marcha; si lo hay (un análisis, una partida, un ejercicio), sólo se avisa de cómo hacerlo */
+window.addEventListener("online", () => {
+  if (settings.engine !== "auto" || Engine.kind !== "internal" || !(Engine.fails || []).length) return;
+  if (ui.analysing || ui.cpu.on || quiz() || Batch.running || Coach.active) { toast("🌐 Ha vuelto la conexión. Para usar Stockfish 19: ⚙ Ajustes › Motor › «🔄 Reintentar Stockfish 19».", 6000); return; }
+  toast("🌐 Ha vuelto la conexión: se carga Stockfish 19…", 4000);
+  Engine.init();
+});
 $("versionsBtn").onclick = openVersions;
 $("copyGameBtn").onclick = () => saveToLibrary({ copy: true, force: true });
 $("licBtn").onclick = () => openModal("licModal");
@@ -366,7 +374,7 @@ $("cloudStockfishBtn").onclick = async () => {
     toast("Evaluación de la nube cargada (análisis continuo en pausa).");
   } catch (e) {
     setEngineBadge("⚙ " + (Engine.name || "Motor"), Engine.note);
-    toast(e.message || "No se pudo consultar la nube.", 4200);
+    toast(isNetErr(e) ? `No se pudo consultar la nube de Lichess: ${netMsg()}.` : e.message || "No se pudo consultar la nube.", 4200);
   }
 };
 

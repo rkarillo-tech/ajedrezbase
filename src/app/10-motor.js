@@ -51,7 +51,7 @@ const servedOverHttp = () => /^https?:$/.test(location.protocol);
 const WASM_FROM_MESSAGE = '(function(){var r;var p=new Promise(function(x){r=x;});self.addEventListener("message",function(e){if(e.data&&e.data.__wasm){r(e.data.__wasm);e.stopImmediatePropagation();}});var f=self.fetch;self.fetch=function(u,o){return /\\.wasm/.test(String(u))?p.then(function(b){return new Response(b,{headers:{"Content-Type":"application/wasm"}});}):f.call(self,u,o);};})();\n';
 document.addEventListener("visibilitychange", () => { if (!document.hidden) Engine.seenAt = Date.now(); });
 const Engine = {
-  watchTimer: null, watchMs: 0, seenAt: 0, revived: 0,
+  watchTimer: null, watchMs: 0, seenAt: 0, revived: 0, readyMs: 30000,   // readyMs: lo que se espera a cada fuente de Stockfish antes de probar la siguiente
   w: null, kind: "", name: "", ready: false, running: null, pending: null, stopping: false, note: "", readyTimer: null, urls: [], cache: null, fromCache: false, skipCache: false,
   init() {
     this.shutdown();
@@ -125,7 +125,7 @@ const Engine = {
       if (sameOrigin) retry(i, true);
       else retry(i + 1, false, engineFailReason(def));
     };
-    this.readyTimer = setTimeout(() => { if (!this.ready && this.kind === "stockfish" && this.w === w) retry(i + 1, false, engineFailReason(def, true)); }, 30000);
+    this.readyTimer = setTimeout(() => { if (!this.ready && this.kind === "stockfish" && this.w === w) retry(i + 1, false, engineFailReason(def, true)); }, this.readyMs);
     this.send("uci");
   },
   fallback(reason) {

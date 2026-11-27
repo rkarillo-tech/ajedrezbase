@@ -2945,6 +2945,154 @@ def prueba_sin_ia(browser):
     ctx.close()
 
 
+def prueba_cdn_caida(browser):
+    print("1.69 (D3): los CDN del motor caídos o sin responder")
+    sin_errores = lambda errores: comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    # 1. Los CDN responden con un error (503): se pasa enseguida al motor interno y se explica por qué
+    ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
+    for patron in ("**/cdn.jsdelivr.net/**", "**/unpkg.com/**", "**/cdnjs.cloudflare.com/**"):
+        ctx.route(patron, lambda r: r.fulfill(status=503, body="<h1>503 Service Unavailable</h1>", headers={"Content-Type": "text/html"}))
+    ctx.route("**/*lichess*/**", lambda r: r.abort())
+    t0 = time.time()
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready && Engine.kind === 'internal'", timeout=30000)
+    segs = time.time() - t0
+    fallos = pg.evaluate("Engine.fails.join(' | ')")
+    comprobar(segs < 15 and all(x in fallos for x in ("desde jsDelivr", "desde unpkg", "desde cdnjs")),
+              f"con los CDN caídos (503) se prueban jsDelivr, unpkg y cdnjs y se pasa al motor interno en {segs:.0f} s")
+    comprobar(pg.inner_text("#engineSourceBadge").strip() == "⚙ Motor interno ⚠", "la etiqueta del motor avisa (⚠) de que no es Stockfish")
+    pg.evaluate("$('welcomeBox').hidden = true")
+    pg.click("#settingsBtn"); pg.click("#setTab-motor")
+    st = pg.inner_text("#engineStatus")
+    comprobar("Motor interno" in st and "jsDelivr" in st and "Reintentar" in st, "⚙ Ajustes › Motor dice qué motor se usa, por qué y que se puede reintentar")
+    pg.keyboard.press("Escape")
+    pg.click("#servicesBtn")
+    comprobar("Stockfish no se ha podido cargar" in pg.inner_text("#servicesList"), "el estado de los servicios también lo dice")
+    pg.keyboard.press("Escape")
+    pg.evaluate("settings.analysisMs = 300; loadPgnText('1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 4. Nxe5 Qg5 5. Nxf7 Qxg2 6. Rf1 Qxe4+ 7. Be2 Nf3# 0-1', { endAtEnd: true }); analyseGame(); 0")
+    pg.wait_for_function("ui.report && !ui.analysing", timeout=120000)
+    comprobar("Motor interno" in pg.inner_text("#analysisStatus"), "la partida se analiza igual, con el motor interno")
+    sin_errores(errores)
+    ctx.close()
+    # 2. Los CDN no responden (la petición se queda colgada): se espera un tiempo por cada uno y después, el motor interno
+    ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
+    colgadas = []
+    for patron in ("**/cdn.jsdelivr.net/**", "**/unpkg.com/**", "**/cdnjs.cloudflare.com/**"):
+        ctx.route(patron, lambda r: colgadas.append(r))
+    ctx.route("**/*lichess*/**", lambda r: r.abort())
+    pg, errores = nueva_pagina(ctx)
+    r = pg.evaluate("""async () => { Engine.readyMs = 1500; Engine.init();
+      const espera = Engine.analyse(cur(), { purpose: 'prueba', movetime: 300 });   // pedido mientras el motor aún se está cargando
+      const job = await espera;
+      return { kind: Engine.kind, ok: !!(job && job.best), fails: Engine.fails.join(' | '), badge: $('engineSourceBadge').textContent }; }""")
+    comprobar(r["kind"] == "internal" and all(f"tardó demasiado en descargarse desde {h}" in r["fails"] for h in ("jsDelivr", "unpkg", "cdnjs")),
+              "si los CDN no responden, se espera a cada uno un tiempo máximo y se pasa al motor interno, diciendo que tardaban demasiado")
+    comprobar(r["ok"], "un cálculo pedido mientras se cargaba el motor no se pierde: lo hace el motor interno en cuanto está listo")
+    sin_errores(errores)
+    for rt in colgadas:
+        try: rt.abort()
+        except Exception: pass
+    ctx.close()
+
+
+def prueba_sin_conexion_primera_vez(browser):
+    print("1.69 (D3): abrir la aplicación sin conexión la primera vez")
+    ctx = contexto(browser)
+    ctx.set_offline(True)
+    t0 = time.time()
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    segs = time.time() - t0
+    comprobar(pg.evaluate("Engine.kind") == "internal" and "no hay conexión a internet" in pg.evaluate("Engine.note") and segs < 15,
+              f"sin conexión y sin copia guardada de Stockfish, arranca enseguida el motor interno ({segs:.0f} s) y dice por qué")
+    pg.evaluate("$('welcomeBox').hidden = true; settings.token = 'lip_prueba'")
+    pg.click("#servicesBtn")
+    t = pg.inner_text("#servicesList")
+    comprobar("Sin conexión: funcionan" in t and "no disponible" in t, "el estado de los servicios dice qué funciona sin conexión y qué no")
+    pg.keyboard.press("Escape")
+    toast = lambda: pg.inner_text("#toast")
+    # Lo que necesita internet avisa en español, sin el «Failed to fetch» del navegador, y no rompe nada
+    pg.evaluate("loadFen('8/8/8/4k3/8/8/4P3/4K3 w - - 0 1'); switchTab('endgames')")
+    pg.wait_for_function("$('syzygyStatusText').textContent.includes('No se pudo')", timeout=10000)
+    comprobar("no hay conexión a internet" in pg.inner_text("#syzygyStatusText") and "Failed" not in pg.inner_text("#syzygyStatusText"),
+              f"👑 Finales: Syzygy dice que no hay conexión ({pg.inner_text('#syzygyStatusText')})")
+    pg.click("#cloudStockfishBtn")
+    pg.wait_for_function("$('toast').textContent.includes('nube')", timeout=10000)
+    comprobar("no hay conexión a internet" in toast() and "Failed" not in toast(), f"☁ Nube: dice que no hay conexión ({toast()})")
+    pg.evaluate("$('explorerDbSelect').value = 'masters'; switchTab('explorer'); refreshExplorer()")
+    pg.wait_for_function("$('explorerMovesBody').textContent.includes('sin conexión')", timeout=10000)
+    comprobar("Mi biblioteca" in pg.inner_text("#explorerMovesBody"), "el explorador de Lichess avisa y ofrece «Mi biblioteca», que funciona sin conexión")
+    pg.evaluate("downloadPack('tactica-1')")
+    pg.wait_for_function("$('toast').textContent.includes('paquete')", timeout=10000)
+    comprobar("no hay conexión a internet" in toast() and "Failed" not in toast(), f"📦 un paquete de problemas no se puede descargar y lo dice ({toast()})")
+    pg.evaluate("switchTab('study'); $('setBoard3d').checked = true; $('setBoard3d').dispatchEvent(new Event('change'))")
+    pg.wait_for_function("B3.failed", timeout=20000)
+    comprobar(pg.locator("#board .square").count() == 64 and "tablero 3D" in toast(), "🧊 el tablero 3D no se puede descargar: sigue el plano y lo dice")
+    pg.evaluate("$('setBoard3d').checked = false; $('setBoard3d').dispatchEvent(new Event('change'))")
+    pg.evaluate("settings.analysisMs = 300; loadPgnText('1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 4. Nxe5 Qg5 5. Nxf7 Qxg2 6. Rf1 Qxe4+ 7. Be2 Nf3# 0-1', { endAtEnd: true }); analyseGame(); 0")
+    pg.wait_for_function("ui.report && !ui.analysing", timeout=120000)
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root)[5].nag") in ("?", "??"), "sin conexión se analiza la partida con el motor interno (3...Cd4 marcado)")
+    # Al volver la conexión se reintenta Stockfish solo (aquí los CDN siguen bloqueados: sigue el motor interno, con el motivo nuevo)
+    pg.evaluate("window.__w = Engine.w; ui.analysing = true; window.dispatchEvent(new Event('online'))")
+    comprobar("Reintentar Stockfish 19" in toast() and pg.evaluate("Engine.w === window.__w"), "si vuelve la conexión con algo en marcha (un análisis), no se cambia de motor: sólo se dice cómo hacerlo")
+    pg.evaluate("ui.analysing = false")
+    ctx.set_offline(False)
+    pg.wait_for_function("$('toast').textContent.includes('Ha vuelto la conexión') && Engine.ready && Engine.w !== window.__w", timeout=20000)
+    comprobar(pg.evaluate("Engine.kind") == "internal" and "bloqueador" in pg.evaluate("Engine.fails.join(' ')"),
+              "al volver la conexión, sin nada en marcha, se reintenta Stockfish 19 solo (con los CDN bloqueados, sigue el motor interno y dice el motivo nuevo)")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_cambio_de_motor(browser):
+    print("1.69 (D3): cambiar de motor (o reintentar Stockfish) en mitad de un cálculo")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    pg.evaluate("$('welcomeBox').hidden = true; settings.analysisMs = 400")
+    # Espera a que el motor esté con un cálculo de ese tipo y cambia de motor (o pulsa «Reintentar») justo entonces
+    cambiar = """async ({ purpose, to }) => {
+      for (let i = 0; i < 3000 && !(Engine.running && Engine.running.purpose === purpose); i++) await new Promise(r => setTimeout(r, 5));
+      const pillado = !!(Engine.running && Engine.running.purpose === purpose);
+      if (to === 'reintentar') $('retryEngineBtn').click(); else { const s = $('setEngine'); s.value = to; s.dispatchEvent(new Event('change')); }
+      return pillado; }"""
+    # 1. Analizar y comentar la partida
+    pg.evaluate("loadPgnText('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7', { endAtEnd: true }); analyseGame(); 0")
+    pg.wait_for_function("/posición ([4-9]|1\\d) de/.test($('analysisStatus').textContent)", timeout=60000)
+    pillado = pg.evaluate(cambiar, {"purpose": "batch", "to": "internal"})
+    pg.wait_for_function("!ui.analysing && ui.report", timeout=120000)
+    sin = pg.evaluate("[game.root, ...Pgn.mainlineFrom(game.root)].filter(n => !n.eval).length")
+    comprobar(pillado and sin == 0, f"si cambias de motor en ⚙ Ajustes a mitad del análisis, termina sin dejar posiciones sin evaluar ({sin} sin evaluar)")
+    # 2. 🔬 Analizar más a fondo, con «🔄 Reintentar Stockfish 19» por medio
+    r = pg.evaluate("""async (cambiar) => { const n = Pgn.mainlineFrom(game.root)[6]; const p = deepAnalyse(n);
+      const pillado = await (eval('(' + cambiar + ')'))({ purpose: 'deep', to: 'reintentar' });
+      const res = await p; return { pillado, ok: !!res, st: $('analysisStatus').textContent }; }""", cambiar)
+    comprobar(r["pillado"] and r["ok"] and "No se pudo" not in r["st"], f"«🔄 Reintentar Stockfish 19» en mitad de «🔬 Analizar más a fondo»: el cálculo se repite y termina ({r['st'][:80]})")
+    pg.wait_for_function("Engine.ready", timeout=30000)
+    # 3. Contra la CPU: cambiar de motor mientras piensa su jugada
+    pg.click("#playCpuToggle")
+    pg.select_option("#cpuOpponent", "cpu"); pg.select_option("#cpuColor", "1"); pg.select_option("#cpuClock", ""); pg.select_option("#cpuFrom", "new")
+    pg.click("#cpuStartBtn")
+    pg.wait_for_function("ui.cpu.on && !ui.cpu.thinking && cur().state.t === 1", timeout=20000)
+    pillado = pg.evaluate("""async (cambiar) => { playMove(Chess.moveFromUci(cur().state, 'e2e4'), 'user');
+      return await (eval('(' + cambiar + ')'))({ purpose: 'cpu', to: 'auto' }); }""", cambiar)
+    try:
+        pg.wait_for_function("ui.cpu.on && cur().state.t === 1 && Pgn.mainlineFrom(game.root).length === 2 && !ui.cpu.thinking", timeout=30000)
+        movio = True
+    except Exception:
+        movio = False
+    comprobar(pillado and movio, "si cambias de motor mientras la CPU piensa, la CPU juega igual (antes la partida se quedaba parada)")
+    pg.evaluate("stopCpu(true)")
+    # 4. El análisis en vivo se reanuda con el motor nuevo
+    pg.evaluate("settings.live = true; loadFen('r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3'); requestLive()")
+    pillado = pg.evaluate(cambiar, {"purpose": "live", "to": "internal"})
+    pg.wait_for_function("Engine.ready && Engine.running && Engine.running.purpose === 'live'", timeout=30000)
+    comprobar(pillado, "el análisis en vivo vuelve a empezar solo con el motor nuevo")
+    pg.evaluate("$('setEngine').value = 'auto'; $('setEngine').dispatchEvent(new Event('change'))")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_v159_herramientas(browser):
     print("1.59: modo básico, estado de los servicios, comparar dos posiciones y espacios de trabajo")
     ctx = contexto(browser)
@@ -3390,6 +3538,34 @@ def prueba_stockfish19(browser):
     pg.wait_for_function("document.getElementById('reportBox').classList.contains('show')", timeout=120000)
     comprobar(pg.evaluate("Pgn.mainlineFrom(game.root)[5].nag") == "??", "Stockfish 19 marca 3...Cf6?? como error grave")
     comprobar(pg.evaluate("!!Pgn.mainlineFrom(game.root)[2].eval.wdl"), "las probabilidades se guardan con cada evaluación del análisis")
+    # 1.69 (D3): pasar de Stockfish 19 al motor interno a mitad del análisis: termina sin huecos y el informe lo dice
+    pg.evaluate("settings.analysisMs = 500; loadPgnText('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6', { endAtEnd: true }); analyseGame(); 0")
+    pg.wait_for_function("/posición [3-9] de/.test($('analysisStatus').textContent)", timeout=60000)
+    pg.evaluate("const s = $('setEngine'); s.value = 'internal'; s.dispatchEvent(new Event('change'))")
+    pg.wait_for_function("!ui.analysing && ui.report", timeout=120000)
+    r = pg.evaluate("({ sin: [game.root, ...Pgn.mainlineFrom(game.root)].filter(n => !n.eval).length, prov: ui.report.prov.text + ' | ' + ui.report.prov.change, box: $('reportBox').textContent })")
+    comprobar(r["sin"] == 0 and "cambió durante el análisis: de Stockfish 19 a Motor interno" in r["prov"] and "cambió durante el análisis" in r["box"],
+              "si pasas de Stockfish 19 al motor interno a mitad del análisis, termina sin huecos y el informe dice que cambió el motor")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+    # 1.69 (D3): abierta sin conexión la primera vez (motor interno); al volver la conexión, Stockfish 19 se carga solo
+    # (las rutas de Playwright responden aunque el contexto esté sin conexión, así que el CDN se corta a mano mientras tanto)
+    ctx = browser.new_context(viewport={"width": 1400, "height": 1000})
+    ctx.route("**/cdn.jsdelivr.net/**", lambda r: r.abort())
+    ctx.route("**/cdnjs.cloudflare.com/**", lambda r: r.abort())
+    ctx.route("**/unpkg.com/**", lambda r: r.abort())
+    ctx.route("**/*lichess*/**", lambda r: r.abort())
+    ctx.set_offline(True)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready && Engine.kind === 'internal'", timeout=30000)
+    comprobar("no hay conexión" in pg.evaluate("Engine.note"), "sin conexión la primera vez, se usa el motor interno")
+    ctx.unroute("**/cdn.jsdelivr.net/**")
+    ctx.route("**/cdn.jsdelivr.net/**", servir)
+    ctx.set_offline(False)
+    pg.wait_for_function("Engine.ready && Engine.kind === 'stockfish'", timeout=60000)
+    comprobar(pg.inner_text("#engineSourceBadge").strip() == "⚙ Stockfish 19", "al volver la conexión, Stockfish 19 se carga solo, sin pulsar «Reintentar»")
+    pg.wait_for_function("document.querySelectorAll('#engineLines .pv-line').length >= 1", timeout=30000)
+    comprobar(True, "y analiza con normalidad")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
     # Archivo abierto con doble clic: se guarda una copia de Stockfish 19 y después funciona sin conexión
@@ -3487,7 +3663,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_descriptiva, prueba_rutas, prueba_inyeccion_pgn, prueba_siguiente_paso, prueba_motivos, prueba_v153_distribucion, prueba_estructuras, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_sin_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_buscador, prueba_aperturas_explicadas, prueba_entrenador, prueba_velocidad_y_ordenes, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_descriptiva, prueba_rutas, prueba_inyeccion_pgn, prueba_siguiente_paso, prueba_motivos, prueba_v153_distribucion, prueba_estructuras, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_sin_ia, prueba_cdn_caida, prueba_sin_conexion_primera_vez, prueba_cambio_de_motor, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_buscador, prueba_aperturas_explicadas, prueba_entrenador, prueba_velocidad_y_ordenes, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
