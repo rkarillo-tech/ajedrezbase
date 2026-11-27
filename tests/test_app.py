@@ -2914,6 +2914,43 @@ def prueba_recorrido_guiado(browser):
     ctx.close()
 
 
+def prueba_descriptiva(browser):
+    print("1.63: notación descriptiva española (libros antiguos)")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.evaluate("$('welcomeBox').hidden = true; settings.live = false; saveSettings()")
+    # Importar una partida en descriptiva con una captura ambigua: se para, se elige en el tablero y sigue
+    pg.fill("#moveInput", "1. P4R P4D 2. P4AD PxP 3. C3AD C3AR 4. C x P P3R *")
+    pg.click("#importBtn")
+    comprobar(pg.is_visible("#descPick") and "«PxP» admite 2 jugadas" in pg.inner_text("#descPick") and pg.evaluate("Pgn.mainlineFrom(game.root).length") == 3 and pg.evaluate("cur().san") == "c4",
+              "al importar, una jugada ambigua («PxP») para la lectura y el tablero queda en esa posición")
+    comprobar(pg.evaluate("DescPick.ucis.join()") == "d5c4,d5e4" and "dxc4" in pg.inner_text("#descPick") and "(PxPA)" in pg.inner_text("#descPick"), "dice las dos lecturas, en algebraica y en descriptiva sin ambigüedad")
+    casilla(pg, "d5").click(); casilla(pg, "e4").click()
+    pg.wait_for_timeout(200)
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).map(n => n.san).join(' ')") == "e4 d5 c4 dxe4 Nc3 Nf6 Nxe4 e6" and pg.is_hidden("#descPick"), "elegir en el tablero (dxe4) sigue leyendo el resto de la partida")
+    # Ver también en descriptiva, en la lista y en la planilla
+    pg.click("#descViewBtn")
+    txt = pg.inner_text("#moves")
+    comprobar("P4R" in txt and "C3AR" in txt and "CxP" in txt and pg.evaluate("settings.showDesc") is True, "📜 Descriptiva muestra cada jugada también en descriptiva (P4R junto a e4)")
+    pg.click("#moveViewBtn")
+    comprobar("P4R" in pg.inner_text("#moves") and pg.locator("#moves .sheet-row").count() >= 4, "…también en la planilla")
+    pg.click("#moveViewBtn")
+    pg.click("#descViewBtn")
+    comprobar("P4R" not in pg.inner_text("#moves"), "y se quita")
+    # Escribir una jugada como en el libro
+    pg.evaluate("setGame(Pgn.newGame(), { noConfirm: true })")
+    for j in ["p4r", "P-4R", "C3AR", "C3AD", "A4A", "P3D"]:
+        pg.fill("#moveTyped", j); pg.press("#moveTyped", "Enter")
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).map(n => n.san).join(' ')") == "e4 e5 Nf3 Nc6 Bc4 d6", "en «⌨ Escribe una jugada» se puede escribir como en el libro (p4r, P-4R, C3AR, A4A)")
+    pg.evaluate("setGame(Pgn.parseGame('1. e4 d5 2. c4 e6', { lang: 'en' }).game, { noConfirm: true }); goTo(Pgn.mainlineFrom(game.root).pop())")
+    pg.fill("#moveTyped", "PxP"); pg.press("#moveTyped", "Enter")
+    comprobar(pg.is_visible("#descPick") and pg.evaluate("DescPick.ucis.join()") == "c4d5,e4d5", "si lo escrito admite varias jugadas, se elige")
+    pg.locator('#descPick [data-dp="c4d5"]').click()
+    comprobar(pg.evaluate("cur().san") == "cxd5" and pg.is_hidden("#descPick"), "…con su botón")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_v153_distribucion(browser):
     print("1.53: jugadas al lado del tablero, herramientas del motor plegadas y bienvenida compacta")
     ctx = contexto(browser, viewport={"width": 1440, "height": 900})
@@ -3716,7 +3753,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_descriptiva, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

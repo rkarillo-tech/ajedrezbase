@@ -444,7 +444,15 @@ $("moveTyped").addEventListener("keydown", e => {
   if (!canUserMove()) { toast(ui.cpu.thinking ? "La CPU está pensando…" : "Ahora no te toca mover."); return; }
   try {
     const lang = settings.notation === "en" ? "en" : settings.notation === "es" ? "es" : "auto";
-    const { move } = Chess.parseMove(cur().state, txt, lang);
+    // 📜 Descriptiva (P4R, C3AR, PxP): si así se ha elegido, o si no es una jugada algebraica y lo parece
+    let move = null, err0 = null;
+    if (settings.notation !== "desc") { try { move = Chess.parseMove(cur().state, txt, lang).move; } catch (x) { err0 = x; } }
+    if (!move && (settings.notation === "desc" || Pgn.looksDesc(txt.toUpperCase()))) {
+      const d = descTyped(txt);
+      if (d === null) { e.target.value = ""; return; }   // varias lecturas: se elige en el tablero
+      if (d) move = d;
+    }
+    if (!move) throw err0 || Error("Jugada ilegal o no reconocida: " + txt);
     e.target.value = "";
     playMove(move, "user");
   } catch (err) { Sound.play("error"); toast("«" + txt + "»: " + err.message.replace(/^Jugada ilegal o no reconocida: .*$/, "no es una jugada legal en esta posición."), 3500); }

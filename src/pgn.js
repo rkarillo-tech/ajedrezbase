@@ -114,6 +114,10 @@ var Pgn = (function (C) {
 
   function detectLang(movetext) {
     const t = movetext.replace(/\{[^}]*\}/g, " ");
+    // Descriptiva (P4R, C3AR, PxP): ninguna jugada algebraica cumple su forma, porque todas llevan la columna en minúscula
+    const words = descPrepare(t).replace(/\([^()]*\)/g, " ").split(/\s+/).map(w => w.replace(/^\d+\s*[.…]+/, "")).filter(w => /^[PRDTACNBQKa-h]/.test(w));
+    const nDesc = words.filter(looksDesc).length;
+    if (nDesc >= 2 && nDesc >= words.length * 0.6) return "desc";
     const es = (t.match(/(^|[\s.(])[CADT][a-h1-8x]/g) || []).length;
     const en = (t.match(/(^|[\s.(])[NBQ][a-h1-8x]/g) || []).length;
     return es > en ? "es" : en > es ? "en" : "auto";
@@ -153,7 +157,7 @@ var Pgn = (function (C) {
     game.headers = Object.assign(game.headers, headers);
     if (!headers.Event) game.headers.Event = opts.defaultEvent || game.headers.Event;
     let lang = opts.lang && opts.lang !== "auto" && opts.lang !== "figurines" && opts.lang !== "uci" ? opts.lang : detectLang(parts.movetext);
-    const tokens = tokenize(parts.movetext);
+    const tokens = tokenize(lang === "desc" ? descPrepare(parts.movetext) : parts.movetext);
     let cur = game.root, count = 0, error = null, pending = "";
     const stack = [];
     let nullSkipped = 0;
@@ -211,12 +215,14 @@ var Pgn = (function (C) {
         let parsed;
         try {
           const lg = opts.lang === "uci" ? "en" : lang;
-          parsed = C.parseMove(cur.state, tk.v, lg);
+          parsed = lg === "desc" ? descParseMove(cur.state, tk.v, opts.descChoices) : C.parseMove(cur.state, tk.v, lg);
         } catch (e) {
           const ps = cur.state;
           const label = ps.full + (ps.t === 1 ? ". " : "... ") + tk.v;
-          if (stack.length) { if (!error) error = { token: tk.v, label, message: e.message, inVariation: true }; skip = 1; continue; }
-          error = { token: tk.v, label, message: e.message };
+          // Descriptiva ambigua (PxP con dos capturas): se dice cuáles encajan, para elegir y volver a leer (reparse)
+          const amb = e.choices ? { choices: e.choices, key: descKey(ps, tk.v) } : {};
+          if (stack.length) { if (!error) error = Object.assign({ token: tk.v, label, message: e.message, inVariation: true }, amb); skip = 1; continue; }
+          error = Object.assign({ token: tk.v, label, message: e.message }, amb);
           break;
         }
         const child = addMove(cur, parsed.move);
@@ -228,9 +234,176 @@ var Pgn = (function (C) {
       }
     }
     game.current = game.root;
-    return { game, error, count, nullSkipped };
+    const reparse = choices => parseGame(src, Object.assign({}, opts, { lang, descChoices: Object.assign({}, opts.descChoices, choices) }));
+    return { game, error, count, nullSkipped, lang, reparse };
   }
 
+  /* ---------- Notación descriptiva española (libros antiguos: P4R, C3AR, AxC, PxP) ----------
+     Las columnas se nombran por la pieza que empieza en ellas (TD CD AD D R AR CR TR = a…h) y las filas se cuentan
+     desde el lado de quien mueve: P4R es e4 para las blancas y e5 para las negras. Una jugada se lee comparándola
+     con las jugadas legales de la posición (descMoves); si encaja con varias (PxP con dos capturas posibles), se
+     devuelven todas para que se elija. descFor escribe una jugada en la forma más corta que no sea ambigua. */
+  const D_FILES = ["TD", "CD", "AD", "D", "R", "AR", "CR", "TR"];
+  const D_PIECE = { R: "K", D: "Q", T: "R", A: "B", C: "N", P: "P" };
+  const D_LETTER = { K: "R", Q: "D", R: "T", B: "A", N: "C", P: "P" };
+  const D_SHORT = { T: [0, 7], C: [1, 6], A: [2, 5] };
+  const D_FN = /^(TD|CD|AD|TR|CR|AR|D|R|T|C|A)$/;
+  const dFiles = fn => (D_SHORT[fn] ? D_SHORT[fn] : D_FILES.indexOf(fn) >= 0 ? [D_FILES.indexOf(fn)] : null);
+  const dShort = f => (f === 3 || f === 4 ? D_FILES[f] : D_FILES[f].slice(0, 1));
+  const dSide = f => (f < 4 ? "D" : "R");
+  const fileOf = sq => sq & 7, rankOf = sq => 8 - (sq >> 4);   // 0x88: fila 0 = la octava
+  const relRank = (sq, t) => (t === 1 ? rankOf(sq) : 9 - rankOf(sq));
+  /* Lo que se puede escribir de una casilla: «4R» o «R4» */
+  function dSquare(str) {
+    let m = /^([1-8])([A-Z]{1,2})$/.exec(str) || /^([A-Z]{1,2})([1-8])$/.exec(str);
+    if (!m) return null;
+    const [r, fn] = /^\d/.test(m[1]) ? [+m[1], m[2]] : [+m[2], m[1]];
+    const files = D_FN.test(fn) ? dFiles(fn) : null;
+    return files ? { rank: r, files } : null;
+  }
+  /* Calificativo de origen: para un peón, su columna (PA, PAR); para una pieza, su flanco (CR, TD) o su casilla (C5D) */
+  function dOrigin(str, piece) {
+    if (!str) return {};
+    let s = str;
+    const paren = /^\((.*)\)$/.exec(s);
+    if (paren) s = paren[1];
+    if (/^[1-8]$/.test(s)) return { rank: +s };
+    const sq = dSquare(s);
+    if (sq && /\d/.test(s)) return { rank: sq.rank, files: sq.files };
+    if (!D_FN.test(s)) return null;
+    if (piece === "P") return { files: dFiles(s) };
+    return s === "R" || s === "D" ? { side: s } : null;
+  }
+  /* Lo capturado: una pieza (con su columna si es un peón, su flanco si es una pieza, y quizá su fila) o una casilla */
+  function dTargets(str) {
+    const out = [];
+    const sq = dSquare(str);
+    if (sq) out.push({ square: sq });
+    const m = /^([RDTACP])([A-Z]{0,2})\(?([1-8])?\)?$/.exec(str);
+    if (m) {
+      const t = { piece: m[1] };
+      if (m[3]) t.rank = +m[3];
+      if (m[2]) {
+        if (!D_FN.test(m[2])) return out;
+        if (m[1] === "P") t.files = dFiles(m[2]);
+        else if (m[2] === "R" || m[2] === "D") t.side = m[2];
+        else return out;
+      }
+      out.push(t);
+    }
+    return out;
+  }
+  function dNormalize(raw) {
+    return String(raw).toUpperCase().replace(/[\s\-–—]/g, "").replace(/[×:]/g, "X")
+      .replace(/(\+\+|\+|#|!!|\?\?|!\?|\?!|!|\?)+$/, "").replace(/(JAQUE|MATE)$/, "").replace(/(A\.?P\.?|E\.?P\.?)$/, "");
+  }
+  /* Todas las lecturas posibles de una jugada escrita (puede haber varias: «TR1R» o «PAR4») */
+  function dParse(raw) {
+    const t = dNormalize(raw), out = [];
+    if (/^[0O]{3}$/.test(t)) return [{ castle: "Q" }];
+    if (/^[0O]{2}$/.test(t)) return [{ castle: "K" }];
+    const P = t[0];
+    if (!P || !D_PIECE[P]) return out;
+    for (let i = 1; i <= Math.min(6, t.length); i++) {
+      const origin = dOrigin(t.slice(1, i), P);
+      if (origin === null) continue;
+      const rest = t.slice(i);
+      const splits = [[rest, null]];
+      if (P === "P") { const pm = /^(.+?)(?:=|\()?([DTAC])\)?$/.exec(rest); if (pm) splits.push([pm[1], pm[2]]); }
+      for (const [body, promo] of splits) {
+        if (body[0] === "X") for (const cap of dTargets(body.slice(1))) out.push({ piece: P, origin, cap, promo });
+        else { const d = dSquare(body); if (d) out.push({ piece: P, origin, dest: d, promo }); }
+      }
+    }
+    return out;
+  }
+  function dMatches(s, m, c) {
+    const t = s.t;
+    if (c.castle) return m.flag === "castle" && (c.castle === "K" ? fileOf(m.to) === 6 : fileOf(m.to) === 2);
+    if (m.flag === "castle" && c.piece !== "R") return false;
+    if (D_PIECE[c.piece] !== m.piece.toUpperCase()) return false;
+    if (m.promotion) { if ((c.promo ? D_PIECE[c.promo] : "Q") !== m.promotion.toUpperCase()) return false; }
+    else if (c.promo) return false;
+    const o = c.origin || {};
+    if (o.files && !o.files.includes(fileOf(m.from))) return false;
+    if (o.side && dSide(fileOf(m.from)) !== o.side) return false;
+    if (o.rank && relRank(m.from, t) !== o.rank) return false;
+    const isCap = m.captured !== "." || m.flag === "ep";
+    if (c.dest) return !isCap && c.dest.files.includes(fileOf(m.to)) && relRank(m.to, t) === c.dest.rank;
+    if (!isCap) return false;
+    const cap = c.cap;
+    if (cap.square) return cap.square.files.includes(fileOf(m.to)) && relRank(m.to, t) === cap.square.rank;
+    const capSq = m.flag === "ep" ? m.to + 16 * t : m.to;
+    const capType = m.flag === "ep" ? "P" : m.captured.toUpperCase();
+    if (D_PIECE[cap.piece] !== capType) return false;
+    if (cap.files && !cap.files.includes(fileOf(capSq))) return false;
+    if (cap.side && dSide(fileOf(capSq)) !== cap.side) return false;
+    if (cap.rank && relRank(capSq, t) !== cap.rank) return false;
+    return true;
+  }
+  /* Las jugadas legales que encajan con lo escrito */
+  function descMoves(s, raw, L) {
+    const legal = L || C.legal(s), out = [];
+    for (const c of dParse(raw)) for (const m of legal) if (!out.includes(m) && dMatches(s, m, c)) out.push(m);
+    return out;
+  }
+  /* La jugada escrita en descriptiva, en la forma más corta que sólo encaja con ella */
+  function descFor(s, m, L) {
+    const legal = L || C.legal(s);
+    const after = C.apply(s, m), check = C.inCheck(after) ? (C.legal(after).length ? "+" : "++") : "";
+    if (m.flag === "castle") return (fileOf(m.to) === 6 ? "0-0" : "0-0-0") + check;
+    const P = D_LETTER[m.piece.toUpperCase()], ff = fileOf(m.from), tf = fileOf(m.to), t = s.t;
+    const promo = m.promotion ? "=" + D_LETTER[m.promotion.toUpperCase()] : "";
+    const origins = P === "P" ? ["", dShort(ff), D_FILES[ff]] : ["", dSide(ff), relRank(m.from, t) + D_FILES[ff]];
+    const ends = [];
+    if (m.captured !== "." || m.flag === "ep") {
+      const capSq = m.flag === "ep" ? m.to + 16 * t : m.to, cf = fileOf(capSq);
+      const cl = m.flag === "ep" ? "P" : D_LETTER[m.captured.toUpperCase()];
+      const quals = cl === "P" ? ["", dShort(cf), D_FILES[cf]] : ["", dSide(cf)];
+      for (const q of quals) ends.push("X" + cl + q);
+      ends.push("X" + relRank(m.to, t) + D_FILES[tf]);
+    } else ends.push(relRank(m.to, t) + dShort(tf), relRank(m.to, t) + D_FILES[tf]);
+    let best = null;
+    for (const o of origins) {
+      for (const e of ends) {
+        const txt = P + o + e + promo;
+        const found = descMoves(s, txt, legal);
+        if (found.length === 1 && sameMove(found[0], m)) { best = txt; break; }
+      }
+      if (best) break;
+    }
+    return (best || P + relRank(m.from, t) + D_FILES[ff] + "-" + relRank(m.to, t) + D_FILES[tf] + promo).replace(/X/g, "x") + check;
+  }
+  /* ¿Parece una jugada descriptiva? (sin minúsculas: las de la notación algebraica siempre llevan la columna en minúscula) */
+  const looksDesc = tok => {
+    const t = String(tok).replace(/[-–—]/g, "");
+    return /^[PRDTAC][A-Z0-9=()x×:]{1,9}[+#!?]*$/.test(t) && /[1-8x×:X]/.test(t.slice(1));
+  };
+  /* Antes de leer una partida en descriptiva: «P x P» y «P-4R» sin espacios ni guiones, «a.p.» fuera, y los paréntesis
+     de «T(D)1R» o «P8D(D)» (que en PGN abren una variante) convertidos en «TD1R» y «P8D=D» */
+  function descPrepare(text) {
+    return String(text)
+      .replace(/(^|\s)[ae]\.\s?p\.(?=\s|$)/gi, "$1")
+      .replace(/([A-Za-z0-9])\s*[x×:]\s*(?=[PRDTACprdtac1-8])/g, "$1x")
+      .replace(/([A-Za-z)])\s*-\s*(?=[0-9A-Za-z(])/g, "$1")
+      .replace(/(\d)-(?=[A-Za-z])/g, "$1")
+      .replace(/([0-9A-Za-z])\(([DTACdtac])\)/g, "$1=$2")
+      .replace(/([RDTACrdtac])\(([0-9A-Za-z]{1,3})\)(?=[0-9xX])/g, "$1$2");
+  }
+
+  const descKey = (s, raw) => C.posKey(s) + "|" + dNormalize(raw);
+  function descParseMove(s, raw, choices) {
+    const found = descMoves(s, raw);
+    let mv = found.length === 1 ? found[0] : null;
+    if (found.length > 1 && choices) { const u = choices[descKey(s, raw)]; mv = found.find(m => C.uci(m) === u) || null; }
+    if (!mv) {
+      const e = Error(found.length ? `«${raw}» admite ${found.length} jugadas (${found.map(m => C.san(s, m)).join(", ")}): elige cuál` : `Jugada descriptiva no reconocida o ilegal: ${raw}`);
+      if (found.length) e.choices = found.map(m => C.uci(m));
+      throw e;
+    }
+    const nm = /(!!|\?\?|!\?|\?!|!|\?)$/.exec(raw);
+    return { move: mv, nag: nm ? nm[1] : "" };
+  }
   /* ---------- Escribir PGN ---------- */
   function escapeHeader(v) { return String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"'); }
   function commentOf(n, opts) {
@@ -317,6 +490,6 @@ var Pgn = (function (C) {
   return {
     MOVE_NAGS, POS_NAGS, nagSymbol, newGame, addMove, mainlineFrom, pathTo, isMainline, findById, walk, countMoves,
     moveNumberLabel, parseCommentText, splitGames, detectLang, parseGame, exportPgn, exportMovetext,
-    deleteNode, promote, makeMain, sameMove
+    deleteNode, promote, makeMain, sameMove, descMoves, descFor, descKey, looksDesc, descPrepare
   };
 })(Chess);

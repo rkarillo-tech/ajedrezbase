@@ -58,6 +58,12 @@
           <li><b>FEN</b>: una posición suelta, por ejemplo <code>8/8/1KP5/3r4/8/8/8/k7 w - - 0 1</code>. Se detecta sola al importar, o usa <b>Cargar FEN</b>.</li>
         </ul>
         <p><b>«Notación de entrada»</b> indica cómo está escrito lo que pegas; con «Automática» la aplicación lo deduce. Es distinto de <b>«Notación en pantalla» de ⚙ Ajustes</b>, que sólo decide cómo se <i>muestran</i> las jugadas. Por eso puedes pegar en inglés y verlo en español (Nf3 → Cf3). El PGN que copias o descargas siempre sale en inglés, que es el estándar.</p>
+        <p><b>📜 Notación descriptiva (libros antiguos).</b> Puedes copiar las jugadas tal como aparecen en un libro antiguo en castellano: <code>1. P4R P4R 2. C3AR C3AD 3. A5C P3TD 4. AxC PDxA</code>. Las columnas se nombran por la pieza que empieza en ellas (TD, CD, AD, D, R, AR, CR, TR) y las filas se cuentan desde el lado de quien mueve: P4R es e4 para las blancas y e5 para las negras. Se reconoce sola (o elige «Descriptiva» en «Notación de entrada») y admite guiones (<code>P-4R</code>), capturas con espacios (<code>A x C</code>), <code>a.p.</code>, coronaciones (<code>P8R=D</code> o <code>P8R(D)</code>) y el enroque (<code>0-0</code>, <code>0-0-0</code>). La partida se guarda en PGN estándar.</p>
+        <ul>
+            <li>Si una jugada admite varias lecturas (por ejemplo, <code>PxP</code> cuando dos peones pueden capturar), la lectura se para ahí: el tablero muestra las posibilidades con flechas y eliges una jugándola o con su botón. Después sigue leyendo el resto de la partida.</li>
+            <li>En <b>⌨ Escribe una jugada</b> también puedes escribirlas así (<code>P4R</code>, <code>c3ar</code>, <code>PxP</code>).</li>
+            <li>El botón <b>📜 Descriptiva</b>, junto a «Ver como planilla», muestra cada jugada también en descriptiva (P4R junto a e4), en la lista y en la planilla, para seguir el libro.</li>
+        </ul>
         <ul>
           <li><b>Añadir desde aquí</b>: añade las jugadas del recuadro a partir de la posición actual del tablero (útil para meter una variante escrita a mano).</li>
           <li><b>📋 Copiar PGN</b> / <b>⬇ Descargar .pgn</b> / <b>📋 Copiar FEN</b>: para llevarte la partida o la posición a otro programa.</li>

@@ -110,6 +110,7 @@ function shapeList() {
     for (const sh of cur().shapes || []) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
     if (ui.engineArrow && settings.arrow && !quiz() && ui.engineArrow.node === cur() && !(ui.lesson && ui.lesson.game === game)) list.push({ color: "engine", from: ui.engineArrow.from, to: ui.engineArrow.to });
     if (Threat.node === cur() && !quiz()) list.push({ color: "threat", from: Threat.from, to: Threat.to });
+    if (DescPick.node === cur()) for (const u of DescPick.ucis) list.push({ color: "yellow", from: Chess.sqIdx(u.slice(0, 2)), to: Chess.sqIdx(u.slice(2, 4)) });
     if (Scan.node === cur() && Scan.data) for (const sh of Scan.shapes) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
     if (ui.cpu.on && ui.cpu.coachArrow && ui.cpu.coachArrow.node === cur()) list.push({ color: "blue", from: ui.cpu.coachArrow.from, to: ui.cpu.coachArrow.to });
     if (Talk.node === cur() && (!quiz() || cpuHelpMode())) for (const sh of Talk.shapes) list.push({ color: sh.color, from: Chess.sqIdx(sh.from), to: Chess.sqIdx(sh.to) });
@@ -330,6 +331,8 @@ function soundFor(node) {
   else Sound.play("move");
 }
 function playMove(move, who = "user") {
+  // 📜 Eligiendo entre las lecturas de una jugada descriptiva ambigua: jugar una de ellas en el tablero la elige
+  if (DescPick.node && who === "user" && DescPick.node === cur() && DescPick.ucis.includes(Chess.uci(move))) { descPickChoose(Chess.uci(move)); return; }
   if (Retry.active && who === "user") { retryMove(move); return; }
   if (Coach.active && who === "user") { coachMove(move); return; }
   if (trainer.active && who === "user") { trainerUserMove(move); return; }

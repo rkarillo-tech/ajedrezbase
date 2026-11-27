@@ -45,6 +45,12 @@ En **📖 Estudio**, despliega **📥 Importar / exportar** (debajo del comentar
 
 **«Notación de entrada»** indica cómo está escrito lo que pegas; con «Automática» la aplicación lo deduce. Es distinto de **«Notación en pantalla» de ⚙ Ajustes**, que sólo decide cómo se *muestran* las jugadas. Por eso puedes pegar en inglés y verlo en español (Nf3 → Cf3). El PGN que copias o descargas siempre sale en inglés, que es el estándar.
 
+**📜 Notación descriptiva (libros antiguos).** Puedes copiar las jugadas tal como aparecen en un libro antiguo en castellano: `1. P4R P4R 2. C3AR C3AD 3. A5C P3TD 4. AxC PDxA`. Las columnas se nombran por la pieza que empieza en ellas (TD, CD, AD, D, R, AR, CR, TR) y las filas se cuentan desde el lado de quien mueve: P4R es e4 para las blancas y e5 para las negras. Se reconoce sola (o elige «Descriptiva» en «Notación de entrada») y admite guiones (`P-4R`), capturas con espacios (`A x C`), `a.p.`, coronaciones (`P8R=D` o `P8R(D)`) y el enroque (`0-0`, `0-0-0`). La partida se guarda en PGN estándar.
+
+- Si una jugada admite varias lecturas (por ejemplo, `PxP` cuando dos peones pueden capturar), la lectura se para ahí: el tablero muestra las posibilidades con flechas y eliges una jugándola o con su botón. Después sigue leyendo el resto de la partida.
+- En **⌨ Escribe una jugada** también puedes escribirlas así (`P4R`, `c3ar`, `PxP`).
+- El botón **📜 Descriptiva**, junto a «Ver como planilla», muestra cada jugada también en descriptiva (P4R junto a e4), en la lista y en la planilla, para seguir el libro.
+
 - **Añadir desde aquí**: añade las jugadas del recuadro a partir de la posición actual del tablero (útil para meter una variante escrita a mano).
 - **📋 Copiar PGN** / **⬇ Descargar .pgn** / **📋 Copiar FEN**: para llevarte la partida o la posición a otro programa.
 - Si el texto tiene varias partidas, se muestra la primera y todas quedan en **📚 Biblioteca › 🗂 Abrir .pgn** (sin guardar).
