@@ -380,5 +380,6 @@ document.addEventListener("keydown", e => {
   const a = document.activeElement;
   const typing = !!a && ["INPUT", "TEXTAREA", "SELECT"].includes(a.tagName) && a.offsetParent !== null && !["checkbox", "radio", "range"].includes(a.type);
   if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === "k" || e.key === "K")) { e.preventDefault(); if ($("cmdModal").classList.contains("open")) closeModals(); else openCommands(); return; }
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === "z" || e.key === "Z") && !typing && ui.lastCut && ui.lastCut.game === game && !document.querySelector(".modal-back.open")) { e.preventDefault(); undoCut(); return; }
   if (e.key === "/" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey && !document.querySelector(".modal-back.open") && !editor.active) { e.preventDefault(); openCommands(); }
 });

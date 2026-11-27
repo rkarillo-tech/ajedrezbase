@@ -433,6 +433,54 @@ seccion("🤖 Lo que la IA dice de las piezas", () => {
   comprobar(r.lista.includes("Piezas de las negras: rey negro en e8; dama negra en d8; torre negra en a8; torre negra en h8; alfil negro en c8; alfil negro en f8; caballo negro en d7; caballo negro en f6; caballo negro en a5;") && r.lista.includes("peón blanco en c4"), "la lista de piezas que recibe la IA, cada una con su color pegado");
 });
 
+seccion("Correcciones de la auditoría (1.59.1)", () => {
+  const r = JSON.parse(E.ev(`JSON.stringify((() => {
+    const parse = mt => Pgn.parseGame(mt, { lang: "en" }).game;
+    const last = g => { const l = Pgn.mainlineFrom(g.root); return l[l.length - 1]; };
+    // Triple repetición: la primera posición tenía captura al paso legal
+    const rep6 = gameStatus(last(parse("1. e4 Nf6 2. e5 d5 3. Nf3 Nfd7 4. Ng1 Nf6 5. Nf3 Nfd7 6. Ng1 Nf6 *")));
+    const rep8 = gameStatus(last(parse("1. e4 Nf6 2. e5 d5 3. Nf3 Nfd7 4. Ng1 Nf6 5. Nf3 Nfd7 6. Ng1 Nf6 7. Nf3 Nfd7 8. Ng1 Nf6 *")));
+    const repSin = gameStatus(last(parse("1. Nf3 Nf6 2. Ng1 Ng8 3. Nf3 Nf6 4. Ng1 Ng8 *")));
+    // Precisión en apertura: el Gambito Letón está en el catálogo, pero empeora a las negras
+    const g = parse("1. e4 e5 2. Nf3 f5 *"), [e4, e5, nf3, f5] = Pgn.mainlineFrom(g.root);
+    nf3.eval = { cp: 30, best: "b8c6", depth: 18 }; f5.eval = { cp: 120, depth: 18 };
+    const letón = classifyMove(f5);
+    const g2 = parse("1. e4 e5 2. Nf3 Nc6 *"), nc6 = Pgn.mainlineFrom(g2.root)[3];
+    nc6.parent.eval = { cp: 30, best: "b8c6", depth: 18 }; nc6.eval = { cp: 32, depth: 18 };
+    const normal = classifyMove(nc6);
+    const comment = buildComment(f5, letón);
+    // Guardar una colección: completas, con errores, ilegibles y repetidas
+    Coll.games = Pgn.splitGames([
+      '[White "A"]\\n[Black "B"]\\n\\n1. e4 e5 2. Nf3 Nc6 *',
+      '[White "C"]\\n[Black "D"]\\n\\n1. d4 d5 2. c4 e6 3. Ke3 Nf6 *',
+      '[White "E"]\\n[Black "F"]\\n\\n1. Ke2 e5 *',
+      '[White "A"]\\n[Black "B"]\\n\\n1. e4 e5 2. Nf3 Nc6 *',
+      '[White "G"]\\n[Black "H"]\\n\\n1. c4 e5 *'
+    ].join("\\n\\n"));
+    const lib = [[recordFromGame(parse('[White "G"]\\n[Black "H"]\\n\\n1. c4 e5 *')).sig, 7]];
+    const plan = collSavePlan([0, 1, 2, 3, 4], lib);
+    const fallo = collSaveSummary({ written: 250, failed: "no queda espacio", pending: 50, incompleteSaved: 0, incompleteSkipped: 1, bad: 1, dup: 0, dupFile: 0 });
+    const bien = collSaveSummary({ written: 1, failed: "", pending: 0, incompleteSaved: 0, incompleteSkipped: 1, bad: 1, dup: 1, dupFile: 1 });
+    // Cortar: qué se elimina
+    const gc = parse("1. e4 e5 2. Nf3 (2. f4 {Gambito} exf4 (2... d5) 3. Nf3) Nc6 *");
+    game = gc;
+    const f4 = gc.root.children[0].children[0].children[1], nf3c = gc.root.children[0].children[0].children[0];
+    return { rep6: rep6.over, rep8: rep8.text, repSin: repSin.text, letón, normal, comment,
+      plan: { ok: plan.ok.map(x => x.i), inc: plan.incomplete.map(x => [x.i, x.why]), bad: plan.bad.map(x => x.i), dup: plan.dup.map(x => x.i), dupFile: plan.dupFile.map(x => [x.i, x.of]) },
+      fallo, bien, cutVar: cutDescription(f4), cutMain: cutDescription(nf3c) };
+  })())`));
+  comprobar(r.rep6 === false && r.rep8 === "Tablas por triple repetición", "triple repetición: no declara tablas si en la primera posición se podía capturar al paso, sí en la tercera repetición real");
+  comprobar(r.repSin === "Tablas por triple repetición", "triple repetición normal, sin al paso");
+  comprobar(r.letón.book && r.letón.loss > 5 && r.letón.acc < 80 && r.letón.cpl === 90 && ["?!", "?", "??"].includes(r.letón.cls), "una jugada del catálogo ECO que empeora la posición (Gambito Letón) pierde precisión y se marca");
+  comprobar(r.normal.book && r.normal.loss === 0 && r.normal.acc > 99 && r.normal.cls === "", "una jugada de teoría que mantiene la valoración sigue con precisión completa");
+  comprobar(r.comment.includes("Teoría: C40") && /Imprecisión|Error/.test(r.comment), "el comentario da por separado el nombre de la apertura y la valoración de la jugada");
+  comprobar(igual(r.plan.ok, [0]) && r.plan.inc.length === 1 && r.plan.inc[0][0] === 1 && r.plan.inc[0][1].includes("3. Ke3") && r.plan.inc[0][1].includes("4 jugadas"), "guardar una colección: una partida que se detiene en una jugada ilegal no cuenta como completa");
+  comprobar(igual(r.plan.bad, [2]) && igual(r.plan.dup, [4]) && igual(r.plan.dupFile, [[3, 0]]), "…las ilegibles, las que ya están en la biblioteca y las repetidas dentro del fichero (con su gemela), por separado");
+  comprobar(!r.fallo.ok && r.fallo.text.startsWith("❌ No se ha podido terminar de guardar: no queda espacio") && r.fallo.text.includes("250 partidas guardadas") && r.fallo.text.includes("50 quedan pendientes"), "si falla la escritura, el resumen lo dice y cuenta las guardadas y las pendientes");
+  comprobar(r.bien.ok && r.bien.text.startsWith("💾 1 partida guardada completa ·") && r.bien.text.includes("1 con errores no se ha guardado") && r.bien.text.includes("1 ilegible") && r.bien.text.includes("1 ya estaba") && r.bien.text.includes("1 repetida"), "resumen sin fallos: guardadas, con errores, ilegibles y repetidas");
+  comprobar(r.cutVar.text === "la variante 2.f4 · 4 jugadas, 1 variante, 1 con comentarios o dibujos" && r.cutMain.text === "2.Cf3 y lo que sigue · 2 jugadas", "✂ Cortar dice qué se elimina: la variante o la continuación, cuántas jugadas y si hay comentarios");
+});
+
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log(`\nTodas las pruebas de lógica superadas (${((Date.now() - t0) / 1000).toFixed(1)} s).`);
 process.exit(0);

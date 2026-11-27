@@ -106,10 +106,12 @@ function classifyMove(n) {
   if (n.eval.mate === 0) after = n.eval;
   const wb = mover === 1 ? winPct(p.eval) : 100 - winPct(p.eval);
   const wa = mover === 1 ? winPct(after) : 100 - winPct(after);
+  // Que la posición tenga nombre en el catálogo ECO no la hace buena (el Gambito Letón también lo tiene, y se llega
+  // igual por transposición): la pérdida se calcula siempre y «book» sólo sirve para mostrar el nombre de la apertura.
   const book = ECO.byKey.has(n.key);
-  const loss = book ? 0 : Math.max(0, wb - wa);
+  const loss = Math.max(0, wb - wa);
   const cpOf = ev => (ev.mate != null ? (ev.mate === 0 ? ev.winner * 1000 : Math.sign(ev.mate) * 1000) : Math.max(-1000, Math.min(1000, ev.cp)));
-  const cpl = book ? 0 : Math.max(0, (cpOf(p.eval) - cpOf(after)) * mover);
+  const cpl = Math.max(0, (cpOf(p.eval) - cpOf(after)) * mover);
   const acc = Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * loss) - 3.1669));
   let cls = loss >= 15 ? "??" : loss >= 10 ? "?" : loss >= 5 ? "?!" : "";
   // Jugada única: coincide con el motor y la segunda opción era claramente peor

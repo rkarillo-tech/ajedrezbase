@@ -2720,6 +2720,82 @@ def prueba_guardar_al_salir(browser):
     ctx.close()
 
 
+PGN_COLECCION_1591 = """[White "Ana"]
+[Black "Beto"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 *
+
+[White "Carla"]
+[Black "Dani"]
+[Result "*"]
+
+1. d4 d5 2. c4 e6 3. Ke3 Nf6 *
+
+[White "Eva"]
+[Black "Fran"]
+[Result "*"]
+
+1. c4 e5 2. Nc3 Nf6 *
+"""
+
+
+def prueba_v1591_correcciones(browser):
+    print("1.59.1: guardar colecciones sin engañar, deshacer «Cortar» y símbolos PGN")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    # Guardar una colección cuando la base de datos falla
+    pg.evaluate("t => setCollection(t, false, 'auditoría')", PGN_COLECCION_1591)
+    pg.click('.tab-btn[data-tab="library"]')
+    res = pg.evaluate("""async () => {
+      const put = DB.putMany;
+      DB.putMany = async () => { throw new Error("no queda espacio (prueba)"); };
+      const conf = window.confirm, preguntas = [];
+      window.confirm = m => { preguntas.push(m); return !m.includes("tienen errores") && !m.includes("tiene errores"); };
+      await saveCollGames([0, 1, 2]);
+      const tras = { lib: Lib.games.size, saved: Coll.saved.size, informe: $("collSaveReport").textContent, visible: !$("collSaveReport").hidden, toast: $("toast").textContent,
+        botones: document.querySelectorAll("#pgnDbBody [data-save]").length, aviso: document.querySelectorAll("#pgnDbBody .msg-err").length };
+      DB.putMany = put;
+      await saveCollGames([0, 1, 2]);
+      const bien = { lib: Lib.games.size, informe: $("collSaveReport").textContent, botones: document.querySelectorAll("#pgnDbBody [data-save]").length, preguntas: preguntas.length };
+      window.confirm = () => true;
+      await saveCollGames([1]);
+      const inc = [...Lib.games.values()].find(r => r.white === "Carla");
+      window.confirm = conf;
+      return { tras, bien, inc: inc ? { tags: inc.tags, plies: inc.plies } : null, informe3: $("collSaveReport").textContent, pregunta: preguntas.find(m => m.includes("errores")) || "" };
+    }""")
+    t = res["tras"]
+    comprobar(t["lib"] == 0 and t["saved"] == 0 and t["visible"] and "No se ha podido terminar de guardar: no queda espacio (prueba)" in t["informe"] and "2 quedan pendientes" in t["informe"] and t["toast"].startswith("❌") and t["botones"] == 3,
+              "si falla la escritura no se anuncia como guardada: nada se marca con ✔ y el resumen dice cuántas quedan pendientes")
+    comprobar(t["aviso"] == 1 and "3. Ke3" in res["pregunta"] and "incompleta" in res["pregunta"], "una partida que se detiene en una jugada ilegal se señala con ⚠ y se pregunta antes de guardarla")
+    b = res["bien"]
+    comprobar(b["lib"] == 2 and b["botones"] == 1 and "2 partidas guardadas completas" in b["informe"] and "1 con errores no se ha guardado" in b["informe"], "al reintentar se guardan las dos completas y la incompleta queda pendiente")
+    comprobar(res["inc"] == {"tags": ["incompleta"], "plies": 4} and "1 partida guardada (1 incompleta" in res["informe3"], "si lo confirmas, la incompleta se guarda tal como se pudo leer y con la etiqueta «incompleta»")
+    pg.click('.tab-btn[data-tab="study"]')
+    # ✂ Cortar dice qué elimina y se puede deshacer
+    pg.fill("#moveInput", "1. e4 e5 2. Nf3 {Desarrollo} Nc6 3. Bb5 a6 *")
+    pg.click("#importBtn")
+    pg.evaluate("goTo(game.root.children[0].children[0].children[0])")
+    pg.click("#undoBtn")
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).length") == 2 and "Eliminada 2.Cf3 y lo que sigue · 4 jugadas, 1 con comentarios o dibujos" in pg.inner_text("#toast"),
+              "✂ Cortar dice qué ha eliminado (cuántas jugadas y si había comentarios)")
+    pg.click("#toast .toast-action")
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).length === 6 && cur().san === 'Nf3' && cur().comment === 'Desarrollo'"), "↩ Deshacer en el aviso recupera la continuación con sus comentarios")
+    pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[4])")
+    pg.click("#undoBtn")
+    pg.evaluate("document.activeElement.blur()")
+    pg.keyboard.press("Control+z")
+    comprobar(pg.evaluate("Pgn.mainlineFrom(game.root).length") == 6, "también con Ctrl+Z")
+    # Símbolos PGN que antes se perdían
+    pg.fill("#moveInput", "1. e4 $36 e5 $37 2. Nf3 $142 *")
+    pg.click("#importBtn")
+    txt = pg.inner_text("#moves")
+    pgn = pg.evaluate("Pgn.exportPgn(game)")
+    comprobar("→" in txt and "⌓" in txt and "1. e4 $36 e5 $37 2. Nf3 $142" in pgn, "se ven y se exportan $36, $37 y $142")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_v153_distribucion(browser):
     print("1.53: jugadas al lado del tablero, herramientas del motor plegadas y bienvenida compacta")
     ctx = contexto(browser, viewport={"width": 1440, "height": 900})
@@ -3522,7 +3598,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
