@@ -399,6 +399,7 @@ function startDrills(mode) {
   $("cardsBackBtn").hidden = false;
   if (Retry.active) retryEnd(true);
   startRetry(0, q);
+  routeEvent("drill-start");
 }
 async function drillRecord(node, ok) {
   logActivity("drill");

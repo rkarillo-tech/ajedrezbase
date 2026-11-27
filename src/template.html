@@ -511,6 +511,23 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .threat-info { padding: 5px 9px; border-bottom: 1px solid var(--border); font-size: .8rem; color: var(--bad-text); background: rgba(239,83,80,.08); }
 .mv-desc { color: var(--muted); font-size: .82em; margin-left: 3px; }
 #descViewBtn.on { border-color: var(--accent); }
+.route-card { position: fixed; right: 16px; bottom: 16px; width: min(390px, calc(100vw - 32px)); max-height: 70vh; overflow: auto; z-index: 250; background: var(--panel); border: 2px solid var(--accent); border-radius: 12px; padding: 10px 12px; box-shadow: 0 8px 28px rgba(0,0,0,.45); font-size: .88rem; }
+.route-card.route-left { right: auto; left: 16px; }
+.route-card.route-min { width: auto; padding: 0; border: 0; background: none; box-shadow: none; overflow: visible; }
+.route-pill { border-radius: 999px; border: 2px solid var(--accent); background: var(--panel); color: var(--text); padding: 7px 14px; box-shadow: 0 6px 18px rgba(0,0,0,.4); cursor: pointer; font-size: .85rem; }
+.route-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.route-x { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px 7px; font-size: .9rem; }
+.route-list { display: grid; gap: 6px; margin-top: 8px; }
+.route-dots { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+.route-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
+.route-dot.done { background: var(--accent); }
+.route-dot.cur { background: var(--warn); box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--warn); }
+.route-dots .small { margin-left: 4px; }
+.route-step { margin-bottom: 6px; }
+.route-step .small { margin-top: 3px; line-height: 1.45; }
+.route-auto { margin-top: 4px; color: var(--muted); }
+.route-target { outline: 3px solid var(--warn) !important; outline-offset: 3px; animation: routePulse 1.2s ease-in-out 5; }
+@keyframes routePulse { 50% { outline-color: transparent; } }
 .flow-guide { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 6px 0; padding: 7px 34px 7px 10px; position: relative; border: 1px solid var(--accent); border-radius: 8px; background: var(--panel2); font-size: .86rem; }
 .flow-guide .flow-next { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .flow-guide .flow-close { position: absolute; top: 4px; right: 4px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: .85rem; padding: 4px 6px; }
@@ -956,6 +973,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus, textarea:focus) .mode-tabs { display: none; }   /* no tapa lo que se escribe */
   body.editing .mode-tabs { display: none; }
   .toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+  .route-card { left: 12px; right: 12px; width: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); max-height: 46vh; }
+  .route-card.route-min { left: auto; }
   .tab-pane { scroll-margin-top: 8px; }
   #navControls { grid-template-columns: repeat(7, 1fr); }
   #navControls #playBtn, #navControls #flipBtn { font-size: .72rem; white-space: nowrap; }
@@ -1019,6 +1038,7 @@ body.board-full #exportControls { order: 10; }
     <button id="servicesBtn" class="services-btn" title="Estado de los servicios: motor, profesor IA, conexión, Lichess, sincronización…" aria-label="Estado de los servicios"><span id="servicesDot" class="svc-dot" aria-hidden="true"></span></button>
     <button id="settingsBtn" title="Ajustes (motor, token de Lichess, análisis)" aria-label="Ajustes">⚙</button>
     <button id="installBtn" class="primary" hidden title="Instalar AjedrezBase como aplicación (funciona sin conexión)">⬇ Instalar</button>
+    <button id="routesBtn" title="¿Qué quieres hacer? Elige un objetivo y te guío paso a paso" aria-label="Guíame">🧭<span class="cmd-btn-lbl"> Guíame</span></button>
     <button id="helpBtn" title="Guía completa y atajos (?)" aria-label="Ayuda">❓<span class="cmd-btn-lbl"> Ayuda</span></button>
     <button id="newGame" class="danger" title="Empezar una partida nueva">Nueva</button>
   </div>
@@ -1036,6 +1056,7 @@ body.board-full #exportControls { order: 10; }
       <button type="button" class="train-card" data-welcome="lichess"><span class="tc-ico" aria-hidden="true">☁</span><span class="tc-body"><b>Traer mis partidas de Lichess</b><span class="small">Con tu nombre de usuario, sin contraseña</span></span></button>
       <button type="button" class="train-card" data-welcome="puzzles"><span class="tc-ico" aria-hidden="true">🧩</span><span class="tc-body"><b>Resolver problemas</b><span class="small">Táctica por temas y a tu nivel</span></span></button>
       <button type="button" class="train-card" data-welcome="courses"><span class="tc-ico" aria-hidden="true">📘</span><span class="tc-body"><b>Hacer un curso</b><span class="small">Lecciones comentadas paso a paso</span></span></button>
+      <button type="button" class="train-card" data-welcome="routes"><span class="tc-ico" aria-hidden="true">🧭</span><span class="tc-body"><b>Que me guíe paso a paso</b><span class="small">Revisar una partida, estudiar una apertura, táctica, finales…</span></span></button>
       <button type="button" class="train-card" data-welcome="cpu"><span class="tc-ico" aria-hidden="true">🤖</span><span class="tc-body"><b>Jugar una partida</b><span class="small">Contra la CPU o entre dos personas</span></span></button>
     </div>
     <div class="small welcome-foot">¿Prefieres leer antes? <button class="link-inline" id="welcomeHelp" type="button">Abre la guía</button>.</div>
@@ -2256,6 +2277,7 @@ body.board-full #exportControls { order: 10; }
 
 <div id="printView" class="print-view" aria-hidden="true"></div>
 
+<aside id="routeCard" class="route-card" hidden aria-label="Guía paso a paso" aria-live="polite"></aside>
 <div id="toast" class="toast" role="status"></div>
 
 <script id="coreLib">

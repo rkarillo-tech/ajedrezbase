@@ -336,6 +336,7 @@ function openingLessons(art) {
 
 /* La ventana del artículo */
 function openOpeningArticle(id, entry) {
+  routeEvent("opening-article");
   const art = openingArticleById(id);
   if (!art) return;
   const note = entry ? ((art.v || []).find(([re]) => re.test(entry.name)) || [])[1] : "";

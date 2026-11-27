@@ -71,6 +71,7 @@ function initEndgamePresets() {
       $("endgameNote").hidden = false;
       $("endgameNote").textContent = eg.note;
       querySyzygy();
+      routeEvent("endgame-preset");
     };
     box.append(b);
   }

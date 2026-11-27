@@ -507,6 +507,7 @@ function endBlindPuzzles() {
   $("puzzlesBackBtn").onclick = () => { restoreStash(); };
 }
 function endPuzzles() {
+  routeEvent("puzzles-done", { theme: $("puzzleTheme").value });
   if (Puz.exam) { endExam(true); return; }
   if (Puz.rush) { endRush(); return; }
   if (trainer.active && trainer.puzzle) stopTraining(true);
@@ -665,6 +666,7 @@ function finishExamPuzzle(ok) {
   renderPuzzleStats();
 }
 function endExam(aborted) {
+  if (!aborted) routeEvent("exam-done");
   const E = Puz.exam;
   if (!E) return;
   clearInterval(E.timer);
