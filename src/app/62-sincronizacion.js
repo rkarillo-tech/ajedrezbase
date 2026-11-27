@@ -146,7 +146,9 @@ function syncMerge(L, R, opts = {}) {
     for (const [k, v] of Object.entries(R.tomb)) if (!(tomb[k] >= v)) tomb[k] = v;
   }
   const res = { games: { put: [], del: [], alias: new Map(), write: false }, marks: { put: [], del: [], alias: new Map(), write: false }, ls: {}, tomb, write: !!opts.restore };
-  syncMergeList(L.games, rGames, tomb, x => x.sig, res.games);
+  // La misma partida guardada por separado en los dos lados se queda una sola vez, pero sólo si es idéntica:
+  // dos versiones con distintas notas o continuación se conservan las dos
+  syncMergeList(L.games, rGames, tomb, x => (x.sig ? x.sig + "|" + recContentSig(x) : ""), res.games);
   // Marcadores: van con su partida (que puede haber cambiado de «uid» al unificarse)
   const ga = u => res.games.alias.get(u) || u;
   const alive = new Set(L.games.map(x => ga(x.uid)));

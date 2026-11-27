@@ -457,7 +457,7 @@ seccion("Correcciones de la auditoría (1.59.1)", () => {
       '[White "A"]\\n[Black "B"]\\n\\n1. e4 e5 2. Nf3 Nc6 *',
       '[White "G"]\\n[Black "H"]\\n\\n1. c4 e5 *'
     ].join("\\n\\n"));
-    const lib = [[recordFromGame(parse('[White "G"]\\n[Black "H"]\\n\\n1. c4 e5 *')).sig, 7]];
+    const lib = [Object.assign(recordFromGame(parse('[White "G"]\\n[Black "H"]\\n\\n1. c4 e5 *')), { id: 7 })];
     const plan = collSavePlan([0, 1, 2, 3, 4], lib);
     const fallo = collSaveSummary({ written: 250, failed: "no queda espacio", pending: 50, incompleteSaved: 0, incompleteSkipped: 1, bad: 1, dup: 0, dupFile: 0 });
     const bien = collSaveSummary({ written: 1, failed: "", pending: 0, incompleteSaved: 0, incompleteSkipped: 1, bad: 1, dup: 1, dupFile: 1 });
@@ -477,8 +477,68 @@ seccion("Correcciones de la auditoría (1.59.1)", () => {
   comprobar(igual(r.plan.ok, [0]) && r.plan.inc.length === 1 && r.plan.inc[0][0] === 1 && r.plan.inc[0][1].includes("3. Ke3") && r.plan.inc[0][1].includes("4 jugadas"), "guardar una colección: una partida que se detiene en una jugada ilegal no cuenta como completa");
   comprobar(igual(r.plan.bad, [2]) && igual(r.plan.dup, [4]) && igual(r.plan.dupFile, [[3, 0]]), "…las ilegibles, las que ya están en la biblioteca y las repetidas dentro del fichero (con su gemela), por separado");
   comprobar(!r.fallo.ok && r.fallo.text.startsWith("❌ No se ha podido terminar de guardar: no queda espacio") && r.fallo.text.includes("250 partidas guardadas") && r.fallo.text.includes("50 quedan pendientes"), "si falla la escritura, el resumen lo dice y cuenta las guardadas y las pendientes");
-  comprobar(r.bien.ok && r.bien.text.startsWith("💾 1 partida guardada completa ·") && r.bien.text.includes("1 con errores no se ha guardado") && r.bien.text.includes("1 ilegible") && r.bien.text.includes("1 ya estaba") && r.bien.text.includes("1 repetida"), "resumen sin fallos: guardadas, con errores, ilegibles y repetidas");
+  comprobar(r.bien.ok && r.bien.text.startsWith("💾 1 partida guardada completa ·") && r.bien.text.includes("1 con errores no se ha guardado") && r.bien.text.includes("1 ilegible") && r.bien.text.includes("1 ya estaba") && r.bien.text.includes("1 copia idéntica dentro del fichero"), "resumen sin fallos: guardadas, con errores, ilegibles y repetidas");
   comprobar(r.cutVar.text === "la variante 2.f4 · 4 jugadas, 1 variante, 1 con comentarios o dibujos" && r.cutMain.text === "2.Cf3 y lo que sigue · 2 jugadas", "✂ Cortar dice qué se elimina: la variante o la continuación, cuántas jugadas y si hay comentarios");
+});
+
+seccion("📑 Versiones de una misma partida (1.60)", () => {
+  const r = JSON.parse(E.ev(`JSON.stringify((() => {
+    const parse = mt => Pgn.parseGame(mt, { lang: "en" }).game;
+    const H = '[White "Ana"]\\n[Black "Beto"]\\n[Date "1950.01.01"]\\n';
+    const base = H + '\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *';
+    const cs = mt => contentSig(parse(mt));
+    const sig = {
+      igual: cs(base) === cs(H + '\\n1. e4    e5\\n2. Nf3 Nc6 3. Bb5 a6 *'),
+      evals: cs(base) === cs(H + '\\n1. e4 { [%eval 0.3] } e5 2. Nf3 Nc6 3. Bb5 a6 *'),
+      cabecera: cs(base) === cs('[White "Ana"]\\n[Black "Beto"]\\n[Date "1950.01.01"]\\n[Annotator "Kasparov"]\\n\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *'),
+      comentario: cs(base) !== cs(H + '\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 {La española} a6 *'),
+      variante: cs(base) !== cs(H + '\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 (3. Bc4) a6 *'),
+      simbolo: cs(base) !== cs(H + '\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 $36 a6 *'),
+      continuacion: cs(base) !== cs(H + '\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 *'),
+      misma: gameSig(parse(base)) === gameSig(parse(H + '\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 {La española} (3. Bc4) a6 *'))
+    };
+    const viejo = Object.assign(recordFromGame(parse(base)), { id: 1, title: "Ana – Beto" });
+    delete viejo.csig;   // como los guardados antes de la 1.60
+    const recalculada = recContentSig(viejo) === cs(base);
+    const diff = versionDiff(parse(H + '\\n1. e4 e5 2. Nf3 {Desarrollo} Nc6 3. Bb5 {La española} (3. Bc4 Bc5) a6 *'), parse(base));
+    const diffLinea = versionDiff(parse(H + '\\n1. e4 e5 2. Nf3 Nc6 3. Bc4 *'), parse(base));
+    const titulos = [versionTitle("Ana – Beto", { Annotator: "Kasparov" }, [viejo]), versionTitle("Ana – Beto", {}, [viejo]), versionTitle("Ana – Beto", {}, [viejo, { title: "Ana – Beto (versión 2)" }]), versionTitle("Otra", {}, [viejo])];
+    // Un fichero con: la misma partida comentada por Kasparov, una copia idéntica a la que ya tenías, esa misma comentada
+    // otra vez (copia idéntica dentro del fichero) y otra continuación
+    Coll.games = Pgn.splitGames([
+      '[White "Ana"]\\n[Black "Beto"]\\n[Date "1950.01.01"]\\n[Annotator "Kasparov"]\\n\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 {La española} a6 *',
+      base,
+      '[White "Ana"]\\n[Black "Beto"]\\n[Date "1950.01.01"]\\n[Annotator "Kasparov"]\\n\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 {La española} a6 *',
+      H + '\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 *'
+    ].join("\\n\\n"));
+    const plan = collSavePlan([0, 1, 2, 3], [viejo]);
+    const ida = "1. Nf3 Nf6 2. Ng1 Ng8 ".repeat(16);   // 64 jugadas
+    const largo1 = Object.assign(recordFromGame(parse(H + '\\n' + ida + '65. e4 *')), { id: 2, title: "Larga" });
+    Coll.games = Pgn.splitGames(H + '\\n' + ida + '65. d4 *');
+    const pl = collSavePlan([0], [largo1]);
+    const largo = pl.ok.length === 1 && pl.ok[0].version && pl.ok[0].rec.sig === largo1.sig;
+    const resumen = collSaveSummary({ written: 2, failed: "", pending: 0, versions: 2, incompleteSaved: 0, incompleteSkipped: 0, bad: 0, dup: 1, dupFile: 1 }).text;
+    // Sincronización: dos versiones de la misma partida en dos dispositivos se conservan las dos
+    const gm = (uid, pgn, _m) => ({ uid, sig: "s", pgn, _m, title: uid });
+    const sync2 = syncMerge({ games: [gm("a", base, 1)], marks: [], ls: {}, tomb: {} }, { games: [gm("b", H + '\\n1. e4 e5 2. Nf3 Nc6 3. Bb5 {Nota} a6 *', 2)], marks: [], ls: {}, tomb: {} });
+    const sync1 = syncMerge({ games: [gm("a", base, 1)], marks: [], ls: {}, tomb: {} }, { games: [gm("b", base, 2)], marks: [], ls: {}, tomb: {} });
+    return { largo, sig, recalculada, diff, diffLinea, titulos,
+      plan: { ok: plan.ok.map(x => [x.i, x.version, x.rec.title]), dup: plan.dup.map(x => x.i), dupFile: plan.dupFile.map(x => [x.i, x.of]) }, resumen,
+      sync2: { put: sync2.games.put.length, same: sync2.games.put.some(p => p.same), alias: sync2.games.alias.size },
+      sync1: { same: sync1.games.put.length === 1 && sync1.games.put[0].same } };
+  })())`));
+  const s = r.sig;
+  comprobar(s.igual && s.evals && s.cabecera, "copia idéntica: da igual el espacio, las evaluaciones del motor y las cabeceras");
+  comprobar(s.comentario && s.variante && s.simbolo && s.continuacion && s.misma, "otra versión: la misma partida con otro comentario, otra variante, otro símbolo u otra continuación");
+  comprobar(r.recalculada, "las partidas guardadas antes de la 1.60 se comparan igual (la firma del contenido se calcula a partir de su PGN)");
+  comprobar(r.diff.join(" | ") === "2 comentarios frente a 0 | 1 variante frente a 0", "dice en qué se diferencia la nueva versión: comentarios y variantes");
+  comprobar(r.diffLinea[0] === "otra continuación desde 3.Ac4", "…u otra continuación, desde qué jugada");
+  comprobar(r.titulos.join(" | ") === "Ana – Beto · notas de Kasparov | Ana – Beto (versión 2) | Ana – Beto (versión 3) | Otra", "título de una nueva versión: quién la anota, o «versión N»");
+  comprobar(JSON.stringify(r.plan.ok) === JSON.stringify([[0, true, "Ana – Beto · notas de Kasparov"], [3, false, "Ana – Beto"]]) && JSON.stringify(r.plan.dup) === "[1]" && JSON.stringify(r.plan.dupFile) === "[[2,0]]" && r.largo,
+    "al guardar un fichero, se omiten sólo las copias idénticas; las otras versiones se guardan con su propio título (y otra continuación, también pasada la jugada 60)");
+  comprobar(r.resumen.includes("📑 2 son otras versiones (con otros comentarios, variantes o continuación) de partidas que ya tenías") && r.resumen.includes("1 ya estaba en tu biblioteca, idéntica") && r.resumen.includes("1 copia idéntica dentro del fichero"), "el resumen cuenta las versiones nuevas y las copias idénticas omitidas");
+  comprobar(r.sync2.put === 1 && !r.sync2.same && r.sync2.alias === 0, "sincronización: dos versiones de la misma partida, una en cada dispositivo, se conservan las dos");
+  comprobar(r.sync1.same, "…y dos copias idénticas se quedan en una");
 });
 
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }

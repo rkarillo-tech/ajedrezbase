@@ -109,12 +109,58 @@ function gameSig(g) {
   const start = Chess.toFen(g.root.state) === Chess.START_FEN ? "" : Chess.posKey(g.root.state);
   return `${norm(h.White)}|${norm(h.Black)}|${h.Date || ""}|${start}|${line}`;
 }
+/* Versiones de una misma partida. gameSig dice QUÉ partida es (jugadores, fecha, posición inicial y primeras jugadas);
+   contentSig, CÓMO está anotada: todas las jugadas, variantes, comentarios, símbolos, dibujos, relojes y el resultado,
+   sin las evaluaciones del motor (se pueden recalcular) ni diferencias de espacios. Misma gameSig y distinta
+   contentSig = otra versión (otro libro la comenta, otra continuación…): se guardan las dos. Las dos iguales = copia idéntica. */
+function contentSig(g) {
+  return strHash(Chess.toFen(g.root.state) + "|" + Pgn.exportMovetext(g, { evals: false }).replace(/\s+/g, " ").trim());
+}
+/* La de un registro guardado; los anteriores a la 1.60 no la tienen y se calcula (una vez) a partir de su PGN */
+function recContentSig(r) {
+  if (!r.csig) { try { r.csig = contentSig(Pgn.parseGame(r.pgn || "", { lang: "en" }).game); } catch { r.csig = ""; } }
+  return r.csig;
+}
+function annotationStats(g) {
+  let comments = 0, variations = 0, nags = 0;
+  Pgn.walk(g.root, n => {
+    if (n.comment) comments++;
+    if (n.children.length > 1) variations += n.children.length - 1;
+    if (n.nag || n.posNag || (n.nags && n.nags.length)) nags++;
+  });
+  return { line: Pgn.mainlineFrom(g.root), comments, variations, nags };
+}
+/* En qué se diferencia la partida «a» de la versión «b» que ya tenías (frases cortas) */
+function versionDiff(a, b) {
+  const A = annotationStats(a), B = annotationStats(b), out = [];
+  const pl = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+  let k = 0;
+  while (k < A.line.length && k < B.line.length && A.line[k].uci === B.line[k].uci) k++;
+  if (k < A.line.length && k < B.line.length) { const n = A.line[k]; out.push(`otra continuación desde ${numPrefix(n.parent.state)}${dispSan(n)}`); }
+  else if (A.line.length !== B.line.length) out.push(`${A.line.length > B.line.length ? "más larga" : "más corta"} (${A.line.length} jugadas frente a ${B.line.length})`);
+  if (A.comments !== B.comments) out.push(`${pl(A.comments, "comentario", "comentarios")} frente a ${B.comments}`);
+  if (A.variations !== B.variations) out.push(`${pl(A.variations, "variante", "variantes")} frente a ${B.variations}`);
+  if (A.nags !== B.nags) out.push(`${pl(A.nags, "jugada", "jugadas")} con símbolos frente a ${B.nags}`);
+  if (!out.length) out.push("los comentarios, las variantes o los símbolos cambian de texto o de sitio");
+  return out;
+}
+/* Título para una nueva versión: si choca con el de otra, se añade quién la anota (cabecera Annotator) o «versión N» */
+function versionTitle(base, h, others) {
+  const taken = t => others.some(r => r.title === t);
+  if (!taken(base)) return base;
+  const who = h && h.Annotator && h.Annotator !== "?" ? String(h.Annotator).trim() : "";
+  if (who && !taken(`${base} · notas de ${who}`)) return `${base} · notas de ${who}`;
+  let n = others.length + 1;
+  while (taken(`${base} (versión ${n})`)) n++;
+  return `${base} (versión ${n})`;
+}
+const libVersionsOf = sig => [...Lib.games.values()].filter(r => r.sig === sig);
 function recordFromGame(g, extra = {}) {
   const h = g.headers, pgn = Pgn.exportPgn(g, { evals: true }), now = Date.now();
   return Object.assign({
     title: extra.title || defaultTitle(h), white: h.White || "", black: h.Black || "", event: h.Event || "", site: h.Site || "",
     date: h.Date || "", result: h.Result || "*", eco: h.ECO || "", whiteElo: h.WhiteElo || "", blackElo: h.BlackElo || "",
-    pgn, sig: gameSig(g), plies: Pgn.mainlineFrom(g.root).length, size: pgn.length, timeControl: h.TimeControl || "",
+    pgn, sig: gameSig(g), csig: contentSig(g), plies: Pgn.mainlineFrom(g.root).length, size: pgn.length, timeControl: h.TimeControl || "",
     analysis: analysisOf(g), created: now, updated: now, fav: false, tags: [], srs: null
   }, extra, { title: extra.title || defaultTitle(h) });
 }
@@ -192,17 +238,19 @@ async function saveToLibrary(opts = {}) {
       return null;
     }
   }
-  let base;
+  let base, title2 = title, versionOf = null;
   if (existing && opts.copy) {
     base = { created: Date.now(), srs: null };
   } else if (existing) base = Object.assign({}, existing);
   else {
-    const sig = gameSig(g);
-    const dup = [...Lib.games.values()].find(r => r.sig === sig);
-    if (dup && !opts.force && !confirm(`Ya tienes en la biblioteca una partida igual («${dup.title}»).\n\n¿Guardar otra copia de todos modos?`)) return null;
+    // Sólo se pregunta ante una copia idéntica; si cambian las notas o la continuación, se guarda como otra versión
+    const same = libVersionsOf(gameSig(g)), csig = contentSig(g);
+    const twin = same.find(r => recContentSig(r) === csig);
+    if (twin && !opts.force && !confirm(`Ya tienes en la biblioteca una copia idéntica de esta partida («${twin.title}»): las mismas jugadas, variantes y comentarios.\n\n¿Guardar otra copia de todos modos?`)) return null;
+    if (!twin && same.length) { versionOf = same[0]; title2 = versionTitle(title, g.headers, same); }
     base = { created: Date.now(), srs: null };
   }
-  const copyTitle = opts.copy ? `${title} (copia)` : title;
+  const copyTitle = opts.copy ? `${title} (copia)` : title2;
   const rec = Object.assign(base, recordFromGame(g, { title: copyTitle, fav: opts.copy ? false : ui.fav, tags: ui.tags.slice(), created: base.created, srs: base.srs || null }));
   if (opts.copy) { delete rec.orig; delete rec.versions; delete rec.drills; }
   if (existing && !opts.copy) {
@@ -236,6 +284,11 @@ async function saveToLibrary(opts = {}) {
   }
   if (opts.copy && g !== game) toast(`📑 Tus cambios se han guardado como «${rec.title}» en la biblioteca; la otra versión queda como estaba.`, 5000);
   else if (opts.copy) toast(`📑 Copia guardada como «${rec.title}». Ahora editas la copia; la original queda como estaba.`, 4500);
+  else if (versionOf) {
+    let diff = [];
+    try { diff = versionDiff(g, Pgn.parseGame(versionOf.pgn, { lang: "en" }).game); } catch {}
+    toast(`📑 «${rec.title}» guardada como otra versión de «${versionOf.title}»${diff.length ? ": " + diff.join(", ") : ""}.`, 6000);
+  }
   else if (!opts.silent) toast(existing ? `💾 «${rec.title}» actualizada.` : `💾 «${rec.title}» guardada en tu biblioteca.`);
   refreshLibraryViews();
   scheduleAutosave();
@@ -441,8 +494,10 @@ function showAdvSummary(px, F, metas) {
 function libFiltered() {
   const q = norm($("libFilter").value).split(/\s+/).filter(Boolean);
   const tag = $("libTagFilter").value, now = Date.now(), F = advState("lib"), names = myNameList();
+  const nSig = tag === "*versions" ? libSigCounts() : null;
   let arr = [...Lib.games.values()].filter(r => {
     if (tag === "*fav" && !r.fav) return false;
+    if (nSig && !(nSig.get(r.sig) > 1)) return false;
     if (tag === "*due" && !(r.srs && r.srs.due <= now)) return false;
     if (tag === "*marks" && !marksOfGame(r.id).length) return false;
     if (tag && !tag.startsWith("*") && !(r.tags || []).includes(tag)) return false;
@@ -457,13 +512,15 @@ function libFiltered() {
   else arr.sort((a, b) => b.updated - a.updated);
   return arr;
 }
+function libSigCounts() { const m = new Map(); for (const r of Lib.games.values()) m.set(r.sig, (m.get(r.sig) || 0) + 1); return m; }
 function renderTagOptions() {
   const tags = new Map();
   for (const r of Lib.games.values()) for (const t of r.tags || []) tags.set(t, (tags.get(t) || 0) + 1);
   const sel = $("libTagFilter"), cur0 = sel.value;
   const nFav = [...Lib.games.values()].filter(r => r.fav).length;
   const nDue = [...Lib.games.values()].filter(r => r.srs && r.srs.due <= Date.now()).length;
-  sel.innerHTML = `<option value="">Todas</option><option value="*fav">⭐ Favoritas (${nFav})</option><option value="*marks">📌 Con marcadores</option><option value="*due">📅 Repaso pendiente (${nDue})</option>` +
+  const nVer = [...libSigCounts().values()].filter(n => n > 1).reduce((a, n) => a + n, 0);
+  sel.innerHTML = `<option value="">Todas</option><option value="*fav">⭐ Favoritas (${nFav})</option><option value="*marks">📌 Con marcadores</option><option value="*due">📅 Repaso pendiente (${nDue})</option>${nVer ? `<option value="*versions">📑 Con varias versiones (${nVer})</option>` : ""}` +
     [...tags.entries()].sort((a, b) => a[0].localeCompare(b[0], "es")).map(([t, n]) => `<option value="${esc(t)}">🏷 ${esc(t)} (${n})</option>`).join("");
   sel.value = [...sel.options].some(o => o.value === cur0) ? cur0 : "";
   $("tagList").innerHTML = [...tags.keys()].map(t => `<option value="${esc(t)}">`).join("");
@@ -477,16 +534,17 @@ function renderLibrary() {
   if (!arr.length) {
     tbody.innerHTML = `<tr><td colspan="6" class="small">${Lib.games.size ? "Ninguna partida coincide con el filtro." : "Tu biblioteca está vacía. Abre o importa una partida y pulsa «💾 Guardar en biblioteca», o guarda las que te interesen desde «🗂 Abrir .pgn»."}</td></tr>`;
   }
-  const frag = document.createDocumentFragment();
+  const frag = document.createDocumentFragment(), nSig = libSigCounts();
   for (const r of arr.slice(0, 500)) {
     const tr = document.createElement("tr");
     if (r.id === ui.libId) tr.className = "current";
+    const nVer = nSig.get(r.sig) || 1;
     const nMarks = marksOfGame(r.id).length;
     const due = r.srs && r.srs.due <= Date.now();
     const sub = [r.white && r.black ? `${r.white} – ${r.black}` : "", r.event, (r.date || "").replace(/\.\?\?/g, ""), r.eco, r.plies ? Math.ceil(r.plies / 2) + " jug." : ""].filter(x => x && x !== "?").join(" · ");
     tr.innerHTML = `<td><input type="checkbox" data-sel ${Lib.sel.has(r.id) ? "checked" : ""} aria-label="Seleccionar"></td>
       <td class="star-cell" data-fav title="Favorita">${r.fav ? "★" : "☆"}</td>
-      <td><div class="lib-title">${esc(r.title)}${nMarks ? ` <span class="small" title="${nMarks} marcadores">📌${nMarks}</span>` : ""}${due ? ` <span class="srs-pill due">repasar</span>` : ""}</div><div class="lib-sub">${esc(sub)}</div></td>
+      <td><div class="lib-title">${esc(r.title)}${nMarks ? ` <span class="small" title="${nMarks} marcadores">📌${nMarks}</span>` : ""}${nVer > 1 ? ` <span class="small" title="Tienes ${nVer} versiones de esta partida, con distintos comentarios, variantes o continuación. Para verlas juntas, elige «📑 Con varias versiones» en el filtro.">📑${nVer}</span>` : ""}${due ? ` <span class="srs-pill due">repasar</span>` : ""}</div><div class="lib-sub">${esc(sub)}</div></td>
       <td>${esc(r.result || "*")}</td>
       <td class="hide-sm">${(r.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("")}</td>
       <td class="row-actions"><button class="sm-btn" data-train title="Entrenar esta partida">🎯</button> <button class="sm-btn danger" data-del title="Borrar de la biblioteca">🗑</button></td>`;
@@ -605,29 +663,38 @@ function loadCollGame(i) {
    Una partida sólo se marca como guardada (✔) cuando la base de datos confirma la escritura; si falla, las que
    no han entrado quedan pendientes y el resumen lo dice. */
 const COLL_INCOMPLETE_TAG = "incompleta";
-function collSavePlan(list, libSigs) {
-  const sigs = new Map(libSigs), first = new Map();
+/* libRecs: los registros de la biblioteca. Una partida que ya está (o que sale antes en el mismo fichero) se omite sólo
+   si es una copia idéntica; con otros comentarios, variantes o continuación se guarda como otra versión (version: true). */
+function collSavePlan(list, libRecs) {
+  const bySig = new Map(), first = new Map();
+  for (const r of libRecs) { if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
   const plan = { ok: [], incomplete: [], bad: [], dup: [], dupFile: [] };
   for (const i of list) {
     const r = Pgn.parseGame(Coll.games[i], { lang: "auto" });
     if (!r.count && r.error) { plan.bad.push({ i, why: `${r.error.label}: ${r.error.message}` }); continue; }
-    const rec = recordFromGame(r.game);
-    if (first.has(rec.sig)) { plan.dupFile.push({ i, of: first.get(rec.sig) }); continue; }
-    if (sigs.has(rec.sig)) { plan.dup.push({ i }); continue; }
-    first.set(rec.sig, i);
-    if (r.error) plan.incomplete.push({ i, rec, why: `${r.error.inVariation ? "se pierde una variante en" : "se detiene en"} «${r.error.label}» (${r.error.message}); se leyeron ${r.count} jugadas` });
-    else plan.ok.push({ i, rec });
+    const rec = recordFromGame(r.game), key = rec.sig + "|" + rec.csig;
+    if (first.has(key)) { plan.dupFile.push({ i, of: first.get(key) }); continue; }
+    const same = bySig.get(rec.sig) || [];
+    if (same.some(x => !x.fromFile && recContentSig(x) === rec.csig)) { plan.dup.push({ i }); continue; }
+    first.set(key, i);
+    const version = same.length > 0;
+    if (version) rec.title = versionTitle(rec.title, r.game.headers, same);
+    if (!bySig.has(rec.sig)) bySig.set(rec.sig, []);
+    bySig.get(rec.sig).push({ title: rec.title, sig: rec.sig, fromFile: true });
+    if (r.error) plan.incomplete.push({ i, rec, version, why: `${r.error.inVariation ? "se pierde una variante en" : "se detiene en"} «${r.error.label}» (${r.error.message}); se leyeron ${r.count} jugadas` });
+    else plan.ok.push({ i, rec, version });
   }
   return plan;
 }
-/* El resumen final. res: { written, failed (motivo o ""), pending, incompleteSaved, incompleteSkipped, bad, dup, dupFile } (números) */
+/* El resumen final. res: { written, failed (motivo o ""), pending, versions, incompleteSaved, incompleteSkipped, bad, dup, dupFile } (números) */
 function collSaveSummary(res) {
   const pl = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
   const parts = [`💾 ${pl(res.written, "partida guardada", "partidas guardadas")}${res.incompleteSaved ? ` (${pl(res.incompleteSaved, "incompleta", "incompletas")}, con la etiqueta «${COLL_INCOMPLETE_TAG}»)` : res.written ? (res.written === 1 ? " completa" : " completas") : ""}`];
+  if (res.versions) parts.push(`📑 ${pl(res.versions, "es otra versión", "son otras versiones")} (con otros comentarios, variantes o continuación) de partidas que ya tenías`);
   if (res.incompleteSkipped) parts.push(`⚠ ${pl(res.incompleteSkipped, "con errores no se ha guardado", "con errores no se han guardado")}`);
   if (res.bad) parts.push(`⚠ ${pl(res.bad, "ilegible", "ilegibles")}`);
-  if (res.dup) parts.push(`${pl(res.dup, "ya estaba", "ya estaban")} en tu biblioteca`);
-  if (res.dupFile) parts.push(`${pl(res.dupFile, "repetida", "repetidas")} dentro del fichero`);
+  if (res.dup) parts.push(`${pl(res.dup, "ya estaba", "ya estaban")} en tu biblioteca, idéntica${res.dup === 1 ? "" : "s"}`);
+  if (res.dupFile) parts.push(`${pl(res.dupFile, "copia idéntica", "copias idénticas")} dentro del fichero`);
   let text = parts.join(" · ") + ".";
   if (res.failed) text = `❌ No se ha podido terminar de guardar: ${res.failed}. ` + text + ` ⏳ ${pl(res.pending, "queda pendiente", "quedan pendientes")}: no están en tu biblioteca. Libera espacio (o exporta y borra partidas antiguas) y vuelve a pulsar 💾.`;
   else if (res.incompleteSkipped || res.bad) text += " Pasa el puntero sobre ⚠ en la lista para ver el error de cada una.";
@@ -645,7 +712,7 @@ async function saveCollGames(list) {
   const btn = $("saveCollFilteredBtn");
   btn.disabled = true;
   if (list.length > 40) { $("dbStatus").textContent = `Leyendo ${list.length} partidas…`; await new Promise(r2 => setTimeout(r2, 0)); }
-  const plan = collSavePlan(list, [...Lib.games.values()].map(r => [r.sig, r.id]));
+  const plan = collSavePlan(list, [...Lib.games.values()]);
   for (const x of plan.bad) Coll.issues.set(x.i, "Ilegible: " + x.why);
   for (const x of plan.incomplete) Coll.issues.set(x.i, "Con errores: " + x.why);
   for (const x of plan.dup) Coll.saved.add(x.i);
@@ -670,7 +737,7 @@ async function saveCollGames(list) {
   btn.disabled = false;
   const savedIncomplete = withIncomplete ? plan.incomplete.filter(x => Coll.saved.has(x.i)).length : 0;
   Coll.report = collSaveSummary({
-    written, failed, pending: todo.length - written, incompleteSaved: savedIncomplete,
+    written, failed, pending: todo.length - written, incompleteSaved: savedIncomplete, versions: todo.filter(x => x.version && Coll.saved.has(x.i)).length,
     incompleteSkipped: withIncomplete ? 0 : plan.incomplete.length, bad: plan.bad.length, dup: plan.dup.length, dupFile: plan.dupFile.length
   });
   toast(Coll.report.text.length > 160 ? Coll.report.text.split(". ")[0] + "." : Coll.report.text, failed ? 9000 : 4500);
@@ -1019,22 +1086,28 @@ function isSampleDb(raw) {
   return a.length === b.length && a.every((g, i) => g.headers.White === b[i].headers.White && g.headers.Black === b[i].headers.Black);
 }
 async function importRecords(games, marks) {
-  const bySig = new Map([...Lib.games.values()].map(r => [r.sig, r.id]));
-  const idMap = new Map(), fresh = [];
+  // Se omite sólo lo idéntico: otra versión de una partida que ya tienes (otras notas o continuación) se importa
+  const bySig = new Map();
+  for (const r of Lib.games.values()) { if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push({ id: r.id, rec: r }); }
+  const idMap = new Map(), fresh = [], twinsInFile = [];
   let dup = 0;
   for (const g of games) {
     if (!g || !g.pgn) continue;
     const oldId = g.id;
-    if (g.sig && bySig.has(g.sig)) { idMap.set(oldId, bySig.get(g.sig)); dup++; continue; }
+    const twin = g.sig && (bySig.get(g.sig) || []).find(x => recContentSig(x.rec) === recContentSig(g));
+    if (twin && twin.id !== -1) { idMap.set(oldId, twin.id); dup++; continue; }
+    if (twin) { twinsInFile.push([oldId, twin.rec]); dup++; continue; }   // repetida en la copia: sus marcadores van a la que se importa
     const rec = Object.assign({}, g);
     delete rec.id;
     if (!rec.sig) { const r = Pgn.parseGame(rec.pgn, { lang: "en" }); Object.assign(rec, recordFromGame(r.game, { title: rec.title, fav: rec.fav, tags: rec.tags || [], srs: rec.srs || null, created: rec.created || Date.now() })); }
     rec._old = oldId;
     fresh.push(rec);
-    bySig.set(rec.sig, -1);
+    if (!bySig.has(rec.sig)) bySig.set(rec.sig, []);
+    bySig.get(rec.sig).push({ id: -1, rec });
   }
   for (let k = 0; k < fresh.length; k += 250) await DB.putMany("games", fresh.slice(k, k + 250));
   for (const r of fresh) { idMap.set(r._old, r.id); delete r._old; Lib.games.set(r.id, r); }
+  for (const [oldId, r] of twinsInFile) idMap.set(oldId, r.id);
   const freshMarks = [];
   const have = new Set([...Lib.marks.values()].map(m => m.gameId + "|" + m.path.join(" ")));
   for (const m of marks || []) {

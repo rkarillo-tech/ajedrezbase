@@ -172,6 +172,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
 - Si vas a abrir otra partida y la actual tiene cambios sin guardar, se te avisa antes.
 - **🕘 Versiones: el original nunca se pierde.** Antes de tu primer cambio en una partida guardada (cada vez que la abres) se guarda una copia de cómo estaba. Se conservan siempre el **original** y las cinco versiones anteriores más recientes. Con el botón **🕘 Versiones**, debajo del título, puedes abrir cualquiera como copia sin tocar nada o **↺ Restaurarla**; al restaurar, la versión actual también pasa al historial.
 - **📑 Guardar como copia** crea una partida nueva en la biblioteca con tus cambios y deja la original como estaba. Útil para hacer tu propia versión de una partida o de una lección.
+- **📑 Varias versiones de la misma partida.** Dos libros pueden comentar la misma partida y enseñar cosas distintas. Si guardas una partida que ya tienes, pero con otros comentarios, variantes, símbolos o continuación, se guarda aparte, sin preguntar. El aviso dice en qué se diferencia (por ejemplo, «2 comentarios frente a 0») y el título lleva quién la anota (la cabecera `Annotator`) o «versión 2». Sólo se pregunta si es una **copia idéntica**: las mismas jugadas, variantes y comentarios (no cuentan las evaluaciones del motor ni las cabeceras). En la lista, **📑2** indica cuántas versiones tienes, y el filtro **📑 Con varias versiones** las muestra juntas. Lo mismo vale al guardar las partidas de un fichero .pgn, al restaurar una copia de seguridad y al sincronizar. No hay que confundirlas con el historial de **🕘 Versiones**, que guarda tus propios cambios en una partida.
 - **Título**: edítalo en el recuadro de la barra. **⭐** la marca como favorita (si no estaba guardada, la guarda). **Etiquetas**: escríbelas separadas por comas, por ejemplo `repertorio, siciliana, torneo 2026`.
 - En **📚 Biblioteca › Mis partidas**:
   - busca por título, jugador, evento, ECO o año;
@@ -179,7 +180,7 @@ El estilo sólo elige entre jugadas casi igual de buenas según el motor, así q
   - filtra por ⭐ favoritas, 📌 con marcadores, 📅 repaso pendiente o por etiqueta;
   - pulsa una fila para abrirla, ☆ para marcarla como favorita, 🎯 para entrenarla, 🗑 para borrarla;
   - marca varias casillas y usa **🗑 Borrar seleccionadas** o **⬇ Exportar .pgn** (si no seleccionas nada, exporta las que estés viendo).
-- **⬇ Copia de seguridad** descarga un archivo con todo lo tuyo: partidas, marcadores, progreso del entrenamiento (problemas, repasos, racha, cursos) y ajustes. **⬆ Restaurar copia** lo vuelve a cargar y lo **combina** con lo que ya tengas: no duplica ni borra nada.
+- **⬇ Copia de seguridad** descarga un archivo con todo lo tuyo: partidas, marcadores, progreso del entrenamiento (problemas, repasos, racha, cursos) y ajustes. **⬆ Restaurar copia** lo vuelve a cargar y lo **combina** con lo que ya tengas: no duplica ni borra nada (otra versión de una partida que ya tienes, con otras notas, sí entra).
 - **🔄 Varios dispositivos**: para tener lo mismo en el ordenador y en el móvil sin copias a mano, mira [Sincronizar entre dispositivos](#).
 
 > **Ejemplo:** tienes 30 partidas de Siciliana guardadas → escribe «siciliana» en el buscador → marca «Todas» → «⬇ Exportar .pgn» para llevarlas a ChessBase.

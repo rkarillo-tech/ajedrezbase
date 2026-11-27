@@ -2796,6 +2796,48 @@ def prueba_v1591_correcciones(browser):
     ctx.close()
 
 
+def prueba_versiones_partida(browser):
+    print("1.60: versiones de una misma partida (otros comentarios, variantes o continuación)")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    cab = '[White "Ana"]\n[Black "Beto"]\n[Date "1950.01.01"]\n'
+    def importar(pgn):
+        pg.evaluate("t => loadPgnText(t)", pgn)
+    importar(cab + "\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *")
+    pg.click("#saveGame")
+    pg.wait_for_function("Lib.games.size === 1 && !ui.dirty")
+    # La misma partida, comentada por otro autor: se guarda como otra versión, sin preguntar
+    importar('[White "Ana"]\n[Black "Beto"]\n[Date "1950.01.01"]\n[Annotator "Kasparov"]\n\n1. e4 e5 2. Nf3 {Desarrollo} Nc6 3. Bb5 {La española} (3. Bc4 Bc5) a6 *')
+    pg.evaluate("() => { window._p = []; window.confirm = m => { window._p.push(m); return false; }; }")
+    pg.click("#saveGame")
+    pg.wait_for_function("Lib.games.size === 2")
+    toast = pg.inner_text("#toast")
+    comprobar("guardada como otra versión de «Ana – Beto»" in toast and "2 comentarios frente a 0" in toast and "1 variante frente a 0" in toast and pg.evaluate("window._p.length") == 0,
+              "la misma partida con otros comentarios y variantes se guarda como otra versión, sin preguntar, y dice en qué se diferencia")
+    comprobar(pg.evaluate("[...Lib.games.values()].map(r => r.title).sort().join(' | ')") == "Ana – Beto | Ana – Beto · notas de Kasparov", "la nueva versión lleva el nombre de quien la anota")
+    # Una copia idéntica sí se pregunta (y aquí se cancela)
+    importar(cab + "\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *")
+    pg.evaluate("$('gameName').value = ''")
+    pg.click("#saveGame")
+    pg.wait_for_timeout(300)
+    comprobar(pg.evaluate("Lib.games.size") == 2 and "copia idéntica" in pg.evaluate("window._p.join(' ')"), "ante una copia idéntica se pregunta antes de guardarla otra vez")
+    # En la biblioteca: aviso de varias versiones y filtro
+    pg.click('.tab-btn[data-tab="library"]')
+    pg.click('.sub-btn[data-sub="games"]')
+    comprobar(pg.locator("#libBody .lib-title", has_text="📑2").count() == 2, "en la biblioteca, cada versión indica cuántas hay (📑2)")
+    pg.select_option("#libTagFilter", "*versions")
+    comprobar(pg.locator("#libBody tr").count() == 2 and "Con varias versiones (2)" in pg.inner_text("#libTagFilter"), "el filtro «📑 Con varias versiones» las muestra juntas")
+    # Copia de seguridad: lo idéntico se omite y otra versión entra
+    res = pg.evaluate("""async t => {
+      const a = Pgn.parseGame(t[0], { lang: 'en' }).game, b = Pgn.parseGame(t[1], { lang: 'en' }).game;
+      const r1 = Object.assign(recordFromGame(a), { id: 101 }), r2 = Object.assign(recordFromGame(b), { id: 102 });
+      return importRecords([r1, r2, Object.assign({}, r2, { id: 103 })], []);
+    }""", [cab + "\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *", cab + "\n1. e4 e5 2. Nf3 Nc6 3. Bb5 {Otra nota} a6 *"])
+    comprobar(res["games"] == 1 and res["dup"] == 2 and pg.evaluate("Lib.games.size") == 3, "al importar una copia de seguridad se omite lo idéntico y entra otra versión")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_v153_distribucion(browser):
     print("1.53: jugadas al lado del tablero, herramientas del motor plegadas y bienvenida compacta")
     ctx = contexto(browser, viewport={"width": 1440, "height": 900})
@@ -3598,7 +3640,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()
