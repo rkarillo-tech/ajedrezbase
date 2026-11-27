@@ -48,6 +48,8 @@ function cmdCommands() {
   const S = (name, id, opts = {}) => C(name, () => cmdUse(id, false), Object.assign({ cat: "Ajuste", icon: "⚙" }, opts));
   const T = (name, tab, opts = {}) => C(name, () => { closeModals(); switchTab(tab); if (opts.sub) switchSub(opts.sub); if (opts.train) openTrainSection(opts.train); }, Object.assign({ cat: "Ir a", icon: "➜" }, opts));
   return [
+    C("🧭 Guíame: ¿qué quieres hacer?", () => { closeModals(); routeMenu(); }, { kw: "guia ruta paso a paso ayuda empezar como estudiar que hago tutorial asistente" }),
+    ...ROUTES.map(r => C(`🧭 Ruta: ${r.name}`, () => { closeModals(); routeStart(r.id); }, { cat: "Guía", icon: r.icon, kw: "guia ruta paso a paso " + r.desc })),
     C("Nueva partida", () => cmdUse("newGame"), { kw: "empezar borrar limpiar tablero" }),
     C("Jugar contra la CPU", () => cmdUse("playCpuToggle"), { kw: "ordenador maquina fritz stockfish rival partida dos jugadores reloj jugar la posicion" }),
     C("Jugar esta posición contra la CPU", () => { closeModals(); if (ui.cpu.on) { toast("Ya estás jugando una partida."); return; } openCpuDialog(); $("cpuFrom").value = "here"; }, { kw: "jugar la posicion desde aqui fritz motor practicar" }),

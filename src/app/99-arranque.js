@@ -9,7 +9,8 @@ const WELCOME = {
   lichess() { switchTab("library"); switchSub("collection"); $("lichessImport").open = true; $("liUser").focus(); },
   puzzles() { switchTab("tools"); openTrainSection("puzzles"); },
   courses() { switchTab("courses"); },
-  cpu() { $("playCpuToggle").click(); }
+  cpu() { $("playCpuToggle").click(); },
+  routes() { routeMenu(); }
 };
 document.querySelectorAll("[data-welcome]").forEach(b => b.addEventListener("click", () => {
   showWelcome(false);

@@ -141,6 +141,7 @@ function renderCourses() {
 function openLesson(id, i) {
   const l = courseLessons(id)[i], c = COURSES.find(x => x.id === id);
   if (!l) return false;
+  routeEvent("lesson", id);
   if (!confirmLeave()) return false;
   leaveModes();
   const r = Pgn.parseGame(l.g, { lang: "en" });

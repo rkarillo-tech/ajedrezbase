@@ -54,7 +54,7 @@ function editMyRep(id) {
 function trainMyRep(id) {
   const rec = Lib.games.get(id);
   if (!rec) return;
-  if (openLibGame(id, [])) startTraining({ side: repSideOf(rec) });
+  if (openLibGame(id, [])) { startTraining({ side: repSideOf(rec) }); routeEvent("rep-train"); }
 }
 async function toggleRepSide(id) {
   const rec = Lib.games.get(id);
@@ -96,6 +96,7 @@ async function createMyRep(fromCourse) {
   const rec = await saveToLibrary({ silent: true, force: true });
   if (!rec) return;
   $("repNewName").value = "";
+  routeEvent("rep-created");
   switchTab("study");
   render();
   toast(fromCourse != null && fromCourse !== "" ? `🗂 «${title}» copiado a tus repertorios: cámbialo como quieras (añade o borra variantes); se guarda solo.` : `🗂 «${title}» creado. Juega en el tablero las jugadas de tu repertorio; para añadir otra respuesta del rival, vuelve atrás y juega otra jugada. Se guarda solo.`, 6500);
@@ -168,6 +169,7 @@ async function evalStateNow(state, ms, multipv) {
 /* Sorpresas y trampas de la posición del tablero */
 const Surprise = { busy: false };
 async function findSurprises() {
+  routeEvent("surprises");
   ExpEval.token++;
   const out = $("surpriseOut"), node = cur(), st = node.state, me = st.t;
   if (Surprise.busy) return;

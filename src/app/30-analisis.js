@@ -304,6 +304,7 @@ async function deepAnalyse(n) {
     ui.report.prov = analysisProvenance(nodes, ui.reportRun.fresh, ui.reportRun.change);
     if (!ui.reportRun.variation) { game.analysis = analysisSummary(ui.report, game.root, "motor"); game.analysis.prov = ui.report.prov.text; }
     renderGameReport();
+    flowRefreshMoments();   // 🧭 la cuenta de momentos críticos del recorrido, al día
   }
   $("analysisStatus").textContent = text;
   markDirty();
@@ -1036,6 +1037,7 @@ function startRetry(side, queue) {
   Threat.node = null;
   Engine.cancel("live");
   Object.assign(Retry, { active: true, busy: false, queue: q, i: 0, results: [], prevFlip: ui.flipped });
+  routeEvent("practice-start");
   retryShow();
   const box = $("retryBox");
   setTimeout(() => { const r = $("boardWrap").getBoundingClientRect(); if (r.top < 0 || r.bottom > innerHeight) $("topBar").scrollIntoView({ block: "start", behavior: "smooth" }); }, 40);

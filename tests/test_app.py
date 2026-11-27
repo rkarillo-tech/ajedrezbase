@@ -248,7 +248,7 @@ def prueba_ayuda_y_movil(browser):
     pg.click("#licBtn")
     comprobar("MIT" in pg.inner_text("#licModal") and "Stockfish" in pg.inner_text("#licModal"), "licencia MIT y créditos de terceros visibles")
     pg.keyboard.press("Escape")
-    comprobar(pg.is_visible("#welcomeBox") and pg.locator("#welcomeBox [data-welcome]").count() == 5, "la primera vez se muestran los «Primeros pasos»")
+    comprobar(pg.is_visible("#welcomeBox") and pg.locator("#welcomeBox [data-welcome]").count() == 6, "la primera vez se muestran los «Primeros pasos» (también «Guíame paso a paso»)")
     pg.click('#welcomeBox [data-welcome="puzzles"]')
     comprobar(not pg.is_visible("#welcomeBox") and pg.is_visible("#puzzleStartBtn") and pg.evaluate("settings.welcomed === true"), "un acceso de «Primeros pasos» lleva a su sitio (problemas) y cierra el panel")
     pg.click("#welcomeBtn")
@@ -2892,6 +2892,12 @@ def prueba_recorrido_guiado(browser):
     pg.click("#flowGuide [data-flow=first]")
     comprobar(pg.evaluate("cur().san") == "Nf6" and "Momento crítico 1 de 1" in pg.inner_text("#flowGuide") and "3...Cf6??" in pg.inner_text("#flowGuide"),
               "«Revisar el primer momento crítico» lleva el tablero a esa jugada (3...Cf6??)")
+    # 🔬 Más a fondo rehace el informe: si la jugada ya no es crítica, la cuenta se pone al día y se dice
+    pg.evaluate("ui.report.key = []; flowRefreshMoments()")
+    comprobar("ya no es un momento crítico" in pg.inner_text("#flowGuide") and "No queda ningún momento crítico" in pg.inner_text("#flowGuide"),
+              "tras «Más a fondo», la cuenta de momentos críticos se pone al día")
+    pg.evaluate("ui.report = buildGameReport(ui.analysedLine); flowRefreshMoments()")
+    comprobar("Momento crítico 1 de 1" in pg.inner_text("#flowGuide"), "…y vuelve a contar si recupera el momento")
     pg.click("#flowGuide [data-flow=practice]")
     pg.wait_for_function("Retry.active", timeout=10000)
     comprobar(pg.is_hidden("#flowGuide"), "«Practicar» empieza el repaso de los errores y la sugerencia se retira")
@@ -2947,6 +2953,73 @@ def prueba_descriptiva(browser):
     comprobar(pg.is_visible("#descPick") and pg.evaluate("DescPick.ucis.join()") == "c4d5,e4d5", "si lo escrito admite varias jugadas, se elige")
     pg.locator('#descPick [data-dp="c4d5"]').click()
     comprobar(pg.evaluate("cur().san") == "cxd5" and pg.is_hidden("#descPick"), "…con su botón")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
+def prueba_rutas(browser):
+    print("1.64: 🧭 rutas guiadas por objetivo")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.evaluate("$('welcomeBox').hidden = true; settings.analysisMs = 200; settings.live = false; saveSettings()")
+    pg.click("#routesBtn")
+    comprobar(pg.is_visible("#routeCard") and pg.locator("#routeCard [data-route-start]").count() == 5 and "¿Qué quieres hacer?" in pg.inner_text("#routeCard"), "🧭 Guíame ofrece cinco objetivos")
+    pg.click('#routeCard [data-route-start="revisar"]')
+    txt = pg.inner_text("#routeCard")
+    comprobar("Revisar una partida mía" in txt and "Paso 1 de 5" in txt and "Trae la partida" in txt, "la ruta empieza por el primer paso, con el porqué")
+    comprobar(pg.evaluate("$('moveInput').classList.contains('route-target') && $('importDetails').open"), "«Llévame» abre donde hay que ir y resalta lo que hay que usar")
+    # Paso 1 → 2: al importar, avanza solo
+    pg.fill("#moveInput", '[White "Ana"]\n[Black "Beto"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0')
+    pg.click("#importBtn")
+    pg.wait_for_function("document.getElementById('routeCard').textContent.includes('Paso 2 de 5')", timeout=5000)
+    comprobar("Analízala con el motor" in pg.inner_text("#routeCard"), "al importar la partida, pasa solo al paso 2")
+    pg.click('#routeCard [data-route="go"]')
+    comprobar(pg.evaluate("$('autoAnnotateBtn').classList.contains('route-target')"), "resalta «🤖 Analizar y comentar»")
+    pg.click("#autoAnnotateBtn")
+    pg.wait_for_function("document.getElementById('routeCard').textContent.includes('Paso 3 de 5')", timeout=180000)
+    pg.click("#flowGuide [data-flow=first]")
+    pg.wait_for_function("document.getElementById('routeCard').textContent.includes('Paso 4 de 5')", timeout=5000)
+    comprobar("Practica tus errores" in pg.inner_text("#routeCard"), "revisar el primer momento crítico completa el paso 3")
+    pg.locator("#retryStart button:not([disabled])").first.click()
+    pg.wait_for_function("document.getElementById('routeCard').textContent.includes('Paso 5 de 5')", timeout=5000)
+    pg.evaluate("retryEnd(true)")
+    pg.click("#saveGame")
+    pg.wait_for_function("document.getElementById('routeCard').textContent.includes('Ruta terminada')", timeout=5000)
+    comprobar("Estadísticas" in pg.inner_text("#routeCard"), "al guardar, la ruta termina y propone qué hacer después")
+    pg.click('#routeCard [data-route="exit"]')
+    comprobar(pg.is_hidden("#routeCard") and pg.evaluate("localStorage.getItem('ajedrezRuta')") == "null", "se puede salir")
+    # Otra ruta: minimizar, seguir tras recargar, «Hecho» y «Saltar»
+    pg.click("#routesBtn")
+    pg.click('#routeCard [data-route-start="finales"]')
+    pg.click('#routeCard [data-route="min"]')
+    comprobar("Estudiar finales · paso 1 de 4" in pg.inner_text("#routeCard"), "se minimiza a una pastilla con el paso")
+    pg.reload()
+    pg.wait_for_function("typeof Lib !== 'undefined' && Lib.ready", timeout=20000)
+    pg.wait_for_selector("#routeCard .route-pill", timeout=5000)
+    pg.click("#routeCard .route-pill")
+    comprobar("Aprende los finales básicos" in pg.inner_text("#routeCard"), "al recargar la página, sigue en el mismo paso")
+    pg.click('#routeCard [data-route="skip"]')
+    pg.click('#routeCard [data-route="go"]')
+    comprobar(pg.evaluate("ui.activeTab") == "endgames" and pg.evaluate("$('endgamePresets').classList.contains('route-target')"), "«Saltar» pasa al siguiente y «Llévame» va a la pestaña de finales")
+    pg.locator("#endgamePresets button").first.click()
+    pg.wait_for_function("document.getElementById('routeCard').textContent.includes('Paso 3 de 4')", timeout=5000)
+    comprobar("defensa perfecta" in pg.inner_text("#routeCard"), "elegir un final fundamental completa el paso")
+    pg.evaluate("Route.i = 3; routeRender()")
+    pg.click('#routeCard [data-route="next"]')
+    comprobar("Ruta terminada" in pg.inner_text("#routeCard"), "los pasos que no se pueden comprobar se marcan con «✔ Hecho»")
+    pg.click('#routeCard [data-route="exit"]')
+    # Todos los pasos de todas las rutas llevan a algo que existe y se ve
+    rotos = pg.evaluate("""() => { const out = [];
+      for (const r of ROUTES) r.steps.forEach((st, k) => { try { st.go && st.go(); } catch (e) { out.push(r.id + k + ': ' + e.message); return; }
+        if (!routeVisible(st.target)) out.push(r.id + ' paso ' + (k + 1) + ': ' + st.target); });
+      switchTab('study'); return out; }""")
+    comprobar(not rotos, "los 25 pasos de las cinco rutas llevan a un botón o recuadro visible" + (": " + "; ".join(rotos) if rotos else ""))
+    # También desde la bienvenida
+    pg.evaluate("showWelcome(true)")
+    pg.click('[data-welcome="routes"]')
+    comprobar(pg.locator("#routeCard [data-route-start]").count() == 5, "también se abre desde la bienvenida")
+    comprobar(pg.evaluate("cmdCommands().filter(c => c.name.startsWith('🧭')).length") == 6, "y desde el buscador (Ctrl+K): «Guíame» y cada ruta")
     comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
     ctx.close()
 
@@ -3753,7 +3826,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_descriptiva, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_recorrido_guiado, prueba_descriptiva, prueba_rutas, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

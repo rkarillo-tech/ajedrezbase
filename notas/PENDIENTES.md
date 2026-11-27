@@ -55,6 +55,14 @@ Todos los puntos se han comprobado en el código. E1–E5 son fallos; E6–E9, m
 - ✅ **E8** (1.62.0). Recorrido guiado: tras importar, confirmación visible («Partida cargada · 32 jugadas») con «Analizar y comentar»; al terminar, «Revisar el primer momento crítico» y después «Practicar». Sugerencias que se pueden ignorar, no un asistente. Hoy el mensaje de importación queda dentro de la sección plegable del PGN.
 - ✅ **E9** (1.63.0). Notación descriptiva española (`P4R`, `C3AR`, `PxP`) como modo de entrada aparte: filas contadas desde cada bando, jugada estándar al lado en la planilla y, si una captura es ambigua, elegir en el tablero. Guardar en PGN estándar. Es la más costosa.
 
+## F. Guía por la aplicación (petición del 27/11/2026)
+
+Hay muchas herramientas y no es fácil saber cuál usar en cada caso ni en qué orden.
+
+- ✅ **F1** (1.64.0). **Rutas por objetivo** («🧭 Guíame»): revisar una partida mía, estudiar una apertura, mejorar la táctica, estudiar finales y estudiar una partida de un libro o de un maestro. Tarjeta de pasos con «Llévame» (abre la pestaña y resalta el botón), avance automático cuando se puede comprobar y «Hecho» cuando no (`src/app/33-rutas.js`).
+- **F2**. **Sugerencias según el momento**: extender el recuadro «🧭 siguiente paso» (`31-recorrido.js`), que hoy sólo cubre importar → analizar → revisar → practicar, a otros momentos: al terminar una sesión de problemas o el examen, al acabar una partida contra la CPU, al terminar una lección o un curso y al abrir una partida de la biblioteca.
+- **F3**. Más rutas si hacen falta: preparar una partida contra un rival (Preparar un rival + sorpresas), entrenamiento diario (📅 Hoy + entrenador IA), mejorar el cálculo (a ciegas y visualización).
+
 ## Orden previsto
 
 1. ✅ 1.52.1: A1 y A2.
@@ -68,4 +76,5 @@ Todos los puntos se han comprobado en el código. E1–E5 son fallos; E6–E9, m
 9. ✅ 1.61.0: E7.
 10. ✅ 1.62.0: E8.
 11. ✅ 1.63.0: E9.
-12. Después: B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
+12. ✅ 1.64.0: F1.
+13. Después: F2 y F3; B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.

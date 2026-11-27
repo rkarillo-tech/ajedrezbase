@@ -166,6 +166,7 @@ function guessStop() {
   $("guessBadge").className = "srs-pill";
 }
 function guessFinish() {
+  routeEvent("guess-done");
   if (!Guess.active) return;
   if (Guess.n) logActivity("guess");
   const complete = Guess.i >= Guess.line.length;

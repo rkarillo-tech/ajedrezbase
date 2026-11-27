@@ -811,6 +811,7 @@ function renderCatChips() {
   }
 }
 async function saveMark() {
+  routeEvent("mark");
   const ctx = ui.markCtx;
   if (!ctx) return;
   const node = ctx.node;
