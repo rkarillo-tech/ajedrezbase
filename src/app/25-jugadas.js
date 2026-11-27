@@ -148,6 +148,7 @@ function updateEvalBar(ev) {
   if (!ev || quiz()) return;
   const w = winPct(ev);
   $("evalBarWhite").style.height = Math.max(2, Math.min(98, w)) + "%";
+  outer.title = `Evaluación (blanco = ventaja de las blancas). 🎲 ${fmtChances(ev)}`;
   const txt = ev.mate != null ? (ev.mate === 0 ? "#" : "#" + Math.abs(ev.mate)) : (Math.abs(ev.cp) >= 1000 ? Math.round(Math.abs(ev.cp) / 100) : (Math.abs(ev.cp) / 100).toFixed(1));
   const whiteBetter = w >= 50;
   // El texto aparece en el extremo del bando que lleva ventaja
@@ -239,7 +240,7 @@ function evalVerdict(ev) {
 function renderVerdict(ev) {
   const el = $("engineVerdict");
   el.hidden = !ev || quiz();
-  if (!el.hidden) el.innerHTML = `<b>${esc(fmtEval(ev))}</b> · ${esc(evalVerdict(ev))}`;
+  if (!el.hidden) el.innerHTML = `<b>${esc(fmtEval(ev))}</b> · ${esc(evalVerdict(ev))}${chances(ev) ? `<div class="small chances" title="${chances(ev).exact ? "Probabilidades que calcula Stockfish" : "Estimación a partir de la evaluación: este motor no calcula probabilidades"}">🎲 ${esc(fmtChances(ev))}</div>` : ""}`;
 }
 /* ⚖ La jugada que lleva a la posición actual frente a la que proponía el motor */
 const Compare = { busy: false };
@@ -249,7 +250,7 @@ function renderCompare(job) {
   if (!p || quiz() || editor.active) { el.hidden = true; return; }
   el.hidden = false;
   const san = numPrefix(p.state) + dispSan(n);
-  const live = job && job.lines && job.lines[0] ? { cp: job.lines[0].cp, mate: job.lines[0].mate, winner: job.lines[0].winner } : null;
+  const live = job && job.lines && job.lines[0] ? { cp: job.lines[0].cp, mate: job.lines[0].mate, winner: job.lines[0].winner, wdl: job.lines[0].wdl, pv: job.lines[0].pv } : null;
   const after = terminalEval(n) || n.eval || live;
   if (Compare.busy) { el.innerHTML = `⚖ ⏳ Comparando <b>${esc(san)}</b> con la jugada del motor…`; return; }
   if (p.eval && p.eval.best === n.uci) { el.innerHTML = `⚖ ★ <b>${esc(san)}</b> es la jugada que propone el motor (${esc(fmtEval(p.eval))}).`; return; }
@@ -266,6 +267,7 @@ function renderCompare(job) {
   const label = (eco ? `📖 Teoría: ${eco.eco} ${eco.name} · ` : "") + (COMPARE_LABEL[c.cls] || (c.loss < 2 ? "✔ Excelente: casi como la del motor" : "✔ Buena jugada"));
   const lost = after.mate == null && p.eval.mate == null ? ` · pierdes ${(c.cpl / 100).toFixed(2).replace(".", ",")} peones` : "";
   el.innerHTML = `⚖ <b>${esc(san)}</b> → ${esc(fmtEval(after))} · la del motor, <b>${esc(bestSan)}</b> → ${esc(fmtEval(p.eval))}${lost}<br><b>${esc(label)}</b>${live && !n.eval ? ` <span class="small">(provisional, el motor sigue calculando)</span>` : ""}
+    ${(() => { const d = chancesDrop(p.eval, after, p.state.t, p.state.t === 1 ? "de las blancas" : "de las negras"); return d ? `<div class="small chances">🎲 ${esc(d)}</div>` : ""; })()}
     ${["?!", "?", "??"].includes(c.cls) ? cmpWhy(p, n, after, bm) : ""}
     ${ui.deepNote && ui.deepNote.id === n.id ? `<div class="small deep-note">${esc(ui.deepNote.text)}</div>` : `<div class="small">${esc(evalOrigin(p.eval) ? "Calculada con " + evalOrigin(p.eval).label + "." : "")}</div>`}
     <div class="controls"><button class="sm-btn" data-cmp="best" title="Vuelve a la posición anterior y juega la del motor, como variante">↪ Probar la del motor</button> <button class="sm-btn" data-cmp="deep" title="Recalcula esta jugada con ${esc(fmtMs(DEEP_MS()))} por posición">🔬 Más a fondo</button></div>`;
@@ -282,7 +284,7 @@ function cmpWhy(p, n, after, bm) {
   const good = p.eval.pv && p.eval.pv.length ? motifGood(p.state, p.eval.pv, p.eval) : "";
   if (!bad && !good) return "";
   const bestTxt = bm ? numPrefix(p.state) + formatSan(Chess.san(p.state, bm), settings.lang, p.state.t) : "";
-  return `<div class="small cmp-why">${bad ? `❌ ${esc(bad)}` : ""}${bad && good ? "<br>" : ""}${good ? `✔ ${esc(bestTxt)}: ${esc(good)}.` : ""}</div>`;
+  return `<div class="small cmp-why">${bad ? `❌ ${esc(bad)}` : ""}${bad && good ? "<br>" : ""}${good ? `✔ ${esc(bestTxt)} — ${esc(good)}.` : ""}</div>`;
 }
 async function compareWithEngine() {
   const n = cur(), p = n.parent;
@@ -301,8 +303,8 @@ function showEngineFor(node, job) {
   renderCompare(job);
   if (job && job.lines && job.lines.length) {
     const l0 = job.lines[0];
-    renderVerdict({ cp: l0.cp, mate: l0.mate, winner: l0.winner });
-    updateEvalBar({ cp: l0.cp, mate: l0.mate, winner: l0.winner });
+    renderVerdict({ cp: l0.cp, mate: l0.mate, winner: l0.winner, wdl: l0.wdl });
+    updateEvalBar({ cp: l0.cp, mate: l0.mate, winner: l0.winner, wdl: l0.wdl });
     renderEngineLines(job.lines, node);
     $("engineMeta").textContent = `prof. ${job.depth || 0}` + (job.nps ? ` · ${Math.round(job.nps / 1000)} kN/s` : "");
     if (l0.pv[0]) { ui.engineArrow = { node, from: Chess.sqIdx(l0.pv[0].slice(0, 2)), to: Chess.sqIdx(l0.pv[0].slice(2, 4)) }; renderShapes(); }

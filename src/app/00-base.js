@@ -131,6 +131,33 @@ function winPct(ev) {
   return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * ev.cp)) - 1);
 }
 
+/* 🎲 Probabilidades de victoria, tablas y derrota, desde las blancas. Stockfish 19 las calcula (UCI_ShowWDL, en
+   milésimas); sin ellas (motor de respaldo, evaluaciones de un PGN) sólo se puede estimar la puntuación esperada
+   a partir de la evaluación, y se dice que es una estimación (≈) */
+function chances(ev) {
+  if (!ev) return null;
+  if (ev.mate != null) { const white = ev.mate === 0 ? ev.winner === 1 : ev.mate > 0; return { w: white ? 100 : 0, d: 0, l: white ? 0 : 100, exact: true }; }
+  if (ev.wdl) { const [w, d, l] = ev.wdl; return { w: Math.round(w / 10), d: Math.round(d / 10), l: Math.round(l / 10), exact: true }; }
+  return ev.cp == null ? null : { score: Math.round(winPct(ev)), exact: false };
+}
+function fmtChances(ev) {
+  const c = chances(ev);
+  if (!c) return "";
+  return c.exact ? `Blancas ganan ${c.w} % · tablas ${c.d} % · negras ganan ${c.l} %` : `≈ ${c.score} % de los puntos para las blancas (estimado)`;
+}
+/* Opciones de ganar de un bando (con probabilidades) o su puntuación esperada estimada; exact dice cuál es */
+function sideChance(ev, side) {
+  const c = chances(ev);
+  if (!c) return null;
+  return c.exact ? { v: side === 1 ? c.w : c.l, exact: true } : { v: side === 1 ? c.score : 100 - c.score, exact: false };
+}
+/* «Las opciones de ganar de las blancas bajan del 70 % al 15 %» (sólo si las dos son probabilidades del motor) */
+function chancesDrop(before, after, side, who) {
+  const a = sideChance(before, side), b = sideChance(after, side);
+  if (!a || !b || !a.exact || !b.exact || Math.abs(a.v - b.v) < 5) return "";
+  return `Las opciones de ganar ${who} ${b.v < a.v ? "bajan" : "suben"} del ${a.v} % al ${b.v} %.`;
+}
+
 /* ---------- 3. Piezas ---------- */
 /*__PIECES__*/
 
