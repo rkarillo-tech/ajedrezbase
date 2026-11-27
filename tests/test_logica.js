@@ -602,6 +602,30 @@ seccion("🎯 Motivos tácticos sin IA (1.66)", () => {
     "el comentario del análisis da el motivo de la buena y el de la mala");
 });
 
+seccion("🎲 Probabilidades de victoria, tablas y derrota (1.67)", () => {
+  const r = JSON.parse(E.ev(`JSON.stringify((() => {
+    // Lo que manda Stockfish con UCI_ShowWDL: milésimas desde el bando que mueve (aquí, las negras)
+    const prev = Engine.running, job = { stm: -1, lines: [] };
+    Engine.running = job;
+    Engine.onLine("info depth 18 seldepth 25 multipv 1 score cp 40 wdl 520 400 80 nodes 1000 nps 100000 time 10 pv e7e5 g1f3");
+    Engine.running = prev;
+    const l = job.lines[0];
+    const fen = "rnbqkb1r/pp2pppp/5n2/1N1p4/5B2/3pP3/PPP2PPP/R2QKBNR w KQkq - 0 6";
+    const g = Pgn.parseGame('[FEN "' + fen + '"]\\n\\n6. Nd6+ exd6 *', { lang: "en" }).game, n = g.root.children[0];
+    g.root.eval = { cp: 380, best: "b5c7", pv: ["b5c7", "e8d7", "c7a8"], depth: 20, wdl: [905, 90, 5] };
+    n.eval = { cp: -600, best: "e7d6", pv: ["e7d6", "f1d3"], depth: 20, wdl: [2, 40, 958] };
+    const sinWdl = Pgn.parseGame('[FEN "' + fen + '"]\\n\\n6. Nd6+ exd6 *', { lang: "en" }).game, n2 = sinWdl.root.children[0];
+    sinWdl.root.eval = { cp: 380, best: "b5c7", pv: ["b5c7"], depth: 20 }; n2.eval = { cp: -600, best: "e7d6", pv: ["e7d6"], depth: 20 };
+    return { cp: l.cp, wdl: l.wdl, exacta: fmtChances({ cp: 40, wdl: [620, 300, 80] }), estimada: fmtChances({ cp: 0 }), mate: fmtChances({ mate: -2 }),
+      comentario: buildComment(n, classifyMove(n)), comentario2: buildComment(n2, classifyMove(n2)), poco: chancesDrop({ cp: 0, wdl: [300, 400, 300] }, { cp: -5, wdl: [280, 420, 300] }, 1, "de las blancas") };
+  })())`));
+  comprobar(r.cp === -40 && JSON.stringify(r.wdl) === "[80,400,520]", "lee las probabilidades de Stockfish (wdl) y las pasa a la perspectiva de las blancas");
+  comprobar(r.exacta === "Blancas ganan 62 % · tablas 30 % · negras ganan 8 %" && r.mate === "Blancas ganan 0 % · tablas 0 % · negras ganan 100 %", "las muestra en porcentajes");
+  comprobar(r.estimada.startsWith("≈ 50 % de los puntos para las blancas (estimado)"), "sin probabilidades del motor, una estimación que dice que lo es");
+  comprobar(r.comentario.includes("Las opciones de ganar de las blancas bajan del 91 % al 0 %."), "el comentario de un error dice cuánto bajan las opciones de ganar");
+  comprobar(!r.comentario2.includes("opciones de ganar") && r.poco === "", "sin probabilidades del motor (o si apenas cambian) no se dice nada");
+});
+
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log(`\nTodas las pruebas de lógica superadas (${((Date.now() - t0) / 1000).toFixed(1)} s).`);
 process.exit(0);

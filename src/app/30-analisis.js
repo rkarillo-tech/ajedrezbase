@@ -139,7 +139,11 @@ function buildComment(n, info) {
     const pe = p.eval, ne = info.after || n.eval;
     if (pe.mate != null && pe.mate * mover > 0 && !(ne.mate != null && ne.mate * mover > 0)) s += ` Se escapa un mate en ${Math.abs(pe.mate)}.`;
     else if (ne.mate != null && ne.mate !== 0 && ne.mate * mover < 0) s += ` Permite mate en ${Math.abs(ne.mate)}.`;
-    else s += ` La valoración pasa de ${fmtEval(pe)} a ${fmtEval(ne)}.`;
+    else {
+      s += ` La valoración pasa de ${fmtEval(pe)} a ${fmtEval(ne)}.`;
+      const drop = chancesDrop(pe, ne && ne.wdl ? ne : n.eval, mover, mover === 1 ? "de las blancas" : "de las negras");   // 🎲 si el motor dio probabilidades
+      if (drop) s += " " + drop;
+    }
     if (pe.best && pe.best !== n.uci) {
       const bpv = pe.pv && pe.pv.length ? pe.pv : [pe.best], txt = lineText(p.state, bpv, 5), good = motifGood(p.state, bpv, pe);
       if (txt) s += ` Era mejor ${txt}${good ? ` (${good})` : ""}.`;

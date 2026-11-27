@@ -156,7 +156,7 @@ const Engine = {
         this.note = "";
         if (!this.fromCache && !servedOverHttp()) saveEngineCopy(this.def);
       }
-      if (this.kind === "stockfish") this.send("setoption name Hash value 32");
+      if (this.kind === "stockfish") { this.send("setoption name Hash value 32"); this.send("setoption name UCI_ShowWDL value true"); }   // 🎲 probabilidades (Stockfish 12 o posterior)
       setEngineBadge("⚙ " + this.name + (this.note ? " ⚠" : ""), this.note);
       renderEngineStatus();
       this.pump();
@@ -178,6 +178,8 @@ const Engine = {
       const L = { depth, pv };
       if (kind === "mate") { L.mate = val * job.stm; if (val === 0) { L.mate = 0; L.winner = -job.stm; } }
       else L.cp = val * job.stm;
+      const wi = tk.indexOf("wdl");   // victoria, tablas y derrota en milésimas, desde el bando que mueve → desde las blancas
+      if (wi >= 0 && tk[wi + 3] != null) { const w = +tk[wi + 1], d = +tk[wi + 2], l = +tk[wi + 3]; if ([w, d, l].every(Number.isFinite)) L.wdl = job.stm === 1 ? [w, d, l] : [l, d, w]; }
       job.lines[mpv - 1] = L;
       job.depth = Math.max(job.depth || 0, depth);
       job.nps = +(get("nps") || 0) || (get("time") && +get("time") ? Math.round(+get("nodes") / (+get("time") / 1000)) : 0);
@@ -305,10 +307,10 @@ function storeEval(node, job, force) {
   const prev = node.eval;
   if (!force && prev && prev.source !== "pgn" && (prev.depth || 0) > l0.depth) return;
   node.eval = {
-    cp: l0.cp, mate: l0.mate, winner: l0.winner, depth: l0.depth, best: l0.pv[0] || job.best, pv: l0.pv.slice(0, 14),
-    second: job.lines[1] ? { cp: job.lines[1].cp, mate: job.lines[1].mate, uci: job.lines[1].pv[0] } : null, source: Engine.kind,
+    cp: l0.cp, mate: l0.mate, winner: l0.winner, depth: l0.depth, best: l0.pv[0] || job.best, pv: l0.pv.slice(0, 14), wdl: l0.wdl,
+    second: job.lines[1] ? { cp: job.lines[1].cp, mate: job.lines[1].mate, uci: job.lines[1].pv[0], wdl: job.lines[1].wdl } : null, source: Engine.kind,
     engine: Engine.name || "", ms: +job.movetime || 0,   // para decir en el informe cómo se obtuvo
-    lines: job.lines.filter(Boolean).map(l => ({ cp: l.cp, mate: l.mate, winner: l.winner, depth: l.depth, pv: l.pv.slice(0, 14) })), done: job.purpose === "live"
+    lines: job.lines.filter(Boolean).map(l => ({ cp: l.cp, mate: l.mate, winner: l.winner, depth: l.depth, pv: l.pv.slice(0, 14), wdl: l.wdl })), done: job.purpose === "live"
   };
 }
 

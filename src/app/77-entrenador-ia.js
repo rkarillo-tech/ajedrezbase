@@ -407,7 +407,7 @@ function coachShowSolution() {
 /* Por qué funciona la mejor jugada, sin IA (29-motivos.js) */
 function coachWhyGood(ex) {
   const g = motifGood(ex.node.state, ex.line, ex.bestEv);
-  return g ? `<b>${esc(coachSan(ex.node.state, ex.best))}</b>: ${esc(g)}. ` : "";
+  return g ? `<b>${esc(coachSan(ex.node.state, ex.best))}</b> — ${esc(g)}. ` : "";
 }
 async function coachExplain(what) {
   const ex = Coach.ex;
