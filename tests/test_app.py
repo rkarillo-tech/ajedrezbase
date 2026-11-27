@@ -2892,6 +2892,12 @@ def prueba_recorrido_guiado(browser):
     pg.click("#flowGuide [data-flow=first]")
     comprobar(pg.evaluate("cur().san") == "Nf6" and "Momento crítico 1 de 1" in pg.inner_text("#flowGuide") and "3...Cf6??" in pg.inner_text("#flowGuide"),
               "«Revisar el primer momento crítico» lleva el tablero a esa jugada (3...Cf6??)")
+    # 🔬 Más a fondo rehace el informe: si la jugada ya no es crítica, la cuenta se pone al día y se dice
+    pg.evaluate("ui.report.key = []; flowRefreshMoments()")
+    comprobar("ya no es un momento crítico" in pg.inner_text("#flowGuide") and "No queda ningún momento crítico" in pg.inner_text("#flowGuide"),
+              "tras «Más a fondo», la cuenta de momentos críticos se pone al día")
+    pg.evaluate("ui.report = buildGameReport(ui.analysedLine); flowRefreshMoments()")
+    comprobar("Momento crítico 1 de 1" in pg.inner_text("#flowGuide"), "…y vuelve a contar si recupera el momento")
     pg.click("#flowGuide [data-flow=practice]")
     pg.wait_for_function("Retry.active", timeout=10000)
     comprobar(pg.is_hidden("#flowGuide"), "«Practicar» empieza el repaso de los errores y la sugerencia se retira")

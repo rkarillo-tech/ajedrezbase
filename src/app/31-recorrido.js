@@ -30,9 +30,24 @@ function flowAnalysed() {
 function flowMySide() {
   try { return colorOfMe({ white: game.headers.White || "", black: game.headers.Black || "" }, myNameList()); } catch { return 0; }
 }
+/* Tras «🔬 Más a fondo» el informe se rehace y los momentos críticos pueden cambiar: se recuentan y, si la jugada
+   que estabas revisando ya no lo es, se dice y «Siguiente momento» lleva al siguiente que sí lo sea */
+function flowRefreshMoments() {
+  if (Flow.game !== game || !ui.report || !["analysed", "reviewing"].includes(Flow.step)) return;
+  const depth = n => Pgn.pathTo(n).length, was = Flow.off || Flow.moments[Flow.i];
+  Flow.moments = ui.report.key.map(x => x.n).filter(n => n.parent).sort((a, b) => depth(a) - depth(b));
+  Flow.off = null;
+  if (Flow.step === "reviewing" && was) {
+    const j = Flow.moments.indexOf(was);
+    if (j >= 0) Flow.i = j;
+    else { Flow.off = was; Flow.i = Flow.moments.filter(n => depth(n) < depth(was)).length - 1; }
+  }
+  renderFlow();
+}
 function flowGo(i) {
   const n = Flow.moments[i];
   if (!n) return;
+  Flow.off = null;
   Flow.i = i;
   Flow.step = "reviewing";
   goTo(n);
@@ -65,9 +80,12 @@ function renderFlow() {
     html = `<span class="flow-msg">✔ <b>Análisis terminado</b> · ${k ? `${k} momento${k === 1 ? "" : "s"} crítico${k === 1 ? "" : "s"}` : "ningún momento crítico: ninguna jugada cambió el rumbo de la partida"}${all ? ` · ${all} error${all === 1 ? "" : "es"} para practicar` : ""}</span>
       <span class="flow-next">${k ? `Siguiente paso: <button type="button" class="sm-btn primary" data-flow="first" title="Lleva el tablero a la primera jugada que cambió el rumbo de la partida">📍 Revisar el primer momento crítico</button>` : ""}${practice}</span>`;
   } else if (Flow.step === "reviewing") {
-    const k = Flow.moments.length, n = Flow.moments[Flow.i];
+    const k = Flow.moments.length, n = Flow.off || Flow.moments[Flow.i];
     const lbl = n && n.parent ? numPrefix(n.parent.state) + dispSan(n) + (n.nag || "") : "";
-    html = `<span class="flow-msg">📍 <b>Momento crítico ${Flow.i + 1} de ${k}</b>${lbl ? `: <button type="button" class="link-btn" data-flow="here" title="Volver a esta jugada">${esc(lbl)}</button>` : ""}. Lee el comentario y prueba la buena en el tablero.</span>
+    html = Flow.off
+      ? `<span class="flow-msg">📍 Tras recalcularla, <b>${esc(lbl)}</b> ya no es un momento crítico. ${k ? `Quedan ${k} momento${k === 1 ? "" : "s"} crítico${k === 1 ? "" : "s"}.` : "No queda ningún momento crítico."}</span>`
+      : `<span class="flow-msg">📍 <b>Momento crítico ${Flow.i + 1} de ${k}</b>${lbl ? `: <button type="button" class="link-btn" data-flow="here" title="Volver a esta jugada">${esc(lbl)}</button>` : ""}. Lee el comentario y prueba la buena en el tablero.</span>`;
+    html += `
       <span class="flow-next">${Flow.i + 1 < k ? `<button type="button" class="sm-btn" data-flow="next">▶ Siguiente momento</button>` : `<span class="small">Era el último.</span>`}${practice ? ` ${Flow.i + 1 < k ? "" : "Siguiente paso: "}${practice}` : ""}</span>`;
   }
   box.innerHTML = html + close;

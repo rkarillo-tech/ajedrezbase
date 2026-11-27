@@ -304,6 +304,7 @@ async function deepAnalyse(n) {
     ui.report.prov = analysisProvenance(nodes, ui.reportRun.fresh, ui.reportRun.change);
     if (!ui.reportRun.variation) { game.analysis = analysisSummary(ui.report, game.root, "motor"); game.analysis.prov = ui.report.prov.text; }
     renderGameReport();
+    flowRefreshMoments();   // 🧭 la cuenta de momentos críticos del recorrido, al día
   }
   $("analysisStatus").textContent = text;
   markDirty();
