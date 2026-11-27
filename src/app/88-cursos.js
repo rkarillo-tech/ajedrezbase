@@ -181,7 +181,7 @@ function placeTrainFeedback() {
    tablero, para no tener que bajar la página; en el móvil, en horizontal y a pantalla completa, debajo del tablero */
 const movesHome = { next: $("exportControls") };
 function placeMovesDock() {
-  const dock = $("movesDock"), side = sideLayout(), els = [$("moves"), $("varControls"), $("gameMarksBox")];
+  const dock = $("movesDock"), side = sideLayout(), els = [$("flowGuide"), $("moves"), $("varControls"), $("gameMarksBox")];
   if (side && els[0].parentElement !== dock) dock.append(...els);
   if (!side && els[0].parentElement === dock) els.forEach(el => movesHome.next.parentElement.insertBefore(el, movesHome.next));
   dock.hidden = !side;

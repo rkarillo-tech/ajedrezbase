@@ -111,6 +111,7 @@ Además, si en la respuesta aparece alguna jugada que no viene de nada comprobad
 - En **⚙ Ajustes** puedes elegir el motor (automático, Stockfish 10 o sólo el interno), el tiempo por jugada y el número de líneas.
 
 ## 🤖 6. Analizar una partida completa y leer el gráfico
+- **🧭 El siguiente paso.** Encima de las jugadas, una sugerencia te acompaña desde que importas una partida hasta que practicas tus errores: «✔ Partida cargada · 32 jugadas» con **🤖 Analizar y comentar**; al terminar el análisis, **📍 Revisar el primer momento crítico** (y luego **▶ Siguiente momento**) y **🎯 Practicar**, con tus errores si tu nombre está en «Mis nombres». No interrumpe nada: puedes ignorarla, cerrarla con ✖ o desactivarla en ⚙ Ajustes › 🎨 Apariencia.
 - **🤖 Analizar y comentar** (pestaña Estudio) evalúa todas las jugadas de la línea principal y:
   - marca las jugadas: ?? error grave, ? error, ?! imprecisión, ! jugada única;
   - escribe comentarios en las jugadas críticas (cuál era mejor, cuál es la refutación, si se deja material o un mate);

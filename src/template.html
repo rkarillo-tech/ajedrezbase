@@ -509,6 +509,10 @@ button:disabled { opacity: .35; cursor: not-allowed; }
 .move-compare { padding: 6px 9px; font-size: .82rem; border-bottom: 1px solid var(--border); background: rgba(41,182,246,.06); }
 .move-compare .controls { margin-top: 4px; }
 .threat-info { padding: 5px 9px; border-bottom: 1px solid var(--border); font-size: .8rem; color: var(--bad-text); background: rgba(239,83,80,.08); }
+.flow-guide { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 6px 0; padding: 7px 34px 7px 10px; position: relative; border: 1px solid var(--accent); border-radius: 8px; background: var(--panel2); font-size: .86rem; }
+.flow-guide .flow-next { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.flow-guide .flow-close { position: absolute; top: 4px; right: 4px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: .85rem; padding: 4px 6px; }
+.flow-guide .link-btn { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; font-weight: 600; text-decoration: underline; }
 .retry-box { margin-top: 8px; background: var(--deep-green); border: 1px solid var(--accent); border-radius: 8px; padding: 9px 11px; font-size: .86rem; }
 .retry-box:focus { outline: none; }
 .retry-head { font-weight: 800; margin-bottom: 3px; }
@@ -856,6 +860,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #statusText { order: 2; }
   #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox { order: 3; }
   #coachBox { order: 0; }
+  #flowGuide { order: 4; }
   #moves { order: 4; max-height: 32vh; }
   #varControls { order: 5; }
   #gameMarksBox { order: 5; }
@@ -910,6 +915,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   #statusText { order: 2; margin-top: 3px; }
   #retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox { order: 3; }
   #coachBox { order: 0; }
+  #flowGuide { order: 4; }
   #moves { order: 4; max-height: 52vh; max-height: 52dvh; min-height: 90px; margin-top: 4px; }
   #varControls { order: 5; }
   #gameMarksBox { order: 5; }
@@ -981,7 +987,7 @@ body.board-full #navControls { margin-top: 0; }
 body.board-full #statusText { order: 2; }
 body.board-full #coachBox { order: 0; }
 body.board-full :is(#retryBox, #cpuBox, #guessBox, #visBox, #lessonBox, #trainFeedback, #trainSessionBtns, #scanBox) { order: 3; }
-body.board-full #moves { order: 4; }
+body.board-full :is(#flowGuide, #moves) { order: 4; }
 body.board-full :is(#varControls, #gameMarksBox) { order: 5; }
 body.board-full #typeMoveRow { order: 6; }
 body.board-full :is(#engineBox, #thinkBox, #talkBox) { order: 7; }
@@ -1192,6 +1198,7 @@ body.board-full #exportControls { order: 10; }
       <input id="moveTyped" placeholder="⌨ Escribe una jugada (e4, Cf3, Axc6, O-O…) y pulsa Intro" aria-label="Escribir una jugada con el teclado" autocomplete="off" spellcheck="false">
     </div>
 
+    <div id="flowGuide" class="flow-guide" role="status" aria-live="polite" hidden></div>
     <div id="moves" class="moves-box" aria-label="Jugadas y variantes"></div>
     <div class="controls" id="varControls">
       <button id="promoteVarBtn" class="sm-btn" title="Subir esta variante un puesto">⬆ Promover variante</button>
@@ -1913,6 +1920,7 @@ body.board-full #exportControls { order: 10; }
       <option value="full">🧰 Completo: todas las herramientas a la vista</option>
       <option value="basic">🌱 Básico: menos botones (lo demás sigue en el buscador y en ⚙ Ajustes)</option>
     </select>
+    <label title="Tras importar una partida propone analizarla; al terminar, revisar el primer momento crítico y practicar los errores. Aparece encima de las jugadas y se puede cerrar"><input type="checkbox" id="setFlowGuide"> 🧭 Sugerir el siguiente paso (importar → analizar → revisar → practicar)</label>
     <label for="wsSelect">🗂 Espacios de trabajo: la distribución y las herramientas para cada cosa</label>
     <div class="gc-row">
       <select id="wsSelect" aria-label="Espacio de trabajo"></select>
