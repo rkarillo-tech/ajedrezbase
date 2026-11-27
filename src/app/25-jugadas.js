@@ -6,7 +6,7 @@ function movesSignature(marked) {
   const st = [game.root];
   while (st.length) {
     const n = st.pop();
-    s += n.id + (n.nag || "") + (n.posNag || "") + "{" + (n.comment || "") + "}";
+    s += n.id + (n.nag || "") + (n.posNag || "") + (n.nags || []).join(",") + "{" + (n.comment || "") + "}";
     for (let i = n.children.length - 1; i >= 0; i--) st.push(n.children[i]);
   }
   return s;
@@ -47,7 +47,7 @@ function renderMoves() {
     if (node.clk != null) { const sp = spentOn(node); b.title = `⏱ ${sp != null ? "tardó " + fmtSecs(sp) + " · " : ""}le quedaban ${fmtClock(node.clk * 1000)}`; }
     b.dataset.id = node.id;
     const mk = marked.get(node.id);
-    b.innerHTML = esc(dispSan(node)) + (node.nag ? `<span class="nag ${NAG_CLASS[node.nag] || ""}">${esc(node.nag)}</span>` : "") + (node.posNag ? `<span class="nag-pos">${esc(node.posNag)}</span>` : "") + (mk ? `<span class="mv-mark" title="${esc(CATS[mk.cat].name + (mk.note ? ": " + mk.note : ""))}">${CATS[mk.cat].icon}</span>` : "");
+    b.innerHTML = esc(dispSan(node)) + (node.nag ? `<span class="nag ${NAG_CLASS[node.nag] || ""}">${esc(node.nag)}</span>` : "") + (node.posNag ? `<span class="nag-pos">${esc(node.posNag)}</span>` : "") + (node.nags || []).map(c => `<span class="nag-pos" title="Símbolo PGN $${c}">${esc(Pgn.nagSymbol(c))}</span>`).join("") + (mk ? `<span class="mv-mark" title="${esc(CATS[mk.cat].name + (mk.note ? ": " + mk.note : ""))}">${CATS[mk.cat].icon}</span>` : "");
     ui.nodeMap.set(node.id, node);
     parentEl.append(b, " ");
   };
@@ -261,8 +261,10 @@ function renderCompare(job) {
   const c = classifyMove(Object.assign({}, n, { eval: after }));
   const bm = Chess.moveFromUci(p.state, p.eval.best);
   const bestSan = bm ? numPrefix(p.state) + formatSan(Chess.san(p.state, bm), settings.lang, p.state.t) : p.eval.best;
-  const label = c.book ? "📖 Jugada de teoría: no se compara" : COMPARE_LABEL[c.cls] || (c.loss < 2 ? "✔ Excelente: casi como la del motor" : "✔ Buena jugada");
-  const lost = c.book ? "" : after.mate == null && p.eval.mate == null ? ` · pierdes ${(c.cpl / 100).toFixed(2).replace(".", ",")} peones` : "";
+  // El nombre de la apertura y la valoración de la jugada, por separado: una posición de teoría también puede ser mala
+  const eco = c.book ? ECO.byKey.get(n.key) : null;
+  const label = (eco ? `📖 Teoría: ${eco.eco} ${eco.name} · ` : "") + (COMPARE_LABEL[c.cls] || (c.loss < 2 ? "✔ Excelente: casi como la del motor" : "✔ Buena jugada"));
+  const lost = after.mate == null && p.eval.mate == null ? ` · pierdes ${(c.cpl / 100).toFixed(2).replace(".", ",")} peones` : "";
   el.innerHTML = `⚖ <b>${esc(san)}</b> → ${esc(fmtEval(after))} · la del motor, <b>${esc(bestSan)}</b> → ${esc(fmtEval(p.eval))}${lost}<br><b>${esc(label)}</b>${live && !n.eval ? ` <span class="small">(provisional, el motor sigue calculando)</span>` : ""}
     <div class="controls"><button class="sm-btn" data-cmp="best" title="Vuelve a la posición anterior y juega la del motor, como variante">↪ Probar la del motor</button></div>`;
   el.querySelector("[data-cmp=best]").onclick = () => {

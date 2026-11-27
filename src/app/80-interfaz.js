@@ -377,14 +377,43 @@ $("forwardBtn").onclick = () => { stopAutoplay(); goForward(); };
 $("endBtn").onclick = goEnd;
 $("playBtn").onclick = toggleAutoplay;
 $("flipBtn").onclick = () => { ui.flipped = !ui.flipped; render(); };
-$("undoBtn").onclick = () => {
-  const n = cur();
-  if (!n.parent) return;
-  const size = Pgn.countMoves(n) + 1;
-  if (size > 6 && !confirm(`Se borrarán ${size} jugadas (esta y todo lo que sigue). ¿Continuar?`)) return;
+/* ✂ Cortar: dice qué se elimina (la variante o la continuación, cuántas jugadas y comentarios) y se puede deshacer
+   (↩ en el aviso o Ctrl+Z) mientras no cambies de partida. */
+function cutDescription(n) {
+  let plies = 0, notes = 0;
+  Pgn.walk(n, x => { plies++; if (x.comment || x.shapes.length) notes++; });
+  const p = n.parent, first = numPrefix(p.state) + dispSan(n);
+  const what = p.children[0] !== n ? `la variante ${first}` : Pgn.isMainline(n) ? `${first} y lo que sigue` : `${first} y lo que sigue en esta variante`;
+  const vars = []; Pgn.walk(n, x => { if (x.children.length > 1) vars.push(x.children.length - 1); });
+  const nVars = vars.reduce((a, b) => a + b, 0);
+  return { plies, notes, vars: nVars,
+    text: `${what} · ${plies} jugada${plies === 1 ? "" : "s"}${nVars ? `, ${nVars} variante${nVars === 1 ? "" : "s"}` : ""}${notes ? `, ${notes} con comentarios o dibujos` : ""}` };
+}
+function cutNode(n) {
+  if (!n || !n.parent) return;
+  const d = cutDescription(n);
+  if ((d.plies > 6 || d.notes) && !confirm(`¿Eliminar ${d.text}?\n\nPodrás deshacerlo con «↩ Deshacer» o Ctrl+Z mientras no cambies de partida.`)) return;
+  const p = n.parent;
+  ui.lastCut = { node: n, parent: p, idx: p.children.indexOf(n), game, text: d.text };
   goTo(Pgn.deleteNode(n));
   markDirty();
-};
+  toast(`✂ Eliminada ${d.text}.`, 8000, { label: "↩ Deshacer", run: undoCut });
+}
+function undoCut() {
+  const c = ui.lastCut;
+  ui.lastCut = null;
+  if (!c || c.game !== game) { toast("No hay nada que deshacer."); return false; }
+  let attached = false;
+  for (let x = c.parent; x; x = x.parent) if (x === game.root) attached = true;
+  if (!attached) { toast("No se puede deshacer: la jugada de la que salía también se ha eliminado."); return false; }
+  if (c.parent.children.some(x => Pgn.sameMove(x.move, c.node.move))) { toast("No se puede deshacer: has vuelto a jugar esa misma jugada desde ahí."); return false; }
+  c.parent.children.splice(Math.min(c.idx, c.parent.children.length), 0, c.node);
+  goTo(c.node);
+  markDirty();
+  toast(`↩ Recuperada ${c.text}.`);
+  return true;
+}
+$("undoBtn").onclick = () => cutNode(cur());
 $("promoteVarBtn").onclick = () => { Pgn.promote(cur()); markDirty(); render(); };
 $("mainVarBtn").onclick = () => { Pgn.makeMain(cur()); markDirty(); render(); };
 $("clearShapesBtn").onclick = () => { cur().shapes = []; markDirty(); render(); };
@@ -441,7 +470,8 @@ function graft(src, dst) {
   for (const c of src.children) {
     const d = Pgn.addMove(dst, c.move);
     if (c.nag) d.nag = c.nag;
-    if (c.posNag) d.posNag = c.posNag;
+    if (c.posNag) { d.posNag = c.posNag; d.posNagCode = c.posNagCode || 0; }
+    if (c.nags && c.nags.length) d.nags = c.nags.slice();
     if (c.comment) d.comment = c.comment;
     if (c.shapes.length) d.shapes = c.shapes.slice();
     graft(c, d);
@@ -478,7 +508,7 @@ $("annotation").addEventListener("input", debounce(() => {
 document.querySelectorAll(".nag-btn").forEach(btn => btn.onclick = () => {
   const n = cur();
   if (!n.parent) return;
-  if (btn.dataset.nag === "") { n.nag = ""; n.posNag = ""; }
+  if (btn.dataset.nag === "") { n.nag = ""; n.posNag = ""; n.posNagCode = 0; n.nags = []; }
   else n.nag = n.nag === btn.dataset.nag ? "" : btn.dataset.nag;
   n.nagAuto = false;
   markDirty();
@@ -488,6 +518,7 @@ document.querySelectorAll(".posnag-btn").forEach(btn => btn.onclick = () => {
   const n = cur();
   if (!n.parent) return;
   n.posNag = n.posNag === btn.dataset.nag ? "" : btn.dataset.nag;
+  n.posNagCode = 0;
   markDirty();
   render();
 });

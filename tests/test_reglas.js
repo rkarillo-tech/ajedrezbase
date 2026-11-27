@@ -62,6 +62,33 @@ comprobar(!r.error && r.nullSkipped === 1 && Pgn.mainlineFrom(r.game.root).lengt
 comprobar(!!Pgn.parseGame("1. e4 -- 2. d4").error, "en la línea principal, la jugada nula se avisa como error");
 comprobar(Pgn.parseGame("1. e4 a6 2. e5 d5 3. exd6 e.p. cxd6").count === 6 && Pgn.parseGame("1. e4 1… e5 2… Nc6").count === 2, "se ignoran «e.p.» y los números con «…»");
 
+console.log("Símbolos PGN (1.59.1)");
+{
+  const ida = mt => Pgn.exportPgn(Pgn.parseGame(mt, { lang: "en" }).game).trim().split("\n").pop();
+  comprobar([36, 37, 40, 41, 132, 142, 146, 22].every(c => ida(`1. e4 $${c} e5 *`) === `1. e4 $${c} e5 *`), "se conservan al exportar los símbolos sin tabla propia ($36 iniciativa, $40 ataque, $132 contrajuego, $142, $146…)");
+  const r36 = Pgn.parseGame("1. e4 $36 e5 $37 *", { lang: "en" }).game.root.children[0];
+  comprobar(r36.posNag === "→" && r36.children[0].posNag === "→" && ida("1. e4 $36 e5 $37 *") === "1. e4 $36 e5 $37 *", "$36 y $37 se ven igual («→») pero cada uno conserva su bando al exportar");
+  comprobar(ida("1. e4 $1 $14 $36 $142 e5 *") === "1. e4! $14 $36 $142 e5 *", "varios símbolos en la misma jugada");
+  comprobar(ida("1. e4 $1 $3 e5 *") === "1. e4! $3 e5 *" && ida("1. e4 $14 $16 e5 *") === "1. e4 $14 $16 e5 *", "un segundo símbolo de jugada o de posición no sustituye al primero");
+  comprobar(Pgn.nagSymbol(36) === "→" && Pgn.nagSymbol(142) === "⌓" && Pgn.nagSymbol(250) === "$250", "símbolo para enseñar cada código (o el número si no tiene)");
+}
+
+console.log("Triple repetición y captura al paso (1.59.1)");
+{
+  const fin = mt => { const g = Pgn.parseGame(mt, { lang: "en" }).game; const l = Pgn.mainlineFrom(g.root); return l[l.length - 1]; };
+  const cuenta = n => { const k = Chess.repKey(n.state); let c = 0; for (let x = n; x; x = x.parent) if (Chess.repKey(x.state) === k) c++; return c; };
+  // Tras 2...d5 se puede capturar al paso (exd6): esa posición no es igual a las que vienen después
+  const conAlPaso = fin("1. e4 Nf6 2. e5 d5 3. Nf3 Nfd7 4. Ng1 Nf6 5. Nf3 Nfd7 6. Ng1 Nf6 *");
+  comprobar(cuenta(conAlPaso) === 2, "la posición en que se podía capturar al paso no cuenta para la triple repetición");
+  comprobar(cuenta(fin("1. e4 Nf6 2. e5 d5 3. Nf3 Nfd7 4. Ng1 Nf6 5. Nf3 Nfd7 6. Ng1 Nf6 7. Nf3 Nfd7 8. Ng1 Nf6 *")) === 3, "…y la tercera repetición de verdad sí se cuenta");
+  // Casilla al paso sin captura legal (no hay peón blanco al lado): la posición sí es la misma
+  const s1 = Chess.parseFen("rnbqkbnr/ppp1pppp/8/3p4/8/5N2/PPPPPPPP/RNBQKB1R w KQkq d6 0 2"), s2 = Chess.parseFen("rnbqkbnr/ppp1pppp/8/3p4/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 2");
+  comprobar(Chess.repKey(s1) === Chess.repKey(s2), "una casilla al paso sin captura legal no cambia la posición");
+  // Captura al paso que dejaría al rey en jaque: no es legal, así que tampoco cuenta
+  const s3 = Chess.parseFen("8/8/8/K2Pp2r/8/8/8/6k1 w - e6 0 1"), s4 = Chess.parseFen("8/8/8/K2Pp2r/8/8/8/6k1 w - - 0 1");
+  comprobar(Chess.repKey(s3) === Chess.repKey(s4) && Chess.repKey(Chess.parseFen("8/8/8/3Pp3/8/8/8/K5k1 w - e6 0 1")) !== Chess.repKey(Chess.parseFen("8/8/8/3Pp3/8/8/8/K5k1 w - - 0 1")), "sólo cuenta si la captura al paso es legal (no si deja al rey en jaque)");
+}
+
 console.log("Estructura y casillas fuertes");
 {
   const s1 = Chess.parseFen("4k3/8/8/3P4/8/2P5/2P1P3/4K3 w - - 0 1");

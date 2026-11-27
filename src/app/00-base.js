@@ -26,9 +26,19 @@ function throttle(fn, ms) {
   };
 }
 let toastTimer;
-function toast(msg, ms = 2600) {
+/* action (opcional): { label, run } añade un botón al aviso, por ejemplo «↩ Deshacer» */
+function toast(msg, ms = 2600, action = null) {
   const el = $("toast");
   el.textContent = msg;
+  el.classList.toggle("has-action", !!action);
+  if (action) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "sm-btn toast-action";
+    b.textContent = action.label;
+    b.onclick = () => { el.classList.remove("show", "has-action"); clearTimeout(toastTimer); action.run(); };
+    el.append(" ", b);
+  }
   el.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), ms);

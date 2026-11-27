@@ -69,6 +69,13 @@ var Chess = (function () {
   }
   /* Clave de posición (sin contadores ni al paso): repeticiones, aperturas, comentarios */
   function posKey(s) { return `${boardFen(s)} ${s.t === 1 ? "w" : "b"} ${castleStr(s.c)}`; }
+  /* Clave para la triple repetición (FIDE 9.2.3): la misma posición exige también el mismo derecho a capturar
+     al paso, y ese derecho sólo existe si la captura es legal. Se calcula sólo cuando hay casilla al paso. */
+  function repKey(s) {
+    const k = posKey(s);
+    if (s.ep < 0) return k;
+    return legal(s).some(m => m.flag === "ep") ? `${k} ${sqName(s.ep)}` : k;
+  }
   function clone(s) { return { b: s.b.slice(), t: s.t, c: s.c, ep: s.ep, half: s.half, full: s.full }; }
 
   /* ---------------- Ataques y jaques ---------------- */
@@ -710,7 +717,7 @@ var Chess = (function () {
   }
 
   return {
-    START_FEN, FILES, VAL, on, color, sqName, sqIdx, parseFen, toFen, boardFen, posKey, clone,
+    START_FEN, FILES, VAL, on, color, sqName, sqIdx, parseFen, toFen, boardFen, posKey, repKey, clone,
     attacked, attackers, kingSq, inCheck, pseudo, legal, apply, san, sanBase, uci, moveFromUci,
     parseMove, cleanToken, insufficient, material, hash, evaluate, search, clearTT, workerMain, MATE,
     pawnStructure, bishopPair, isOutpost, nonPawnCount

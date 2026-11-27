@@ -399,8 +399,14 @@ function gameStatus(node) {
   if (!L.length) return chk ? { over: true, text: `Jaque mate · ganan las ${other}`, result: s.t === 1 ? "0-1" : "1-0" } : { over: true, text: "Rey ahogado · tablas", result: "1/2-1/2" };
   if (Chess.insufficient(s)) return { over: true, text: "Tablas por material insuficiente", result: "1/2-1/2" };
   if (s.half >= 100) return { over: true, text: "Tablas por la regla de las 50 jugadas", result: "1/2-1/2" };
+  // Con Chess.repKey: dos posiciones con las mismas piezas no son iguales si sólo en una se puede capturar al paso.
+  // Antes de la última jugada irreversible (captura o de peón) ninguna posición puede repetirse.
   let reps = 0;
-  for (let n = node; n; n = n.parent) if (n.key === node.key) reps++;
+  const key = Chess.repKey(s);
+  for (let n = node; n; n = n.parent) {
+    if (n.key === node.key && Chess.repKey(n.state) === key) reps++;
+    if (n.state.half === 0) break;
+  }
   if (reps >= 3) return { over: true, text: "Tablas por triple repetición", result: "1/2-1/2" };
   return { over: false, check: chk, text: chk ? `¡Jaque! Juegan las ${side}` : `Juegan las ${side}` };
 }

@@ -41,6 +41,20 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 - **D4**. Revisar los usos de `innerHTML` donde se pinta texto de PGN o comentarios importados (hay unos 160).
 - **D5**. Bibliotecas grandes: carga bajo demanda y lista virtualizada (hoy la biblioteca se carga entera; límite recomendado de 100 MB).
 
+## E. Auditoría externa de la 1.59.0
+
+Todos los puntos se han comprobado en el código. E1–E5 son fallos; E6–E9, mejoras.
+
+- ✅ **E1** (1.59.1). Triple repetición con captura al paso. `gameStatus` (`20-tablero.js`) compara `posKey`, que excluye la casilla al paso: con `1.e4 Cf6 2.e5 d5 3.Cf3 Cfd7 4.Cg1 Cf6 5.Cf3 Cfd7 6.Cg1 Cf6` declaraba tablas (cuenta 3; según la FIDE son 2, porque en la primera era legal `exd6`). Hace falta una clave propia para repeticiones que incluya el al paso solo si la captura es legal.
+- ✅ **E2** (1.59.1). Guardado de colecciones PGN (`saveCollGames`, `60-biblioteca.js`). Si fallaba la escritura anunciaba «N guardadas» igualmente; las partidas se marcaban con ✔ antes de escribirlas; si fallaba una tanda de 250 no decía cuántas habían entrado; y una partida que se detiene en una jugada ilegal se guardaba incompleta sin avisar. Mostrar cuántas se han guardado completas, cuáles tienen errores y cuáles quedan pendientes.
+- ✅ **E3** (1.59.1). Precisión en jugadas de apertura (`classifyMove`, `30-analisis.js`). Toda posición del catálogo ECO contaba como pérdida 0 y precisión 100 %, también el Gambito Letón o una transposición a una posición con nombre. Calcular siempre la pérdida y usar el ECO solo como etiqueta.
+- ✅ **E4** (1.59.1). Símbolos PGN. Al exportar se perdían `$36`, `$37`, `$40`, `$132`, `$142`, `$146` y cualquier código fuera de la tabla; `$36` y `$37` (iniciativa de cada bando) se leían como el mismo «→», y solo se guardaba un símbolo de jugada y otro de posición por movimiento. Conservar los códigos originales.
+- ✅ **E5** (1.59.1). Deshacer «Cortar» (`80-interfaz.js`). Borraba hasta 6 medios movimientos sin confirmar y sin forma de recuperarlos, comentarios incluidos. Aclarar qué se elimina y ofrecer ↩ Deshacer.
+- **E6**. Versiones de una partida. `gameSig` solo mira jugadores, fecha y las 60 primeras jugadas de la línea principal: al importar una colección, otra edición de la misma partida con comentarios o variantes distintas se descarta en silencio. Omitir solo las copias idénticas (PGN normalizado) y guardar o preguntar cuando cambian las notas.
+- **E7**. Origen de la evaluación en el informe: motor, tiempo por posición, si alguna evaluación es de otro motor o de un análisis anterior (hoy se reutilizan si tienen profundidad suficiente) y si entró el motor de respaldo. Botón «Analizar más a fondo esta posición» en cada momento crítico (reutilizar `explainCurrentMove` forzando el recálculo con más tiempo).
+- **E8**. Recorrido guiado: tras importar, confirmación visible («Partida cargada · 32 jugadas») con «Analizar y comentar»; al terminar, «Revisar el primer momento crítico» y después «Practicar». Sugerencias que se pueden ignorar, no un asistente. Hoy el mensaje de importación queda dentro de la sección plegable del PGN.
+- **E9**. Notación descriptiva española (`P4R`, `C3AR`, `PxP`) como modo de entrada aparte: filas contadas desde cada bando, jugada estándar al lado en la planilla y, si una captura es ambigua, elegir en el tablero. Guardar en PGN estándar. Es la más costosa.
+
 ## Orden previsto
 
 1. ✅ 1.52.1: A1 y A2.
@@ -49,4 +63,5 @@ Al terminar una tarea, márcala con ✅ y la versión, o bórrala.
 4. ✅ 1.55.0: C3 y A3.
 5. ✅ 1.56.0: C2.
 6. ✅ 1.57.0: B4 y B5 · ✅ 1.58.0: C4 · ✅ 1.59.0: C5.
-7. Después: B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
+7. ✅ 1.59.1: E1, E2, E3, E4 y E5 (correcciones).
+8. Después: E6, E7, E8 y E9; B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.

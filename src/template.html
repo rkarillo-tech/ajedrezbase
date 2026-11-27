@@ -812,6 +812,8 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
 .lichess-import summary { font-weight: 700; color: var(--text); }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel3); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; z-index: 300; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 90vw; }
 .toast.show { opacity: 1; }
+.toast.show.has-action { pointer-events: auto; }
+.toast .toast-action { margin-left: 8px; }
 
 @media (max-width: 980px) {
   header { position: static; }
@@ -1156,7 +1158,7 @@ body.board-full #exportControls { order: 10; }
       <button id="flipBtn" title="Girar tablero (F)">⇅ Girar</button>
       <button id="moreBtn" class="more-btn" type="button" aria-expanded="false" aria-label="Más acciones" title="Más acciones: colocar piezas, cortar, flechas, variantes, escribir la jugada, imagen, imprimir y enlace">⋯</button>
       <button id="editPosBtn" class="warn-btn" title="Colocar las piezas libremente y empezar desde esa posición">✏ Colocar piezas</button>
-      <button id="undoBtn" class="danger" title="Borrar esta jugada y todo lo que sigue">✂ Cortar</button>
+      <button id="undoBtn" class="danger" title="Borrar esta jugada y todo lo que sigue (se puede deshacer con Ctrl+Z)">✂ Cortar</button>
     </div>
     <div id="drawBar" class="draw-bar" role="toolbar" aria-label="Dibujar en el tablero">
       <button id="drawToggle" class="sm-btn" aria-pressed="false" title="Con el modo dibujo activado, arrastra (con el dedo o con el clic normal) de una casilla a otra para dibujar una flecha, o pulsa una casilla para rodearla. En el ordenador también: clic derecho y arrastrar, o Ctrl + arrastrar">✏ Dibujar flechas</button>
@@ -1615,6 +1617,7 @@ body.board-full #exportControls { order: 10; }
           <button id="saveCollFilteredBtn" class="sm-btn warn-btn">💾 Guardar en la biblioteca las partidas filtradas</button>
         </div>
         <div id="dbStatus" class="small"></div>
+        <div id="collSaveReport" class="small" role="status" hidden></div>
       </div>
     </div>
 

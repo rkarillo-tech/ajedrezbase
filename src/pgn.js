@@ -7,6 +7,11 @@ var Pgn = (function (C) {
   const POS_NAGS = { 10: "=", 13: "∞", 14: "⩲", 15: "⩱", 16: "±", 17: "∓", 18: "+−", 19: "−+", 22: "⨀", 23: "⨀", 32: "⟳", 33: "⟳", 36: "→", 37: "→", 40: "↑", 41: "↑", 132: "⇆", 133: "⇆", 140: "∆", 146: "N" };
   const MOVE_NAG_CODE = { "!": 1, "?": 2, "!!": 3, "??": 4, "!?": 5, "?!": 6 };
   const POS_NAG_CODE = { "=": 10, "∞": 13, "⩲": 14, "⩱": 15, "±": 16, "∓": 17, "+−": 18, "−+": 19 };
+  /* Símbolos para enseñar en pantalla otros códigos habituales. Los códigos se guardan tal cual (node.posNagCode y
+     node.nags) y se exportan con su número: $36 (iniciativa de las blancas) y $37 (de las negras) se ven igual, «→»,
+     pero no se confunden al guardar. */
+  const NAG_SYMBOLS = Object.assign({ 7: "□", 8: "□", 20: "+−", 21: "−+", 44: "=∞", 45: "=∞", 138: "⊕", 139: "⊕", 142: "⌓", 145: "RR" }, POS_NAGS);
+  const nagSymbol = code => NAG_SYMBOLS[code] || "$" + code;
   const TEXT_POS_NAGS = { "+-": "+−", "-+": "−+", "+/-": "±", "-/+": "∓", "+=": "⩲", "=+": "⩱", "=": "=", "±": "±", "∓": "∓", "⩲": "⩲", "⩱": "⩱", "∞": "∞", "+−": "+−", "−+": "−+" };
   const SEVEN = ["Event", "Site", "Date", "Round", "White", "Black", "Result"];
 
@@ -14,7 +19,7 @@ var Pgn = (function (C) {
   function makeNode(parent, move, state, sanStr) {
     return {
       id: nextId++, parent, children: [], move, san: sanStr || "", uci: move ? C.uci(move) : "",
-      state, key: C.posKey(state), nag: "", posNag: "", comment: "", shapes: [], eval: null
+      state, key: C.posKey(state), nag: "", posNag: "", posNagCode: 0, nags: [], comment: "", shapes: [], eval: null
     };
   }
   function newGame(fen) {
@@ -185,12 +190,14 @@ var Pgn = (function (C) {
         justOpened = false;
       } else if (tk.type === "nag") {
         if (cur === game.root) continue;
-        if (MOVE_NAGS[tk.v]) cur.nag = MOVE_NAGS[tk.v];
-        else if (POS_NAGS[tk.v]) cur.posNag = POS_NAGS[tk.v];
+        // El primero de cada clase se ve como símbolo; los demás (o los que no tienen símbolo) se guardan aparte
+        if (MOVE_NAGS[tk.v] && !cur.nag) cur.nag = MOVE_NAGS[tk.v];
+        else if (POS_NAGS[tk.v] && !cur.posNag) { cur.posNag = POS_NAGS[tk.v]; cur.posNagCode = tk.v; }
+        else if (MOVE_NAG_CODE[cur.nag] !== tk.v && cur.posNagCode !== tk.v && !cur.nags.includes(tk.v)) cur.nags.push(tk.v);
       } else if (tk.type === "movenag") {
         if (cur !== game.root) cur.nag = tk.v;
       } else if (tk.type === "posnag") {
-        if (cur !== game.root) cur.posNag = tk.v;
+        if (cur !== game.root) { cur.posNag = tk.v; cur.posNagCode = POS_NAG_CODE[tk.v] || 0; }
       } else if (tk.type === "result") {
         if (!stack.length) { if (!headers.Result || headers.Result === "*") game.headers.Result = tk.v; break; }
       } else if (tk.type === "nullmove") {
@@ -236,7 +243,11 @@ var Pgn = (function (C) {
   }
   function moveText(n, force) {
     let s = moveNumberLabel(n, force) + n.san + (n.nag || "");
-    if (n.posNag && POS_NAG_CODE[n.posNag]) s += " $" + POS_NAG_CODE[n.posNag];
+    if (n.posNag) {
+      const code = n.posNagCode && POS_NAGS[n.posNagCode] === n.posNag ? n.posNagCode : POS_NAG_CODE[n.posNag];
+      if (code) s += " $" + code;
+    }
+    for (const c of n.nags || []) s += " $" + c;
     return s;
   }
   function exportMovetext(game, opts = {}) {
@@ -304,7 +315,7 @@ var Pgn = (function (C) {
   }
 
   return {
-    MOVE_NAGS, POS_NAGS, newGame, addMove, mainlineFrom, pathTo, isMainline, findById, walk, countMoves,
+    MOVE_NAGS, POS_NAGS, nagSymbol, newGame, addMove, mainlineFrom, pathTo, isMainline, findById, walk, countMoves,
     moveNumberLabel, parseCommentText, splitGames, detectLang, parseGame, exportPgn, exportMovetext,
     deleteNode, promote, makeMain, sameMove
   };

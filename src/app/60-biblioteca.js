@@ -55,14 +55,18 @@ const DB = {
       if (!opts.raw) syncTouch();
       return ids;
     }
-    const arr = this.mem[store];
+    const arr = this.mem[store], before = arr.slice(), next = this.mem.next;
     const ids = recs.map(r => {
       if (r.id == null) r.id = this.mem.next++;
       const i = arr.findIndex(x => x.id === r.id);
       if (i >= 0) arr[i] = Object.assign({}, r); else arr.push(Object.assign({}, r));
       return r.id;
     });
-    if (!LS.set("ajedrezLibFallback", this.mem)) throw Error("no queda espacio en el almacén de este navegador");
+    if (!LS.set("ajedrezLibFallback", this.mem)) {
+      this.mem[store] = before; this.mem.next = next;
+      recs.forEach(r => { if (!before.some(x => x.id === r.id)) r.id = undefined; });
+      throw Error("no queda espacio en el almacén de este navegador");
+    }
     if (!opts.raw) syncTouch();
     return ids;
   },
@@ -79,7 +83,7 @@ const DB = {
 
 /* ---------- B2. Biblioteca en memoria ---------- */
 const Lib = { games: new Map(), marks: new Map(), ready: false, sel: new Set() };
-const Coll = { games: [], bytes: 0, names: [], saved: new Set() };
+const Coll = { games: [], bytes: 0, names: [], saved: new Set(), issues: new Map(), report: null };
 let LocalIdx = null, LocalIdxBuilding = false;
 const LIB_SOFT = () => (DB.kind === "ls" ? 4 * 1048576 : 100 * 1048576);   // recomendado (la biblioteca se carga entera al abrir)
 const COLL_SOFT = 200 * 1048576;                                      // recomendado para un .pgn abierto en memoria
@@ -533,7 +537,7 @@ async function deleteLibGames(ids) {
 function collRaw(g) { return Object.entries(g.headers).map(([k, v]) => `[${k} "${String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"]`).join("\n") + "\n\n" + g.movetext.trim(); }
 function setCollection(text, append, name) {
   const parts = Pgn.splitGames(text).filter(g => g.movetext.trim());
-  if (!append) { Coll.games = []; Coll.bytes = 0; Coll.names = []; Coll.saved = new Set(); }
+  if (!append) { Coll.games = []; Coll.bytes = 0; Coll.names = []; Coll.saved = new Set(); Coll.issues = new Map(); Coll.report = null; }
   for (const p of parts) Coll.games.push(p);
   Coll.bytes += text.length;
   if (name) Coll.names.push(name);
@@ -569,7 +573,7 @@ function renderCollection() {
     const tr = document.createElement("tr");
     const saved = Coll.saved.has(i);
     tr.innerHTML = `<td class="num">${i + 1}</td><td><b>${esc(h.White || "?")}</b>${h.WhiteElo ? ` <span class="small">${esc(h.WhiteElo)}</span>` : ""}</td><td><b>${esc(h.Black || "?")}</b>${h.BlackElo ? ` <span class="small">${esc(h.BlackElo)}</span>` : ""}</td><td>${esc(h.Result || "*")}</td><td class="hide-sm">${h.ECO ? `<span class="srs-pill">${esc(h.ECO)}</span> ` : ""}${esc(h.Event || "")}</td><td>${esc((h.Date || "").slice(0, 4))}</td>
-      <td class="row-actions">${saved ? `<span class="small msg-ok" title="Ya está en tu biblioteca">✔</span>` : `<button class="sm-btn" data-save title="Guardar en la biblioteca">💾</button>`}</td>`;
+      <td class="row-actions">${saved ? `<span class="small msg-ok" title="Ya está en tu biblioteca">✔</span>${Coll.issues.has(i) ? `<span class="small msg-err" title="${esc("Guardada incompleta: " + Coll.issues.get(i))}">⚠</span>` : ""}` : `${Coll.issues.has(i) ? `<span class="small msg-err" title="${esc(Coll.issues.get(i))}">⚠</span>` : ""}<button class="sm-btn" data-save title="Guardar en la biblioteca">💾</button>`}</td>`;
     const sb = tr.querySelector("[data-save]");
     if (sb) sb.onclick = e => { e.stopPropagation(); saveCollGames([i]); };
     tr.onclick = () => loadCollGame(i);
@@ -580,6 +584,9 @@ function renderCollection() {
     ? `${Coll.names.length ? "«" + Coll.names.join("», «") + "» · " : ""}${Coll.games.length} partidas en memoria (${fmtBytes(Coll.bytes)})${rows.length > 500 ? ` · mostrando 500 de ${rows.length}` : ""}`
     : "";
   showAdvSummary("db", advState("db"), rows.map(i => advMeta(Coll.games[i])));
+  const rep = $("collSaveReport");
+  rep.hidden = !Coll.report;
+  if (Coll.report) { rep.className = "small " + (Coll.report.ok ? "msg-ok" : "msg-err"); rep.textContent = Coll.report.text; }
   $("saveCollFilteredBtn").disabled = !rows.length;
   $("saveCollFilteredBtn").textContent = rows.length ? `💾 Guardar en la biblioteca las ${rows.length} partidas filtradas` : "💾 Guardar en la biblioteca las partidas filtradas";
 }
@@ -592,6 +599,40 @@ function loadCollGame(i) {
   importResultMsg(r);
   switchTab("study");
 }
+/* Guardar partidas de un fichero abierto. Primero se leen y se clasifican (collSavePlan, sin tocar la base de datos):
+   completas, con errores (se detienen en una jugada ilegal o pierden una variante), ilegibles y repetidas. Las que
+   tienen errores sólo se guardan si lo confirmas, tal como se han podido leer y con la etiqueta «incompleta».
+   Una partida sólo se marca como guardada (✔) cuando la base de datos confirma la escritura; si falla, las que
+   no han entrado quedan pendientes y el resumen lo dice. */
+const COLL_INCOMPLETE_TAG = "incompleta";
+function collSavePlan(list, libSigs) {
+  const sigs = new Map(libSigs), first = new Map();
+  const plan = { ok: [], incomplete: [], bad: [], dup: [], dupFile: [] };
+  for (const i of list) {
+    const r = Pgn.parseGame(Coll.games[i], { lang: "auto" });
+    if (!r.count && r.error) { plan.bad.push({ i, why: `${r.error.label}: ${r.error.message}` }); continue; }
+    const rec = recordFromGame(r.game);
+    if (first.has(rec.sig)) { plan.dupFile.push({ i, of: first.get(rec.sig) }); continue; }
+    if (sigs.has(rec.sig)) { plan.dup.push({ i }); continue; }
+    first.set(rec.sig, i);
+    if (r.error) plan.incomplete.push({ i, rec, why: `${r.error.inVariation ? "se pierde una variante en" : "se detiene en"} «${r.error.label}» (${r.error.message}); se leyeron ${r.count} jugadas` });
+    else plan.ok.push({ i, rec });
+  }
+  return plan;
+}
+/* El resumen final. res: { written, failed (motivo o ""), pending, incompleteSaved, incompleteSkipped, bad, dup, dupFile } (números) */
+function collSaveSummary(res) {
+  const pl = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+  const parts = [`💾 ${pl(res.written, "partida guardada", "partidas guardadas")}${res.incompleteSaved ? ` (${pl(res.incompleteSaved, "incompleta", "incompletas")}, con la etiqueta «${COLL_INCOMPLETE_TAG}»)` : res.written ? (res.written === 1 ? " completa" : " completas") : ""}`];
+  if (res.incompleteSkipped) parts.push(`⚠ ${pl(res.incompleteSkipped, "con errores no se ha guardado", "con errores no se han guardado")}`);
+  if (res.bad) parts.push(`⚠ ${pl(res.bad, "ilegible", "ilegibles")}`);
+  if (res.dup) parts.push(`${pl(res.dup, "ya estaba", "ya estaban")} en tu biblioteca`);
+  if (res.dupFile) parts.push(`${pl(res.dupFile, "repetida", "repetidas")} dentro del fichero`);
+  let text = parts.join(" · ") + ".";
+  if (res.failed) text = `❌ No se ha podido terminar de guardar: ${res.failed}. ` + text + ` ⏳ ${pl(res.pending, "queda pendiente", "quedan pendientes")}: no están en tu biblioteca. Libera espacio (o exporta y borra partidas antiguas) y vuelve a pulsar 💾.`;
+  else if (res.incompleteSkipped || res.bad) text += " Pasa el puntero sobre ⚠ en la lista para ver el error de cada una.";
+  return { ok: !res.failed, text };
+}
 async function saveCollGames(list) {
   if (!Lib.ready || !list.length) return;
   const estBytes = list.reduce((a, i) => a + Coll.games[i].movetext.length + 300, 0);
@@ -601,32 +642,38 @@ async function saveCollGames(list) {
     if (projected > LIB_SOFT()) msg += `\n\n⚠ La biblioteca pasaría a ocupar ≈${fmtBytes(projected)}, más de lo recomendado (${fmtBytes(LIB_SOFT())}). Puede ir más lenta al abrir la página.`;
     if (!confirm(msg)) return;
   }
-  const sigs = new Map([...Lib.games.values()].map(r => [r.sig, r.id]));
-  const recs = [];
-  let dup = 0, dupFile = 0, bad = 0;
   const btn = $("saveCollFilteredBtn");
   btn.disabled = true;
-  for (let k = 0; k < list.length; k++) {
-    const i = list[k];
-    const r = Pgn.parseGame(Coll.games[i], { lang: "auto" });
-    if (!r.count && r.error) { bad++; continue; }
-    const rec = recordFromGame(r.game);
-    if (sigs.has(rec.sig)) { if (sigs.get(rec.sig) === -1) dupFile++; else dup++; Coll.saved.add(i); continue; }
-    sigs.set(rec.sig, -1);
-    recs.push(rec);
-    Coll.saved.add(i);
-    if (k % 40 === 39) { $("dbStatus").textContent = `Preparando… ${k + 1} / ${list.length}`; await new Promise(r2 => setTimeout(r2, 0)); }
+  if (list.length > 40) { $("dbStatus").textContent = `Leyendo ${list.length} partidas…`; await new Promise(r2 => setTimeout(r2, 0)); }
+  const plan = collSavePlan(list, [...Lib.games.values()].map(r => [r.sig, r.id]));
+  for (const x of plan.bad) Coll.issues.set(x.i, "Ilegible: " + x.why);
+  for (const x of plan.incomplete) Coll.issues.set(x.i, "Con errores: " + x.why);
+  for (const x of plan.dup) Coll.saved.add(x.i);
+  let withIncomplete = false;
+  if (plan.incomplete.length) {
+    const n = plan.incomplete.length, ej = plan.incomplete[0];
+    withIncomplete = confirm(`${n === 1 ? "Una partida tiene errores" : `${n} partidas tienen errores`}: no se ha${n === 1 ? "" : "n"} podido leer entera${n === 1 ? "" : "s"}.\nPor ejemplo, la n.º ${ej.i + 1}: ${ej.why}.\n\n¿Guardarla${n === 1 ? "" : "s"} igualmente tal como se ha${n === 1 ? "" : "n"} podido leer?\n\nAceptar = guardarla${n === 1 ? "" : "s"} incompleta${n === 1 ? "" : "s"}, con la etiqueta «${COLL_INCOMPLETE_TAG}»\nCancelar = guardar sólo las completas`);
   }
-  try {
-    for (let k = 0; k < recs.length; k += 250) {
-      await DB.putMany("games", recs.slice(k, k + 250));
-      $("dbStatus").textContent = `Guardando… ${Math.min(recs.length, k + 250)} / ${recs.length}`;
-    }
-  } catch (e) { toast("❌ Error al guardar: " + e.message, 6000); }
-  for (const r of recs) if (r.id != null) Lib.games.set(r.id, r);
-  LocalIdx = null;
+  const todo = plan.ok.slice();
+  if (withIncomplete) for (const x of plan.incomplete) { x.rec.tags = [COLL_INCOMPLETE_TAG]; todo.push(x); }
+  let written = 0, failed = "";
+  for (let k = 0; k < todo.length; k += 250) {
+    const chunk = todo.slice(k, k + 250);
+    try { await DB.putMany("games", chunk.map(x => x.rec)); }
+    catch (e) { failed = (e && e.message) || String(e); break; }
+    for (const x of chunk) { Lib.games.set(x.rec.id, x.rec); Coll.saved.add(x.i); }
+    written += chunk.length;
+    $("dbStatus").textContent = `Guardando… ${written} / ${todo.length}`;
+  }
+  for (const x of plan.dupFile) if (Coll.saved.has(x.of)) Coll.saved.add(x.i);   // sólo si su gemela del fichero ha entrado
+  if (written) LocalIdx = null;
   btn.disabled = false;
-  toast(`💾 ${recs.length} guardada${recs.length === 1 ? "" : "s"}${dup ? ` · ${dup} ya estaba${dup === 1 ? "" : "n"} en tu biblioteca` : ""}${dupFile ? ` · ${dupFile} repetida${dupFile === 1 ? "" : "s"} dentro del fichero` : ""}${bad ? ` · ${bad} ilegibles` : ""}.`, 4500);
+  const savedIncomplete = withIncomplete ? plan.incomplete.filter(x => Coll.saved.has(x.i)).length : 0;
+  Coll.report = collSaveSummary({
+    written, failed, pending: todo.length - written, incompleteSaved: savedIncomplete,
+    incompleteSkipped: withIncomplete ? 0 : plan.incomplete.length, bad: plan.bad.length, dup: plan.dup.length, dupFile: plan.dupFile.length
+  });
+  toast(Coll.report.text.length > 160 ? Coll.report.text.split(". ")[0] + "." : Coll.report.text, failed ? 9000 : 4500);
   renderCollection();
   refreshLibraryViews();
 }
