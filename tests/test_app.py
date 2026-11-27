@@ -2838,6 +2838,39 @@ def prueba_versiones_partida(browser):
     ctx.close()
 
 
+def prueba_origen_evaluacion(browser):
+    print("1.61: cómo se obtuvo la evaluación y 🔬 Analizar más a fondo")
+    ctx = contexto(browser)
+    pg, errores = nueva_pagina(ctx)
+    pg.wait_for_function("Engine.ready", timeout=20000)
+    pg.evaluate("settings.analysisMs = 200; settings.live = false; saveSettings()")
+    pg.fill("#moveInput", "1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0")
+    pg.click("#importBtn")
+    # Una posición ya evaluada antes, con otro tiempo, se reutiliza: el informe lo dice
+    pg.evaluate("Pgn.mainlineFrom(game.root)[1].eval = { cp: 20, depth: 30, source: Engine.kind, engine: Engine.name, ms: 3000, best: 'g1f3', pv: ['g1f3'], second: null }")
+    pg.click("#autoAnnotateBtn")
+    pg.wait_for_function("document.getElementById('reportBox').classList.contains('show')", timeout=180000)
+    nombre = pg.evaluate("Engine.name")
+    txt = pg.inner_text("#reportExtra")
+    comprobar("Cómo se ha obtenido:" in txt and f"con {nombre} a 200 ms por posición" in txt and f"1 posición con {nombre} a 3 s por posición" in txt and "de un análisis anterior" in txt and "No todas las evaluaciones son del mismo motor" in txt,
+              "el informe dice con qué motor y cuánto tiempo por posición, y qué se reutilizó de un análisis anterior")
+    comprobar(pg.evaluate("game.analysis && game.analysis.prov.includes('200 ms')"), "la procedencia se guarda con el análisis de la partida")
+    botones = pg.locator("#reportExtra [data-deep]")
+    comprobar(botones.count() >= 1, "cada momento clave tiene «🔬 Más a fondo»")
+    botones.first.click()
+    pg.wait_for_function("document.querySelector('#reportExtra .deep-note')", timeout=60000)
+    nota = pg.inner_text("#reportExtra .deep-note")
+    comprobar("recalculada con" in nota and "a 5 s por posición" in nota and "antes, de" in nota and ("Sigue siendo" in nota or "Ahora es" in nota),
+              "«Más a fondo» recalcula esa jugada con más tiempo y dice si cambia el juicio")
+    comprobar("a 5 s por posición" in pg.inner_text("#reportExtra .rep-prov"), "el informe se rehace y su procedencia incluye el nuevo cálculo")
+    # También desde «⚖ Tu jugada frente a la del motor»
+    pg.evaluate("goTo(Pgn.mainlineFrom(game.root)[2])")
+    pg.wait_for_selector("#moveCompare [data-cmp=deep]", timeout=10000)
+    comprobar("Calculada con" in pg.inner_text("#moveCompare"), "la comparación con el motor dice con qué se calculó")
+    comprobar(not errores, "sin errores de JavaScript" + (": " + "; ".join(errores) if errores else ""))
+    ctx.close()
+
+
 def prueba_v153_distribucion(browser):
     print("1.53: jugadas al lado del tablero, herramientas del motor plegadas y bienvenida compacta")
     ctx = contexto(browser, viewport={"width": 1440, "height": 900})
@@ -3640,7 +3673,7 @@ def main():
     with sync_playwright() as p:
         # WebGL por software (SwiftShader) para poder probar el tablero 3D sin tarjeta gráfica
         browser = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
-        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
+        for prueba in (prueba_tablero_y_partidas, prueba_editor, prueba_biblioteca, prueba_ayuda_y_movil, prueba_v11, prueba_v12, prueba_v13, prueba_v14, prueba_cursos, prueba_versiones, prueba_guardar_al_salir, prueba_v1591_correcciones, prueba_versiones_partida, prueba_origen_evaluacion, prueba_v153_distribucion, prueba_estructuras, prueba_comentar_repertorio, prueba_memoria_entrenador, prueba_v157_actividad_y_ajustes, prueba_vigilancia_ia, prueba_v159_herramientas, prueba_motor_ayuda, prueba_entrenamiento_19, prueba_dia_a_dia, prueba_cpu_adaptativa, prueba_ayuda_contra_cpu, prueba_mis_repertorios, prueba_sorpresas_y_planes, prueba_tactil_y_tema, prueba_rival_humano, prueba_rival_explorador_y_piensa, prueba_reloj_dos_jugadores_y_ventaja, prueba_filtros_avanzados, prueba_importar_curso, prueba_marcadores_y_velocidad, prueba_habla_con_tus_piezas, prueba_paquetes_de_problemas, prueba_sincronizacion, prueba_tu_semana, prueba_geometria_y_ciegas, prueba_salir_del_entrenamiento, prueba_salir_movil, prueba_pantalla_completa, prueba_traer_partidas, prueba_que_hago_ahora, prueba_contrarreloj, prueba_colores_jugadas, prueba_ayudas_profesor, prueba_ollama, prueba_buscador_y_contexto_ia, prueba_propuestas_ia, prueba_aperturas_explicadas, prueba_entrenador_ia, prueba_velocidad_y_ordenes, prueba_notacion_ia, prueba_piezas_ia, prueba_repaso_y_preguntas, prueba_tablero3d, prueba_lee_el_tablero, prueba_fiabilidad, prueba_stockfish19, prueba_sin_conexion):
             # Límite por prueba: si algo se queda esperando para siempre (una promesa que no se resuelve, un
             # navegador bloqueado), se detiene todo en minutos diciendo qué prueba fue, en vez de colgar la CI horas
             t0 = time.time()

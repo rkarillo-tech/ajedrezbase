@@ -115,6 +115,8 @@ Además, si en la respuesta aparece alguna jugada que no viene de nada comprobad
   - marca las jugadas: ?? error grave, ? error, ?! imprecisión, ! jugada única;
   - escribe comentarios en las jugadas críticas (cuál era mejor, cuál es la refutación, si se deja material o un mate);
   - muestra un informe con la **precisión** de cada jugador y la pérdida media en centipeones. Las jugadas de apertura también cuentan: que una posición tenga nombre (como el Gambito Letón) no la hace buena, así que se indica la apertura y, aparte, lo que pierde la jugada;
+  - dice **🔍 cómo se ha obtenido** la evaluación: con qué motor y cuánto tiempo por posición, cuántas posiciones se han reutilizado de un análisis anterior (a veces con otro motor u otro tiempo), cuáles vienen de la nube de Lichess o del PGN, y si el motor cambió a mitad (por ejemplo, porque Stockfish dejó de responder y siguió el motor interno);
+  - junto a cada momento clave, **🔬 Más a fondo** recalcula la posición anterior y la posterior con mucho más tiempo (cuatro veces el del análisis, entre 5 y 15 s por posición) y dice si cambia el juicio («Sigue siendo un error» o «Ahora es una imprecisión»). Sirve cuando AjedrezBase y otro análisis (como el de Lichess) no coinciden en una jugada. El mismo botón está en **⚖ Tu jugada frente a la del motor**;
   - añade breves comentarios estratégicos en las jugadas tranquilas con una idea clara (peones pasados o aislados, casillas fuertes, cambio de damas…).
 - Debajo aparece el **informe de la partida**:
   - **📝 Resumen**: la apertura y cómo fue cambiando la valoración («empezó equilibrada; tras 21…g5 pasó a ventaja negra…») hasta el resultado.

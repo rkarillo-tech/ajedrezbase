@@ -164,6 +164,48 @@ function buildComment(n, info) {
   if (motif) parts.push(motif);
   return parts.join(" ");
 }
+/* ---------- Cómo se obtuvo la evaluación ----------
+   El informe dice con qué motor y cuánto tiempo por posición se calculó, si alguna evaluación viene de un análisis
+   anterior (se reutilizan si tienen profundidad suficiente), de la nube de Lichess o del PGN, y si el motor cambió
+   a mitad de camino. Así se puede interpretar una diferencia con otro análisis y recalcular justo esa posición. */
+const fmtMs = ms => (ms >= 1000 ? `${String(+(ms / 1000).toFixed(1)).replace(".", ",")} s` : `${ms} ms`);
+function evalOrigin(ev) {
+  if (!ev || ev.source === "regla") return null;   // mate, ahogado o tablas: no hace falta motor
+  if (ev.source === "pgn") return { key: "pgn", label: "las evaluaciones que traía el PGN (por ejemplo, el análisis de Lichess)" };
+  if (ev.source === "nube") return { key: "nube", label: "la nube de Lichess" };
+  const name = ev.engine || (ev.source === "internal" ? "Motor interno" : "Stockfish");
+  return { key: name + "|" + (ev.ms || 0), label: name + (ev.ms ? ` a ${fmtMs(ev.ms)} por posición` : "") };
+}
+/* fresh: las posiciones calculadas en esta pasada (las demás se han reutilizado) */
+function analysisProvenance(nodes, fresh, change = "") {
+  const groups = new Map();
+  for (const n of nodes) {
+    const o = evalOrigin(n.eval);
+    if (!o) continue;
+    const g = groups.get(o.key) || { label: o.label, n: 0, reused: 0, dmin: Infinity, dmax: 0 };
+    g.n++;
+    if (!fresh.has(n)) g.reused++;
+    const d = n.eval.depth || 0;
+    if (d) { g.dmin = Math.min(g.dmin, d); g.dmax = Math.max(g.dmax, d); }
+    groups.set(o.key, g);
+  }
+  const list = [...groups.values()].sort((a, b) => b.n - a.n);
+  const text = list.map(g => `${g.n} ${g.n === 1 ? "posición" : "posiciones"} con ${g.label}${g.dmax ? ` (profundidad ${g.dmin === g.dmax ? g.dmax : g.dmin + "–" + g.dmax})` : ""}${g.reused ? (g.reused === g.n ? `, ${g.n === 1 ? "de" : "todas de"} un análisis anterior` : `, ${g.reused} de un análisis anterior`) : ""}`).join(" · ");
+  return { text, mixed: list.length > 1, change };
+}
+function renderReportTable(st) {
+  const mean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+  const harm = a => a.length / a.reduce((x, y) => x + 1 / Math.max(1, y), 0);
+  for (const [k, pre] of [[1, "W"], [-1, "B"]]) {
+    const S = st[k];
+    $(`rep${pre}Acc`).textContent = S.acc.length ? Math.round((mean(S.acc) + harm(S.acc)) / 2) + "%" : "–";
+    $(`rep${pre}Acpl`).textContent = S.cpl.length ? Math.round(mean(S.cpl)) : "–";
+    $(`rep${pre}Good`).textContent = S.good;
+    $(`rep${pre}Inacc`).textContent = S.inacc;
+    $(`rep${pre}Mistake`).textContent = S.mistake;
+    $(`rep${pre}Blunder`).textContent = S.blunder;
+  }
+}
 async function analyseGame(opts = {}) {
   if (Batch.running) { toast("Ahora se están analizando tus partidas de la biblioteca: espera a que termine o detenlo en «📊 Estadísticas»."); return; }
   if (ui.analysing) return;
@@ -181,7 +223,7 @@ async function analyseGame(opts = {}) {
   $("analysisProgress").classList.add("show");
   const bar = $("analysisProgress").firstElementChild;
   const minDepth = quick ? (Engine.kind === "stockfish" ? 8 : 4) : (Engine.kind === "stockfish" ? 12 : 5);
-  const t0 = Date.now();
+  const t0 = Date.now(), fresh = new Set(), engine0 = Engine.name;
   for (let i = 0; i < nodes.length && !ui.cancelAnalysis; i++) {
     const n = nodes[i];
     const term = terminalEval(n);
@@ -190,7 +232,7 @@ async function analyseGame(opts = {}) {
       const job = await Engine.analyse(n, quick
         ? { purpose: "batch", movetime: Math.min(300, +settings.analysisMs), multipv: 1 }
         : { purpose: "batch", movetime: +settings.analysisMs, multipv: Engine.kind === "stockfish" ? 2 : 1 });
-      if (job) storeEval(n, job, true);
+      if (job) { storeEval(n, job, true); fresh.add(n); }
     }
     bar.style.width = ((i + 1) / nodes.length * 100).toFixed(1) + "%";
     $("analysisStatus").textContent = `${quick ? "Completando el gráfico" : "Analizando"} con ${Engine.name}: posición ${i + 1} de ${nodes.length}…`;
@@ -204,28 +246,67 @@ async function analyseGame(opts = {}) {
   bar.style.width = "0";
   if (cancelled) { $("analysisStatus").textContent = "Análisis detenido. Las evaluaciones obtenidas se conservan."; render(); return; }
   if (quick) { $("analysisStatus").textContent = "📈 Gráfico completado. Para marcar errores y redactar comentarios usa «🤖 Analizar y comentar»."; if (ui.libId) markDirty(); render(); return; }
-  const st = annotateNodes(nodes);
-  const mean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
-  const harm = a => a.length / a.reduce((x, y) => x + 1 / Math.max(1, y), 0);
-  for (const [k, pre] of [[1, "W"], [-1, "B"]]) {
-    const S = st[k];
-    $(`rep${pre}Acc`).textContent = S.acc.length ? Math.round((mean(S.acc) + harm(S.acc)) / 2) + "%" : "–";
-    $(`rep${pre}Acpl`).textContent = S.cpl.length ? Math.round(mean(S.cpl)) : "–";
-    $(`rep${pre}Good`).textContent = S.good;
-    $(`rep${pre}Inacc`).textContent = S.inacc;
-    $(`rep${pre}Mistake`).textContent = S.mistake;
-    $(`rep${pre}Blunder`).textContent = S.blunder;
-  }
+  renderReportTable(annotateNodes(nodes));
   $("repWName").textContent = game.headers.White || "Blancas";
   $("repBName").textContent = game.headers.Black || "Negras";
   ui.report = buildGameReport(nodes);
-  if (!opts.variation) game.analysis = analysisSummary(ui.report, game.root, "motor");
+  const change = engine0 && Engine.name !== engine0 ? `El motor cambió durante el análisis: de ${engine0} a ${Engine.name}${Engine.note ? ` (${Engine.note})` : ""}.` : "";
+  ui.report.prov = analysisProvenance(nodes, fresh, change);
+  ui.reportRun = { fresh, change, variation: !!opts.variation };
+  ui.deepNote = null;
+  if (!opts.variation) { game.analysis = analysisSummary(ui.report, game.root, "motor"); game.analysis.prov = ui.report.prov.text; }
   renderGameReport();
   $("reportBox").classList.add("show");
   $("analysisStatus").textContent = `✔ Análisis ${opts.variation ? "de la variante " : ""}completado con ${Engine.name} en ${Math.round((Date.now() - t0) / 1000)} s. Se han marcado y comentado las jugadas críticas.`;
   markDirty();
   render();
   renderRetryStart();
+}
+/* 🔬 Analizar más a fondo: recalcula la posición anterior y la posterior a una jugada con bastante más tiempo
+   (4 veces el del análisis, entre 5 y 15 s) y dice si cambia el juicio. Si la jugada es de la línea del informe,
+   el informe se rehace con las nuevas evaluaciones. */
+const DEEP_MS = () => Math.min(15000, Math.max(5000, 4 * (+settings.analysisMs || 1000)));
+const CLS_NAME = { "??": "un error grave", "?": "un error", "?!": "una imprecisión", "!": "una jugada única" };
+const clsName = c => CLS_NAME[c] || "una jugada correcta";
+async function deepAnalyse(n) {
+  if (!n || !n.parent) return null;
+  if (ui.analysing || Batch.running) { toast("Espera a que termine el análisis en curso."); return null; }
+  if (quiz()) { toast("Termina antes el ejercicio."); return null; }
+  if (!Engine.ready) { toast("El motor aún se está cargando…"); return null; }
+  const p = n.parent, label = numPrefix(p.state) + dispSan(n), ms = DEEP_MS();
+  const old = classifyMove(n), oldTxt = old ? `${fmtEval(p.eval)} a ${fmtEval(old.after)}` : "", oldOrigin = evalOrigin(p.eval);
+  ui.analysing = true;
+  Engine.cancel("live");
+  $("analysisStatus").textContent = `🔬 Recalculando ${label} con ${Engine.name} a ${fmtMs(ms)} por posición…`;
+  let ok = true;
+  try {
+    for (const x of [p, n]) {
+      const term = terminalEval(x);
+      if (term) { x.eval = term; continue; }
+      const job = await Engine.analyse(x, { purpose: "deep", movetime: ms, multipv: Engine.kind === "stockfish" ? 2 : 1 });
+      if (job) storeEval(x, job, true); else ok = false;
+    }
+  } finally { ui.analysing = false; }
+  const info = classifyMove(n);
+  if (!ok || !info) { $("analysisStatus").textContent = "🔬 No se pudo terminar el cálculo."; render(); return null; }
+  if (!n.nag || n.nagAuto) { n.nag = info.cls; n.nagAuto = Boolean(info.cls); }
+  if (n.commentAuto || (!n.comment && info.cls)) { const t = buildComment(n, info); if (t) { n.comment = t; n.commentAuto = true; } }
+  const verdict = old && old.cls === info.cls ? `Sigue siendo ${clsName(info.cls)}.` : `Ahora es ${clsName(info.cls)}${old ? ` (antes, ${clsName(old.cls)})` : ""}.`;
+  const text = `🔬 ${label}, recalculada con ${Engine.name} a ${fmtMs(ms)} por posición${p.eval.depth ? ` (profundidad ${p.eval.depth})` : ""}: la valoración pasa de ${fmtEval(p.eval)} a ${fmtEval(info.after)}${old ? `; antes, de ${oldTxt}${oldOrigin ? `, con ${oldOrigin.label}` : ""}` : ""}. ${verdict}`;
+  ui.deepNote = { id: n.id, text };
+  const nodes = ui.analysedLine;
+  if (ui.report && ui.reportRun && nodes && nodes.includes(n)) {
+    ui.reportRun.fresh.add(p); ui.reportRun.fresh.add(n);
+    renderReportTable(annotateNodes(nodes));
+    ui.report = buildGameReport(nodes);
+    ui.report.prov = analysisProvenance(nodes, ui.reportRun.fresh, ui.reportRun.change);
+    if (!ui.reportRun.variation) { game.analysis = analysisSummary(ui.report, game.root, "motor"); game.analysis.prov = ui.report.prov.text; }
+    renderGameReport();
+  }
+  $("analysisStatus").textContent = text;
+  markDirty();
+  render();
+  return { text, before: old ? old.cls : null, after: info.cls };
 }
 /* Clasifica las jugadas (??, ?, ?!, !) y redacta los comentarios automáticos de una línea ya evaluada */
 function annotateNodes(nodes) {
@@ -404,11 +485,12 @@ function renderGameReport() {
   const pcell = v => (v == null ? "–" : v + "%");
   let html = (aiProvider() ? `<div class="controls"><button id="aiReviewBtn" class="sm-btn primary" title="El profesor IA comenta los momentos clave como un entrenador">🤖 Que la comente el profesor</button></div><div id="aiReviewBox" class="retry-box think-box" hidden aria-live="polite"></div>` : "") +
     `<h3>📝 Resumen</h3><p class="rep-summary">${esc(R.summary)}</p>`;
+  if (R.prov && R.prov.text) html = `<p class="small rep-prov">🔍 <b>Cómo se ha obtenido:</b> ${esc(R.prov.text)}.${R.prov.mixed ? " ⚠ No todas las evaluaciones son del mismo motor o del mismo tiempo: tenlo en cuenta al comparar jugadas." : ""}${R.prov.change ? ` ⚠ ${esc(R.prov.change)}` : ""} Si una jugada te parece mal juzgada (o no coincide con otro análisis, como el de Lichess), pulsa <b>🔬 Más a fondo</b> para recalcular esa posición con más tiempo.</p>` + html;
   html += `<h3>📍 Momentos clave</h3>`;
   if (R.key.length) {
     html += `<ol class="rep-key">` + R.key.map((x, i) => {
       const n = x.n, p = n.parent;
-      return `<li><a href="#" data-k="${i}"><b>${esc(numPrefix(p.state) + dispSan(n) + (n.nag || ""))}</b></a> (${esc(p.state.t === 1 ? h.White || "blancas" : h.Black || "negras")}): ${esc(x.theme.txt)}; la valoración pasa de ${esc(fmtEval(p.eval))} a ${esc(fmtEval(x.info.after || n.eval))}.</li>`;
+      return `<li><a href="#" data-k="${i}"><b>${esc(numPrefix(p.state) + dispSan(n) + (n.nag || ""))}</b></a> (${esc(p.state.t === 1 ? h.White || "blancas" : h.Black || "negras")}): ${esc(x.theme.txt)}; la valoración pasa de ${esc(fmtEval(p.eval))} a ${esc(fmtEval(x.info.after || n.eval))}. <button class="sm-btn" data-deep="${i}" title="Recalcula la posición anterior y la posterior con ${esc(fmtMs(DEEP_MS()))} por posición (ahora: ${esc((evalOrigin(p.eval) || { label: "sin datos" }).label)})">🔬 Más a fondo</button>${ui.deepNote && ui.deepNote.id === n.id ? `<div class="small deep-note">${esc(ui.deepNote.text)}</div>` : ""}</li>`;
     }).join("") + `</ol>`;
   } else html += `<p class="small">No hubo errores importantes: ninguna jugada cambió el rumbo de la partida.</p>`;
   html += `<h3>⏱ Precisión por fases</h3><table class="rep-phases"><thead><tr><th></th><th>${nm(1)}</th><th>${nm(-1)}</th></tr></thead><tbody>` +
@@ -417,6 +499,15 @@ function renderGameReport() {
   html += `<h3>🎯 Qué practicar</h3>` + R.players.map(pl => `<div class="rep-player"><b>${esc(pl.verdict)}</b>${pl.practice.length ? `<ul>${pl.practice.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<div class="small">Nada destacable: ¡buena partida!</div>`}</div>`).join("");
   box.innerHTML = html;
   box.querySelectorAll("[data-k]").forEach(a => a.onclick = e => { e.preventDefault(); const x = R.key[+a.dataset.k]; if (x && !quiz()) goTo(x.n); });
+  box.querySelectorAll("[data-deep]").forEach(b => b.onclick = async e => {
+    e.preventDefault();
+    const x = R.key[+b.dataset.deep];
+    if (!x) return;
+    b.disabled = true; b.textContent = "⏳ Calculando…";
+    const res = await deepAnalyse(x.n);
+    if (!res) { b.disabled = false; b.textContent = "🔬 Más a fondo"; }
+    else if (!(ui.analysedLine || []).includes(x.n)) toast(res.text, 9000);
+  });
   if ($("aiReviewBtn")) $("aiReviewBtn").onclick = () => aiGameReview($("aiReviewBox"), 0);
   box.querySelectorAll("[data-tm]").forEach(a => a.onclick = e => { e.preventDefault(); const n = Pgn.findById(game.root, +a.dataset.tm); if (n && !quiz()) goTo(n); });
 }

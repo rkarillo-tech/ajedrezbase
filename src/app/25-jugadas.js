@@ -266,7 +266,9 @@ function renderCompare(job) {
   const label = (eco ? `📖 Teoría: ${eco.eco} ${eco.name} · ` : "") + (COMPARE_LABEL[c.cls] || (c.loss < 2 ? "✔ Excelente: casi como la del motor" : "✔ Buena jugada"));
   const lost = after.mate == null && p.eval.mate == null ? ` · pierdes ${(c.cpl / 100).toFixed(2).replace(".", ",")} peones` : "";
   el.innerHTML = `⚖ <b>${esc(san)}</b> → ${esc(fmtEval(after))} · la del motor, <b>${esc(bestSan)}</b> → ${esc(fmtEval(p.eval))}${lost}<br><b>${esc(label)}</b>${live && !n.eval ? ` <span class="small">(provisional, el motor sigue calculando)</span>` : ""}
-    <div class="controls"><button class="sm-btn" data-cmp="best" title="Vuelve a la posición anterior y juega la del motor, como variante">↪ Probar la del motor</button></div>`;
+    ${ui.deepNote && ui.deepNote.id === n.id ? `<div class="small deep-note">${esc(ui.deepNote.text)}</div>` : `<div class="small">${esc(evalOrigin(p.eval) ? "Calculada con " + evalOrigin(p.eval).label + "." : "")}</div>`}
+    <div class="controls"><button class="sm-btn" data-cmp="best" title="Vuelve a la posición anterior y juega la del motor, como variante">↪ Probar la del motor</button> <button class="sm-btn" data-cmp="deep" title="Recalcula esta jugada con ${esc(fmtMs(DEEP_MS()))} por posición">🔬 Más a fondo</button></div>`;
+  el.querySelector("[data-cmp=deep]").onclick = async e => { e.target.disabled = true; e.target.textContent = "⏳ Calculando…"; if (!(await deepAnalyse(n))) renderCompare(); };
   el.querySelector("[data-cmp=best]").onclick = () => {
     if (!bm || cur() !== n) return;
     goTo(p);

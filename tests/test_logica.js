@@ -541,6 +541,30 @@ seccion("📑 Versiones de una misma partida (1.60)", () => {
   comprobar(r.sync1.same, "…y dos copias idénticas se quedan en una");
 });
 
+seccion("🔍 Cómo se obtuvo la evaluación (1.61)", () => {
+  const r = JSON.parse(E.ev(`JSON.stringify((() => {
+    const g = Pgn.parseGame("1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0", { lang: "en" }).game;
+    const nodes = [g.root, ...Pgn.mainlineFrom(g.root)];
+    const sf19 = d => ({ cp: 20, depth: d, source: "stockfish", engine: "Stockfish 19", ms: 1000 });
+    nodes[0].eval = sf19(18); nodes[1].eval = sf19(20); nodes[2].eval = sf19(19);
+    nodes[3].eval = { cp: 10, depth: 12, source: "stockfish", engine: "Stockfish 10", ms: 300 };
+    nodes[4].eval = { cp: 10, depth: 40, source: "nube", engine: "Stockfish (nube de Lichess)", ms: 0 };
+    nodes[5].eval = { cp: 30, depth: 0, source: "pgn" };
+    nodes[6].eval = { cp: 900, depth: 9, source: "internal" };   // guardada antes de la 1.61: sin motor ni tiempo
+    nodes[7].eval = terminalEval(nodes[7]);
+    const fresh = new Set([nodes[0], nodes[1], nodes[2]]);
+    const P = analysisProvenance(nodes, fresh, "El motor cambió durante el análisis: de Stockfish 19 a Motor interno.");
+    const uno = analysisProvenance(nodes.slice(0, 3), new Set(nodes.slice(0, 3)));
+    const todoViejo = analysisProvenance(nodes.slice(0, 3), new Set());
+    return { P, uno, todoViejo, ms: [fmtMs(500), fmtMs(1000), fmtMs(2500), fmtMs(15000)], deep: DEEP_MS(), cls: [clsName("??"), clsName("")] };
+  })())`));
+  comprobar(r.P.text === "3 posiciones con Stockfish 19 a 1 s por posición (profundidad 18–20) · 1 posición con Stockfish 10 a 300 ms por posición (profundidad 12), de un análisis anterior · 1 posición con la nube de Lichess (profundidad 40), de un análisis anterior · 1 posición con las evaluaciones que traía el PGN (por ejemplo, el análisis de Lichess), de un análisis anterior · 1 posición con Motor interno (profundidad 9), de un análisis anterior",
+    "dice cuántas posiciones se calcularon con cada motor y tiempo, cuáles venían de antes, de la nube de Lichess o del PGN (el mate final no cuenta)");
+  comprobar(r.P.mixed && r.P.change.startsWith("El motor cambió") && !r.uno.mixed && r.uno.text === "3 posiciones con Stockfish 19 a 1 s por posición (profundidad 18–20)", "avisa si se mezclan motores o tiempos, o si el motor cambió a mitad");
+  comprobar(r.todoViejo.text.endsWith(", todas de un análisis anterior"), "si todo se reutiliza, lo dice");
+  comprobar(r.ms.join(" | ") === "500 ms | 1 s | 2,5 s | 15 s" && r.deep === 5000 && r.cls.join(" | ") === "un error grave | una jugada correcta", "tiempos legibles; «Más a fondo» usa al menos 5 s por posición");
+});
+
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log(`\nTodas las pruebas de lógica superadas (${((Date.now() - t0) / 1000).toFixed(1)} s).`);
 process.exit(0);

@@ -356,7 +356,7 @@ $("cloudStockfishBtn").onclick = async () => {
     if (!lines.length) throw Error("Sin datos.");
     Engine.cancel("live");
     settings.live = false;
-    node.eval = { cp: lines[0].cp, mate: lines[0].mate, depth: data.depth, best: lines[0].pv[0], pv: lines[0].pv.slice(0, 14), second: lines[1] ? { cp: lines[1].cp, mate: lines[1].mate } : null, source: "nube" };
+    node.eval = { cp: lines[0].cp, mate: lines[0].mate, depth: data.depth, best: lines[0].pv[0], pv: lines[0].pv.slice(0, 14), second: lines[1] ? { cp: lines[1].cp, mate: lines[1].mate } : null, source: "nube", engine: "Stockfish (nube de Lichess)", ms: 0 };
     if (cur() === node) {
       showEngineFor(node, { lines, depth: data.depth, nps: 0 });
       $("engineMeta").textContent = `nube · prof. ${data.depth} · ${Math.round(data.knodes / 1000)} M nodos`;
