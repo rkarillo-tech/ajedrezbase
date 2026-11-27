@@ -266,6 +266,7 @@ function renderCompare(job) {
   const label = (eco ? `📖 Teoría: ${eco.eco} ${eco.name} · ` : "") + (COMPARE_LABEL[c.cls] || (c.loss < 2 ? "✔ Excelente: casi como la del motor" : "✔ Buena jugada"));
   const lost = after.mate == null && p.eval.mate == null ? ` · pierdes ${(c.cpl / 100).toFixed(2).replace(".", ",")} peones` : "";
   el.innerHTML = `⚖ <b>${esc(san)}</b> → ${esc(fmtEval(after))} · la del motor, <b>${esc(bestSan)}</b> → ${esc(fmtEval(p.eval))}${lost}<br><b>${esc(label)}</b>${live && !n.eval ? ` <span class="small">(provisional, el motor sigue calculando)</span>` : ""}
+    ${["?!", "?", "??"].includes(c.cls) ? cmpWhy(p, n, after, bm) : ""}
     ${ui.deepNote && ui.deepNote.id === n.id ? `<div class="small deep-note">${esc(ui.deepNote.text)}</div>` : `<div class="small">${esc(evalOrigin(p.eval) ? "Calculada con " + evalOrigin(p.eval).label + "." : "")}</div>`}
     <div class="controls"><button class="sm-btn" data-cmp="best" title="Vuelve a la posición anterior y juega la del motor, como variante">↪ Probar la del motor</button> <button class="sm-btn" data-cmp="deep" title="Recalcula esta jugada con ${esc(fmtMs(DEEP_MS()))} por posición">🔬 Más a fondo</button></div>`;
   el.querySelector("[data-cmp=deep]").onclick = async e => { e.target.disabled = true; e.target.textContent = "⏳ Calculando…"; if (!(await deepAnalyse(n))) renderCompare(); };
@@ -274,6 +275,14 @@ function renderCompare(job) {
     goTo(p);
     if (canUserMove()) playMove(bm, "user");
   };
+}
+/* El porqué, sin IA: el motivo táctico de la jugada hecha y de la del motor (29-motivos.js) */
+function cmpWhy(p, n, after, bm) {
+  const bad = after && after.pv && after.pv.length ? motifBad(p.state, n.move, after.pv, after) : "";
+  const good = p.eval.pv && p.eval.pv.length ? motifGood(p.state, p.eval.pv, p.eval) : "";
+  if (!bad && !good) return "";
+  const bestTxt = bm ? numPrefix(p.state) + formatSan(Chess.san(p.state, bm), settings.lang, p.state.t) : "";
+  return `<div class="small cmp-why">${bad ? `❌ ${esc(bad)}` : ""}${bad && good ? "<br>" : ""}${good ? `✔ ${esc(bestTxt)}: ${esc(good)}.` : ""}</div>`;
 }
 async function compareWithEngine() {
   const n = cur(), p = n.parent;
