@@ -270,6 +270,7 @@ async function findSurprises() {
    y las líneas suyas que se salen de tu repertorio */
 const Rival = { busy: false };
 async function prepareRival() {
+  routeEvent("rival");
   const user = $("rivalUser").value.trim(), out = $("rivalOut");
   if (!/^[A-Za-z0-9_-]{2,30}$/.test(user)) { toast("Escribe un nombre de usuario de Lichess válido."); $("rivalUser").focus(); return; }
   if (Rival.busy) return;

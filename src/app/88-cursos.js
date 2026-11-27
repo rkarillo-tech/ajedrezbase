@@ -217,7 +217,7 @@ function renderLesson() {
     <div class="lesson-text">${mine
       ? `🧪 <b>Jugada tuya</b>, fuera de la lección.${n.eval ? ` Valoración del motor: <b>${esc(fmtEval(n.eval))}</b>.` : settings.live ? " El motor la está analizando: mira su valoración en el panel del motor." : " Activa «Analizar» (tecla E) para que el motor la valore."} Sigue probando o vuelve con <b>↩ Línea principal</b>; <b>↺ Reiniciar</b> borra todas tus pruebas.${text ? `<br>📝 ${esc(text)}` : ""}`
       : text ? esc(text) : `<span class="small">${n === game.root ? "Pulsa ▶ para empezar." : "Sin comentario en esta jugada: sigue con ▶ o mira las flechas del tablero."}</span>`}</div>
-    ${atEnd ? `<div class="retry-msg">✔ <b>Lección terminada.</b>${next ? "" : " ¡Has llegado al final del curso!"}</div>` : ""}
+    ${atEnd ? `<div class="retry-msg">✔ <b>Lección terminada.</b>${next ? "" : " ¡Has llegado al final del curso!"}<br><span class="small">🧭 Siguiente paso: ${l.exercise ? "si no te ha salido a la primera, «🎯 Resolver» otra vez" : "«🎯 " + (l.repertoire ? "Entrenar repertorio" : "Practicar") + "»: juega tú las jugadas desde el principio, para fijarlas"}${next ? "; después, «Lección siguiente ▶»" : "; después, elige otro curso o practica lo aprendido con 🧭 Guíame"}.</span></div>` : ""}
     <div class="controls">
       <button class="sm-btn" data-l="back" ${n.parent ? "" : "disabled"}>◀</button>
       <button class="sm-btn${atEnd ? "" : " primary"}" data-l="fwd" ${n.children.length ? "" : "disabled"}>${n === game.root ? "▶ Empezar" : "▶ Siguiente"}</button>

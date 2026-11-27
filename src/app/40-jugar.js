@@ -495,6 +495,7 @@ function openCpuDialog(blind) {
 }
 function startCpuGame(opts = {}) {
   if (Batch.running) { toast("El motor está analizando tus partidas de la biblioteca: espera a que termine o detenlo en «📊 Estadísticas»."); return false; }
+  routeEvent("cpu-start");
   Object.assign(settings, { cpuLevel: parseCpuLevel($("cpuLevel").value), cpuStyle: $("cpuStyle").value, cpuClock: $("cpuClock").value, cpuColor: $("cpuColor").value, cpuFrom: $("cpuFrom").value, cpuOpponent: $("cpuOpponent").value, cpuOdds: $("cpuOdds").value, cpuAutoFlip: $("cpuAutoFlip").checked });
   settings.cpuCoach = $("cpuCoachChk").checked;
   saveSettings();
@@ -569,6 +570,8 @@ function cpuGameOver(result, text) {
   markDirty();
   if (ui.cpu.blind && ui.blind) setBlind(false);
   const sc = scoreOf(result, user);
+  text += ui.cpu.two ? " 🧭 Siguiente paso: «🤖 Analizar la partida» marca los errores de los dos; después, «💾 Guardar»."
+    : " 🧭 Siguiente paso: «📋 Informe del entrenador» te enseña tus errores más caros y te deja practicarlos; después, «💾 Guardar».";
   Sound.play("end");
   if (ui.cpu.two) cpuPanel(result === "1-0" ? "🏆 Ganan las blancas" : result === "0-1" ? "🏆 Ganan las negras" : "🟰 Tablas", text);
   else cpuPanel(sc === 1 ? "🏆 ¡Has ganado!" : sc === 0 ? "❌ Has perdido." : "🟰 Tablas.", text);

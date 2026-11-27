@@ -242,6 +242,7 @@ function renderScan() {
 function closeScan() { Scan.node = null; Scan.data = null; Scan.shapes = []; $("scanBox").hidden = true; renderShapes(); }
 /* «🔎 Lee el tablero» (tecla L). En los problemas cuenta como pista; en la partida contra la CPU, como ayuda */
 function readBoard() {
+  routeEvent("scan");
   const node = cur();
   if (Scan.node === node && !$("scanBox").hidden) { closeScan(); return; }
   const inPuzzle = trainer.active && trainer.puzzle && !Puz.exam && trainerUserTurn();

@@ -60,8 +60,8 @@ Todos los puntos se han comprobado en el código. E1–E5 son fallos; E6–E9, m
 Hay muchas herramientas y no es fácil saber cuál usar en cada caso ni en qué orden.
 
 - ✅ **F1** (1.64.0). **Rutas por objetivo** («🧭 Guíame»): revisar una partida mía, estudiar una apertura, mejorar la táctica, estudiar finales y estudiar una partida de un libro o de un maestro. Tarjeta de pasos con «Llévame» (abre la pestaña y resalta el botón), avance automático cuando se puede comprobar y «Hecho» cuando no (`src/app/33-rutas.js`).
-- **F2**. **Sugerencias según el momento**: extender el recuadro «🧭 siguiente paso» (`31-recorrido.js`), que hoy sólo cubre importar → analizar → revisar → practicar, a otros momentos: al terminar una sesión de problemas o el examen, al acabar una partida contra la CPU, al terminar una lección o un curso y al abrir una partida de la biblioteca.
-- **F3**. Más rutas si hacen falta: preparar una partida contra un rival (Preparar un rival + sorpresas), entrenamiento diario (📅 Hoy + entrenador IA), mejorar el cálculo (a ciegas y visualización).
+- ✅ **F2** (1.65.0). **Sugerencias según el momento**: extender el recuadro «🧭 siguiente paso» (`31-recorrido.js`), que hoy sólo cubre importar → analizar → revisar → practicar, a otros momentos: al terminar una sesión de problemas o el examen, al acabar una partida contra la CPU, al terminar una lección o un curso y al abrir una partida de la biblioteca.
+- ✅ **F3** (1.65.0). Más rutas si hacen falta: preparar una partida contra un rival (Preparar un rival + sorpresas), entrenamiento diario (📅 Hoy + entrenador IA), mejorar el cálculo (a ciegas y visualización).
 
 ## Orden previsto
 
@@ -77,4 +77,5 @@ Hay muchas herramientas y no es fácil saber cuál usar en cada caso ni en qué 
 10. ✅ 1.62.0: E8.
 11. ✅ 1.63.0: E9.
 12. ✅ 1.64.0: F1.
-13. Después: F2 y F3; B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
+13. ✅ 1.65.0: F2, F3 y D4 (con una prueba).
+14. Después: B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
