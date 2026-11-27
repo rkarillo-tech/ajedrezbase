@@ -967,7 +967,7 @@ mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
   .welcome .train-card .tc-ico { font-size: 1.1rem; }
   .welcome .train-card .tc-body b { font-size: .8rem; line-height: 1.2; }
   .welcome .train-card .tc-body .small { display: none; }
-  .welcome .train-card:last-child { grid-column: 1 / -1; }
+  .welcome .train-card:last-child:nth-child(odd) { grid-column: 1 / -1; }   /* sólo si sobra una: con seis, tres filas de dos */
   .tab-btn.tab-board { display: inline-flex; }
   .tab-btn .tab-ico { font-size: 1.2rem; line-height: 1.2; }
   .tab-btn .streak-badge { position: absolute; top: 1px; right: 1px; margin: 0; font-size: .56rem; }
