@@ -63,6 +63,14 @@ Hay muchas herramientas y no es fácil saber cuál usar en cada caso ni en qué 
 - ✅ **F2** (1.65.0). **Sugerencias según el momento**: extender el recuadro «🧭 siguiente paso» (`31-recorrido.js`), que hoy sólo cubre importar → analizar → revisar → practicar, a otros momentos: al terminar una sesión de problemas o el examen, al acabar una partida contra la CPU, al terminar una lección o un curso y al abrir una partida de la biblioteca.
 - ✅ **F3** (1.65.0). Más rutas si hacen falta: preparar una partida contra un rival (Preparar un rival + sorpresas), entrenamiento diario (📅 Hoy + entrenador IA), mejorar el cálculo (a ciegas y visualización).
 
+## G. Explicaciones sin IA y quitar la IA (decisión del 27/11/2026)
+
+La IA local (Ollama) se equivocaba al explicar posiciones (piezas que no atacaban, «ataques contra tu propio rey»), y en el móvil o en un ordenador sin IA esa parte no existe. Se decide sacar más partido a Stockfish y a las reglas, y después quitar la IA.
+
+- ✅ **G1** (1.66.0). **Motivos tácticos sin IA** (`src/app/29-motivos.js`): qué consigue la buena (horquilla, clavada, ataque a la descubierta, captura de una pieza sin defensa, mate, material) y por qué falla la jugada (la pieza queda donde la capturan, deja otra sin defensa, permite una horquilla, una clavada o un ataque a la descubierta). En los comentarios del análisis, «⚖ Tu jugada frente a la del motor», «🧠 Piensa conmigo» y el entrenador (también sus pistas, que dicen el tipo de motivo sin la jugada).
+- **G2**. **Probabilidades** de Stockfish 19 (`UCI_ShowWDL`): «blancas ganan 62 % · tablas 30 % · negras 8 %», y en los errores «tus opciones de ganar bajan del 70 % al 15 %». Con el motor de respaldo, estimadas a partir de la evaluación.
+- **G3**. **Quitar la IA**: el profesor IA, sus ajustes y la parte de IA del entrenador, del informe y del repertorio, con la ayuda y las pruebas.
+
 ## Orden previsto
 
 1. ✅ 1.52.1: A1 y A2.
@@ -78,4 +86,5 @@ Hay muchas herramientas y no es fácil saber cuál usar en cada caso ni en qué 
 11. ✅ 1.63.0: E9.
 12. ✅ 1.64.0: F1.
 13. ✅ 1.65.0: F2, F3 y D4 (con una prueba).
-14. Después: B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
+14. ✅ 1.66.0: G1 · 1.67.0: G2 · 1.68.0: G3.
+15. Después: B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.

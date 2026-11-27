@@ -565,6 +565,43 @@ seccion("🔍 Cómo se obtuvo la evaluación (1.61)", () => {
   comprobar(r.ms.join(" | ") === "500 ms | 1 s | 2,5 s | 15 s" && r.deep === 5000 && r.cls.join(" | ") === "un error grave | una jugada correcta", "tiempos legibles; «Más a fondo» usa al menos 5 s por posición");
 });
 
+seccion("🎯 Motivos tácticos sin IA (1.66)", () => {
+  const r = JSON.parse(E.ev(`JSON.stringify((() => {
+    const P = fen => Chess.parseFen(fen), U = (s, u) => Chess.moveFromUci(s, u);
+    const fen = "rnbqkb1r/pp2pppp/5n2/1N1p4/5B2/3pP3/PPP2PPP/R2QKBNR w KQkq - 0 6";
+    const s = P(fen);
+    const out = {
+      horquilla: motifGood(s, ["b5c7", "e8d7", "c7a8"], null),
+      malo: motifBad(s, U(s, "b5d6"), ["e7d6", "f1d3"], null),
+      pista: motifHint(s, ["b5c7", "e8d7", "c7a8"], null),
+      clavada: motifGood(P("r1bqkbnr/ppp2ppp/2np4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4"), ["f1b5"], null),
+      descubierta: motifGood(P("4k3/8/8/8/4N3/8/8/4RK2 w - - 0 1"), ["e4c5"], null),
+      libre: motifGood(P("rnbqkbnr/pppp1ppp/8/4n3/3P4/8/PPP2PPP/RNBQKBNR w KQkq - 0 1"), ["d4e5"], null),
+      dejaSinDefensa: (() => { const t = P("rnb1kbnr/ppqppppp/8/8/5B2/4P3/PPPP1PPP/RN1QKBNR w KQkq - 0 1"); return motifBad(t, U(t, "e3e4"), ["c7f4"], null); })(),
+      nada: motifGood(P(Chess.START_FEN), ["e2e4"], null),
+      mate: motifGood(P("6k1/5ppp/8/8/8/8/8/3R2K1 w - - 0 1"), ["d1d8"], { mate: 1 }),
+      pistaMate: motifHint(P("6k1/5ppp/8/8/8/8/8/3R2K1 w - - 0 1"), ["d1d8"], { mate: 1 })
+    };
+    // El comentario del análisis, con las evaluaciones del motor
+    const g = Pgn.parseGame('[FEN "' + fen + '"]\\n\\n6. Nd6+ exd6 *', { lang: "en" }).game;
+    const n = g.root.children[0];
+    g.root.eval = { cp: 380, best: "b5c7", pv: ["b5c7", "e8d7", "c7a8"], depth: 20 };
+    n.eval = { cp: -600, best: "e7d6", pv: ["e7d6", "f1d3"], depth: 20 };
+    out.comentario = buildComment(n, classifyMove(n));
+    return out;
+  })())`));
+  comprobar(r.horquilla.startsWith("horquilla: da jaque al rey y ataca la torre de a8") && r.horquilla.includes("gana unos 5 puntos"), "la buena (Cc7+) se explica como horquilla: jaque al rey y ataque a la torre de a8");
+  comprobar(r.malo.startsWith("El caballo de d6 queda donde lo captura el peón de e7 (6...exd6)"), "la mala (Cd6+): el caballo queda donde lo captura el peón de e7");
+  comprobar(r.pista.startsWith("Busca una horquilla") && !/c7/i.test(r.pista), "la pista dice el tipo de motivo sin revelar la jugada");
+  comprobar(r.clavada === "clava el caballo de c6 contra el rey", "clavada (Ab5 contra el caballo de c6)");
+  comprobar(r.descubierta === "jaque a la descubierta con la torre de e1", "jaque a la descubierta");
+  comprobar(r.libre.startsWith("captura el caballo de e5, que estaba sin defensa"), "captura de una pieza sin defensa");
+  comprobar(r.dejaSinDefensa.startsWith("Al mover, dejas sin defensa el alfil de f4, que se pierde con 1...Dxf4"), "una jugada que deja sin defensa otra pieza");
+  comprobar(r.nada === "" && r.mate === "es jaque mate" && r.pistaMate.startsWith("Hay un mate"), "sin motivo claro no se dice nada; el mate se dice como tal");
+  comprobar(r.comentario.includes("Era mejor 6.Cc7+") && r.comentario.includes("(horquilla: da jaque al rey y ataca la torre de a8") && r.comentario.includes("El caballo de d6 queda donde lo captura el peón de e7"),
+    "el comentario del análisis da el motivo de la buena y el de la mala");
+});
+
 if (fallos.length) { console.log(`\n${fallos.length} prueba(s) fallida(s)`); process.exit(1); }
 console.log(`\nTodas las pruebas de lógica superadas (${((Date.now() - t0) / 1000).toFixed(1)} s).`);
 process.exit(0);

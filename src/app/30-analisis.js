@@ -141,8 +141,8 @@ function buildComment(n, info) {
     else if (ne.mate != null && ne.mate !== 0 && ne.mate * mover < 0) s += ` Permite mate en ${Math.abs(ne.mate)}.`;
     else s += ` La valoración pasa de ${fmtEval(pe)} a ${fmtEval(ne)}.`;
     if (pe.best && pe.best !== n.uci) {
-      const txt = lineText(p.state, pe.pv && pe.pv.length ? pe.pv : [pe.best], 5);
-      if (txt) s += ` Era mejor ${txt}.`;
+      const bpv = pe.pv && pe.pv.length ? pe.pv : [pe.best], txt = lineText(p.state, bpv, 5), good = motifGood(p.state, bpv, pe);
+      if (txt) s += ` Era mejor ${txt}${good ? ` (${good})` : ""}.`;
     }
     const refUci = n.eval.best;
     if (refUci) {
@@ -152,7 +152,9 @@ function buildComment(n, info) {
         s += ` La respuesta precisa es ${lineText(n.state, pv, cls === "?!" ? 1 : 3)}`;
         s += n.eval.mate != null && n.eval.mate !== 0 && n.eval.mate * mover < 0 ? ", que lleva al mate." : ".";
         const lost = (materialBalance(p.state) - materialBalance(playUcis(n.state, pv, 8))) * mover;
-        if (lost >= 2 && !(n.eval.mate != null && n.eval.mate * mover < 0)) {
+        const bad = motifBad(p.state, n.move, pv, n.eval);   // el motivo: la pieza queda colgada, horquilla, clavada…
+        if (bad) s += " " + bad;
+        else if (lost >= 2 && !(n.eval.mate != null && n.eval.mate * mover < 0)) {
           s += ` El rival gana material (unos ${Math.round(lost)} puntos).`;
           if (rm.captured !== "." && rm.to === n.move.to) { const hang = hangingInfo(n); if (hang) s += " " + hang; }
         }
@@ -741,6 +743,8 @@ async function thinkWithMe() {
     const ideas = [];
     const mating = best.mate != null && best.mate !== 0 && Math.sign(best.mate) === me;
     if (mating) ideas.push(`Hay <b>mate en ${Math.abs(best.mate)}</b>: la línea de abajo lo fuerza.`);
+    const motG = !mating ? motifGood(s, best.pv, best) : "";
+    if (motG && !/^gana unos/.test(motG)) ideas.push(`${cap(motG.split("; ")[0])}.`);
     if (threat && bestM && !mating) {
       if (bestM.to === threat.m.from) ideas.push("Elimina la pieza con la que el rival te amenazaba.");
       else if (bestM.from === threat.m.to) ideas.push("Aparta la pieza que estaba amenazada.");

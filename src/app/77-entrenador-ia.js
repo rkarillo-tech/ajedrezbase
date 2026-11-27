@@ -303,7 +303,8 @@ async function coachMove(move) {
   Coach.arrows = (ex.kind === "drill" ? Coach.arrows.filter(a => a.color === "threat") : []).concat([{ color: "red", from: move.from, to: move.to }]);
   Sound.play("error");
   const refut = reply ? lineText(Chess.apply(s, move), reply, 4) : "";
-  Coach.msg = `❌ Con <b>${esc(san)}</b> la valoración sería ${esc(fmtEval(ev))}${refut ? ` (por ejemplo, ${esc(refut)})` : ""}.`;
+  const whyBad = reply ? motifBad(s, move, reply, ev) : "";
+  Coach.msg = `❌ Con <b>${esc(san)}</b> la valoración sería ${esc(fmtEval(ev))}${refut ? ` (por ejemplo, ${esc(refut)})` : ""}.${whyBad ? ` ${esc(whyBad)}` : ""}`;
   renderShapes();
   coachPanel();
   await coachHint({ wrong: san, refut, auto: true });
@@ -317,7 +318,7 @@ async function coachHint(o = {}) {
   const bestMove = Chess.moveFromUci(ex.node.state, ex.best);
   const generic = COACH_HINT_THEMES[COACH_FOCUS[ex.theme] ? ex.theme : Coach.focus.key] || COACH_HINT_THEMES.tactics;
   let text = "";
-  if (level === 1) text = generic;
+  if (level === 1) text = motifHint(ex.node.state, ex.line, ex.bestEv) || generic;   // el tipo de motivo (horquilla, clavada…), sin la jugada
   if (level === 2) { Coach.hintSq = bestMove.from; text = `La pieza que hay que mover está marcada. ¿Adónde puede ir con más fuerza?`; renderBoard(); }
   if (level === 3) { Coach.hintSq = bestMove.from; Coach.arrows = Coach.arrows.filter(a => a.color !== "red"); text = `Última pista: piensa en la jugada más forzante de esa pieza (un jaque, una captura o una amenaza directa).`; renderBoard(); }
   Coach.hintText = `💡 ${esc(text)}`;
@@ -383,7 +384,7 @@ async function coachSolved(move, san, loss) {
   render();
   const bestSan = coachSan(s, ex.best), line = lineText(s, ex.line, 8);
   Coach.msg = loss === 0 ? `✔ <b>¡Exacto!</b> ${esc(san)} era la mejor jugada.${perfect ? " A la primera y sin pistas. 👏" : ""}` : `✔ <b>¡Bien!</b> ${esc(san)} también vale. La del motor era ${esc(bestSan)} (flecha azul).`;
-  Coach.explain = `Línea: ${esc(line)} (${esc(fmtEval(ex.bestEv))}).`;
+  Coach.explain = coachWhyGood(ex) + `Línea: ${esc(line)} (${esc(fmtEval(ex.bestEv))}).`;
   coachPanel();
   await coachExplain(`El alumno ha encontrado ${san}${loss ? `, que también vale (casi tan buena como ${bestSan})` : ", la mejor"}${Coach.hint ? ` tras ${Coach.hint} pista${Coach.hint === 1 ? "" : "s"}` : ""}.`);
 }
@@ -398,10 +399,15 @@ function coachShowSolution() {
   Coach.streak = 0;
   if (ex.kind === "puzzle") Coach.target -= 150;
   Coach.msg = `👁 La buena era <b>${esc(coachSan(s, ex.best))}</b> (flecha verde).`;
-  Coach.explain = `Línea: ${esc(lineText(s, ex.line, 8))} (${esc(fmtEval(ex.bestEv))}).`;
+  Coach.explain = coachWhyGood(ex) + `Línea: ${esc(lineText(s, ex.line, 8))} (${esc(fmtEval(ex.bestEv))}).`;
   renderShapes();
   coachPanel();
   coachExplain(`El alumno no la ha encontrado${Coach.tries.length ? ` (probó ${Coach.tries.join(", ")})` : ""}; se le ha enseñado la solución.`);
+}
+/* Por qué funciona la mejor jugada, sin IA (29-motivos.js) */
+function coachWhyGood(ex) {
+  const g = motifGood(ex.node.state, ex.line, ex.bestEv);
+  return g ? `<b>${esc(coachSan(ex.node.state, ex.best))}</b>: ${esc(g)}. ` : "";
 }
 async function coachExplain(what) {
   const ex = Coach.ex;
