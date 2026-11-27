@@ -51,7 +51,7 @@ Todos los puntos se han comprobado en el código. E1–E5 son fallos; E6–E9, m
 - ✅ **E4** (1.59.1). Símbolos PGN. Al exportar se perdían `$36`, `$37`, `$40`, `$132`, `$142`, `$146` y cualquier código fuera de la tabla; `$36` y `$37` (iniciativa de cada bando) se leían como el mismo «→», y solo se guardaba un símbolo de jugada y otro de posición por movimiento. Conservar los códigos originales.
 - ✅ **E5** (1.59.1). Deshacer «Cortar» (`80-interfaz.js`). Borraba hasta 6 medios movimientos sin confirmar y sin forma de recuperarlos, comentarios incluidos. Aclarar qué se elimina y ofrecer ↩ Deshacer.
 - ✅ **E6** (1.60.0). Versiones de una partida. `gameSig` solo mira jugadores, fecha y las 60 primeras jugadas de la línea principal: al importar una colección, otra edición de la misma partida con comentarios o variantes distintas se descarta en silencio. Omitir solo las copias idénticas (PGN normalizado) y guardar o preguntar cuando cambian las notas.
-- **E7**. Origen de la evaluación en el informe: motor, tiempo por posición, si alguna evaluación es de otro motor o de un análisis anterior (hoy se reutilizan si tienen profundidad suficiente) y si entró el motor de respaldo. Botón «Analizar más a fondo esta posición» en cada momento crítico (reutilizar `explainCurrentMove` forzando el recálculo con más tiempo).
+- ✅ **E7** (1.61.0). Origen de la evaluación en el informe: motor, tiempo por posición, si alguna evaluación es de otro motor o de un análisis anterior (hoy se reutilizan si tienen profundidad suficiente) y si entró el motor de respaldo. Botón «Analizar más a fondo esta posición» en cada momento crítico (reutilizar `explainCurrentMove` forzando el recálculo con más tiempo).
 - **E8**. Recorrido guiado: tras importar, confirmación visible («Partida cargada · 32 jugadas») con «Analizar y comentar»; al terminar, «Revisar el primer momento crítico» y después «Practicar». Sugerencias que se pueden ignorar, no un asistente. Hoy el mensaje de importación queda dentro de la sección plegable del PGN.
 - **E9**. Notación descriptiva española (`P4R`, `C3AR`, `PxP`) como modo de entrada aparte: filas contadas desde cada bando, jugada estándar al lado en la planilla y, si una captura es ambigua, elegir en el tablero. Guardar en PGN estándar. Es la más costosa.
 
@@ -65,4 +65,5 @@ Todos los puntos se han comprobado en el código. E1–E5 son fallos; E6–E9, m
 6. ✅ 1.57.0: B4 y B5 · ✅ 1.58.0: C4 · ✅ 1.59.0: C5.
 7. ✅ 1.59.1: E1, E2, E3, E4 y E5 (correcciones).
 8. ✅ 1.60.0: E6.
-9. Después: E7, E8 y E9; B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
+9. ✅ 1.61.0: E7.
+10. Después: E8 y E9; B6, B7 y la serie D según haga falta. D1 queda pendiente de que lo revise una persona.
